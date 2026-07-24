@@ -168,10 +168,17 @@ jobs:
       ANDROID_HOME: /opt/android-sdk
 
     steps:
-      - name: Clone fdroiddata (recipe + srclib, from the GitLab fork)
+      - name: Clone fdroiddata into /home/vagrant (match F-Droid's build path)
         run: |
-          git clone --depth 1 --branch anti-vocale-1.8.2 \
-            https://gitlab.com/paoloantinori/fdroid-data.git fdroiddata
+          set -ex
+          # F-Droid builds at /home/vagrant/build/srclib/...; the .so embeds that path.
+          # We MUST build from /home/vagrant so fdroid creates /home/vagrant/build/, matching byte-for-byte.
+          chown -R vagrant:vagrant /home/vagrant
+          sudo -u vagrant git clone --depth 1 --branch anti-vocale-1.8.2 \
+            https://gitlab.com/paoloantinori/fdroid-data.git /home/vagrant/fdroiddata
+          # fdroiddata files (config.yml, metadata/, srclibs/) need to be at the build CWD = /home/vagrant,
+          # so fdroid's build/ output lands at /home/vagrant/build (not /home/vagrant/fdroiddata/build).
+          sudo -u vagrant sh -c 'cd /home/vagrant && cp -r fdroiddata/* fdroiddata/.* . 2>/dev/null || true'
 
       - name: Install fdroidserver and NDK r27c
         run: |
@@ -186,31 +193,39 @@ jobs:
           export PYTHONUNBUFFERED=true
           export serverwebroot=/tmp
           # F-Droid's image ships without an NDK; install r27c (the recipe's ndk:) where fdroid looks.
+          chown -R vagrant:vagrant /opt/android-sdk
           yes | sdkmanager "ndk;27.2.12479018" || true
           # The recipe's sudo: deps (wget etc.) don't auto-install when running as root; install them.
           apt-get update -qq && apt-get install -y --no-install-recommends wget build-essential cmake g++ zip unzip
           fdroid --version || true
 
       - name: Build app via fdroid build (reproducible, from source)
-        working-directory: fdroiddata
         env:
           PYTHONPATH: /opt/fdroidserver:/opt/fdroidserver/examples
           PYTHONUNBUFFERED: "true"
           serverwebroot: /tmp
+          home_vagrant: /home/vagrant
         run: |
           set -ex
           . /etc/profile.d/bsenv.sh || true
           export PATH="/opt/fdroidserver:/opt/android-sdk/cmdline-tools/latest/bin:/opt/android-sdk/platform-tools:$PATH"
-          fdroid build com.antivocale.app:29 --no-tarball
+          # Build as the vagrant user from /home/vagrant, mirroring F-Droid's --on-server layout,
+          # so the srclib build lands at /home/vagrant/build/srclib/sherpa_onnx (matching path embedding).
+          chown -R vagrant:vagrant /home/vagrant
+          sudo -u vagrant -E env PATH="$PATH" PYTHONPATH="$PYTHONPATH" HOME=/home/vagrant \
+            bash -c 'cd /home/vagrant && fdroid build com.antivocale.app:29 --no-tarball'
       - name: Debug - locate built APK
         if: always()
         run: |
-          echo "=== all APKs under the workspace ==="
-          find "$GITHUB_WORKSPACE" -name "*.apk" 2>/dev/null || true
-          echo "=== fdroiddata tree (unsigned/tmp/repo) ==="
-          ls -la fdroiddata/unsigned fdroiddata/tmp fdroiddata/repo 2>/dev/null || true
-          echo "=== full fdroiddata dir listing ==="
-          ls -la fdroiddata 2>/dev/null || true
+          echo "=== all APKs under /home/vagrant ==="
+          find /home/vagrant -name "*.apk" 2>/dev/null | head || true
+          echo "=== embedded path in built jni .so (should be /home/vagrant/build/...) ==="
+          APK=$(find /home/vagrant -path "*/apk/fdroid/release/*.apk" | head -1) || true
+          if [ -n "$APK" ]; then
+            TMP=$(mktemp -d); unzip -o -q "$APK" "lib/arm64-v8a/libsherpa-onnx-jni.so" -d "$TMP" 2>/dev/null
+            strings "$TMP/lib/arm64-v8a/libsherpa-onnx-jni.so" 2>/dev/null | grep -oE "/(home/vagrant|__w)[^ ]*sherpa[^ ]*" | head -2 || true
+            rm -rf "$TMP"
+          fi
 
       - name: Sign the reference APK with the release key
         run: |
@@ -220,8 +235,8 @@ jobs:
           STORE_PASS=$(grep '^storePassword=' keystore.properties | cut -d= -f2-)
           KEY_PASS=$(grep '^keyPassword=' keystore.properties | cut -d= -f2-)
           ALIAS=$(grep '^keyAlias=' keystore.properties | cut -d= -f2-)
-          # fdroid build leaves the APK in the gradle output dir (fdroid publish would move it to unsigned/).
-          UNSIGNED=$(find . -path "*/apk/fdroid/release/*.apk" | head -1)
+          # fdroid build ran under /home/vagrant; find its gradle output APK there.
+          UNSIGNED=$(find /home/vagrant -path "*/apk/fdroid/release/*.apk" | head -1)
           test -n "$UNSIGNED"
           apksigner sign \
             --ks release.keystore \
