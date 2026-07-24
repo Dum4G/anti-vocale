@@ -227,29 +227,23 @@ jobs:
             rm -rf "$TMP"
           fi
 
-      - name: Normalize APK alignment (match F-Droid's reproducible-apk-tools postbuild)
+      - name: Normalize + sign the reference APK
         run: |
           set -ex
-          # Mirror the recipe's postbuild exactly: move to unaligned.apk, then
-          # zipalign.py --page-size 16 --pad-like-apksigner --replace unaligned.apk OUT
           git clone --depth 1 --branch v0.3.0 https://github.com/obfusk/reproducible-apk-tools.git /tmp/rat
           UNSIGNED=$(find /home/vagrant -path "*/apk/fdroid/release/*.apk" | head -1)
           test -n "$UNSIGNED"
+          # Mirror the recipe's postbuild: zipalign + fix-pg-map-id (R8 non-deterministic pg-map-id).
           DIR=$(dirname "$UNSIGNED")
           mv "$UNSIGNED" "$DIR/unaligned.apk"
           python3 /tmp/rat/zipalign.py --page-size 16 --pad-like-apksigner --replace "$DIR/unaligned.apk" "$UNSIGNED"
-
-      - name: Sign the reference APK with the release key
-        run: |
-          set -ex
+          python3 /tmp/rat/fix-pg-map-id.py "$UNSIGNED" "$UNSIGNED" 0000000
+          # Sign the normalized APK.
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > release.keystore
           echo "${{ secrets.KEYSTORE_PROPERTIES }}" > keystore.properties
           STORE_PASS=$(grep '^storePassword=' keystore.properties | cut -d= -f2-)
           KEY_PASS=$(grep '^keyPassword=' keystore.properties | cut -d= -f2-)
           ALIAS=$(grep '^keyAlias=' keystore.properties | cut -d= -f2-)
-          # fdroid build ran under /home/vagrant; find its (now normalized) gradle output APK there.
-          UNSIGNED=$(find /home/vagrant -path "*/apk/fdroid/release/*.apk" | head -1)
-          test -n "$UNSIGNED"
           apksigner sign \
             --ks release.keystore \
             --ks-key-alias "$ALIAS" \
