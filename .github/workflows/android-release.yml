@@ -233,7 +233,7 @@ jobs:
         run: |
           set -ex
           git clone --depth 1 --branch v0.3.0 https://github.com/obfusk/reproducible-apk-tools.git /tmp/rat
-          UNSIGNED=$(find /home/vagrant -name "com.antivocale.app_29.apk" -o -name "app-fdroid-release-unsigned.apk" | head -1)
+          UNSIGNED=$(find /home/vagrant /tmp \( -name "com.antivocale.app_29.apk" -o -name "app-fdroid-release-unsigned.apk" \) 2>/dev/null | grep -v test/data | head -1)
           test -n "$UNSIGNED"
           # Mirror the recipe's postbuild: zipalign + fix-pg-map-id (R8 non-deterministic pg-map-id).
           DIR=$(dirname "$UNSIGNED")
