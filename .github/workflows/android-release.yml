@@ -227,6 +227,16 @@ jobs:
             rm -rf "$TMP"
           fi
 
+      - name: Normalize APK alignment (match F-Droid's reproducible-apk-tools postbuild)
+        run: |
+          set -ex
+          # Mirror the recipe's postbuild: zipalign.py --page-size 16 --pad-like-apksigner,
+          # so our reference APK's alignment matches F-Droid's rebuild (apksigner 35 boundary).
+          git clone --depth 1 --branch v0.3.0 https://github.com/obfusk/reproducible-apk-tools.git /tmp/rat
+          UNSIGNED=$(find /home/vagrant -path "*/apk/fdroid/release/*.apk" | head -1)
+          test -n "$UNSIGNED"
+          python3 /tmp/rat/zipalign.py --page-size 16 --pad-like-apksigner --replace "$UNSIGNED" "$UNSIGNED"
+
       - name: Sign the reference APK with the release key
         run: |
           set -ex
@@ -235,7 +245,7 @@ jobs:
           STORE_PASS=$(grep '^storePassword=' keystore.properties | cut -d= -f2-)
           KEY_PASS=$(grep '^keyPassword=' keystore.properties | cut -d= -f2-)
           ALIAS=$(grep '^keyAlias=' keystore.properties | cut -d= -f2-)
-          # fdroid build ran under /home/vagrant; find its gradle output APK there.
+          # fdroid build ran under /home/vagrant; find its (now normalized) gradle output APK there.
           UNSIGNED=$(find /home/vagrant -path "*/apk/fdroid/release/*.apk" | head -1)
           test -n "$UNSIGNED"
           apksigner sign \
