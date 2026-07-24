@@ -230,12 +230,14 @@ jobs:
       - name: Normalize APK alignment (match F-Droid's reproducible-apk-tools postbuild)
         run: |
           set -ex
-          # Mirror the recipe's postbuild: zipalign.py --page-size 16 --pad-like-apksigner,
-          # so our reference APK's alignment matches F-Droid's rebuild (apksigner 35 boundary).
+          # Mirror the recipe's postbuild exactly: move to unaligned.apk, then
+          # zipalign.py --page-size 16 --pad-like-apksigner --replace unaligned.apk OUT
           git clone --depth 1 --branch v0.3.0 https://github.com/obfusk/reproducible-apk-tools.git /tmp/rat
           UNSIGNED=$(find /home/vagrant -path "*/apk/fdroid/release/*.apk" | head -1)
           test -n "$UNSIGNED"
-          python3 /tmp/rat/zipalign.py --page-size 16 --pad-like-apksigner --replace "$UNSIGNED" "$UNSIGNED"
+          DIR=$(dirname "$UNSIGNED")
+          mv "$UNSIGNED" "$DIR/unaligned.apk"
+          python3 /tmp/rat/zipalign.py --page-size 16 --pad-like-apksigner --replace "$DIR/unaligned.apk" "$UNSIGNED"
 
       - name: Sign the reference APK with the release key
         run: |
