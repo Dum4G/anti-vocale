@@ -239,7 +239,8 @@ jobs:
           DIR=$(dirname "$UNSIGNED")
           mv "$UNSIGNED" "$DIR/unaligned.apk"
           python3 /tmp/rat/zipalign.py --page-size 16 --pad-like-apksigner --replace "$DIR/unaligned.apk" "$UNSIGNED"
-          python3 /tmp/rat/fix-pg-map-id.py "$UNSIGNED" "$UNSIGNED" 0000000
+          python3 /tmp/rat/fix-pg-map-id.py "$UNSIGNED" "$DIR/fixed.apk" 0000000
+          mv "$DIR/fixed.apk" "$UNSIGNED"
           # Sign the normalized APK.
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > release.keystore
           echo "${{ secrets.KEYSTORE_PROPERTIES }}" > keystore.properties
