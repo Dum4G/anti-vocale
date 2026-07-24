@@ -217,15 +217,17 @@ jobs:
       - name: Debug - locate built APK
         if: always()
         run: |
+          set +e
           echo "=== all APKs under /home/vagrant ==="
-          find /home/vagrant -name "*.apk" 2>/dev/null | head || true
+          find /home/vagrant -name "*.apk" 2>/dev/null | head
           echo "=== embedded path in built jni .so (should be /home/vagrant/build/...) ==="
-          APK=$(find /home/vagrant -path "*/apk/fdroid/release/*.apk" | head -1) || true
+          APK=$(find /home/vagrant -path "*/apk/fdroid/release/*.apk" | head -1)
           if [ -n "$APK" ]; then
             TMP=$(mktemp -d); unzip -o -q "$APK" "lib/arm64-v8a/libsherpa-onnx-jni.so" -d "$TMP" 2>/dev/null
-            strings "$TMP/lib/arm64-v8a/libsherpa-onnx-jni.so" 2>/dev/null | grep -oE "/(home/vagrant|__w)[^ ]*sherpa[^ ]*" | head -2 || true
+            strings "$TMP/lib/arm64-v8a/libsherpa-onnx-jni.so" 2>/dev/null | grep -oE "/(home/vagrant|__w)[^ ]*sherpa[^ ]*" | head -2
             rm -rf "$TMP"
           fi
+          exit 0
 
       - name: Normalize + sign the reference APK
         run: |
