@@ -229,7 +229,7 @@ jobs:
           fi
           exit 0
 
-      - name: Sign the reference APK (no normalization — postbuild only runs on F-Droid's side)
+      - name: Sign the reference APK (v2/v3 only, alignment preserved — apksigner must not rewrite the zip)
         run: |
           set -ex
           UNSIGNED=$(find /home/vagrant /tmp \( -name "com.antivocale.app_29.apk" -o -name "app-fdroid-release-unsigned.apk" \) 2>/dev/null | grep -v test/data | head -1)
@@ -239,11 +239,15 @@ jobs:
           STORE_PASS=$(grep '^storePassword=' keystore.properties | cut -d= -f2-)
           KEY_PASS=$(grep '^keyPassword=' keystore.properties | cut -d= -f2-)
           ALIAS=$(grep '^keyAlias=' keystore.properties | cut -d= -f2-)
+          # v1 (JAR) signing and forced realignment (build-tools >= 35) both rebuild the
+          # zip, breaking apksigcopier's byte-identical signature copy in fdroid publish.
           apksigner sign \
             --ks release.keystore \
             --ks-key-alias "$ALIAS" \
             --ks-pass "pass:$STORE_PASS" \
             --key-pass "pass:$KEY_PASS" \
+            --v1-signing-enabled false \
+            --alignment-preserved \
             --in "$UNSIGNED" --out app-fdroid-release.apk
           apksigner verify --print-certs app-fdroid-release.apk | grep SHA-256
 
