@@ -88,7 +88,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: app-fdroid-release
-          path: app/build/outputs/apk/fdroid/release/app-fdroid-release-unsigned.apk
+          path: app/build/outputs/apk/fdroid/release/app-fdroid-*-release-unsigned.apk
 
       - name: Upload Release AAB artifact
         if: >-
@@ -116,7 +116,9 @@ jobs:
         with:
           tag_name: ${{ github.event.inputs.tag || '' }}
           files: |
-            app/build/outputs/apk/fdroid/release/app-fdroid-release-unsigned.apk
+            app/build/outputs/apk/fdroid/release/app-fdroid-armeabi-v7a-release-unsigned.apk
+            app/build/outputs/apk/fdroid/release/app-fdroid-arm64-v8a-release-unsigned.apk
+            app/build/outputs/apk/fdroid/release/app-fdroid-x86_64-release-unsigned.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -151,14 +153,13 @@ jobs:
           status: ${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.draft-release == 'true') && 'draft' || 'completed' }}
           whatsNewDirectory: whats-new
 
-  # Produces the byte-reproducible reference APK for F-Droid's Binaries check.
-  # Built inside F-Droid's own buildserver image (same toolchain/NDK as F-Droid CI),
-  # proven reproducible: two independent F-Droid CI runs of this recipe yielded
-  # byte-identical unsigned APKs. The output is signed with the project release
-  # key and uploaded to the GitHub release as the Binaries reference APK.
-  # Manual trigger only (run once per release after tagging).
+  # Produces the three byte-reproducible per-ABI reference APKs for F-Droid's
+  # per-build binary: check (armeabi-v7a, arm64-v8a, x86_64). Built inside
+  # F-Droid's own buildserver image (same toolchain/NDK as F-Droid CI). Each ABI
+  # is signed with the project release key and uploaded to the GitHub release as
+  # the reference APK for that ABI. Manual trigger only (run once per release).
   reproducible-fdroid:
-    name: Build reproducible F-Droid reference APK
+    name: Build reproducible F-Droid reference APKs (per-ABI)
     runs-on: ubuntu-latest
     if: github.event_name == 'workflow_dispatch'
     container:
@@ -211,9 +212,11 @@ jobs:
           export PATH="/opt/fdroidserver:/opt/android-sdk/cmdline-tools/latest/bin:/opt/android-sdk/platform-tools:$PATH"
           # Build as the vagrant user from /home/vagrant, mirroring F-Droid's --on-server layout,
           # so the srclib build lands at /home/vagrant/build/srclib/sherpa_onnx (matching path embedding).
+          # Per-ABI split: build all three versionCodes (301=armeabi-v7a, 302=arm64-v8a, 304=x86_64).
+          # Each compiles its own ABI's sherpa .so from source (~8-10 min each).
           chown -R vagrant:vagrant /home/vagrant
           sudo -u vagrant -E env PATH="$PATH" PYTHONPATH="$PYTHONPATH" HOME=/home/vagrant \
-            bash -c 'cd /home/vagrant && fdroid build com.antivocale.app:29 --no-tarball'
+            bash -c 'cd /home/vagrant && fdroid build com.antivocale.app:301 com.antivocale.app:302 com.antivocale.app:304 --no-tarball'
       - name: Debug - locate built APK
         if: always()
         run: |
@@ -229,33 +232,45 @@ jobs:
           fi
           exit 0
 
-      - name: Sign the reference APK (v2/v3 only, alignment preserved — apksigner must not rewrite the zip)
+      - name: Sign the three per-ABI reference APKs (v2/v3 only, alignment preserved; apksigner must not rewrite the zip)
         run: |
           set -ex
-          UNSIGNED=$(find /home/vagrant /tmp \( -name "com.antivocale.app_29.apk" -o -name "app-fdroid-release-unsigned.apk" \) 2>/dev/null | grep -v test/data | head -1)
-          test -n "$UNSIGNED"
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > release.keystore
           echo "${{ secrets.KEYSTORE_PROPERTIES }}" > keystore.properties
           STORE_PASS=$(grep '^storePassword=' keystore.properties | cut -d= -f2-)
           KEY_PASS=$(grep '^keyPassword=' keystore.properties | cut -d= -f2-)
           ALIAS=$(grep '^keyAlias=' keystore.properties | cut -d= -f2-)
-          # v1 (JAR) signing and forced realignment (build-tools >= 35) both rebuild the
-          # zip, breaking apksigcopier's byte-identical signature copy in fdroid publish.
-          apksigner sign \
-            --ks release.keystore \
-            --ks-key-alias "$ALIAS" \
-            --ks-pass "pass:$STORE_PASS" \
-            --key-pass "pass:$KEY_PASS" \
-            --v1-signing-enabled false \
-            --alignment-preserved \
-            --in "$UNSIGNED" --out app-fdroid-release.apk
-          apksigner verify --print-certs app-fdroid-release.apk | grep SHA-256
+          # fdroidserver copies each built unsigned APK to unsigned/com.antivocale.app_<versionCode>.apk.
+          # versionCode -> ABI: 301=armeabi-v7a, 302=arm64-v8a, 304=x86_64.
+          sign_abi() {
+            local VC="$1" ABI="$2"
+            local UNSIGNED=$(find /home/vagrant /tmp -name "com.antivocale.app_${VC}.apk" 2>/dev/null | grep -v test/data | head -1)
+            test -n "$UNSIGNED" || { echo "MISSING unsigned APK for versionCode ${VC} (${ABI})"; exit 1; }
+            # v1 (JAR) signing and forced realignment (build-tools >= 35) both rebuild the
+            # zip, breaking apksigcopier's byte-identical signature copy in fdroid publish.
+            apksigner sign \
+              --ks release.keystore \
+              --ks-key-alias "$ALIAS" \
+              --ks-pass "pass:$STORE_PASS" \
+              --key-pass "pass:$KEY_PASS" \
+              --v1-signing-enabled false \
+              --alignment-preserved \
+              --in "$UNSIGNED" --out "app-fdroid-${ABI}-release.apk"
+            apksigner verify --print-certs "app-fdroid-${ABI}-release.apk" | grep SHA-256
+          }
+          sign_abi 301 armeabi-v7a
+          sign_abi 302 arm64-v8a
+          sign_abi 304 x86_64
+          ls -la app-fdroid-*-release.apk
 
-      - name: Attach signed reference APK to GitHub Release
+      - name: Attach signed per-ABI reference APKs to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.event.inputs.tag || github.ref_name }}
-          files: app-fdroid-release.apk
+          files: |
+            app-fdroid-armeabi-v7a-release.apk
+            app-fdroid-arm64-v8a-release.apk
+            app-fdroid-x86_64-release.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
