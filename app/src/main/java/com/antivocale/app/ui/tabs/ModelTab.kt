@@ -1,7 +1,5 @@
 package com.antivocale.app.ui.tabs
 
-import android.Manifest
-import android.content.pm.PackageManager
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -32,7 +30,6 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.style.TextDecoration
 import com.antivocale.app.R
 import androidx.compose.ui.unit.dp
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.antivocale.app.data.ModelDownloader
@@ -80,10 +77,6 @@ private val ParakeetVariant = object : ModelVariant {
     override val supportedLanguageCodes = Language.PARAKEET
 }
 
-private enum class PendingAction {
-    PICK_FILE
-}
-
 private fun <T> filterVariants(
     entries: List<T>,
     languageCode: String?,
@@ -96,30 +89,6 @@ private fun <T> filterVariants(
 /** GGUF inference via llama-bro only ships native libs for arm64-v8a. */
 private fun supportsArm64(): Boolean =
     Build.SUPPORTED_ABIS?.any { it.equals("arm64-v8a", ignoreCase = true) } == true
-
-/**
- * Check if storage permission is needed
- */
-private fun needsStoragePermission(context: android.content.Context): Boolean {
-    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        ContextCompat.checkSelfPermission(context, Manifest.permission.READ_MEDIA_AUDIO) !=
-                PackageManager.PERMISSION_GRANTED
-    } else {
-        ContextCompat.checkSelfPermission(context, Manifest.permission.READ_EXTERNAL_STORAGE) !=
-                PackageManager.PERMISSION_GRANTED
-    }
-}
-
-/**
- * Get storage permissions to request
- */
-private fun getStoragePermissions(): Array<String> {
-    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        arrayOf(Manifest.permission.READ_MEDIA_AUDIO)
-    } else {
-        arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE)
-    }
-}
 
 
 
@@ -152,25 +121,6 @@ fun ModelTab(
     val tokenState by viewModel.tokenState.collectAsState()
     LaunchedEffect(tokenState) {
         viewModel.refreshTokenState()
-    }
-
-    // State for permission request type
-    var pendingAction by remember { mutableStateOf<PendingAction?>(null) }
-
-    // Permission launcher for storage
-    val permissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestMultiplePermissions()
-    ) { permissions ->
-        val allGranted = permissions.values.all { it }
-        when (pendingAction) {
-            PendingAction.PICK_FILE -> {
-                if (allGranted || !needsStoragePermission(context)) {
-                    viewModel.openFilePicker()
-                }
-            }
-            null -> {}
-        }
-        pendingAction = null
     }
 
     // File picker launcher
@@ -570,15 +520,12 @@ fun ModelTab(
             )
         }
 
-        // Select Model Button - secondary option for local files
+        // Select Model Button - secondary option for local files.
+        // SAF (OpenDocument) grants its own URI access, so no storage permission
+        // request is needed (TASK-301).
         OutlinedButton(
             onClick = {
-                if (needsStoragePermission(context)) {
-                    pendingAction = PendingAction.PICK_FILE
-                    permissionLauncher.launch(getStoragePermissions())
-                } else {
-                    viewModel.openFilePicker()
-                }
+                viewModel.openFilePicker()
             },
             modifier = Modifier.fillMaxWidth()
         ) {
