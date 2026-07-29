@@ -1,4 +1,4 @@
-Anti-Vocale trascrive i messaggi vocali da WhatsApp, Telegram, Signal e altre app di messaggistica direttamente sul tuo dispositivo Android. Tutto l'elaborazione avviene on-device — l'audio non lascia mai il telefono.
+Anti-Vocale trascrive i messaggi vocali da qualsiasi app di messaggistica direttamente sul tuo dispositivo Android. Tutta l'elaborazione avviene on-device, quindi l'audio non lascia mai il telefono.
 
 Nessuna connessione internet, nessun cloud, nessun account, nessun tracciamento. I modelli AI girano localmente tramite ONNX Runtime.
 

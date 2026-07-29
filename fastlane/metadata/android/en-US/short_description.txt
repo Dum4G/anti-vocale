@@ -1,1 +1,1 @@
-Offline voice-message transcription for WhatsApp, Telegram and more
+Offline voice-message transcription, fully on-device

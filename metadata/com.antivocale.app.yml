@@ -12,9 +12,9 @@ AutoName: Anti-Vocale
 Summary: Offline voice-message transcription
 
 Description: |
-  Anti-Vocale transcribes voice messages from WhatsApp, Telegram, Signal, and other
-  messaging apps directly on your Android device. All processing happens on-device —
-  your audio never leaves your phone.
+  Anti-Vocale transcribes voice messages from any messaging app directly on your
+  Android device. All processing happens on-device, so your audio never leaves
+  your phone.
 
   No network connection, no cloud, no accounts, no tracking. AI models run locally
   via ONNX Runtime.
