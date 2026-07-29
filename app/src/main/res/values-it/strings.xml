@@ -185,6 +185,8 @@
     <string name="confidence_low">Bassa attendibilità</string>
     <string name="no_audio_file">Nessun file audio ricevuto</string>
     <string name="failed_to_process_audio">Impossibile elaborare il file audio</string>
+    <string name="unsupported_audio_format">Sono supportati i messaggi vocali delle app di messaggistica; .%1$s non è un formato supportato.</string>
+    <string name="unknown_audio_format">Impossibile identificare il formato audio. Condividi l\'audio da un\'app di messaggistica.</string>
     <string name="transcription_started">Trascrizione avviata…</string>
     <string name="added_to_queue">Aggiunto alla coda…</string>
     <string name="processing_chunk">Elaborazione segmento %1$d/%2$d…</string>

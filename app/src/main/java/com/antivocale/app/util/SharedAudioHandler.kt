@@ -42,19 +42,41 @@ object SharedAudioHandler {
     private const val SHARED_AUDIO_DIR = "shared_audio"
 
     /**
+     * Result of copying a shared audio URI into app storage. Non-Success variants
+     * let the share flow show a specific, user-facing message instead of a generic
+     * "failed". The specific cause of each failure is logged by [copyToAppStorage]
+     * at Log.e, so these variants carry only what the caller needs for the toast.
+     */
+    sealed class CopyResult {
+        data class Success(val path: String) : CopyResult()
+        /** The shared content had no recognizable audio extension/MIME. */
+        object UnknownFormat : CopyResult()
+        /** Format was identified but is not in the accepted set. [extension] is the raw ext (no dot). */
+        data class UnsupportedFormat(val extension: String) : CopyResult()
+        /** The content could not be read (permission, I/O, empty stream). */
+        object Unreadable : CopyResult()
+    }
+
+    /**
      * Copies a content:// URI to app-private storage.
      *
      * @param context Application context
      * @param uri Content URI from share intent
      * @param mimeType Optional MIME type (if already known from intent)
-     * @return Absolute path to copied file, or null on error
+     * @return [CopyResult]; [CopyResult.Success] yields the local path, the others
+     *   describe the specific failure for a clear user-facing message.
      */
-    fun copyToAppStorage(context: Context, uri: Uri, mimeType: String? = null): String? {
+    fun copyToAppStorage(context: Context, uri: Uri, mimeType: String? = null): CopyResult {
         Log.d(TAG, "copyToAppStorage: URI=$uri, MIME=$mimeType")
 
         return try {
             // Use provided MIME type or resolve from ContentResolver
-            val resolvedMimeType = mimeType ?: context.contentResolver.getType(uri)
+            val resolvedMimeType = try {
+                mimeType ?: context.contentResolver.getType(uri)
+            } catch (e: Exception) {
+                Log.w(TAG, "Could not resolve MIME for URI: $uri", e)
+                null
+            }
             Log.d(TAG, "Resolved MIME: $resolvedMimeType")
 
             val extension = resolveExtension(uri, resolvedMimeType)
@@ -62,12 +84,12 @@ object SharedAudioHandler {
 
             if (extension == null) {
                 Log.e(TAG, "Could not determine file extension for URI: $uri")
-                return null
+                return CopyResult.UnknownFormat
             }
 
             if (!SUPPORTED_EXTENSIONS.contains(extension.lowercase())) {
                 Log.e(TAG, "Unsupported audio format: $extension")
-                return null
+                return CopyResult.UnsupportedFormat(extension)
             }
 
             // Create output directory if needed
@@ -79,25 +101,40 @@ object SharedAudioHandler {
             val fileName = "shared_${System.currentTimeMillis()}_${UUID.randomUUID().toString().take(8)}.$extension"
             val outputFile = File(outputDir, fileName)
 
-            // Copy content
-            context.contentResolver.openInputStream(uri)?.use { input ->
-                FileOutputStream(outputFile).use { output ->
-                    input.copyTo(output)
+            try {
+                // Copy content
+                context.contentResolver.openInputStream(uri)?.use { input ->
+                    FileOutputStream(outputFile).use { output ->
+                        input.copyTo(output)
+                    }
+                } ?: run {
+                    Log.e(TAG, "Could not open input stream for URI: $uri")
+                    outputFile.delete()
+                    return CopyResult.Unreadable
                 }
-            } ?: run {
-                Log.e(TAG, "Could not open input stream for URI: $uri")
-                return null
+            } catch (e: Exception) {
+                // Clean up any partially-written file so a flaky/revoked content provider
+                // can't leak partial files into shared_audio/ until the 24h cleanup runs.
+                outputFile.delete()
+                Log.e(TAG, "Error copying file from URI: $uri", e)
+                return CopyResult.Unreadable
+            }
+
+            if (outputFile.length() == 0L) {
+                outputFile.delete()
+                Log.e(TAG, "Shared content was empty for URI: $uri")
+                return CopyResult.Unreadable
             }
 
             Log.i(TAG, "Copied ${outputFile.length()} bytes to ${outputFile.absolutePath}")
-            outputFile.absolutePath
+            CopyResult.Success(outputFile.absolutePath)
 
         } catch (e: SecurityException) {
             Log.e(TAG, "Permission denied for URI: $uri", e)
-            null
+            CopyResult.Unreadable
         } catch (e: Exception) {
             Log.e(TAG, "Error copying file from URI: $uri", e)
-            null
+            CopyResult.Unreadable
         }
     }
 

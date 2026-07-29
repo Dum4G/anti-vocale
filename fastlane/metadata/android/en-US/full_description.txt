@@ -1,4 +1,6 @@
-Anti-Vocale transcribes voice messages from any messaging app directly on your Android device. All processing happens on-device, so your audio never leaves your phone.
+Anti-Vocale transcribes voice messages from popular messaging apps directly on your Android device. Share a voice note from your chat app and Anti-Vocale turns it into text on-device, so your audio never leaves your phone.
+
+Note: Anti-Vocale is built around voice messages shared from messaging apps. Audio shared from other sources (for example a voice recorder) may use formats the app can't read yet.
 
 No network connection, no cloud, no accounts, no tracking. AI models run locally via ONNX Runtime.
 

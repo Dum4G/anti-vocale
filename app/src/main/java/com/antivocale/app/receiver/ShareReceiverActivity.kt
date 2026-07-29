@@ -211,18 +211,40 @@ class ShareReceiverActivity : Activity() {
 
         // Copy file while Activity has URI permission
         // Content URI permissions are tied to this Activity instance
-        val localPath = SharedAudioHandler.copyToAppStorage(
+        val result = SharedAudioHandler.copyToAppStorage(
             applicationContext,
             uri,
             intent.type
         )
 
-        if (localPath == null) {
-            Log.e(TAG, "Failed to copy shared audio")
-            showErrorToast(getString(R.string.failed_to_process_audio))
-            cleanup()
-            finish()
-            return
+        val localPath: String = when (result) {
+            is SharedAudioHandler.CopyResult.Success -> result.path
+            is SharedAudioHandler.CopyResult.UnsupportedFormat -> {
+                Log.e(TAG, "Unsupported audio format: ${result.extension}")
+                // result.extension comes from the sender's URI/MIME, so guard against
+                // garbage before interpolating into the toast. A non-token extension
+                // falls back to the generic "unknown format" message.
+                if (result.extension.matches(Regex("^[a-zA-Z0-9]{1,8}$"))) {
+                    showErrorToast(getString(R.string.unsupported_audio_format, result.extension))
+                } else {
+                    showErrorToast(getString(R.string.unknown_audio_format))
+                }
+                cleanup()
+                finish()
+                return
+            }
+            SharedAudioHandler.CopyResult.UnknownFormat -> {
+                showErrorToast(getString(R.string.unknown_audio_format))
+                cleanup()
+                finish()
+                return
+            }
+            SharedAudioHandler.CopyResult.Unreadable -> {
+                showErrorToast(getString(R.string.failed_to_process_audio))
+                cleanup()
+                finish()
+                return
+            }
         }
 
         Log.i(TAG, "Copied to: $localPath")
