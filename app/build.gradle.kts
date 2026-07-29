@@ -24,8 +24,8 @@ android {
         applicationId = "com.antivocale.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 29
-        versionName = "1.8.3"
+        versionCode = 30
+        versionName = "1.8.4"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -86,6 +86,35 @@ android {
         }
     }
 
+    // Per-ABI APK splits: produces separate APKs for each architecture instead of one
+    // 259MB universal APK. Each ABI gets a distinct versionCode so F-Droid can serve
+    // the correct one per device.
+    splits {
+        abi {
+            isEnable = true
+            reset()
+            include("arm64-v8a", "armeabi-v7a", "x86_64")
+            isUniversalApk = false
+        }
+    }
+
+    // Map ABI to versionCode suffix: base * 10 + arch (1=armeabi-v7a, 2=arm64-v8a, 4=x86_64)
+    androidComponents.onVariants { variant ->
+        variant.outputs.forEach { output ->
+            val abi = output.filters.find { it.filterType == com.android.build.api.variant.FilterConfiguration.FilterType.ABI }
+            val abiCode = when (abi?.identifier) {
+                "armeabi-v7a" -> 1
+                "arm64-v8a" -> 2
+                "x86_64" -> 4
+                else -> 0
+            }
+            if (abiCode > 0) {
+                (output as com.android.build.api.variant.impl.VariantOutputImpl).versionCode
+                    .set((defaultConfig.versionCode ?: 30) * 10 + abiCode)
+            }
+        }
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_21
         targetCompatibility = JavaVersion.VERSION_21
@@ -101,6 +130,9 @@ android {
     }
 
     packaging {
+        jniLibs {
+            useLegacyPackaging = true
+        }
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }

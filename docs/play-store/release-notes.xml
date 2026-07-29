@@ -1,4 +1,8 @@
 <en-US>
+What's new in 1.8.4:
+
+• Per-architecture APK splits (smaller downloads) and compressed native libraries
+
 What's new in 1.8.3:
 
 • Maintenance: the sherpa-onnx speech engine is now built from source for F-Droid, and the bundled library is no longer shipped as a committed binary
@@ -145,6 +149,10 @@ What's new since 1.0.3:
 </en-US>
 
 <it-IT>
+Novità della versione 1.8.4:
+
+• APK divisi per architettura (download più piccoli) e librerie native compresse
+
 Novità della versione 1.8.3:
 
 • Manutenzione: il motore di riconoscimento vocale sherpa-onnx è ora compilato da sorgente per F-Droid e la libreria non viene più distribuita come binario precompilato
