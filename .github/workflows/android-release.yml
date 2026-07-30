@@ -200,7 +200,7 @@ jobs:
           apt-get update -qq && apt-get install -y --no-install-recommends wget build-essential cmake g++ zip unzip
           fdroid --version || true
 
-      - name: Strip per-build binary: references (this workflow PRODUCES the references, it does not verify against them)
+      - name: Strip per-build binary references (this workflow PRODUCES them, does not verify against them)
         run: |
           set -ex
           # fdroid build enforces reproducibility against any binary: URLs in the recipe.
