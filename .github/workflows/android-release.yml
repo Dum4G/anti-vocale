@@ -200,18 +200,23 @@ jobs:
           apt-get update -qq && apt-get install -y --no-install-recommends wget build-essential cmake g++ zip unzip
           fdroid --version || true
 
-      - name: Strip per-build binary references (this workflow PRODUCES them, does not verify against them)
+      - name: Strip per-build binary references (this job produces them, does not verify against them)
         run: |
           set -ex
-          # fdroid build enforces reproducibility against any binary: URLs in the recipe.
-          # This job's purpose is to BUILD and publish those references in the first place,
-          # so strip the binary: lines from our local recipe copy before building. Without this,
-          # a stale/wrong reference at the URL (e.g. after a version bump) makes fdroid build
-          # refuse to emit a new signed APK, a chicken-and-egg that blocks ever correcting it.
-          sed -i '/^    binary:$/d; /^      https:\/\/github.com.*\/app-fdroid-.*-release\.apk$/d' \
+          # fdroid build enforces reproducibility against any binary: URLs in the recipe. This
+          # job builds and publishes those references, so strip them from our local recipe copy
+          # first. Without this, a stale reference at the URL (e.g. after a version bump) makes
+          # fdroid refuse to emit a new signed APK, a chicken-and-egg that blocks correcting it.
+          #
+          # Each binary: entry is two lines: `    binary: ` (note trailing space) then a 6-space
+          # indented https://.../app-fdroid-<abi>-release.apk URL. Match the trailing space, or
+          # the binary: line survives and fdroid parses an empty binary reference.
+          sed -i '/^    binary: *$/d; /^      https:\/\/github.com.*\/app-fdroid-.*-release\.apk$/d' \
             /home/vagrant/metadata/com.antivocale.app.yml
           echo "=== recipe after stripping binary: ==="
-          grep -nE "binary:|versionCode:" /home/vagrant/metadata/com.antivocale.app.yml || true
+          grep -nE "binary:|versionCode:" /home/vagrant/metadata/com.antivocale.app.yml
+          # Hard fail if any binary: survived: the whole point of this step is to remove them.
+          ! grep -q '^    binary:' /home/vagrant/metadata/com.antivocale.app.yml
 
       - name: Build app via fdroid build (reproducible, from source)
         env:
@@ -255,12 +260,20 @@ jobs:
           KEY_PASS=$(grep '^keyPassword=' keystore.properties | cut -d= -f2-)
           ALIAS=$(grep '^keyAlias=' keystore.properties | cut -d= -f2-)
           # fdroidserver copies each built unsigned APK to unsigned/com.antivocale.app_<versionCode>.apk.
-          # versionCode -> ABI: base*10 + arch suffix. v1.8.5 (base 31): 311=armeabi-v7a, 312=arm64-v8a, 314=x86_64.
-          # Keep in sync with app/build.gradle.kts androidComponents.onVariants versionCode mapping.
-          sign_abi() {
-            local VC="$1" ABI="$2"
-            local UNSIGNED=$(find /home/vagrant /tmp -name "com.antivocale.app_${VC}.apk" 2>/dev/null | grep -v test/data | head -1)
-            test -n "$UNSIGNED" || { echo "MISSING unsigned APK for versionCode ${VC} (${ABI})"; exit 1; }
+          # Discover the versionCodes fdroid actually built and derive each ABI from the arch suffix
+          # (VC % 10): 1=armeabi-v7a, 2=arm64-v8a, 4=x86_64. This invariant lives in
+          # app/build.gradle.kts androidComponents.onVariants, so no versionCodes are hardcoded here
+          # and a version bump does not require editing this workflow.
+          sign_built() {
+            local UNSIGNED="$1" VC="$2"
+            local SUFFIX=$(( VC % 10 ))
+            local ABI
+            case "$SUFFIX" in
+              1) ABI=armeabi-v7a ;;
+              2) ABI=arm64-v8a ;;
+              4) ABI=x86_64 ;;
+              *) echo "Unrecognized arch suffix $SUFFIX on versionCode $VC"; exit 1 ;;
+            esac
             # v1 (JAR) signing and forced realignment (build-tools >= 35) both rebuild the
             # zip, breaking apksigcopier's byte-identical signature copy in fdroid publish.
             apksigner sign \
@@ -273,9 +286,14 @@ jobs:
               --in "$UNSIGNED" --out "app-fdroid-${ABI}-release.apk"
             apksigner verify --print-certs "app-fdroid-${ABI}-release.apk" | grep SHA-256
           }
-          sign_abi 311 armeabi-v7a
-          sign_abi 312 arm64-v8a
-          sign_abi 314 x86_64
+          # unsigned/ may be under /home/vagrant/unsigned or /tmp/unsigned depending on layout; find both.
+          SIGNED_ANY=0
+          for UNSIGNED in $(find /home/vagrant /tmp -name 'com.antivocale.app_*.apk' 2>/dev/null | grep -v test/data | sort -u); do
+            VC=$(echo "$UNSIGNED" | grep -oE 'com\.antivocale\.app_[0-9]+\.apk' | grep -oE '[0-9]+')
+            sign_built "$UNSIGNED" "$VC"
+            SIGNED_ANY=1
+          done
+          test "$SIGNED_ANY" -eq 1 || { echo "No built unsigned APKs found to sign"; exit 1; }
           ls -la app-fdroid-*-release.apk
 
       - name: Attach signed per-ABI reference APKs to GitHub Release
