@@ -200,6 +200,19 @@ jobs:
           apt-get update -qq && apt-get install -y --no-install-recommends wget build-essential cmake g++ zip unzip
           fdroid --version || true
 
+      - name: Strip per-build binary: references (this workflow PRODUCES the references, it does not verify against them)
+        run: |
+          set -ex
+          # fdroid build enforces reproducibility against any binary: URLs in the recipe.
+          # This job's purpose is to BUILD and publish those references in the first place,
+          # so strip the binary: lines from our local recipe copy before building. Without this,
+          # a stale/wrong reference at the URL (e.g. after a version bump) makes fdroid build
+          # refuse to emit a new signed APK, a chicken-and-egg that blocks ever correcting it.
+          sed -i '/^    binary:$/d; /^      https:\/\/github.com.*\/app-fdroid-.*-release\.apk$/d' \
+            /home/vagrant/metadata/com.antivocale.app.yml
+          echo "=== recipe after stripping binary: ==="
+          grep -nE "binary:|versionCode:" /home/vagrant/metadata/com.antivocale.app.yml || true
+
       - name: Build app via fdroid build (reproducible, from source)
         env:
           PYTHONPATH: /opt/fdroidserver:/opt/fdroidserver/examples
