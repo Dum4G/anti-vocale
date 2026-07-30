@@ -1,0 +1,2 @@
+Rimossi i permessi di storage inutilizzati (READ_MEDIA_AUDIO, READ_EXTERNAL_STORAGE): l'app non ne aveva mai bisogno, tutto l'accesso ai file avviene tramite il selettore di sistema
+Messaggio di errore più chiaro quando si condivide un formato audio non supportato

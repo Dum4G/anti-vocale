@@ -1,0 +1,2 @@
+Removed unused storage permissions (READ_MEDIA_AUDIO, READ_EXTERNAL_STORAGE): the app never needed them, all file access goes through the system file picker
+Clearer error message when an unsupported audio format is shared

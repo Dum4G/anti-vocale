@@ -1,4 +1,8 @@
 <en-US>
+What's new in 1.8.5:
+
+• Removed the unused storage permissions (READ_MEDIA_AUDIO, READ_EXTERNAL_STORAGE) - the app never needed them; all file access uses the system file picker. Clearer error message when an unsupported audio format is shared.
+
 What's new in 1.8.4:
 
 • Per-architecture APK splits (smaller downloads) and compressed native libraries
@@ -149,6 +153,10 @@ What's new since 1.0.3:
 </en-US>
 
 <it-IT>
+Novità della versione 1.8.5:
+
+• Rimossi i permessi di storage inutilizzati (READ_MEDIA_AUDIO, READ_EXTERNAL_STORAGE) - l'app non ne aveva mai bisogno; tutto l'accesso ai file avviene tramite il selettore di sistema. Messaggio di errore più chiaro quando si condivide un formato audio non supportato.
+
 Novità della versione 1.8.4:
 
 • APK divisi per architettura (download più piccoli) e librerie native compresse
