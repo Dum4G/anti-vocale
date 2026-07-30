@@ -212,11 +212,12 @@ jobs:
           export PATH="/opt/fdroidserver:/opt/android-sdk/cmdline-tools/latest/bin:/opt/android-sdk/platform-tools:$PATH"
           # Build as the vagrant user from /home/vagrant, mirroring F-Droid's --on-server layout,
           # so the srclib build lands at /home/vagrant/build/srclib/sherpa_onnx (matching path embedding).
-          # Per-ABI split: build all three versionCodes (301=armeabi-v7a, 302=arm64-v8a, 304=x86_64).
+          # Per-ABI split: build all versionCodes declared in the recipe (no hardcoding,
+          # so a version bump does not require editing this workflow).
           # Each compiles its own ABI's sherpa .so from source (~8-10 min each).
           chown -R vagrant:vagrant /home/vagrant
           sudo -u vagrant -E env PATH="$PATH" PYTHONPATH="$PYTHONPATH" HOME=/home/vagrant \
-            bash -c 'cd /home/vagrant && fdroid build com.antivocale.app:301 com.antivocale.app:302 com.antivocale.app:304 --no-tarball'
+            bash -c 'cd /home/vagrant && fdroid build com.antivocale.app --no-tarball'
       - name: Debug - locate built APK
         if: always()
         run: |
@@ -241,7 +242,8 @@ jobs:
           KEY_PASS=$(grep '^keyPassword=' keystore.properties | cut -d= -f2-)
           ALIAS=$(grep '^keyAlias=' keystore.properties | cut -d= -f2-)
           # fdroidserver copies each built unsigned APK to unsigned/com.antivocale.app_<versionCode>.apk.
-          # versionCode -> ABI: 301=armeabi-v7a, 302=arm64-v8a, 304=x86_64.
+          # versionCode -> ABI: base*10 + arch suffix. v1.8.5 (base 31): 311=armeabi-v7a, 312=arm64-v8a, 314=x86_64.
+          # Keep in sync with app/build.gradle.kts androidComponents.onVariants versionCode mapping.
           sign_abi() {
             local VC="$1" ABI="$2"
             local UNSIGNED=$(find /home/vagrant /tmp -name "com.antivocale.app_${VC}.apk" 2>/dev/null | grep -v test/data | head -1)
@@ -258,9 +260,9 @@ jobs:
               --in "$UNSIGNED" --out "app-fdroid-${ABI}-release.apk"
             apksigner verify --print-certs "app-fdroid-${ABI}-release.apk" | grep SHA-256
           }
-          sign_abi 301 armeabi-v7a
-          sign_abi 302 arm64-v8a
-          sign_abi 304 x86_64
+          sign_abi 311 armeabi-v7a
+          sign_abi 312 arm64-v8a
+          sign_abi 314 x86_64
           ls -la app-fdroid-*-release.apk
 
       - name: Attach signed per-ABI reference APKs to GitHub Release
