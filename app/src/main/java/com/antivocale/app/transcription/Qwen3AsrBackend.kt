@@ -59,13 +59,13 @@ class Qwen3AsrBackend @Inject constructor() : TranscriptionBackend {
 
         val dir = File(modelDirectory)
         if (!dir.exists() || !dir.isDirectory) {
-            return Result.failure(IllegalArgumentException("Model directory not found: $modelDirectory"))
+            return Result.failure(TranscriptionException.ModelLoadError("directory not found: $modelDirectory"))
         }
 
         val modelFiles = discoverModelFiles(dir)
         if (modelFiles == null) {
-            return Result.failure(IllegalArgumentException(
-                "Missing model files in $modelDirectory. Need conv_frontend.onnx, encoder.int8.onnx, decoder.int8.onnx, and tokenizer/ directory"
+            return Result.failure(TranscriptionException.ModelLoadError(
+                "missing files in $modelDirectory: need conv_frontend.onnx, encoder.int8.onnx, decoder.int8.onnx, and tokenizer/ directory"
             ))
         }
 
@@ -110,17 +110,17 @@ class Qwen3AsrBackend @Inject constructor() : TranscriptionBackend {
 
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to initialize Qwen3-ASR", e)
-                Result.failure(e)
+                Result.failure(TranscriptionException.ModelLoadError(e.message ?: "unknown", e))
             } catch (e: Error) {
                 Log.e(TAG, "Native error initializing Qwen3-ASR", e)
-                Result.failure(IllegalStateException("Native error: ${e.message}"))
+                Result.failure(TranscriptionException.NativeError(e.message ?: "unknown", e))
             }
         }
     }
 
     override suspend fun transcribeAudio(samples: FloatArray, sampleRate: Int, prompt: String): Result<TranscriptionResult> {
         val rec = recognizer
-            ?: return Result.failure(IllegalStateException("Backend not initialized"))
+            ?: return Result.failure(TranscriptionException.NotInitialized())
 
         return withContext(Dispatchers.IO) {
             try {
@@ -139,7 +139,7 @@ class Qwen3AsrBackend @Inject constructor() : TranscriptionBackend {
                 Log.d(TAG, "Transcription complete: '${transcription.take(100)}...' (${transcription.length} chars)")
 
                 if (transcription.isBlank()) {
-                    Result.failure(IllegalStateException("No transcription produced"))
+                    Result.failure(TranscriptionException.NoTranscriptionProduced())
                 } else {
                     val confidence = TranscriptionResult.computeConfidence(transcription, samples.size, sampleRate)
                     Result.success(TranscriptionResult(
@@ -151,7 +151,7 @@ class Qwen3AsrBackend @Inject constructor() : TranscriptionBackend {
 
             } catch (e: Exception) {
                 Log.e(TAG, "Transcription failed", e)
-                Result.failure(e)
+                Result.failure(TranscriptionException.NativeError(e.message ?: "unknown", e))
             }
         }
     }

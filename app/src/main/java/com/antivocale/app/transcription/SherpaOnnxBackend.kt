@@ -69,14 +69,14 @@ class SherpaOnnxBackend @Inject constructor() : TranscriptionBackend {
         // Validate model directory exists
         val dir = File(modelDirectory)
         if (!dir.exists() || !dir.isDirectory) {
-            return Result.failure(IllegalArgumentException("Model directory not found: $modelDirectory"))
+            return Result.failure(TranscriptionException.ModelLoadError("directory not found: $modelDirectory"))
         }
 
         // Validate required model files exist
         val missingFiles = REQUIRED_MODEL_FILES.filter { !File(dir, it).exists() }
         if (missingFiles.isNotEmpty()) {
-            return Result.failure(IllegalArgumentException(
-                "Missing model files in $modelDirectory: ${missingFiles.joinToString()}"
+            return Result.failure(TranscriptionException.ModelLoadError(
+                "missing files in $modelDirectory: ${missingFiles.joinToString()}"
             ))
         }
 
@@ -118,18 +118,18 @@ class SherpaOnnxBackend @Inject constructor() : TranscriptionBackend {
 
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to initialize sherpa-onnx", e)
-                Result.failure(e)
+                Result.failure(TranscriptionException.ModelLoadError(e.message ?: "unknown", e))
             } catch (e: Error) {
                 // Catch native errors (UnsatisfiedLinkError, etc.)
                 Log.e(TAG, "Native error initializing sherpa-onnx", e)
-                Result.failure(IllegalStateException("Native error: ${e.message}"))
+                Result.failure(TranscriptionException.NativeError(e.message ?: "unknown", e))
             }
         }
     }
 
     override suspend fun transcribeAudio(samples: FloatArray, sampleRate: Int, prompt: String): Result<TranscriptionResult> {
         val rec = recognizer
-            ?: return Result.failure(IllegalStateException("Backend not initialized"))
+            ?: return Result.failure(TranscriptionException.NotInitialized())
 
         return withContext(Dispatchers.IO) {
             try {
@@ -158,7 +158,7 @@ class SherpaOnnxBackend @Inject constructor() : TranscriptionBackend {
                 Log.d(TAG, "Transcription complete: '${transcription.take(100)}...' (${transcription.length} chars)")
 
                 if (transcription.isBlank()) {
-                    Result.failure(IllegalStateException("No transcription produced"))
+                    Result.failure(TranscriptionException.NoTranscriptionProduced())
                 } else {
                     val confidence = TranscriptionResult.computeConfidence(transcription, padded.size, sampleRate)
                     Result.success(TranscriptionResult(
@@ -170,7 +170,7 @@ class SherpaOnnxBackend @Inject constructor() : TranscriptionBackend {
 
             } catch (e: Exception) {
                 Log.e(TAG, "Transcription failed", e)
-                Result.failure(e)
+                Result.failure(TranscriptionException.NativeError(e.message ?: "unknown", e))
             }
         }
     }

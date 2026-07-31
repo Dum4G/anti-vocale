@@ -130,6 +130,33 @@ sealed class BackendConfig {
 }
 
 /**
+ * Typed exceptions backends throw inside Result.failure, so the orchestrator
+ * and UI can distinguish failure causes and show specific, user-facing messages
+ * instead of a generic "transcription failed".
+ *
+ * Backends should prefer these over raw exceptions where the cause is identifiable.
+ * The [cause] chain is always preserved for logcat diagnostics.
+ */
+sealed class TranscriptionException(message: String, cause: Throwable? = null) :
+    Exception(message, cause) {
+    /** The model file is missing, corrupt, truncated, or the wrong format for this backend. */
+    class ModelLoadError(detail: String, cause: Throwable? = null) :
+        TranscriptionException("Model load failed: $detail", cause)
+
+    /** The model loaded but a native/decoding error occurred during transcription. */
+    class NativeError(detail: String, cause: Throwable? = null) :
+        TranscriptionException("Native inference error: $detail", cause)
+
+    /** The backend was not initialized (no model loaded) when transcription was requested. */
+    class NotInitialized :
+        TranscriptionException("Backend not initialized (no model loaded)")
+
+    /** Audio could be decoded but produced no transcription text. */
+    class NoTranscriptionProduced :
+        TranscriptionException("No transcription produced")
+}
+
+/**
  * Result from audio transcription containing the text and optional metadata.
  */
 data class TranscriptionResult(

@@ -70,11 +70,11 @@ class NemotronStreamingBackend @Inject constructor() : TranscriptionBackend {
         // (encoder.onnx, encoder.onnx.data, decoder.onnx, joiner.onnx, tokens.txt).
         val dir = File(modelDirectory)
         if (!dir.exists() || !dir.isDirectory) {
-            return Result.failure(IllegalArgumentException("Model directory not found: $modelDirectory"))
+            return Result.failure(TranscriptionException.ModelLoadError("directory not found: $modelDirectory"))
         }
         if (NemotronModelManager.validateModelDirectory(dir) == null) {
-            return Result.failure(IllegalArgumentException(
-                "Missing or incomplete Nemotron model files in $modelDirectory. " +
+            return Result.failure(TranscriptionException.ModelLoadError(
+                "missing or incomplete Nemotron model files in $modelDirectory. " +
                     "Required: ${NemotronModelManager.REQUIRED_FILES.joinToString()}"
             ))
         }
@@ -121,11 +121,11 @@ class NemotronStreamingBackend @Inject constructor() : TranscriptionBackend {
 
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to initialize Nemotron streaming backend", e)
-                Result.failure(e)
+                Result.failure(TranscriptionException.ModelLoadError(e.message ?: "unknown", e))
             } catch (e: Error) {
                 // Catch native errors (UnsatisfiedLinkError, etc.)
                 Log.e(TAG, "Native error initializing Nemotron streaming backend", e)
-                Result.failure(IllegalStateException("Native error: ${e.message}"))
+                Result.failure(TranscriptionException.NativeError(e.message ?: "unknown", e))
             }
         }
     }
@@ -140,7 +140,7 @@ class NemotronStreamingBackend @Inject constructor() : TranscriptionBackend {
         onPartial: suspend (String) -> Unit
     ): Result<TranscriptionResult> {
         val rec = recognizer
-            ?: return Result.failure(IllegalStateException("Backend not initialized"))
+            ?: return Result.failure(TranscriptionException.NotInitialized())
 
         return withContext(Dispatchers.IO) {
             var stream: OnlineStream? = null
@@ -197,7 +197,7 @@ class NemotronStreamingBackend @Inject constructor() : TranscriptionBackend {
                 Log.d(TAG, "Transcription complete: '${transcription.take(100)}...' (${transcription.length} chars)")
 
                 if (transcription.isBlank()) {
-                    Result.failure(IllegalStateException("No transcription produced"))
+                    Result.failure(TranscriptionException.NoTranscriptionProduced())
                 } else {
                     // OnlineRecognizerResult exposes no confidence/language fields,
                     // so derive a heuristic confidence and leave detectedLanguage null.
@@ -211,7 +211,7 @@ class NemotronStreamingBackend @Inject constructor() : TranscriptionBackend {
 
             } catch (e: Exception) {
                 Log.e(TAG, "Transcription failed", e)
-                Result.failure(e)
+                Result.failure(TranscriptionException.NativeError(e.message ?: "unknown", e))
             } finally {
                 // Release the native OnlineStream on EVERY path (happy, exception, blank-result)
                 // so the JNI handle is freed deterministically, not left to GC finalization.

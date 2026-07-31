@@ -3,6 +3,7 @@ package com.antivocale.app.manager
 import android.content.Context
 import android.util.Log
 import com.antivocale.app.data.PreferencesManager
+import com.antivocale.app.transcription.TranscriptionException
 import com.google.ai.edge.litertlm.*
 import com.antivocale.app.util.CrashReporter
 import kotlinx.coroutines.*
@@ -160,7 +161,7 @@ open class LlmManager @Inject constructor() {
         // Validate file exists
         val modelFile = File(path)
         if (!modelFile.exists()) {
-            return Result.failure(IllegalArgumentException("Model file not found: $path"))
+            return Result.failure(TranscriptionException.ModelLoadError("file not found: $path"))
         }
 
         appContext = context.applicationContext
@@ -259,7 +260,7 @@ open class LlmManager @Inject constructor() {
 
         } catch (e: Exception) {
             Log.e(TAG, "MediaPipe initialization also failed", e)
-            Result.failure(e)
+            Result.failure(TranscriptionException.ModelLoadError(e.message ?: "unknown", e))
         }
     }
 

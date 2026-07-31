@@ -54,20 +54,20 @@ class TranscriptionOrchestratorTest : TranscriptionOrchestratorTestBase() {
 
     @Test
     fun `isNoModelConfiguredError detects model config errors`() {
-        val error = IllegalStateException("No LLM model configured")
-        assertTrue(orchestrator.isNoModelConfiguredError(error))
+        val error = TranscriptionException.NotInitialized()
+        assertTrue(TranscriptionOrchestrator.isNoModelConfiguredError(error))
     }
 
     @Test
     fun `isNoModelConfiguredError rejects non-config errors`() {
         val error = IllegalStateException("Audio preprocessing failed")
-        assertFalse(orchestrator.isNoModelConfiguredError(error))
+        assertFalse(TranscriptionOrchestrator.isNoModelConfiguredError(error))
     }
 
     @Test
     fun `isNoModelConfiguredError handles null message`() {
         val error = RuntimeException(null as String?)
-        assertFalse(orchestrator.isNoModelConfiguredError(error))
+        assertFalse(TranscriptionOrchestrator.isNoModelConfiguredError(error))
     }
 
     @Test

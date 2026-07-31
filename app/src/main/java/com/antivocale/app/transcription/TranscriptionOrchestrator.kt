@@ -41,6 +41,28 @@ class TranscriptionOrchestrator @Inject constructor(
         private const val TAG = "TranscriptionOrchestrator"
         private const val MAX_CONCURRENT_CHUNKS = 2
         private const val PARTIAL_SAVE_INTERVAL_MS = 5000L
+
+        internal fun isNoModelConfiguredError(error: Throwable): Boolean {
+            return error is TranscriptionException.NotInitialized
+        }
+
+        /**
+         * Maps a [TranscriptionException] to a user-facing localized message via the given [context].
+         * Non-TranscriptionException errors fall back to the generic [R.string.transcription_failed].
+         */
+        internal fun userFacingErrorMessage(context: Context, error: Throwable): String {
+            return when (error) {
+                is TranscriptionException.ModelLoadError ->
+                    context.getString(R.string.error_model_load)
+                is TranscriptionException.NativeError ->
+                    context.getString(R.string.error_native)
+                is TranscriptionException.NotInitialized ->
+                    context.getString(R.string.error_not_initialized)
+                is TranscriptionException.NoTranscriptionProduced ->
+                    context.getString(R.string.transcription_failed)
+                else -> context.getString(R.string.transcription_failed)
+            }
+        }
     }
 
     @Volatile
@@ -118,11 +140,12 @@ class TranscriptionOrchestrator @Inject constructor(
             val loadResult = ensureBackendLoaded(context, backendOverride)
             if (loadResult.isFailure) {
                 val error = loadResult.exceptionOrNull()!!
-                val errorMsg = "Failed to load backend: ${error.message}"
+                val userMsg = userFacingErrorMessage(context, error)
+                val logMsg = "Failed to load backend: ${error.message}"
                 val duration = System.currentTimeMillis() - startTime
                 val isNoModel = isNoModelConfiguredError(error)
-                logError(taskId, errorMsg, duration)
-                listener.onError(taskId, "BACKEND_LOAD_FAILED", errorMsg, isShareRequest, isNoModel, duration)
+                logError(taskId, logMsg, duration)
+                listener.onError(taskId, "BACKEND_LOAD_FAILED", userMsg, isShareRequest, isNoModel, duration)
                 return Result.failure(error)
             }
 
@@ -160,10 +183,11 @@ class TranscriptionOrchestrator @Inject constructor(
                     )
                 },
                 onFailure = { error ->
-                    val errorMsg = error.message ?: "Unknown error"
-                    logError(taskId, errorMsg, duration)
+                    val logMsg = error.message ?: "Unknown error"
+                    val userMsg = userFacingErrorMessage(context, error)
+                    logError(taskId, logMsg, duration)
                     val isNoModel = isNoModelConfiguredError(error)
-                    listener.onError(taskId, "INFERENCE_ERROR", errorMsg, isShareRequest, isNoModel, duration)
+                    listener.onError(taskId, "INFERENCE_ERROR", userMsg, isShareRequest, isNoModel, duration)
                 }
             )
 
@@ -301,7 +325,7 @@ class TranscriptionOrchestrator @Inject constructor(
     private suspend fun loadLlmBackend(context: Context): Result<Unit> {
         val modelPath = preferencesManager.modelPath.first()
         if (modelPath.isNullOrBlank()) {
-            return Result.failure(IllegalStateException("No LLM model configured. Download or select a model in Settings."))
+            return Result.failure(TranscriptionException.NotInitialized())
         }
         return backendManager.setActiveBackend(
             backendId = PreferencesManager.DEFAULT_TRANSCRIPTION_BACKEND,
@@ -319,7 +343,7 @@ class TranscriptionOrchestrator @Inject constructor(
     ): Result<Unit> {
         val modelPath = modelPathFlow.first()
         if (modelPath.isNullOrBlank()) {
-            return Result.failure(IllegalStateException("No $label model configured. Download or select a model in Settings."))
+            return Result.failure(TranscriptionException.NotInitialized())
         }
         return configureSherpaBackend(backendId, modelPath, label, language, context)
     }
@@ -360,7 +384,7 @@ class TranscriptionOrchestrator @Inject constructor(
         // Parakeet uses auto-fallback: prefer SmoothQuant, else Stock int8, else saved pref.
         val savedPath = preferencesManager.parakeetModelPath.first()
         val resolvedPath = ParakeetModelManager.resolveActiveModelPath(context, fallbackPath = savedPath)
-            ?: return Result.failure(IllegalStateException("No Parakeet model configured. Download or select a model in Settings."))
+            ?: return Result.failure(TranscriptionException.NotInitialized())
         // Persist the resolved path so the rest of the app (UI, benchmark) sees a valid path.
         if (resolvedPath != savedPath) {
             preferencesManager.saveParakeetModelPath(resolvedPath)
@@ -393,7 +417,7 @@ class TranscriptionOrchestrator @Inject constructor(
     private suspend fun loadNemotronBackend(context: Context): Result<Unit> {
         val modelPath = preferencesManager.nemotronModelPath.first()
         if (modelPath.isNullOrBlank()) {
-            return Result.failure(IllegalStateException("No Nemotron model configured. Download or select a model in Settings."))
+            return Result.failure(TranscriptionException.NotInitialized())
         }
         return configureSherpaBackend(
             backendId = NemotronStreamingBackend.BACKEND_ID,
@@ -564,7 +588,7 @@ class TranscriptionOrchestrator @Inject constructor(
                         recordCalibration(backend, audioDurationSeconds, chunkProcessingStartTime)
                         Result.success(tr.copy(text = tr.text.trim()))
                     } else {
-                        Result.failure(IllegalStateException("No transcription produced"))
+                        Result.failure(TranscriptionException.NoTranscriptionProduced())
                     }
                 }
                 else -> Result.failure(result.exceptionOrNull()!!)
@@ -806,7 +830,7 @@ class TranscriptionOrchestrator @Inject constructor(
         recordCalibration(backend, audioDurationSeconds, chunkProcessingStartTime)
 
         return if (combinedResult.isBlank()) {
-            Result.failure(IllegalStateException("No transcription produced"))
+            Result.failure(TranscriptionException.NoTranscriptionProduced())
         } else {
             if (failedChunks > 0) {
                 Log.w(TAG, "Parallel completed with $failedChunks/$chunkCount failed chunks")
@@ -958,7 +982,7 @@ class TranscriptionOrchestrator @Inject constructor(
         Log.i(TAG, "PERF: pipeline total ${totalMs}ms for ${totalDurationSeconds}s audio, ${expectedChunkCount} chunks, backend=${backend.id}, ttft_decode=${firstChunkDecodeMs}ms")
 
         return if (combinedResult.isBlank()) {
-            Result.failure(IllegalStateException("No transcription produced"))
+            Result.failure(TranscriptionException.NoTranscriptionProduced())
         } else {
             if (failedChunks > 0) {
                 Log.w(TAG, "Pipeline completed with $failedChunks/$expectedChunkCount failed chunks")
@@ -1269,11 +1293,6 @@ class TranscriptionOrchestrator @Inject constructor(
         if (current == null) return next
         if (next == null) return current
         return minOf(current, next)
-    }
-
-    internal fun isNoModelConfiguredError(error: Throwable): Boolean {
-        val msg = error.message ?: return false
-        return msg.contains("No ") && msg.contains("model configured")
     }
 
     internal fun queueAwareAudioLabel(queuePosition: Int, queueTotal: Int): String =
