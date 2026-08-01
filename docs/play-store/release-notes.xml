@@ -1,4 +1,11 @@
 <en-US>
+What's new in 1.9.0:
+
+• Typed error handling: transcription failures now show specific messages (corrupt model, internal error, no model loaded) instead of a generic "transcription failed"
+• Crash prevention: invalid model files are detected before loading, preventing silent app crashes
+• Crash recovery: if a native crash occurs, the app guides you to re-download the model on next launch
+• Default backend is now Parakeet TDT (was Gemma), matching the most-downloaded model
+
 What's new in 1.8.5:
 
 • Removed the unused storage permissions (READ_MEDIA_AUDIO, READ_EXTERNAL_STORAGE) - the app never needed them; all file access uses the system file picker. Clearer error message when an unsupported audio format is shared.
@@ -153,6 +160,13 @@ What's new since 1.0.3:
 </en-US>
 
 <it-IT>
+Novità della versione 1.9.0:
+
+• Gestione errori tipizzata: gli errori di trascrizione ora mostrano messaggi specifici (modello danneggiato, errore interno, nessun modello caricato) invece del generico "trascrizione fallita"
+• Prevenzione crash: i file modello non validi vengono rilevati prima del caricamento, prevenendo chiusure anomale silenziose dell'app
+• Ripristino da crash: in caso di crash nativo, l'app guida al re-download del modello al prossimo avvio
+• Il backend predefinito è ora Parakeet TDT (prera Gemma), in linea con il modello più scaricato
+
 Novità della versione 1.8.5:
 
 • Rimossi i permessi di storage inutilizzati (READ_MEDIA_AUDIO, READ_EXTERNAL_STORAGE) - l'app non ne aveva mai bisogno; tutto l'accesso ai file avviene tramite il selettore di sistema. Messaggio di errore più chiaro quando si condivide un formato audio non supportato.
