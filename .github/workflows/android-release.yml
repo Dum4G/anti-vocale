@@ -36,6 +36,11 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          # Build from the dispatched tag's commit, not whatever main HEAD happens
+          # to be at run time. Without this, the -unsigned APKs could be built
+          # from a different commit than the release they are attached to.
+          ref: ${{ github.event.inputs.tag || github.ref }}
 
       - name: Set up JDK 21
         uses: actions/setup-java@v4
@@ -199,6 +204,44 @@ jobs:
           # The recipe's sudo: deps (wget etc.) don't auto-install when running as root; install them.
           apt-get update -qq && apt-get install -y --no-install-recommends wget build-essential cmake g++ zip unzip
           fdroid --version || true
+
+      - name: Verify recipe commit matches the release tag (prevent stale-recipe reference)
+        env:
+          # Resolve the tag the same way the release-attach step does (inputs.tag,
+          # else the ref the run was triggered on).
+          RELEASE_TAG: ${{ github.event.inputs.tag || github.ref_name }}
+        run: |
+          set -eu
+          # GUARD: this job builds the reference APKs that F-Droid will verify
+          # reproducibility against. It clones the fdroid-data fork and builds
+          # whatever `commit:` the recipe points to. If the recipe on the fork is
+          # stale (e.g. still pointing at the previous version's commit because the
+          # recipe push landed after this job started), the reference gets built
+          # from the WRONG commit. F-Droid then clones the updated recipe, builds
+          # the right commit, and the reproducibility check fails on a whole-APK
+          # diff. Fail fast here instead of silently shipping a wrong reference.
+          RECIPE=/home/vagrant/metadata/com.antivocale.app.yml
+          RECIPE_COMMIT=$(awk '/^[[:space:]]+commit:/{print $2; exit}' "$RECIPE")
+          if [ -z "$RECIPE_COMMIT" ]; then
+            echo "ERROR: could not read commit: from $RECIPE"; exit 1
+          fi
+          # Resolve the commit the target tag actually points to (^{} peels an
+          # annotated tag to its target commit).
+          TAG_COMMIT=$(git ls-remote https://github.com/RisorseArtificiali/anti-vocale \
+            "refs/tags/${RELEASE_TAG}^{}" 2>/dev/null | awk '{print $1}')
+          if [ -z "$TAG_COMMIT" ]; then
+            echo "ERROR: tag ${RELEASE_TAG} not found on the app repo, or it is a lightweight tag"
+            echo "       (this guard needs an annotated tag so ^{} resolves to its commit)"
+            exit 1
+          fi
+          echo "recipe commit : $RECIPE_COMMIT"
+          echo "tag ${RELEASE_TAG} -> $TAG_COMMIT"
+          if [ "$RECIPE_COMMIT" != "$TAG_COMMIT" ]; then
+            echo "ERROR: recipe commit ($RECIPE_COMMIT) != ${RELEASE_TAG} commit ($TAG_COMMIT)."
+            echo "       Push the updated recipe to the fork BEFORE building references."
+            exit 1
+          fi
+          echo "OK: recipe commit matches ${RELEASE_TAG}."
 
       - name: Strip per-build binary references (this job produces them, does not verify against them)
         run: |
