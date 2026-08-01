@@ -69,16 +69,15 @@ class Qwen3AsrBackend @Inject constructor() : TranscriptionBackend {
             ))
         }
 
-        // Pre-native validation: check the encoder ONNX has required sherpa-onnx metadata.
-        // sherpa-onnx calls exit(255) (native process death) when vocab_size is missing,
-        // which kills the app silently with no catchable exception. We scan the file for
-        // the metadata key as a UTF-8 string (ONNX stores metadata_props as protobuf
-        // key-value pairs in the file header) to catch this before the native call.
+        // Pre-native validation: sherpa-onnx calls exit(255) (native process death) when
+        // vocab_size is missing, killing the app silently with no catchable exception.
+        // We scan the encoder file tail for the metadata key before the native call.
         val encoderFile = File(modelFiles.encoderPath)
-        if (!SherpaOnnxBackend.hasOnnxMetadata(encoderFile, "vocab_size")) {
-            Log.e(TAG, "Encoder missing required ONNX metadata 'vocab_size'")
+        val missingMeta = SherpaOnnxBackend.missingOnnxMetadata(encoderFile, listOf("vocab_size"))
+        if (missingMeta.isNotEmpty()) {
+            Log.e(TAG, "Encoder missing required ONNX metadata: $missingMeta")
             return Result.failure(TranscriptionException.ModelLoadError(
-                "model file is missing required metadata (vocab_size). Try re-downloading."
+                "model file is missing required metadata ($missingMeta). Try re-downloading."
             ))
         }
 

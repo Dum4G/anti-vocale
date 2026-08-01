@@ -42,34 +42,44 @@ class SherpaOnnxBackend @Inject constructor() : TranscriptionBackend {
         )
 
         private const val ONNX_METADATA_SCAN_LIMIT: Long = 2L * 1024 * 1024
-        private const val ONNX_SCAN_CHUNK_SIZE: Int = 64 * 1024
 
         /**
-         * Lightweight check for an ONNX metadata key without loading the model in onnxruntime.
-         * ONNX appends metadata_props (protobuf key-value pairs) near the END of the file for
-         * large models. We scan the last [maxScanBytes] of the file for the key as a UTF-8 string.
+         * Returns the metadata keys from [requiredKeys] that are NOT present in [file].
+         *
+         * ONNX stores metadata_props (protobuf key-value pairs); for large models they land near
+         * the END of the file, so we scan the last [maxScanBytes] once and test every key against
+         * the same buffer. Empty/missing file returns every key as missing.
          *
          * This prevents native crashes: sherpa-onnx calls exit(255) when required metadata
          * (e.g. vocab_size) is missing, killing the process with no catchable exception.
          */
-        fun hasOnnxMetadata(file: File, key: String, maxScanBytes: Long = ONNX_METADATA_SCAN_LIMIT): Boolean {
-            if (!file.exists() || file.length() == 0L) return false
-            val keyBytes = key.toByteArray(Charsets.UTF_8)
-            if (keyBytes.isEmpty()) return false
+        fun missingOnnxMetadata(
+            file: File,
+            requiredKeys: List<String>,
+            maxScanBytes: Long = ONNX_METADATA_SCAN_LIMIT
+        ): List<String> {
+            if (!file.exists() || file.length() == 0L) return requiredKeys
             val fileSize = file.length()
             val scanStart = maxOf(0L, fileSize - maxScanBytes)
-            val scanLen = (fileSize - scanStart).toInt()
-            val data = ByteArray(scanLen)
-            java.io.RandomAccessFile(file, "r").use { raf ->
-                raf.seek(scanStart)
-                raf.readFully(data)
+            val data = ByteArray((fileSize - scanStart).toInt())
+            try {
+                java.io.RandomAccessFile(file, "r").use { raf ->
+                    raf.seek(scanStart)
+                    raf.readFully(data)
+                }
+            } catch (e: java.io.IOException) {
+                // Treat unreadable as "all metadata missing" so the caller shows a clear
+                // ModelLoadError instead of letting an IOException propagate uncaught.
+                return requiredKeys
             }
-            return containsSubsequence(data, keyBytes)
+            return requiredKeys.filter { key ->
+                val needle = key.toByteArray(Charsets.UTF_8)
+                needle.isNotEmpty() && !containsSubsequence(data, needle)
+            }
         }
 
-        /** Returns true if [haystack] contains [needle] as a contiguous subsequence. */
+        /** Returns true if [haystack] contains [needle] as a contiguous byte subsequence. */
         private fun containsSubsequence(haystack: ByteArray, needle: ByteArray): Boolean {
-            if (needle.isEmpty()) return true
             val lastStart = haystack.size - needle.size
             if (lastStart < 0) return false
             for (i in 0..lastStart) {
@@ -119,22 +129,22 @@ class SherpaOnnxBackend @Inject constructor() : TranscriptionBackend {
             ))
         }
 
-        // Pre-native validation: check the encoder ONNX has required sherpa-onnx metadata.
-        // sherpa-onnx calls exit(255) (native process death) when metadata like vocab_size
-        // or subsampling_factor is missing, killing the app silently with no catchable
-        // exception. We check for multiple critical keys (any missing = reject).
-        val encoderFile = File(dir, "encoder.int8.onnx")
-        val requiredMetadataKeys = listOf("vocab_size", "subsampling", "model_type")
-        val missingMeta = requiredMetadataKeys.filter { !hasOnnxMetadata(encoderFile, it) }
-        if (missingMeta.isNotEmpty()) {
-            Log.e(TAG, "Encoder missing required ONNX metadata: $missingMeta")
-            return Result.failure(TranscriptionException.ModelLoadError(
-                "model file is missing required metadata ($missingMeta). " +
-                    "The model may be corrupt or an incompatible export. Try re-downloading it."
-            ))
-        }
-
         return withContext(Dispatchers.IO) {
+            // Pre-native validation (inside IO dispatcher): sherpa-onnx calls exit(255) when the
+            // encoder is missing critical metadata, killing the app silently. Scan the file tail.
+            val encoderFile = File(dir, "encoder.int8.onnx")
+            val missingMeta = missingOnnxMetadata(
+                encoderFile,
+                listOf("vocab_size", "subsampling", "model_type")
+            )
+            if (missingMeta.isNotEmpty()) {
+                Log.e(TAG, "Encoder missing required ONNX metadata: $missingMeta")
+                return@withContext Result.failure(TranscriptionException.ModelLoadError(
+                    "model file is missing required metadata ($missingMeta). " +
+                        "The model may be corrupt or an incompatible export. Try re-downloading it."
+                ))
+            }
+
             try {
                 Log.i(TAG, "Creating OfflineRecognizer config...")
 

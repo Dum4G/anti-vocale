@@ -73,8 +73,8 @@ class WhisperBackend @Inject constructor() : TranscriptionBackend {
         }
 
         // Note: Whisper models do not include 'vocab_size' ONNX metadata (sherpa reads it
-        // from the Whisper model config differently), so the hasOnnxMetadata pre-check used
-        // by Parakeet/Qwen3/Nemotron does not apply here. If sherpa adds a metadata
+        // from the Whisper model config differently), so the missingOnnxMetadata pre-check
+        // used by Parakeet/Qwen3/Nemotron does not apply here. If sherpa adds a metadata
         // requirement for Whisper in the future, add the check here.
 
         return withContext(Dispatchers.IO) {
