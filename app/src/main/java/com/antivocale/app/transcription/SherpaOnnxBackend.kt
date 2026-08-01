@@ -2,6 +2,7 @@ package com.antivocale.app.transcription
 
 import android.content.Context
 import android.util.Log
+import androidx.annotation.VisibleForTesting
 import com.k2fsa.sherpa.onnx.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -72,6 +73,16 @@ class SherpaOnnxBackend @Inject constructor() : TranscriptionBackend {
                 // ModelLoadError instead of letting an IOException propagate uncaught.
                 return requiredKeys
             }
+            return missingOnnxMetadataKeys(data, requiredKeys)
+        }
+
+        /**
+         * Returns the metadata keys from [requiredKeys] whose UTF-8 bytes do not appear as a
+         * contiguous subsequence in [data]. Pure (no I/O) so it can be unit-tested directly.
+         */
+        @JvmStatic
+        @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+        internal fun missingOnnxMetadataKeys(data: ByteArray, requiredKeys: List<String>): List<String> {
             return requiredKeys.filter { key ->
                 val needle = key.toByteArray(Charsets.UTF_8)
                 needle.isNotEmpty() && !containsSubsequence(data, needle)
@@ -79,7 +90,8 @@ class SherpaOnnxBackend @Inject constructor() : TranscriptionBackend {
         }
 
         /** Returns true if [haystack] contains [needle] as a contiguous byte subsequence. */
-        private fun containsSubsequence(haystack: ByteArray, needle: ByteArray): Boolean {
+        @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+        internal fun containsSubsequence(haystack: ByteArray, needle: ByteArray): Boolean {
             val lastStart = haystack.size - needle.size
             if (lastStart < 0) return false
             for (i in 0..lastStart) {
