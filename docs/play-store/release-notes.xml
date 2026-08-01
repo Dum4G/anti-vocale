@@ -1,6 +1,7 @@
 <en-US>
 What's new in 1.9.0:
 
+• Fixed: the Parakeet (quantized) model was crashing silently; model files are now validated before loading, so a broken download is caught instead of crashing
 • Typed error handling: transcription failures now show specific messages (corrupt model, internal error, no model loaded) instead of a generic "transcription failed"
 • Crash prevention: invalid model files are detected before loading, preventing silent app crashes
 • Crash recovery: if a native crash occurs, the app guides you to re-download the model on next launch
@@ -162,6 +163,7 @@ What's new since 1.0.3:
 <it-IT>
 Novità della versione 1.9.0:
 
+• Risolto: il modello Parakeet (quantizzato) crashava silenziosamente; ora i file modello vengono validati prima del caricamento, quindi un download danneggiato viene intercettato invece di far crashare l'app
 • Gestione errori tipizzata: gli errori di trascrizione ora mostrano messaggi specifici (modello danneggiato, errore interno, nessun modello caricato) invece del generico "trascrizione fallita"
 • Prevenzione crash: i file modello non validi vengono rilevati prima del caricamento, prevenendo chiusure anomale silenziose dell'app
 • Ripristino da crash: in caso di crash nativo, l'app guida al re-download del modello al prossimo avvio

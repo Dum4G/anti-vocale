@@ -1,4 +1,5 @@
+Risolto: il modello Parakeet (quantizzato) crashava silenziosamente; ora i file modello vengono validati prima del caricamento
 Gestione errori tipizzata: messaggi specifici per modello danneggiato, errore interno, nessun modello
-Prevenzione crash: rilevamento file modello non validi prima del caricamento
+Prevenzione crash: i file modello non validi vengono rilevati prima del caricamento
 Ripristino da crash: il crash nativo guida al re-download del modello
 Backend predefinito cambiato a Parakeet TDT (sherpa-onnx)

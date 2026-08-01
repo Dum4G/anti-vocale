@@ -1,3 +1,4 @@
+Fixed: the Parakeet (quantized) model was crashing silently; model files are now validated before loading
 Typed error handling: specific messages for corrupt model, internal error, no model loaded
 Crash prevention: invalid model files detected before loading
 Crash recovery: native crash detection guides user to re-download model
