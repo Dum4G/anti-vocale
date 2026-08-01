@@ -147,7 +147,7 @@ class SherpaOnnxBackend @Inject constructor() : TranscriptionBackend {
             val encoderFile = File(dir, "encoder.int8.onnx")
             val missingMeta = missingOnnxMetadata(
                 encoderFile,
-                listOf("vocab_size", "subsampling", "model_type")
+                listOf("vocab_size", "subsampling_factor", "model_type")
             )
             if (missingMeta.isNotEmpty()) {
                 Log.e(TAG, "Encoder missing required ONNX metadata: $missingMeta")
