@@ -27,6 +27,7 @@ import com.antivocale.app.ui.theme.AntiVocaleTheme
 import com.antivocale.app.ui.theme.ThemeType
 import com.antivocale.app.ui.viewmodel.LogsViewModel
 import com.antivocale.app.util.DeviceCompatibility
+import com.antivocale.app.util.NativeCrashDetector
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -57,6 +58,9 @@ class MainActivity : AppCompatActivity() {
     private val _isInPipMode = MutableStateFlow(false)
     val isInPipMode: kotlinx.coroutines.flow.StateFlow<Boolean> = _isInPipMode.asStateFlow()
 
+    /** When true, the app opens on the Model tab. Set by native-crash dialog or intent extra. */
+    private val _navigateToModelTab = MutableStateFlow(false)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -65,6 +69,19 @@ class MainActivity : AppCompatActivity() {
 
         val startOnModelTab = intent.getBooleanExtra(EXTRA_NAVIGATE_TO_MODEL_TAB, false)
         if (startOnModelTab) intent.removeExtra(EXTRA_NAVIGATE_TO_MODEL_TAB)
+
+        // If the previous process died from a native crash (e.g. sherpa-onnx
+        // exit(255) from a corrupt model), guide the user to re-download it.
+        if (NativeCrashDetector.checkForRecentNativeCrash(this)) {
+            AlertDialog.Builder(this)
+                .setTitle(R.string.native_crash_title)
+                .setMessage(R.string.native_crash_model_warning)
+                .setPositiveButton(R.string.native_crash_go_to_model) { _, _ ->
+                    _navigateToModelTab.value = true
+                }
+                .setNegativeButton(android.R.string.cancel, null)
+                .show()
+        }
 
         // Handle notification highlight (cold start)
         val highlightTaskId = intent.getStringExtra(EXTRA_HIGHLIGHT_TASK_ID)
@@ -86,6 +103,9 @@ class MainActivity : AppCompatActivity() {
             // Observe PiP mode state
             val isInPip by _isInPipMode.collectAsState()
 
+            // Observe late navigation signals (e.g. the native-crash dialog button)
+            val navigateToModel by _navigateToModelTab.collectAsState()
+
             // Observe transcription state and update PiP auto-enter params
             LaunchedEffect(Unit) {
                 InferenceService.isTranscribing.collect { isTranscribing ->
@@ -100,6 +120,7 @@ class MainActivity : AppCompatActivity() {
                 ) {
                     MainScreen(
                         startOnModelTab = startOnModelTab,
+                        navigateToModel = navigateToModel,
                         isInPipMode = isInPip
                     )
                 }

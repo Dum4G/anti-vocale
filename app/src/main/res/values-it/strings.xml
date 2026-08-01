@@ -181,6 +181,9 @@
     <string name="error_model_load">Il file del modello potrebbe essere danneggiato o in un formato errato. Prova a scaricarlo di nuovo dalla scheda Modello.</string>
     <string name="error_native">Si è verificato un errore interno durante la trascrizione. Se persiste, prova un modello diverso.</string>
     <string name="error_not_initialized">Nessun modello caricato. Apri la scheda Modello per scaricarne o selezionarne uno.</string>
+    <string name="native_crash_model_warning">L\'app si è chiusa in modo imprevisto durante l\'ultima trascrizione. Se è successo durante il caricamento di un modello, il file potrebbe essere danneggiato. Prova a scaricarlo di nuovo dalla scheda Modello.</string>
+    <string name="native_crash_title">Chiusura imprevista</string>
+    <string name="native_crash_go_to_model">Vai alla scheda Modello</string>
     <string name="copy">Copia</string>
     <string name="share">Condividi</string>
     <string name="char_counter">%1$d di %2$d caratteri</string>

@@ -23,6 +23,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 @Composable
 fun MainScreen(
     startOnModelTab: Boolean = false,
+    navigateToModel: Boolean = false,
     isInPipMode: Boolean = false
 ) {
     // PiP mode: show compact transcription view
@@ -39,6 +40,14 @@ fun MainScreen(
     LaunchedEffect(highlightTaskId) {
         if (highlightTaskId != null) {
             selectedTabIndex = 0
+        }
+    }
+
+    // Switch to Model tab when a late navigation signal arrives
+    // (e.g. user tapped "Go to Model tab" in the native-crash dialog).
+    LaunchedEffect(navigateToModel) {
+        if (navigateToModel) {
+            selectedTabIndex = 1
         }
     }
 
