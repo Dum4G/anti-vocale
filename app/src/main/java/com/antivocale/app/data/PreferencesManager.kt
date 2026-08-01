@@ -79,7 +79,7 @@ interface PreferencesManager {
         const val DEFAULT_PROGRESSIVE_TRANSCRIPTION = true
         const val DEFAULT_PROMPT_VALUE = ""
         const val DEFAULT_THEME = "DEFAULT"
-        const val DEFAULT_TRANSCRIPTION_BACKEND = "llm"
+        const val DEFAULT_TRANSCRIPTION_BACKEND = "sherpa-onnx"
         const val DEFAULT_LANGUAGE = "system"
         const val DEFAULT_TRANSCRIPTION_LANGUAGE = "auto"
         const val DEFAULT_SWIPE_ACTION_MODE = "REVEAL"
