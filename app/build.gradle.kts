@@ -24,8 +24,8 @@ android {
         applicationId = "com.antivocale.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 32
-        versionName = "1.9.0"
+        versionCode = 33
+        versionName = "1.9.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -89,9 +89,16 @@ android {
     // Per-ABI APK splits: produces separate APKs for each architecture instead of one
     // 259MB universal APK. Each ABI gets a distinct versionCode so F-Droid can serve
     // the correct one per device.
+    //
+    // DISABLED for bundle (AAB) builds: an App Bundle already embeds all ABIs and
+    // Google Play performs the split server-side, so splits.abi is redundant there
+    // and makes the bundle task fail ("Sequence contains more than one matching
+    // element" in build<Variant>PreBundle). Keeping it for assemble* preserves the
+    // per-ABI APK output F-Droid relies on, byte-for-byte.
+    val buildingBundle = gradle.startParameter.taskNames.any { it.contains("bundle", true) }
     splits {
         abi {
-            isEnable = true
+            isEnable = !buildingBundle
             reset()
             include("arm64-v8a", "armeabi-v7a", "x86_64")
             isUniversalApk = false
@@ -110,7 +117,7 @@ android {
             }
             if (abiCode > 0) {
                 (output as com.android.build.api.variant.impl.VariantOutputImpl).versionCode
-                    .set((defaultConfig.versionCode ?: 32) * 10 + abiCode)
+                    .set((defaultConfig.versionCode ?: 33) * 10 + abiCode)
             }
         }
     }

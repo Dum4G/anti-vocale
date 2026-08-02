@@ -1,4 +1,8 @@
 <en-US>
+What's new in 1.9.1:
+
+• Maintenance release with no user-facing changes; prepares the app for delivery via the Play Store.
+
 What's new in 1.9.0:
 
 • Fixed: the Parakeet (quantized) model was crashing silently; model files are now validated before loading, so a broken download is caught instead of crashing
@@ -161,6 +165,10 @@ What's new since 1.0.3:
 </en-US>
 
 <it-IT>
+Novità della versione 1.9.1:
+
+• Release di manutenzione senza modifiche visibili all'utente; prepara l'app per la distribuzione tramite il Play Store.
+
 Novità della versione 1.9.0:
 
 • Risolto: il modello Parakeet (quantizzato) crashava silenziosamente; ora i file modello vengono validati prima del caricamento, quindi un download danneggiato viene intercettato invece di far crashare l'app

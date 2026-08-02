@@ -1,0 +1,1 @@
+Release di manutenzione senza modifiche visibili all'utente; prepara l'app per la distribuzione tramite il Play Store.
