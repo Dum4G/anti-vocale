@@ -1,7 +1,12 @@
 <en-US>
 What's new in 1.9.1:
 
-• Maintenance release with no user-facing changes; prepares the app for delivery via the Play Store.
+• Fixed: the Parakeet (quantized) model was crashing silently; model files are now validated before loading, so a broken download is caught instead of crashing
+• Clearer, specific error messages: you now see the actual reason (corrupt model, internal error, no model loaded) instead of a generic "transcription failed"
+• Crash recovery: if a crash happens, the app reopens on the Model tab and points you to re-download the affected model
+• Default transcription engine is now Parakeet TDT (was Gemma), matching the most-downloaded model
+• Removed unused storage permissions (READ_MEDIA_AUDIO, READ_EXTERNAL_STORAGE); all file access uses the system file picker
+• Clearer error when an unsupported audio format is shared
 
 What's new in 1.9.0:
 
@@ -167,7 +172,12 @@ What's new since 1.0.3:
 <it-IT>
 Novità della versione 1.9.1:
 
-• Release di manutenzione senza modifiche visibili all'utente; prepara l'app per la distribuzione tramite il Play Store.
+• Risolto: il modello Parakeet (quantizzato) crashava silenziosamente; ora i file modello vengono validati prima del caricamento, quindi un download danneggiato viene intercettato invece di far crashare l'app
+• Messaggi di errore più chiari e specifici: vedi il motivo reale (modello danneggiato, errore interno, nessun modello caricato) invece del generico "trascrizione fallita"
+• Ripristino da crash: se avviene un crash, l'app si riapre sulla scheda Modello e guida al re-download del modello interessato
+• Il motore di trascrizione predefinito è ora Parakeet TDT (prima Gemma), in linea con il modello più scaricato
+• Rimossi i permessi di storage inutilizzati (READ_MEDIA_AUDIO, READ_EXTERNAL_STORAGE); tutto l'accesso ai file avviene tramite il selettore di sistema
+• Errore più chiaro quando si condivide un formato audio non supportato
 
 Novità della versione 1.9.0:
 

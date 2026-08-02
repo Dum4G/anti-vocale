@@ -1,1 +1,6 @@
-Release di manutenzione senza modifiche visibili all'utente; prepara l'app per la distribuzione tramite il Play Store.
+Risolto: il modello Parakeet (quantizzato) crashava silenziosamente; ora i file modello vengono validati prima del caricamento, quindi un download danneggiato viene intercettato invece di far crashare l'app
+Messaggi di errore più chiari e specifici: il motivo reale (modello danneggiato, errore interno, nessun modello caricato) invece del generico "trascrizione fallita"
+Ripristino da crash: se avviene un crash, l'app si riapre sulla scheda Modello e guida al re-download del modello interessato
+Il motore di trascrizione predefinito è ora Parakeet TDT (prima Gemma), in linea con il modello più scaricato
+Rimossi i permessi di storage inutilizzati (READ_MEDIA_AUDIO, READ_EXTERNAL_STORAGE); tutto l'accesso ai file avviene tramite il selettore di sistema
+Errore più chiaro quando si condivide un formato audio non supportato

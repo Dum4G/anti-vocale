@@ -1,1 +1,6 @@
-Maintenance release with no user-facing changes; prepares the app for delivery via the Play Store.
+Fixed: the Parakeet (quantized) model was crashing silently; model files are now validated before loading, so a broken download is caught instead of crashing
+Clearer, specific error messages: the actual reason (corrupt model, internal error, no model loaded) instead of a generic "transcription failed"
+Crash recovery: if a crash happens, the app reopens on the Model tab and points you to re-download the affected model
+Default transcription engine is now Parakeet TDT (was Gemma), matching the most-downloaded model
+Removed unused storage permissions (READ_MEDIA_AUDIO, READ_EXTERNAL_STORAGE); all file access uses the system file picker
+Clearer error when an unsupported audio format is shared
