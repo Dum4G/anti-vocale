@@ -1,4 +1,8 @@
 <en-US>
+What's new in 1.9.2:
+
+• Maintenance release: improved build reproducibility for F-Droid delivery. No user-facing changes.
+
 What's new in 1.9.1:
 
 • Fixed: the Parakeet (quantized) model was crashing silently; model files are now validated before loading, so a broken download is caught instead of crashing
@@ -170,6 +174,10 @@ What's new since 1.0.3:
 </en-US>
 
 <it-IT>
+Novità della versione 1.9.2:
+
+• Release di manutenzione: migliorata la riproducibilità della build per la distribuzione su F-Droid. Nessuna modifica visibile all'utente.
+
 Novità della versione 1.9.1:
 
 • Risolto: il modello Parakeet (quantizzato) crashava silenziosamente; ora i file modello vengono validati prima del caricamento, quindi un download danneggiato viene intercettato invece di far crashare l'app

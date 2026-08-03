@@ -1,0 +1,1 @@
+Release di manutenzione: migliorata la riproducibilita' della build per la distribuzione su F-Droid. Nessuna modifica visibile all'utente.

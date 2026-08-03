@@ -24,8 +24,8 @@ android {
         applicationId = "com.antivocale.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 33
-        versionName = "1.9.1"
+        versionCode = 34
+        versionName = "1.9.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -117,7 +117,7 @@ android {
             }
             if (abiCode > 0) {
                 (output as com.android.build.api.variant.impl.VariantOutputImpl).versionCode
-                    .set((defaultConfig.versionCode ?: 33) * 10 + abiCode)
+                    .set((defaultConfig.versionCode ?: 34) * 10 + abiCode)
             }
         }
     }
@@ -150,6 +150,24 @@ android {
             isReturnDefaultValues = true
             isIncludeAndroidResources = true
         }
+    }
+}
+
+// Disable AGP's ArtProfile task. It generates assets/dexopt/baseline.prof and
+// baseline.profm from the dex with non-deterministic content (per-build ordering
+// variation), which breaks byte-for-byte reproducibility: F-Droid's rebuild and
+// our reference differ in these files, so the signature integrity check fails
+// after apksigcopier copies our signature onto F-Droid's APK. Documented by
+// F-Droid as "Bug: baseline.prof not deterministic" in the Reproducible Builds
+// guide. Disabling drops both profile files from the APK; baseline profiles are
+// a runtime optimization only, not functional.
+//
+// Use whenTaskAdded (not afterEvaluate): ArtProfile tasks are created lazily
+// AFTER project evaluation, so afterEvaluate matches zero tasks (verified by
+// probe). whenTaskAdded fires as each task is created and catches all of them.
+tasks.whenTaskAdded {
+    if (name.contains("ArtProfile")) {
+        enabled = false
     }
 }
 
