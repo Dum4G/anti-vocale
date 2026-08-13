@@ -1,6 +1,7 @@
 package com.antivocale.app.transcription
 
 import android.os.Build
+import androidx.annotation.VisibleForTesting
 
 /**
  * Resolves the ONNX Runtime execution provider for inference.
@@ -24,16 +25,25 @@ object InferenceProvider {
      * use NNAPI on MediaTek for our model shapes.
      */
     private fun isMediaTek(): Boolean {
-        val hw = Build.HARDWARE.orEmpty().lowercase()
-        val board = Build.BOARD.orEmpty().lowercase()
-        // MediaTek hardware strings: "mt67xx", "mt68xx", "mt6983", etc. Also check the
-        // SOC manufacturer on API 31+ for authoritative detection.
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            val socMfr = Build.SOC_MANUFACTURER.orEmpty().lowercase()
-            if (socMfr.contains("mediatek")) return true
-        }
-        return hw.startsWith("mt") || board.startsWith("mt") ||
-            hw.contains("mediatek") || board.contains("mediatek")
+        return isMediaTek(
+            Build.HARDWARE.orEmpty(),
+            Build.BOARD.orEmpty(),
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) Build.SOC_MANUFACTURER.orEmpty() else ""
+        )
+    }
+
+    /**
+     * Pure, testable MediaTek detection. Checks hardware/board/SOC manufacturer strings.
+     * Visible for testing.
+     */
+    @VisibleForTesting
+    internal fun isMediaTek(hardware: String, board: String, socManufacturer: String): Boolean {
+        val hw = hardware.lowercase()
+        val bd = board.lowercase()
+        val soc = socManufacturer.lowercase()
+        return soc.contains("mediatek") ||
+            hw.startsWith("mt") || bd.startsWith("mt") ||
+            hw.contains("mediatek") || bd.contains("mediatek")
     }
 
     /**
