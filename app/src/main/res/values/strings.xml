@@ -182,6 +182,8 @@
     <string name="error_native">An internal error occurred during transcription. If this persists, try a different model.</string>
     <string name="error_not_initialized">No model is loaded. Open the Model tab to download or select one.</string>
     <string name="native_crash_model_warning">The app closed unexpectedly during the last transcription. If this happened while loading a model, the file may be corrupt. Try re-downloading it from the Model tab.</string>
+    <string name="oom_crash_title">App closed for low memory</string>
+    <string name="oom_crash_warning">The app was closed because the device was running low on memory. Try closing other apps or using a smaller model before transcribing again.</string>
     <string name="native_crash_title">App closed unexpectedly</string>
     <string name="native_crash_go_to_model">Go to Model tab</string>
     <string name="copy">Copy</string>

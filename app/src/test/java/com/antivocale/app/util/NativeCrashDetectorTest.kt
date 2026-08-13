@@ -1,6 +1,7 @@
 package com.antivocale.app.util
 
 import android.content.Context
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -23,11 +24,11 @@ class NativeCrashDetectorTest {
     }
 
     @Test
-    fun `LowMemory and NativeCrash are distinct result types`() {
+    fun `LowMemory and NativeCrash carry their timestamp and are distinct result types`() {
         val lowMem = CrashCheckResult.LowMemory(timestamp = 1234L)
         val nativeCrash = CrashCheckResult.NativeCrash(timestamp = 5678L)
-        assertTrue("LowMemory is its own type", lowMem is CrashCheckResult.LowMemory)
-        assertTrue("NativeCrash is its own type", nativeCrash is CrashCheckResult.NativeCrash)
+        assertEquals(1234L, lowMem.timestamp)
+        assertEquals(5678L, nativeCrash.timestamp)
         assertTrue("the two variants are not the same type", lowMem::class != nativeCrash::class)
     }
 }

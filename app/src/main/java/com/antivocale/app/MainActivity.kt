@@ -71,16 +71,26 @@ class MainActivity : AppCompatActivity() {
         if (startOnModelTab) intent.removeExtra(EXTRA_NAVIGATE_TO_MODEL_TAB)
 
         // If the previous process died from a native crash (e.g. sherpa-onnx
-        // exit(255) from a corrupt model), guide the user to re-download it.
-        if (NativeCrashDetector.checkForRecentNativeCrash(this)) {
-            AlertDialog.Builder(this)
-                .setTitle(R.string.native_crash_title)
-                .setMessage(R.string.native_crash_model_warning)
-                .setPositiveButton(R.string.native_crash_go_to_model) { _, _ ->
-                    _navigateToModelTab.value = true
-                }
-                .setNegativeButton(android.R.string.cancel, null)
-                .show()
+        // exit(255) from a corrupt model) or a low-memory kill, explain what happened.
+        when (val crash = NativeCrashDetector.checkForRecentCrash(this)) {
+            is NativeCrashDetector.CrashCheckResult.NativeCrash -> {
+                AlertDialog.Builder(this)
+                    .setTitle(R.string.native_crash_title)
+                    .setMessage(R.string.native_crash_model_warning)
+                    .setPositiveButton(R.string.native_crash_go_to_model) { _, _ ->
+                        _navigateToModelTab.value = true
+                    }
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .show()
+            }
+            is NativeCrashDetector.CrashCheckResult.LowMemory -> {
+                AlertDialog.Builder(this)
+                    .setTitle(R.string.oom_crash_title)
+                    .setMessage(R.string.oom_crash_warning)
+                    .setPositiveButton(android.R.string.ok, null)
+                    .show()
+            }
+            NativeCrashDetector.CrashCheckResult.None -> { /* no-op */ }
         }
 
         // Handle notification highlight (cold start)
