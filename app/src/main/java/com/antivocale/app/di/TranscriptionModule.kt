@@ -1,6 +1,7 @@
 package com.antivocale.app.di
 
 import com.antivocale.app.manager.LlmManager
+import com.antivocale.app.transcription.CustomTransducerBackend
 import com.antivocale.app.transcription.LlmTranscriptionBackend
 import com.antivocale.app.transcription.NemotronStreamingBackend
 import com.antivocale.app.transcription.Qwen3AsrBackend
@@ -44,6 +45,11 @@ class TranscriptionModule {
         @IntoSet
         @Singleton
         fun provideNemotronStreamingBackend(): TranscriptionBackend = NemotronStreamingBackend()
+
+        @Provides
+        @IntoSet
+        @Singleton
+        fun provideCustomTransducerBackend(): TranscriptionBackend = CustomTransducerBackend()
 
         // GGUF: re-enable by moving files from gguf-disabled/ and adding back:
         // @Binds abstract fun bindGgufInferenceEngine(impl: LlamaBroEngine): GgufInferenceEngine

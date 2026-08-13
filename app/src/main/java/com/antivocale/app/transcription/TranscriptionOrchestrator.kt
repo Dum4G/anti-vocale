@@ -305,6 +305,7 @@ class TranscriptionOrchestrator @Inject constructor(
                 WhisperBackend.BACKEND_ID -> loadWhisperBackend(context)
                 Qwen3AsrBackend.BACKEND_ID -> loadQwen3AsrBackend(context)
                 NemotronStreamingBackend.BACKEND_ID -> loadNemotronBackend(context)
+                CustomTransducerBackend.BACKEND_ID -> loadCustomTransducerBackend(context)
                 "gemma4_gguf" -> loadGgufBackend(context)
                 else -> loadLlmBackend(context)
             }
@@ -358,13 +359,14 @@ class TranscriptionOrchestrator @Inject constructor(
         modelPath: String,
         label: String,
         language: String = "",
-        context: Context
+        context: Context,
+        modelType: String = "nemo_transducer"
     ): Result<Unit> {
         val modelDir = File(modelPath)
         if (!modelDir.exists() || !modelDir.isDirectory) {
             return Result.failure(IllegalStateException("$label model directory not found: $modelPath"))
         }
-        Log.i(TAG, "Auto-loading $label model from: $modelPath")
+        Log.i(TAG, "Auto-loading $label model from: $modelPath (modelType='$modelType')")
         val providerPref = preferencesManager.inferenceProvider.first()
         val resolvedProvider = InferenceProvider.resolve(providerPref)
         Log.i(TAG, "Inference provider: pref=$providerPref resolved=$resolvedProvider")
@@ -373,10 +375,26 @@ class TranscriptionOrchestrator @Inject constructor(
             context = context,
             config = BackendConfig.SherpaOnnxConfig(
                 modelDir = modelPath,
+                modelType = modelType,
                 numThreads = preferencesManager.threadCount.first(),
                 language = language,
                 provider = resolvedProvider
             )
+        )
+    }
+
+    private suspend fun loadCustomTransducerBackend(context: Context): Result<Unit> {
+        // User-imported (sideloaded) transducer model. modelType is user-selected because a wrong
+        // value triggers an uncatchable native exit(255); default nemo_transducer covers GigaAM/Parakeet.
+        val modelPath = preferencesManager.customTransducerModelPath.first()
+            ?: return Result.failure(TranscriptionException.NotInitialized())
+        val modelType = preferencesManager.customTransducerModelType.first()
+        return configureSherpaBackend(
+            backendId = CustomTransducerBackend.BACKEND_ID,
+            modelPath = modelPath,
+            label = "Custom transducer",
+            modelType = modelType,
+            context = context
         )
     }
 
@@ -1234,6 +1252,7 @@ class TranscriptionOrchestrator @Inject constructor(
             Qwen3AsrBackend.BACKEND_ID -> preferencesManager.qwen3AsrModelPath.first()
             SherpaOnnxBackend.BACKEND_ID -> preferencesManager.parakeetModelPath.first()
             NemotronStreamingBackend.BACKEND_ID -> preferencesManager.nemotronModelPath.first()
+            CustomTransducerBackend.BACKEND_ID -> preferencesManager.customTransducerModelPath.first()
             "gemma4_gguf" -> preferencesManager.ggufModelPath.first()
             else -> preferencesManager.modelPath.first()
         } ?: ""
@@ -1253,6 +1272,8 @@ class TranscriptionOrchestrator @Inject constructor(
                     .replace("-", " ")
                     .replaceFirstChar { it.uppercase() }
             }
+            // For sideloaded models the imported directory name is the user's own label.
+            CustomTransducerBackend.BACKEND_ID -> dirName.ifBlank { fallbackName ?: "Custom model" }
             else -> fallbackName ?: backendId
         }
     }

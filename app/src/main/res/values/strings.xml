@@ -10,6 +10,23 @@
     <!-- Model selection -->
     <string name="select_model">Select Model File</string>
     <string name="select_model_from_device">Select Model from Device</string>
+
+    <!-- Custom transducer model (sideload) -->
+    <string name="custom_transducer_name">Custom model</string>
+    <string name="import_custom_model">Import custom model</string>
+    <string name="custom_transducer_select_folder">Select model folder</string>
+    <string name="custom_transducer_model_type">Model architecture</string>
+    <string name="custom_transducer_model_type_nemo">NeMo transducer (Parakeet, GigaAM)</string>
+    <string name="custom_transducer_model_type_zipformer">Zipformer (auto)</string>
+    <string name="custom_transducer_model_type_conformer">Conformer transducer</string>
+    <string name="custom_transducer_model_type_warning">A wrong architecture can crash the app with no error message. If transcription crashes, change this option.</string>
+    <string name="custom_transducer_single_pass_notice">Transcription runs in a single pass on the whole audio. A large model may fail or crash on very long audio. If that happens, trim the audio or use a smaller model.</string>
+    <string name="custom_transducer_delete">Delete custom model</string>
+    <string name="custom_transducer_import_failed">Could not import the selected folder.</string>
+    <string name="custom_transducer_missing_files">Missing required model files: %1$s. A custom model needs an encoder, decoder and joiner .onnx file (any filename) plus a tokens.txt, all in one folder.</string>
+    <string name="custom_transducer_bad_metadata">The model file is missing required metadata. It may be corrupt or not a valid transducer export.</string>
+    <string name="custom_transducer_deleted">Custom model deleted</string>
+    <string name="custom_transducer_active">Custom model active</string>
     <string name="load_model">Load Model</string>
     <string name="unload_model">Unload Model</string>
 

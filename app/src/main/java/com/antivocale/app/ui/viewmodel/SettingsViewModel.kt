@@ -16,6 +16,7 @@ import com.antivocale.app.data.PerAppPreferencesManager
 import com.antivocale.app.data.PreferencesManager
 import com.antivocale.app.data.ShareTargetManager
 import com.antivocale.app.data.TranscriptionCalibrator
+import com.antivocale.app.transcription.CustomTransducerBackend
 import com.antivocale.app.transcription.InferenceProvider
 import com.antivocale.app.manager.LlmManager
 import com.antivocale.app.transcription.Qwen3AsrBackend
@@ -690,8 +691,20 @@ class SettingsViewModel @Inject constructor(
                     }
                 }
                 "gemma4_gguf" -> {
-                    // GGUF: disabled — show filename only
+                    // GGUF: disabled, show filename only.
                     preferencesManager.ggufModelPath.collect { path ->
+                        val modelName = if (!path.isNullOrBlank()) {
+                            java.io.File(path).name
+                        } else null
+                        _uiState.update { it.copy(
+                            currentModelPath = path,
+                            currentModelName = modelName
+                        )}
+                    }
+                }
+                CustomTransducerBackend.BACKEND_ID -> {
+                    // User-imported (sideloaded) transducer model. Show the imported dir name.
+                    preferencesManager.customTransducerModelPath.collect { path ->
                         val modelName = if (!path.isNullOrBlank()) {
                             java.io.File(path).name
                         } else null

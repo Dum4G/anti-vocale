@@ -10,6 +10,23 @@
     <!-- Model selection -->
     <string name="select_model">Seleziona File Modello</string>
     <string name="select_model_from_device">Seleziona Modello dal Dispositivo</string>
+
+    <!-- Modello transducer personalizzato (sideload) -->
+    <string name="custom_transducer_name">Modello personalizzato</string>
+    <string name="import_custom_model">Importa modello personalizzato</string>
+    <string name="custom_transducer_select_folder">Seleziona cartella modello</string>
+    <string name="custom_transducer_model_type">Architettura modello</string>
+    <string name="custom_transducer_model_type_nemo">NeMo transducer (Parakeet, GigaAM)</string>
+    <string name="custom_transducer_model_type_zipformer">Zipformer (auto)</string>
+    <string name="custom_transducer_model_type_conformer">Conformer transducer</string>
+    <string name="custom_transducer_model_type_warning">Un\'architettura sbagliata può far crashare l\'app senza messaggi di errore. Se la trascrizione va in crash, cambia questa opzione.</string>
+    <string name="custom_transducer_single_pass_notice">La trascrizione avviene in una sola passata sull\'intero audio. Un modello grande può fallire o crashare su audio molto lunghi. In tal caso, accorcia l\'audio o usa un modello più piccolo.</string>
+    <string name="custom_transducer_delete">Elimina modello personalizzato</string>
+    <string name="custom_transducer_import_failed">Impossibile importare la cartella selezionata.</string>
+    <string name="custom_transducer_missing_files">File del modello mancanti: %1$s. Un modello personalizzato richiede un file .onnx per encoder, decoder e joiner (qualsiasi nome) più un tokens.txt, tutti in un\'unica cartella.</string>
+    <string name="custom_transducer_bad_metadata">Il file del modello non contiene i metadati richiesti. Potrebbe essere corrotto o non un export transducer valido.</string>
+    <string name="custom_transducer_deleted">Modello personalizzato eliminato</string>
+    <string name="custom_transducer_active">Modello personalizzato attivo</string>
     <string name="load_model">Carica Modello</string>
     <string name="unload_model">Scarica Modello</string>
 

@@ -9,6 +9,8 @@ interface PreferencesManager {
     val themePreference: Flow<String>
     val transcriptionBackend: Flow<String>
     val parakeetModelPath: Flow<String?>
+    val customTransducerModelPath: Flow<String?>
+    val customTransducerModelType: Flow<String>
     val whisperModelPath: Flow<String?>
     val qwen3AsrModelPath: Flow<String?>
     val nemotronModelPath: Flow<String?>
@@ -34,6 +36,9 @@ interface PreferencesManager {
     suspend fun saveTranscriptionBackend(backendId: String)
     suspend fun saveParakeetModelPath(path: String)
     suspend fun clearParakeetModelPath()
+    suspend fun saveCustomTransducerModelPath(path: String)
+    suspend fun clearCustomTransducerModelPath()
+    suspend fun saveCustomTransducerModelType(modelType: String)
     suspend fun saveWhisperModelPath(path: String)
     suspend fun clearWhisperModelPath()
     suspend fun saveQwen3AsrModelPath(path: String)
@@ -80,6 +85,12 @@ interface PreferencesManager {
         const val DEFAULT_PROMPT_VALUE = ""
         const val DEFAULT_THEME = "DEFAULT"
         const val DEFAULT_TRANSCRIPTION_BACKEND = "sherpa-onnx"
+
+        // Backend id for user-imported sherpa-onnx transducer models (Strada B sideload).
+        const val CUSTOM_TRANSDUCER_BACKEND = "custom-transducer"
+        // Default model architecture type for custom imports. Covers GigaAM-ru and Parakeet.
+        // A wrong modelType causes an uncatchable native exit(255); user can change it in the import UI.
+        const val DEFAULT_CUSTOM_TRANSDUCER_MODEL_TYPE = "nemo_transducer"
         const val DEFAULT_LANGUAGE = "system"
         const val DEFAULT_TRANSCRIPTION_LANGUAGE = "auto"
         const val DEFAULT_SWIPE_ACTION_MODE = "REVEAL"
