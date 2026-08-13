@@ -109,17 +109,26 @@ class TranscriptionOrchestratorVadTest : TranscriptionOrchestratorTestBase() {
             listener.onInterimResult(
                 contentText = "seg1",
                 bigText = "seg1",
-                subText = "Segment 1/3"
+                subText = "Segment 1/3",
+                chunkIndex = 0,
+                chunkText = "seg1",
+                totalChunks = 3
             )
             listener.onInterimResult(
                 contentText = "seg2",
                 bigText = "seg2",
-                subText = "Segment 2/3"
+                subText = "Segment 2/3",
+                chunkIndex = 1,
+                chunkText = "seg2",
+                totalChunks = 3
             )
             listener.onInterimResult(
                 contentText = "seg3",
                 bigText = "seg3",
-                subText = "Segment 3/3"
+                subText = "Segment 3/3",
+                chunkIndex = 2,
+                chunkText = "seg3",
+                totalChunks = 3
             )
         }
 
@@ -148,7 +157,7 @@ class TranscriptionOrchestratorVadTest : TranscriptionOrchestratorTestBase() {
         assertTrue(result.isSuccess)
         assertEquals("seg1 seg3", result.getOrNull())
 
-        verify(exactly = 2) { listener.onInterimResult(any(), any(), any()) }
+        verify(exactly = 2) { listener.onInterimResult(any(), any(), any(), any(), any(), any()) }
 
         verify {
             listener.onSuccess(

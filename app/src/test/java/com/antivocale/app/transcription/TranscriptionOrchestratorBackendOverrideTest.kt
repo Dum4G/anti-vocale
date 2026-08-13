@@ -1,5 +1,6 @@
 package com.antivocale.app.transcription
 
+import android.app.ActivityManager
 import android.content.Context
 import com.antivocale.app.data.PreferencesManager
 import io.mockk.*
@@ -31,7 +32,22 @@ class TranscriptionOrchestratorBackendOverrideTest : TranscriptionOrchestratorTe
         val dir = File(System.getProperty("java.io.tmpdir"), "$prefix-${System.nanoTime()}")
         dir.mkdirs()
         tempDirs.add(dir)
+        // Populate the required model files so ParakeetModelManager.isValidModelPath
+        // accepts the directory. The .onnx files must be non-empty (isFileComplete rejects
+        // zero-length files); tokens.txt just needs to exist.
+        ParakeetModelManager.REQUIRED_FILES.forEach { name ->
+            File(dir, name).writeBytes(if (name.endsWith(".onnx")) byteArrayOf(0) else ByteArray(0))
+        }
         return dir
+    }
+
+    /**
+     * Creates a mock Context with getSystemService(ActivityManager) stubbed to null so the
+     * OOM pre-flight memory check in configureSherpaBackend fails open (availBytes=0) instead
+     * of throwing a ClassCastException from the relaxed mock.
+     */
+    private fun createMockContext(): Context = mockk<Context>(relaxed = true) {
+        every { getSystemService(ActivityManager::class.java) } returns null
     }
 
     @Test
@@ -46,7 +62,7 @@ class TranscriptionOrchestratorBackendOverrideTest : TranscriptionOrchestratorTe
         every { backendManager.hasActiveBackend() } returns false
         coEvery { backendManager.setActiveBackend(any(), any(), any()) } returns Result.success(Unit)
 
-        val context = mockk<Context>(relaxed = true)
+        val context = createMockContext()
         orchestrator.processRequest(
             taskId = "test-override-parakeet",
             requestType = "text",
@@ -89,7 +105,7 @@ class TranscriptionOrchestratorBackendOverrideTest : TranscriptionOrchestratorTe
         every { backendManager.hasActiveBackend() } returns false
         coEvery { backendManager.setActiveBackend(any(), any(), any()) } returns Result.success(Unit)
 
-        val context = mockk<Context>(relaxed = true)
+        val context = createMockContext()
         orchestrator.processRequest(
             taskId = "test-override-whisper",
             requestType = "text",
@@ -126,7 +142,7 @@ class TranscriptionOrchestratorBackendOverrideTest : TranscriptionOrchestratorTe
         every { backendManager.hasActiveBackend() } returns false
         coEvery { backendManager.setActiveBackend(any(), any(), any()) } returns Result.success(Unit)
 
-        val context = mockk<Context>(relaxed = true)
+        val context = createMockContext()
         orchestrator.processRequest(
             taskId = "test-no-override",
             requestType = "text",
@@ -169,7 +185,7 @@ class TranscriptionOrchestratorBackendOverrideTest : TranscriptionOrchestratorTe
         every { preferencesManager.keepAliveTimeout } returns flowOf(5)
         coEvery { backendManager.setActiveBackend(any(), any(), any()) } returns Result.success(Unit)
 
-        val context = mockk<Context>(relaxed = true)
+        val context = createMockContext()
         orchestrator.processRequest(
             taskId = "test-override-reload",
             requestType = "text",
@@ -202,7 +218,7 @@ class TranscriptionOrchestratorBackendOverrideTest : TranscriptionOrchestratorTe
         every { preferencesManager.parakeetModelPath } returns flowOf(null)
         every { backendManager.hasActiveBackend() } returns false
 
-        val context = mockk<Context>(relaxed = true)
+        val context = createMockContext()
         val result = orchestrator.processRequest(
             taskId = "test-override-no-model",
             requestType = "text",
@@ -220,9 +236,10 @@ class TranscriptionOrchestratorBackendOverrideTest : TranscriptionOrchestratorTe
         )
 
         assertTrue(result.isFailure)
+        val error = result.exceptionOrNull()
         assertTrue(
-            "Expected 'No Parakeet model configured' but got: ${result.exceptionOrNull()?.message}",
-            result.exceptionOrNull()?.message?.contains("No Parakeet model configured") == true
+            "Expected NotInitialized but got: ${error?.javaClass?.simpleName}: ${error?.message}",
+            error is TranscriptionException.NotInitialized
         )
     }
 
@@ -238,7 +255,7 @@ class TranscriptionOrchestratorBackendOverrideTest : TranscriptionOrchestratorTe
         coEvery { backendManager.setActiveBackend(any(), any(), any()) } returns Result.success(Unit)
         every { backendManager.unloadActiveBackend() } returns Unit
 
-        val context = mockk<Context>(relaxed = true)
+        val context = createMockContext()
         orchestrator.processRequest(
             taskId = "test-restore",
             requestType = "text",
