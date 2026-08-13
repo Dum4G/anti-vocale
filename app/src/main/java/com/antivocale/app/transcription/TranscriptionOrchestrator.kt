@@ -385,9 +385,11 @@ class TranscriptionOrchestrator @Inject constructor(
         // the headroom absorbs inference overhead and reclaimable-cache noise.
         if (!preferencesManager.forceModelLoad.first()) {
             val availBytes = availableMemoryBytes(context)
-            // Fail open if we could not read available memory (e.g. no ActivityManager service):
-            // blocking on an unknown value would regress test/local contexts and offer no real
-            // protection. Only compute the model size and compare when we have a concrete measurement.
+            // Fail open if we could not read available memory (e.g. no ActivityManager service in
+            // a test/local context): blocking on an unknown value would regress those contexts and
+            // offer no real protection. Only compute the model size and compare when we have a
+            // concrete measurement. This also avoids touching the filesystem (walkTopDown) when the
+            // measurement is unavailable.
             if (availBytes > 0) {
                 val modelSizeBytes = modelDir.walkTopDown().filter { it.isFile }.sumOf { it.length() }
                 val requiredBytes = modelSizeBytes + MEMORY_HEADROOM_BYTES
