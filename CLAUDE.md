@@ -12,7 +12,7 @@ Android application written in Kotlin for transcribing voice messages locally on
 - Git protocol: SSH
 - **adb path:** `~/Android/Sdk/platform-tools/adb`
 - **Build & install on device:** `./scripts/install.sh` (ALWAYS use this — never `./gradlew installDebug`)
-- **Device:** Realme RMX3853 (Android 16, wireless debugging at `telefonopaolo:<port>` — port rotates on reboot/Wi-Fi change; user provides the current port each session)
+- **Device:** Realme RMX3853 (Android 16, wireless debugging, paired once and persistently connected). It shows up in `adb devices` automatically, with a long mDNS serial like `adb-b51d20e6-XDR829 (2)._adb-tls-connect._tcp`. Do NOT run `adb disconnect` (it breaks the existing connection and `adb connect ip:port` will not re-establish it on a stale/rotated port). To target it, pass the serial to `-s` exactly as `adb devices` prints it; you can capture it with `D=$(adb devices | awk '/_adb-tls-connect/ && $NF=="device"{print $1}')` and then `adb -s "$D" ...`. The IP port (e.g. 192.168.20.174:40079) rotates and is irrelevant for commands. If the device ever drops off entirely, the user re-enables wireless debugging on the phone; otherwise no user input is needed.
 
 @import docs/BUILD.md
 
