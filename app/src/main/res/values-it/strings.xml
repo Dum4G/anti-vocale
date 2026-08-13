@@ -384,6 +384,8 @@
     <!-- Settings Tab - Theme -->
     <string name="theme_title">Tema</string>
     <string name="theme_description">Scegli il tema cromatico dell\'app.</string>
+    <string name="theme_mode_title">Modalità tema</string>
+    <string name="theme_mode_description">Segui l\'impostazione di sistema, oppure forza scuro o chiaro.</string>
     <string name="theme_default">Predefinito (Indaco)</string>
     <string name="theme_whatsapp">WhatsApp</string>
     <string name="theme_telegram">Telegram</string>

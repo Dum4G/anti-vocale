@@ -26,6 +26,7 @@ import com.antivocale.app.transcription.SherpaOnnxBackend
 import com.antivocale.app.transcription.NemotronStreamingBackend
 import com.antivocale.app.transcription.WhisperBackend
 import com.antivocale.app.transcription.TranscriptionBackendManager
+import com.antivocale.app.ui.theme.ThemeMode
 import com.antivocale.app.ui.theme.ThemeType
 import com.antivocale.app.util.LocaleManager
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -96,6 +97,7 @@ class SettingsViewModel @Inject constructor(
 
     // Theme options
     val themeOptions = ThemeType.entries
+    val themeModeOptions = ThemeMode.entries
 
     // Current keep-alive timeout from preferences
     val keepAliveTimeout: StateFlow<Int> = preferencesManager.keepAliveTimeout
@@ -241,6 +243,10 @@ class SettingsViewModel @Inject constructor(
     private val _currentTheme = MutableStateFlow(ThemeType.DEFAULT)
     val currentTheme: StateFlow<ThemeType> = _currentTheme.asStateFlow()
 
+    // Current theme mode (System / Dark / Light) from preferences
+    private val _currentThemeMode = MutableStateFlow(ThemeMode.SYSTEM)
+    val currentThemeMode: StateFlow<ThemeMode> = _currentThemeMode.asStateFlow()
+
     // HuggingFace token state
     val tokenState = huggingFaceTokenManager.tokenState
 
@@ -266,6 +272,16 @@ class SettingsViewModel @Inject constructor(
                     ThemeType.valueOf(themeName)
                 } catch (e: IllegalArgumentException) {
                     ThemeType.DEFAULT
+                }
+            }
+        }
+        // Load theme mode from preferences
+        viewModelScope.launch {
+            preferencesManager.themeMode.collect { modeName ->
+                _currentThemeMode.value = try {
+                    ThemeMode.valueOf(modeName)
+                } catch (e: IllegalArgumentException) {
+                    ThemeMode.SYSTEM
                 }
             }
         }
@@ -477,6 +493,16 @@ class SettingsViewModel @Inject constructor(
                     errorMessage = e.message ?: getApplication<Application>().getString(R.string.error_save_theme)
                 )}
             }
+        }
+    }
+
+    /**
+     * Saves the theme mode (System / Dark / Light). Takes effect immediately via StateFlow.
+     */
+    fun saveThemeMode(mode: ThemeMode) {
+        viewModelScope.launch {
+            preferencesManager.saveThemeMode(mode.name)
+            _currentThemeMode.value = mode
         }
     }
 

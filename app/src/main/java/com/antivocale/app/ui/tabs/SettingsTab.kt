@@ -581,6 +581,30 @@ fun SettingsTab(
                         label = stringResource(R.string.theme_title),
                         enabled = !uiState.isSaving
                     )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Text(
+                        text = stringResource(R.string.theme_mode_title),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Text(
+                        text = stringResource(R.string.theme_mode_description),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    // Theme mode dropdown (System / Dark / Light)
+                    val currentThemeMode by viewModel.currentThemeMode.collectAsState()
+                    SettingsDropdown(
+                        currentValue = currentThemeMode,
+                        options = viewModel.themeModeOptions,
+                        currentValueDisplay = currentThemeMode.displayName,
+                        optionDisplay = { it.displayName },
+                        onOptionSelected = { viewModel.saveThemeMode(it) },
+                        label = stringResource(R.string.theme_mode_title)
+                    )
                 }
             }
 

@@ -7,6 +7,7 @@ interface PreferencesManager {
     val modelPath: Flow<String?>
     val keepAliveTimeout: Flow<Int>
     val themePreference: Flow<String>
+    val themeMode: Flow<String>
     val transcriptionBackend: Flow<String>
     val parakeetModelPath: Flow<String?>
     val whisperModelPath: Flow<String?>
@@ -32,6 +33,7 @@ interface PreferencesManager {
     suspend fun clearModelPath()
     suspend fun saveKeepAliveTimeout(minutes: Int)
     suspend fun saveThemePreference(theme: String)
+    suspend fun saveThemeMode(mode: String)
     suspend fun saveTranscriptionBackend(backendId: String)
     suspend fun saveParakeetModelPath(path: String)
     suspend fun clearParakeetModelPath()
@@ -81,6 +83,7 @@ interface PreferencesManager {
         const val DEFAULT_PROGRESSIVE_TRANSCRIPTION = true
         const val DEFAULT_PROMPT_VALUE = ""
         const val DEFAULT_THEME = "DEFAULT"
+        const val DEFAULT_THEME_MODE = "SYSTEM"
         const val DEFAULT_TRANSCRIPTION_BACKEND = "sherpa-onnx"
         const val DEFAULT_LANGUAGE = "system"
         const val DEFAULT_TRANSCRIPTION_LANGUAGE = "auto"

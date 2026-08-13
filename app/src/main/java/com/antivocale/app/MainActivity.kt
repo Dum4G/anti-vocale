@@ -24,6 +24,7 @@ import com.antivocale.app.data.PreferencesManager
 import com.antivocale.app.service.InferenceService
 import com.antivocale.app.ui.MainScreen
 import com.antivocale.app.ui.theme.AntiVocaleTheme
+import com.antivocale.app.ui.theme.ThemeMode
 import com.antivocale.app.ui.theme.ThemeType
 import com.antivocale.app.ui.viewmodel.LogsViewModel
 import com.antivocale.app.util.DeviceCompatibility
@@ -110,6 +111,14 @@ class MainActivity : AppCompatActivity() {
                 ThemeType.DEFAULT
             }
 
+            // Collect theme mode (System / Dark / Light) and convert to ThemeMode
+            val themeModeName by preferencesManager.themeMode.collectAsState(initial = PreferencesManager.DEFAULT_THEME_MODE)
+            val themeMode = try {
+                ThemeMode.valueOf(themeModeName)
+            } catch (e: IllegalArgumentException) {
+                ThemeMode.SYSTEM
+            }
+
             // Observe PiP mode state
             val isInPip by _isInPipMode.collectAsState()
 
@@ -123,7 +132,7 @@ class MainActivity : AppCompatActivity() {
                 }
             }
 
-            AntiVocaleTheme(theme = theme) {
+            AntiVocaleTheme(brand = theme, mode = themeMode) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background

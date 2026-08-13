@@ -394,6 +394,8 @@
     <!-- Settings Tab - Theme -->
     <string name="theme_title">Theme</string>
     <string name="theme_description">Choose the app color theme.</string>
+    <string name="theme_mode_title">Theme mode</string>
+    <string name="theme_mode_description">Follow the system setting, or force dark or light.</string>
     <string name="theme_default">Default (Indigo)</string>
     <string name="theme_whatsapp">WhatsApp</string>
     <string name="theme_telegram">Telegram</string>

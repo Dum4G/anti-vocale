@@ -28,6 +28,7 @@ class PreferencesManagerImpl(
         private val KEEP_ALIVE_TIMEOUT_LEGACY = stringPreferencesKey("keep_alive_timeout")
         private val LANGUAGE_PREFERENCE = stringPreferencesKey("language_preference")
         private val THEME_PREFERENCE = stringPreferencesKey("theme_preference")
+        private val THEME_MODE = stringPreferencesKey("theme_mode")
         private val TRANSCRIPTION_BACKEND = stringPreferencesKey("transcription_backend")
         private val PARAKEET_MODEL_PATH = stringPreferencesKey("parakeet_model_path")
         private val WHISPER_MODEL_PATH = stringPreferencesKey("whisper_model_path")
@@ -59,6 +60,7 @@ class PreferencesManagerImpl(
         val modelPath: String? = null,
         val keepAliveTimeout: Int = PreferencesManager.DEFAULT_KEEP_ALIVE_TIMEOUT,
         val themePreference: String = PreferencesManager.DEFAULT_THEME,
+        val themeMode: String = PreferencesManager.DEFAULT_THEME_MODE,
         val transcriptionBackend: String = PreferencesManager.DEFAULT_TRANSCRIPTION_BACKEND,
         val parakeetModelPath: String? = null,
         val whisperModelPath: String? = null,
@@ -87,6 +89,7 @@ class PreferencesManagerImpl(
             ?: this[KEEP_ALIVE_TIMEOUT_LEGACY]?.toIntOrNull()
             ?: PreferencesManager.DEFAULT_KEEP_ALIVE_TIMEOUT,
         themePreference = this[THEME_PREFERENCE] ?: PreferencesManager.DEFAULT_THEME,
+        themeMode = this[THEME_MODE] ?: PreferencesManager.DEFAULT_THEME_MODE,
         transcriptionBackend = this[TRANSCRIPTION_BACKEND] ?: PreferencesManager.DEFAULT_TRANSCRIPTION_BACKEND,
         parakeetModelPath = this[PARAKEET_MODEL_PATH],
         whisperModelPath = this[WHISPER_MODEL_PATH],
@@ -158,6 +161,16 @@ class PreferencesManagerImpl(
             preferences[THEME_PREFERENCE] = theme
         }
         cache.updateAndGet { it.copy(themePreference = theme) }
+    }
+
+    override val themeMode: Flow<String> = context.dataStore.data.map { it[THEME_MODE] ?: PreferencesManager.DEFAULT_THEME_MODE }
+        .onStart { emit(cache.get().themeMode) }
+
+    override suspend fun saveThemeMode(mode: String) {
+        context.dataStore.edit { preferences ->
+            preferences[THEME_MODE] = mode
+        }
+        cache.updateAndGet { it.copy(themeMode = mode) }
     }
 
     override val transcriptionBackend: Flow<String> = context.dataStore.data.map { it[TRANSCRIPTION_BACKEND] ?: PreferencesManager.DEFAULT_TRANSCRIPTION_BACKEND }
