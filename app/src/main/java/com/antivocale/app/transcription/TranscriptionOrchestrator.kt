@@ -337,7 +337,7 @@ class TranscriptionOrchestrator @Inject constructor(
             return Result.failure(TranscriptionException.NotInitialized())
         }
         return backendManager.setActiveBackend(
-            backendId = PreferencesManager.DEFAULT_TRANSCRIPTION_BACKEND,
+            backendId = LlmTranscriptionBackend.BACKEND_ID,
             context = context,
             config = BackendConfig.LiteRTConfig(modelPath = modelPath)
         )
