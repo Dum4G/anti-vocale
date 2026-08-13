@@ -79,6 +79,7 @@ fun SettingsTab(
     val groupLogsByConversation by viewModel.groupLogsByConversation.collectAsState()
     val advancedSharingEnabled by viewModel.advancedSharingEnabled.collectAsState()
     val showRetranscribeButton by viewModel.showRetranscribeButton.collectAsState()
+    val forceModelLoad by viewModel.forceModelLoad.collectAsState()
     val tokenState by viewModel.tokenState.collectAsState()
     val tokenInput by viewModel.tokenInput.collectAsState()
     val oauthState by viewModel.oauthState.collectAsState()
@@ -1243,6 +1244,15 @@ fun SettingsTab(
                 description = stringResource(R.string.retranscribe_setting_description),
                 checked = showRetranscribeButton,
                 onCheckedChange = { viewModel.saveShowRetranscribeButton(it) }
+            )
+
+            // Force model load (bypass the low-memory pre-flight)
+            ToggleSettingCard(
+                icon = Icons.Default.Memory,
+                title = stringResource(R.string.force_model_load),
+                description = stringResource(R.string.force_model_load_desc),
+                checked = forceModelLoad,
+                onCheckedChange = { viewModel.saveForceModelLoad(it) }
             )
 
             // Per-App Settings Navigation Card

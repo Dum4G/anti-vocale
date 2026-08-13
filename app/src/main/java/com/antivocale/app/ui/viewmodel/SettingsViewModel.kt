@@ -220,6 +220,19 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    val forceModelLoad: StateFlow<Boolean> = preferencesManager.forceModelLoad
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = PreferencesManager.DEFAULT_FORCE_MODEL_LOAD
+        )
+
+    fun saveForceModelLoad(enabled: Boolean) {
+        viewModelScope.launch {
+            preferencesManager.saveForceModelLoad(enabled)
+        }
+    }
+
     // Current language from Per-App Language API (not DataStore)
     private val _currentLanguage = MutableStateFlow(LocaleManager.getCurrentLocaleCode())
     val currentLanguage: StateFlow<String> = _currentLanguage.asStateFlow()
