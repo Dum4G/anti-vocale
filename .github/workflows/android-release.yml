@@ -29,6 +29,34 @@ permissions:
   contents: write
 
 jobs:
+  test:
+    name: Unit tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+          cache: 'gradle'
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Run unit tests (playStore debug)
+        run: ./gradlew :app:testPlayStoreDebugUnitTest --console=plain
+
+      - name: Upload test results on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-results
+          path: app/build/reports/tests/testPlayStoreDebugUnitTest/
+
   build:
     name: Build
     runs-on: ubuntu-latest

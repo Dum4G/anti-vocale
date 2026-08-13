@@ -207,12 +207,17 @@ object ParakeetModelManager {
      * / backend-load time. Returns null if no usable model is found.
      */
     fun resolveActiveModelPath(context: Context, fallbackPath: String? = null): String? {
-        val storageDir = getModelStorageDir(context)
-        // Preference order = Variant declaration order (SMOOTHQUANT, then STOCK_INT8).
-        // Reuses validateModelDirectory() as the single source of truth for "is this a complete model".
-        for (variant in Variant.entries) {
-            val dir = File(storageDir, variant.dirName)
-            if (validateModelDirectory(dir) != null) return dir.absolutePath
+        // Scan the app storage dir for known variants. Wrapped because context.filesDir can be
+        // unusable (e.g. a mock Context in unit tests returns a File whose path is null, and
+        // File.exists() NPEs). On any failure, skip the scan and fall through to the fallback path.
+        try {
+            val storageDir = getModelStorageDir(context)
+            for (variant in Variant.entries) {
+                val dir = File(storageDir, variant.dirName)
+                if (validateModelDirectory(dir) != null) return dir.absolutePath
+            }
+        } catch (e: Exception) {
+            // Fall through to the explicit fallback path below.
         }
         if (fallbackPath != null && isValidModelPath(fallbackPath)) return fallbackPath
         return null
