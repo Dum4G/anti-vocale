@@ -59,6 +59,10 @@ class TranscriptionOrchestrator @Inject constructor(
             return when (error) {
                 is TranscriptionException.ModelLoadError ->
                     context.getString(R.string.error_model_load)
+                is TranscriptionException.InsufficientMemory ->
+                    // The exception already carries the localized low-memory message with the
+                    // measured numbers; surface it directly instead of the generic model-load string.
+                    error.message ?: context.getString(R.string.error_model_load)
                 is TranscriptionException.NativeError ->
                     context.getString(R.string.error_native)
                 is TranscriptionException.NotInitialized ->
@@ -395,7 +399,7 @@ class TranscriptionOrchestrator @Inject constructor(
                 val requiredBytes = modelSizeBytes + MEMORY_HEADROOM_BYTES
                 if (availBytes < requiredBytes) {
                     Log.w(TAG, "Blocking $label load: avail=${availBytes / MB}MB < required=${requiredBytes / MB}MB (model=${modelSizeBytes / MB}MB + headroom=${MEMORY_HEADROOM_BYTES / MB}MB)")
-                    return Result.failure(TranscriptionException.ModelLoadError(
+                    return Result.failure(TranscriptionException.InsufficientMemory(
                         context.getString(R.string.model_load_low_memory, formatMb(availBytes), formatMb(requiredBytes))
                     ))
                 }

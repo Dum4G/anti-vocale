@@ -154,6 +154,10 @@ sealed class TranscriptionException(message: String, cause: Throwable? = null) :
     /** Audio could be decoded but produced no transcription text. */
     class NoTranscriptionProduced :
         TranscriptionException("No transcription produced")
+
+    /** The device had too little free memory to load the model (pre-flight block). */
+    class InsufficientMemory(detail: String) :
+        TranscriptionException("Insufficient memory: $detail")
 }
 
 /**
