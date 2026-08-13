@@ -186,6 +186,7 @@
     <string name="oom_crash_warning">L\'app è stata chiusa perché il dispositivo aveva poca memoria libera. Prova a chiudere le altre app o a usare un modello più piccolo prima di trascrivere di nuovo.</string>
     <string name="native_crash_title">Chiusura imprevista</string>
     <string name="native_crash_go_to_model">Vai alla scheda Modello</string>
+    <string name="model_load_low_memory">Memoria libera insufficiente per questo modello (%1$s disponibili, circa %2$s necessari). Chiudi altre app o usa un modello più piccolo. Puoi anche attivare \"Forza caricamento modello\" nelle Impostazioni per riprovare comunque.</string>
     <string name="copy">Copia</string>
     <string name="share">Condividi</string>
     <string name="char_counter">%1$d di %2$d caratteri</string>

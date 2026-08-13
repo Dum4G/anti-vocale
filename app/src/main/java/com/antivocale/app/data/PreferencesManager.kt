@@ -26,6 +26,7 @@ interface PreferencesManager {
     val groupLogsByConversation: Flow<Boolean>
     val advancedSharingEnabled: Flow<Boolean>
     val showRetranscribeButton: Flow<Boolean>
+    val forceModelLoad: Flow<Boolean>
 
     suspend fun saveModelPath(path: String)
     suspend fun clearModelPath()
@@ -57,6 +58,7 @@ interface PreferencesManager {
     suspend fun saveGroupLogsByConversation(enabled: Boolean)
     suspend fun saveAdvancedSharingEnabled(enabled: Boolean)
     suspend fun saveShowRetranscribeButton(enabled: Boolean)
+    suspend fun saveForceModelLoad(enabled: Boolean)
 
     suspend fun saveBenchmarkResult(modelId: String, jsonResult: String)
     fun getBenchmarkResult(modelId: String): Flow<String?>
@@ -87,5 +89,6 @@ interface PreferencesManager {
         const val DEFAULT_GROUP_LOGS_BY_CONVERSATION = true
         const val DEFAULT_ADVANCED_SHARING_ENABLED = false
         const val DEFAULT_SHOW_RETRANSCRIBE_BUTTON = true
+        const val DEFAULT_FORCE_MODEL_LOAD = false
     }
 }

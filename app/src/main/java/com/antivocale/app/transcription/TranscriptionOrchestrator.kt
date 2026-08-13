@@ -1,5 +1,6 @@
 package com.antivocale.app.transcription
 
+import android.app.ActivityManager
 import android.content.Context
 import android.util.Log
 import com.antivocale.app.R
@@ -41,6 +42,10 @@ class TranscriptionOrchestrator @Inject constructor(
         private const val TAG = "TranscriptionOrchestrator"
         private const val MAX_CONCURRENT_CHUNKS = 2
         private const val PARTIAL_SAVE_INTERVAL_MS = 5000L
+        private const val MB = 1024L * 1024L
+        // Headroom over the on-disk model size: absorbs sherpa inference buffers and reclaimable-cache
+        // noise in availMem. Tunable; see TASK-314 spec. ~300MB derived from the SmoothQuant incident.
+        private const val MEMORY_HEADROOM_BYTES = 300L * MB
 
         internal fun isNoModelConfiguredError(error: Throwable): Boolean {
             return error is TranscriptionException.NotInitialized
@@ -348,9 +353,19 @@ class TranscriptionOrchestrator @Inject constructor(
         return configureSherpaBackend(backendId, modelPath, label, language, context)
     }
 
+    /** Returns the system's available memory (the closest user-space analog to MemAvailable). */
+    private fun availableMemoryBytes(context: Context): Long {
+        val info = ActivityManager.MemoryInfo()
+        val am = context.getSystemService(ActivityManager::class.java)
+        am?.getMemoryInfo(info)
+        return info.availMem
+    }
+
+    private fun formatMb(bytes: Long): String = "${bytes / MB}MB"
+
     /**
      * Shared core for sherpa-onnx backends: validate the model dir, resolve the inference
-     * provider, and activate the backend. Called by [loadSherpaOnnxModel] (flow-sourced —
+     * provider, and activate the backend. Called by [loadSherpaOnnxModel] (flow-sourced:
      * Whisper/Qwen3) and [loadSherpaOnnxBackend] (Parakeet auto-fallback).
      */
     private suspend fun configureSherpaBackend(
@@ -363,6 +378,26 @@ class TranscriptionOrchestrator @Inject constructor(
         val modelDir = File(modelPath)
         if (!modelDir.exists() || !modelDir.isDirectory) {
             return Result.failure(IllegalStateException("$label model directory not found: $modelPath"))
+        }
+        // Pre-flight memory check: refuse to load if free memory is below the model size + headroom.
+        // Gated by the forceModelLoad preference so a determined user can bypass it. availMem is a
+        // coarse predictor (lmkd uses PSI + oom_score_adj, not a literal MemAvailable comparison);
+        // the headroom absorbs inference overhead and reclaimable-cache noise.
+        if (!preferencesManager.forceModelLoad.first()) {
+            val availBytes = availableMemoryBytes(context)
+            // Fail open if we could not read available memory (e.g. no ActivityManager service):
+            // blocking on an unknown value would regress test/local contexts and offer no real
+            // protection. Only compute the model size and compare when we have a concrete measurement.
+            if (availBytes > 0) {
+                val modelSizeBytes = modelDir.walkTopDown().filter { it.isFile }.sumOf { it.length() }
+                val requiredBytes = modelSizeBytes + MEMORY_HEADROOM_BYTES
+                if (availBytes < requiredBytes) {
+                    Log.w(TAG, "Blocking $label load: avail=${availBytes / MB}MB < required=${requiredBytes / MB}MB (model=${modelSizeBytes / MB}MB + headroom=${MEMORY_HEADROOM_BYTES / MB}MB)")
+                    return Result.failure(TranscriptionException.ModelLoadError(
+                        context.getString(R.string.model_load_low_memory, formatMb(availBytes), formatMb(requiredBytes))
+                    ))
+                }
+            }
         }
         Log.i(TAG, "Auto-loading $label model from: $modelPath")
         val providerPref = preferencesManager.inferenceProvider.first()

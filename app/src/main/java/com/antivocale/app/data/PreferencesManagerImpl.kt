@@ -48,6 +48,7 @@ class PreferencesManagerImpl(
         private val GROUP_LOGS_BY_CONVERSATION = booleanPreferencesKey("group_logs_by_conversation")
         private val ADVANCED_SHARING_ENABLED = booleanPreferencesKey("advanced_sharing_enabled")
         private val SHOW_RETRANSCRIBE_BUTTON = booleanPreferencesKey("show_retranscribe_button")
+        private val FORCE_MODEL_LOAD = booleanPreferencesKey("force_model_load")
         private val PARTIAL_TRANSCRIPTION_TEXT = stringPreferencesKey("partial_transcription_text")
         private val PARTIAL_TRANSCRIPTION_TIMESTAMP = longPreferencesKey("partial_transcription_timestamp")
     }
@@ -76,7 +77,8 @@ class PreferencesManagerImpl(
         val vadAdvisoryDismissed: Boolean = false,
         val groupLogsByConversation: Boolean = PreferencesManager.DEFAULT_GROUP_LOGS_BY_CONVERSATION,
         val advancedSharingEnabled: Boolean = PreferencesManager.DEFAULT_ADVANCED_SHARING_ENABLED,
-        val showRetranscribeButton: Boolean = PreferencesManager.DEFAULT_SHOW_RETRANSCRIBE_BUTTON
+        val showRetranscribeButton: Boolean = PreferencesManager.DEFAULT_SHOW_RETRANSCRIBE_BUTTON,
+        val forceModelLoad: Boolean = PreferencesManager.DEFAULT_FORCE_MODEL_LOAD
     )
 
     private fun Preferences.toCached() = CachedPreferences(
@@ -103,7 +105,8 @@ class PreferencesManagerImpl(
         vadAdvisoryDismissed = this[VAD_ADVISORY_DISMISSED] ?: false,
         groupLogsByConversation = this[GROUP_LOGS_BY_CONVERSATION] ?: PreferencesManager.DEFAULT_GROUP_LOGS_BY_CONVERSATION,
         advancedSharingEnabled = this[ADVANCED_SHARING_ENABLED] ?: PreferencesManager.DEFAULT_ADVANCED_SHARING_ENABLED,
-        showRetranscribeButton = this[SHOW_RETRANSCRIBE_BUTTON] ?: PreferencesManager.DEFAULT_SHOW_RETRANSCRIBE_BUTTON
+        showRetranscribeButton = this[SHOW_RETRANSCRIBE_BUTTON] ?: PreferencesManager.DEFAULT_SHOW_RETRANSCRIBE_BUTTON,
+        forceModelLoad = this[FORCE_MODEL_LOAD] ?: PreferencesManager.DEFAULT_FORCE_MODEL_LOAD
     )
 
     fun initialize() {
@@ -447,5 +450,15 @@ class PreferencesManagerImpl(
             preferences[SHOW_RETRANSCRIBE_BUTTON] = enabled
         }
         cache.updateAndGet { it.copy(showRetranscribeButton = enabled) }
+    }
+
+    override val forceModelLoad: Flow<Boolean> = context.dataStore.data.map { it[FORCE_MODEL_LOAD] ?: PreferencesManager.DEFAULT_FORCE_MODEL_LOAD }
+        .onStart { emit(cache.get().forceModelLoad) }
+
+    override suspend fun saveForceModelLoad(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[FORCE_MODEL_LOAD] = enabled
+        }
+        cache.updateAndGet { it.copy(forceModelLoad = enabled) }
     }
 }
