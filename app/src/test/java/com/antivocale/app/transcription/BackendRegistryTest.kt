@@ -44,10 +44,9 @@ import kotlin.reflect.KProperty1
  * and the display-name derivation, exactly as the dispatch sites hardcode them
  * today. Migration follow-ups can then assert behavior-parity against this.
  *
- * Share aliases below are the literal values of ShareReceiverActivity's private
- * ALIAS_* constants; pinning them here guards against drift until the registry
- * becomes the single source (at which point ShareReceiverActivity flips to
- * lookup by descriptor).
+ * Share aliases below are pinned against the manifest activity-alias literals
+ * (the registry is the single source since TASK-323: ShareReceiverActivity
+ * resolves aliases via byShareAlias, so this pins registry <-> manifest).
  */
 class BackendRegistryTest {
 

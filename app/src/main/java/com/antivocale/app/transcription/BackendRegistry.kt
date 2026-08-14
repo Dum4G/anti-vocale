@@ -19,7 +19,9 @@ import javax.inject.Singleton
  *  - the [modelType] enum used by download/bookkeeping code
  *    ([ExtractionService.ModelType]),
  *  - the [shareAlias] manifest activity-alias used to route share targets
- *    (mirrors ShareReceiverActivity's private `ALIAS_*` constants).
+ *    (single source since TASK-323: ShareReceiverActivity and ShareTargetManager
+ *    resolve it through the registry; the manifest activity-alias android:name
+ *    attributes themselves stay literal strings).
  *
  * It also carries the per-backend saved-model-path preference accessors and the
  * display-name derivation, so the parallel `when` blocks can collapse into
@@ -46,9 +48,12 @@ data class BackendDescriptor(
     val modelType: ExtractionService.ModelType,
 
     /**
-     * Share-target activity-alias for this backend. Literal mirror of the
-     * private `ALIAS_*` constants in `ShareReceiverActivity`; pinned by
-     * BackendRegistryTest until the registry becomes the single source.
+     * Share-target activity-alias for this backend: the manifest
+     * activity-alias class name that routes shared audio to it. Single
+     * source since TASK-323 (ShareReceiverActivity's backendIdForAlias and
+     * ShareTargetManager resolve it here); the manifest android:name
+     * attributes cannot reference runtime values and stay literal strings,
+     * pinned by BackendRegistryTest.
      */
     val shareAlias: String,
 
@@ -96,8 +101,10 @@ data class BackendDescriptor(
  *  - [com.antivocale.app.di.TranscriptionModule] (Hilt @IntoSet DI registration)
  *  - [com.antivocale.app.data.ShareTargetManager] (TARGETS list + hasModel) and
  *    [com.antivocale.app.receiver.ShareReceiverActivity] (ALIAS_* constants +
- *    backendIdForAlias)
- *  - AndroidManifest.xml (share-target activity-alias) + strings (share_target_*)
+ *    backendIdForAlias). Migrated in TASK-323 onto the registry lookups
+ *  - AndroidManifest.xml (share-target activity-alias) + strings (share_target_*):
+ *    the android:name attributes stay literal strings by necessity (the manifest
+ *    cannot reference registry values); the registry pins their values
  *  - [com.antivocale.app.data.PreferencesManager] / PreferencesManagerImpl
  *    (per-backend xxxModelPath flow + save/clear)
  *
@@ -109,7 +116,14 @@ data class BackendDescriptor(
  * the saved-model-path lookup reads the descriptor's model-path flow, with the
  * GGUF literal and unknown-id fallbacks kept locally; its calibration
  * display-name derivation deliberately keeps its own dir-name semantics, see
- * TranscriptionOrchestratorTest).
+ * TranscriptionOrchestratorTest); and the share-target sites (TASK-323):
+ * [com.antivocale.app.receiver.ShareReceiverActivity].backendIdForAlias resolves
+ * the intent's alias component via byShareAlias (unknown aliases still yield
+ * null; the private ALIAS_* constants are gone), and
+ * [com.antivocale.app.data.ShareTargetManager] iterates the registry's
+ * descriptors for component enable/disable and reads the descriptor's
+ * model-path flow for the has-model check (neither site had a GGUF target,
+ * so nothing literal needed preserving).
  *
  * Not registered: the disabled GGUF backend (`gemma4_gguf`,
  * [ExtractionService.ModelType.GEMMA4_GGUF]). It has no BACKEND_ID constant
