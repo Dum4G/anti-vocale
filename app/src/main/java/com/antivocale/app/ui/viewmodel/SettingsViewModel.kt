@@ -12,19 +12,15 @@ import com.antivocale.app.data.HuggingFaceAuthManager
 import com.antivocale.app.data.HuggingFaceOAuthConfig
 import com.antivocale.app.data.HuggingFaceTokenManager
 import com.antivocale.app.data.ModelDiscovery
+import com.antivocale.app.data.ActiveModelRepository
 import com.antivocale.app.data.PerAppPreferencesManager
 import com.antivocale.app.data.PreferencesManager
 import com.antivocale.app.data.ShareTargetManager
 import com.antivocale.app.data.TranscriptionCalibrator
 import com.antivocale.app.transcription.InferenceProvider
 import com.antivocale.app.manager.LlmManager
-import com.antivocale.app.transcription.Qwen3AsrBackend
-import com.antivocale.app.transcription.Qwen3AsrModelManager
 // GGUF: import com.antivocale.app.transcription.Gemma4GgufBackend
 // GGUF: import com.antivocale.app.transcription.Gemma4GgufModelManager
-import com.antivocale.app.transcription.SherpaOnnxBackend
-import com.antivocale.app.transcription.NemotronStreamingBackend
-import com.antivocale.app.transcription.WhisperBackend
 import com.antivocale.app.transcription.TranscriptionBackendManager
 import com.antivocale.app.ui.theme.ThemeMode
 import com.antivocale.app.ui.theme.ThemeType
@@ -36,7 +32,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -60,7 +55,8 @@ class SettingsViewModel @Inject constructor(
     val transcriptionCalibrator: TranscriptionCalibrator,
     private val backendManager: TranscriptionBackendManager,
     private val llmManager: LlmManager,
-    private val shareTargetManager: ShareTargetManager
+    private val shareTargetManager: ShareTargetManager,
+    private val activeModelRepository: ActiveModelRepository
 ) : AndroidViewModel(application) {
 
     companion object {
@@ -667,87 +663,19 @@ class SettingsViewModel @Inject constructor(
     // ========== Model Selection ==========
 
     /**
-     * Loads the current model path from preferences.
-     * Checks backend preference to determine which model to show.
+     * Collects the active model from [ActiveModelRepository], which derives
+     * backend, path and display name reactively from preferences; the uiState
+     * stays in sync with any backend or model-path change without a manual reload.
      */
     fun loadCurrentModel() {
         viewModelScope.launch {
-            // Check which backend is selected
-            val backend = preferencesManager.transcriptionBackend.first()
-            _uiState.update { it.copy(transcriptionBackend = backend) }
-
-            when (backend) {
-                SherpaOnnxBackend.BACKEND_ID -> {
-                    // Show Parakeet model
-                    preferencesManager.parakeetModelPath.collect { path ->
-                        _uiState.update { it.copy(
-                            currentModelPath = path,
-                            currentModelName = if (!path.isNullOrBlank()) getApplication<Application>().getString(R.string.parakeet_name) else null
-                        )}
-                    }
-                }
-                WhisperBackend.BACKEND_ID -> {
-                    // Show Whisper model
-                    preferencesManager.whisperModelPath.collect { path ->
-                        val modelName = if (!path.isNullOrBlank()) {
-                            val modelDir = java.io.File(path)
-                            val model = com.antivocale.app.transcription.WhisperModelManager.validateModelDirectory(modelDir)
-                            model?.variant?.let { v ->
-                                getApplication<Application>().getString(v.titleResId)
-                            } ?: path.substringAfterLast("/")
-                        } else null
-                        _uiState.update { it.copy(
-                            currentModelPath = path,
-                            currentModelName = modelName
-                        )}
-                    }
-                }
-                Qwen3AsrBackend.BACKEND_ID -> {
-                    preferencesManager.qwen3AsrModelPath.collect { path ->
-                        val modelName = if (!path.isNullOrBlank()) {
-                            val modelDir = java.io.File(path)
-                            Qwen3AsrModelManager.detectVariant(modelDir.name)?.let { v ->
-                                getApplication<Application>().getString(v.titleResId)
-                            } ?: path.substringAfterLast("/")
-                        } else null
-                        _uiState.update { it.copy(
-                            currentModelPath = path,
-                            currentModelName = modelName
-                        )}
-                    }
-                }
-                NemotronStreamingBackend.BACKEND_ID -> {
-                    // Show Nemotron streaming model
-                    preferencesManager.nemotronModelPath.collect { path ->
-                        val modelName = if (!path.isNullOrBlank()) {
-                            getApplication<Application>().getString(R.string.nemotron_name)
-                        } else null
-                        _uiState.update { it.copy(
-                            currentModelPath = path,
-                            currentModelName = modelName
-                        )}
-                    }
-                }
-                "gemma4_gguf" -> {
-                    // GGUF: disabled — show filename only
-                    preferencesManager.ggufModelPath.collect { path ->
-                        val modelName = if (!path.isNullOrBlank()) {
-                            java.io.File(path).name
-                        } else null
-                        _uiState.update { it.copy(
-                            currentModelPath = path,
-                            currentModelName = modelName
-                        )}
-                    }
-                }
-                else -> {
-                    // Show LLM model (Gemma, etc.)
-                    preferencesManager.modelPath.collect { path ->
-                        _uiState.update { it.copy(
-                            currentModelPath = path,
-                            currentModelName = path?.let { File(it).name }
-                        )}
-                    }
+            activeModelRepository.activeModelFlow.collect { active ->
+                _uiState.update {
+                    it.copy(
+                        transcriptionBackend = active.backendId,
+                        currentModelPath = active.modelPath,
+                        currentModelName = active.modelName
+                    )
                 }
             }
         }
