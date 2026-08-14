@@ -85,45 +85,64 @@ data class BackendDescriptor(
  * of [BackendDescriptor]s plus lookups by backend-id, [ExtractionService.ModelType],
  * and share alias.
  *
- * TASK-254 introduces the abstraction only; the dispatch sites below still
- * hardcode their own mappings and are meant to migrate onto this registry in
- * follow-up tasks. Checklist (from the CLAUDE.md "Architecture Gotchas"
- * section, plus the repository noted last):
+ * TASK-254 introduced the abstraction; the migration is complete as of
+ * TASK-324. Status of the dispatch sites from the CLAUDE.md "Architecture
+ * Gotchas" section, plus the repository noted last:
  *
- *  - [com.antivocale.app.ui.viewmodel.ModelViewModel] (loadSavedModelPath,
- *    modelPathForBackend, benchmark config)
+ * Migrated onto this registry:
+ *  - [com.antivocale.app.data.ActiveModelRepository] (TASK-321; backend ids
+ *    without a descriptor keep their legacy fallbacks there: GGUF's dedicated
+ *    ggufModelPath, generic modelPath for other unknowns)
+ *  - [com.antivocale.app.transcription.TranscriptionOrchestrator] (TASK-322;
+ *    the backend-load dispatch keys on the descriptor's modelType and the
+ *    saved-model-path lookup reads the descriptor's model-path flow, with the
+ *    GGUF literal and unknown-id fallbacks kept locally; its calibration
+ *    display-name derivation is still a string-keyed when (BACKEND_ID
+ *    constants) that deliberately keeps its own dir-name semantics, see
+ *    TranscriptionOrchestratorTest)
+ *  - the share-target sites (TASK-323):
+ *    [com.antivocale.app.receiver.ShareReceiverActivity].backendIdForAlias
+ *    resolves the intent's alias component via byShareAlias (unknown aliases
+ *    still yield null; the private ALIAS_* constants are gone), and
+ *    [com.antivocale.app.data.ShareTargetManager] iterates the registry's
+ *    descriptors for component enable/disable and reads the descriptor's
+ *    model-path flow for the has-model check (neither site had a GGUF
+ *    target, so nothing literal needed preserving)
  *  - [com.antivocale.app.ui.viewmodel.SettingsViewModel].loadCurrentModel
- *    (Settings active-model display; separate state from ModelViewModel)
- *  - [com.antivocale.app.service.ExtractionService] (ModelType enum +
- *    download/cancel/displayName dispatch. Assessed in TASK-322: the enum
- *    stays as the persistence/bookkeeping scheme and the dispatch carries no
- *    registry data, so nothing to migrate there)
- *  - [com.antivocale.app.di.TranscriptionModule] (Hilt @IntoSet DI registration)
- *  - [com.antivocale.app.data.ShareTargetManager] (TARGETS list + hasModel) and
- *    [com.antivocale.app.receiver.ShareReceiverActivity] (ALIAS_* constants +
- *    backendIdForAlias). Migrated in TASK-323 onto the registry lookups
- *  - AndroidManifest.xml (share-target activity-alias) + strings (share_target_*):
- *    the android:name attributes stay literal strings by necessity (the manifest
- *    cannot reference registry values); the registry pins their values
- *  - [com.antivocale.app.data.PreferencesManager] / PreferencesManagerImpl
- *    (per-backend xxxModelPath flow + save/clear)
+ *    (indirectly via TASK-258: it keeps no parallel mapping of its own but
+ *    collects [com.antivocale.app.data.ActiveModelRepository]'s
+ *    activeModelFlow, which dispatches through this registry since TASK-321)
+ *  - [com.antivocale.app.ui.viewmodel.ModelViewModel] (TASK-324: the
+ *    file-validity check in loadSavedModelPath keys on the descriptor's
+ *    modelType, mirroring the orchestrator, with the GGUF literal matched
+ *    first; its benchmark-config when in startBenchmark still keys on
+ *    backend-id strings, which selects inference configuration rather than
+ *    backend metadata)
  *
- * Migrated onto this registry: [com.antivocale.app.data.ActiveModelRepository]
- * (TASK-321; backend ids without a descriptor keep their legacy fallbacks
- * there: GGUF's dedicated ggufModelPath, generic modelPath for other
- * unknowns), and [com.antivocale.app.transcription.TranscriptionOrchestrator]
- * (TASK-322; the backend-load dispatch keys on the descriptor's modelType and
- * the saved-model-path lookup reads the descriptor's model-path flow, with the
- * GGUF literal and unknown-id fallbacks kept locally; its calibration
- * display-name derivation deliberately keeps its own dir-name semantics, see
- * TranscriptionOrchestratorTest); and the share-target sites (TASK-323):
- * [com.antivocale.app.receiver.ShareReceiverActivity].backendIdForAlias resolves
- * the intent's alias component via byShareAlias (unknown aliases still yield
- * null; the private ALIAS_* constants are gone), and
- * [com.antivocale.app.data.ShareTargetManager] iterates the registry's
- * descriptors for component enable/disable and reads the descriptor's
- * model-path flow for the has-model check (neither site had a GGUF target,
- * so nothing literal needed preserving).
+ * Remaining sites, deliberately (not migration targets):
+ *  - [com.antivocale.app.ui.viewmodel.LogsViewModel]: hand-builds a
+ *    backend-id -> saved-model-path map (~line 283). A sixth dispatch site
+ *    missed by the original CLAUDE.md list (found by the TASK-324 review);
+ *    migration is tracked as a follow-up because the map's insertion order
+ *    drives a picker, so swapping to registry iteration order is a visible
+ *    behavior change, not a pure refactor.
+ *  - [com.antivocale.app.service.ExtractionService]: assessed in TASK-322,
+ *    the ModelType enum stays as the persistence/bookkeeping scheme and the
+ *    dispatch carries no registry data, so nothing to migrate there
+ *  - [com.antivocale.app.di.TranscriptionModule] (Hilt @IntoSet DI
+ *    registration): assembling the backend set is a different concern from
+ *    metadata dispatch (this registry describes backends, the multibinding
+ *    instantiates them)
+ *  - [com.antivocale.app.data.PreferencesManager] / PreferencesManagerImpl
+ *    (per-backend xxxModelPath flow + save/clear): this interface IS the
+ *    data source the descriptors delegate to ([BackendDescriptor.modelPathFlow],
+ *    [BackendDescriptor.saveModelPath], [BackendDescriptor.clearModelPath]
+ *    all take a PreferencesManager), so migrating it onto the registry would
+ *    be circular
+ *  - AndroidManifest.xml (share-target activity-alias) + strings
+ *    (share_target_*): the android:name attributes stay literal strings by
+ *    necessity (the manifest cannot reference registry values); their values
+ *    are pinned by BackendRegistryTest
  *
  * Not registered: the disabled GGUF backend (`gemma4_gguf`,
  * [ExtractionService.ModelType.GEMMA4_GGUF]). It has no BACKEND_ID constant

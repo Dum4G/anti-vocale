@@ -13,6 +13,7 @@ import com.antivocale.app.BuildConfig
 import com.antivocale.app.data.ModelDownloader
 import com.antivocale.app.data.PreferencesManager
 import com.antivocale.app.data.ShareTargetManager
+import com.antivocale.app.transcription.BackendRegistry
 import com.antivocale.app.transcription.LlmTranscriptionBackend
 import com.antivocale.app.transcription.NemotronDownloader
 import com.antivocale.app.transcription.NemotronModelManager
@@ -64,7 +65,11 @@ class ModelViewModel @Inject constructor(
     private val backendManager: TranscriptionBackendManager,
     private val llmManager: LlmManager,
     private val shareTargetManager: ShareTargetManager,
-    @ApplicationContext private val ctx: Context
+    @ApplicationContext private val ctx: Context,
+    // Defaulted so direct construction without Hilt (unit tests) keeps the
+    // eight-argument shape; the registry is stateless so a fresh instance is
+    // equivalent to the injected singleton.
+    private val backendRegistry: BackendRegistry = BackendRegistry(),
 ) : ViewModel() {
 
     val tokenState = tokenManager.tokenState
@@ -840,19 +845,29 @@ class ModelViewModel @Inject constructor(
                     // File-existence validation is backend-specific (directory vs file vs custom
                     // check). This when-block stays here because it drives the statusMessage, not
                     // because it dispatches preferences (that is now the repository's job).
+                    // TASK-324: key on the registry descriptor's ModelType instead of the
+                    // backend-id strings, mirroring TranscriptionOrchestrator.ensureBackendLoaded.
+                    // The disabled GGUF backend is unregistered, so its literal id is matched
+                    // before the lookup; the registered LLM backend (GEMMA) and unknown ids
+                    // (null descriptor) both fall to validateModelPath, exactly as the former
+                    // string-keyed else did.
                     val isValid = when (active.backendId) {
-                        SherpaOnnxBackend.BACKEND_ID -> File(path).exists()
-                        WhisperBackend.BACKEND_ID,
-                        Qwen3AsrBackend.BACKEND_ID,
-                        NemotronStreamingBackend.BACKEND_ID -> {
-                            val dir = File(path)
-                            dir.exists() && dir.isDirectory
-                        }
                         "gemma4_gguf" -> {
                             val file = File(path)
                             file.exists() && file.isFile
                         }
-                        else -> validateModelPath(path)
+                        else -> when (backendRegistry.byBackendId(active.backendId)?.modelType) {
+                            ExtractionService.ModelType.PARAKEET -> File(path).exists()
+                            ExtractionService.ModelType.WHISPER,
+                            ExtractionService.ModelType.QWEN3_ASR,
+                            ExtractionService.ModelType.NEMOTRON -> {
+                                val dir = File(path)
+                                dir.exists() && dir.isDirectory
+                            }
+                            // The registered LLM backend ("llm" -> GEMMA) validates as a file.
+                            ExtractionService.ModelType.GEMMA -> validateModelPath(path)
+                            else -> validateModelPath(path)
+                        }
                     }
                     val displayName = name ?: path.substringAfterLast("/")
                     val isLlm = active.backendId == LlmTranscriptionBackend.BACKEND_ID
