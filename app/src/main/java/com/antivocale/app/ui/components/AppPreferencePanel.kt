@@ -74,7 +74,7 @@ fun AppPreferencePanel(
                             style = MaterialTheme.typography.bodyLarge
                         )
                         Text(
-                            text = "Automatically copy transcription to clipboard",
+                            text = stringResource(R.string.per_app_settings_auto_copy_description),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -99,7 +99,7 @@ fun AppPreferencePanel(
                             style = MaterialTheme.typography.bodyLarge
                         )
                         Text(
-                            text = "Display share button in notification",
+                            text = stringResource(R.string.per_app_settings_show_share_description),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
