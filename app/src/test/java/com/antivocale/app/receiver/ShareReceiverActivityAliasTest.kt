@@ -36,6 +36,14 @@ class ShareReceiverActivityAliasTest {
     }
 
     @Test
+    fun `nemotron alias maps to nemotron-streaming backend`() {
+        assertEquals(
+            "nemotron-streaming",
+            ShareReceiverActivity.backendIdForAlias("com.antivocale.app.ShareNemotron")
+        )
+    }
+
+    @Test
     fun `empty string returns null`() {
         assertNull(ShareReceiverActivity.backendIdForAlias(""))
     }
