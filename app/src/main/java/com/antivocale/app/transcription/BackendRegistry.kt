@@ -29,15 +29,14 @@ import javax.inject.Singleton
  * fixed localized name (`context.getString(displayNameResId)`); otherwise call
  * [deriveDisplayName] with the saved model path. Backends whose name depends on
  * the downloaded variant (Whisper, Qwen3-ASR) derive it via their model
- * manager, exactly as [com.antivocale.app.data.ActiveModelRepository] does
- * today; the default derivation is the model file name.
+ * manager; the default derivation is the model file name. This is the single
+ * implementation of the derivations (ActiveModelRepository consumes it since
+ * TASK-321).
  *
  * Differences between backends are expressed as capability flags
  * ([isStreaming]) rather than forcing uniform metadata: the LLM backend
  * (Gemma) has no dedicated display-name resource and stores its model path in
  * the generic `modelPath` preference, which its accessors reflect.
- *
- * TASK-254 creates this abstraction only; no consumer is migrated here.
  */
 data class BackendDescriptor(
     /** Value of the backend's `BACKEND_ID` companion constant (e.g. "sherpa-onnx"). */
@@ -101,8 +100,11 @@ data class BackendDescriptor(
  *  - AndroidManifest.xml (share-target activity-alias) + strings (share_target_*)
  *  - [com.antivocale.app.data.PreferencesManager] / PreferencesManagerImpl
  *    (per-backend xxxModelPath flow + save/clear)
- *  - [com.antivocale.app.data.ActiveModelRepository] (when-block keyed on
- *    backend-id strings; its KDoc already points here)
+ *
+ * Migrated onto this registry: [com.antivocale.app.data.ActiveModelRepository]
+ * (TASK-321; backend ids without a descriptor keep their legacy fallbacks
+ * there: GGUF's dedicated ggufModelPath, generic modelPath for other
+ * unknowns).
  *
  * Not registered: the disabled GGUF backend (`gemma4_gguf`,
  * [ExtractionService.ModelType.GEMMA4_GGUF]). It has no BACKEND_ID constant

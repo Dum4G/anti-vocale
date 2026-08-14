@@ -1,9 +1,8 @@
 package com.antivocale.app.data
 
 import android.content.Context
-import com.antivocale.app.R
-import com.antivocale.app.transcription.Qwen3AsrModelManager
-import com.antivocale.app.transcription.WhisperModelManager
+import com.antivocale.app.transcription.BackendDescriptor
+import com.antivocale.app.transcription.BackendRegistry
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -20,15 +19,23 @@ import javax.inject.Singleton
  * corresponding per-backend model-path preference so that consumers
  * always see a consistent [ActiveModel].
  *
- * NOTE: This class contains a `when` block keyed on backend-id strings.
- * When BackendRegistry (TASK-254) lands, this is the single place to
- * replace with descriptor-based accessor lookups.
+ * The per-backend dispatch lives in [BackendRegistry]: the backend id is
+ * resolved to a [BackendDescriptor] whose model-path flow and display-name
+ * derivation supply the emission. Backend ids without a registered
+ * descriptor keep today's fallback behavior: the disabled GGUF backend
+ * (`gemma4_gguf`, deliberately unregistered because it has no BACKEND_ID
+ * constant) reads its own `ggufModelPath` preference, and any other unknown
+ * id degrades to the generic [PreferencesManager.modelPath].
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 @Singleton
 class ActiveModelRepository @Inject constructor(
     private val preferencesManager: PreferencesManager,
     @ApplicationContext private val context: Context,
+    // Defaulted so direct construction without Hilt (unit tests) keeps the
+    // two-argument shape; the registry is stateless so a fresh instance is
+    // equivalent to the injected singleton.
+    private val backendRegistry: BackendRegistry = BackendRegistry(),
 ) {
     /**
      * The active backend plus its saved model path and display name, reactively
@@ -41,43 +48,48 @@ class ActiveModelRepository @Inject constructor(
      */
     val activeModelFlow: Flow<ActiveModel> =
         preferencesManager.transcriptionBackend.flatMapLatest { backend ->
-            when (backend) {
-                "sherpa-onnx" -> preferencesManager.parakeetModelPath.map { path ->
-                    path.toActiveModel(backend) { context.getString(R.string.parakeet_name) }
-                }
-                "whisper" -> preferencesManager.whisperModelPath.map { path ->
-                    path.toActiveModel(backend) { p ->
-                        WhisperModelManager.validateModelDirectory(File(p))
-                            ?.variant?.let { v -> context.getString(v.titleResId) }
-                            ?: File(p).name
-                    }
-                }
-                "qwen3-asr" -> preferencesManager.qwen3AsrModelPath.map { path ->
-                    path.toActiveModel(backend) { p ->
-                        Qwen3AsrModelManager.detectVariant(File(p).name)?.let { v ->
-                            context.getString(v.titleResId)
-                        } ?: File(p).name
-                    }
-                }
-                "nemotron-streaming" -> preferencesManager.nemotronModelPath.map { path ->
-                    path.toActiveModel(backend) { context.getString(R.string.nemotron_name) }
-                }
-                "gemma4_gguf" -> preferencesManager.ggufModelPath.map { path ->
-                    path.toActiveModel(backend) { File(it).name }
-                }
-                else -> preferencesManager.modelPath.map { path ->
-                    path.toActiveModel(backend) { File(it).name }
-                }
+            val descriptor = backendRegistry.byBackendId(backend)
+            modelPathFlowFor(backend, descriptor).map { path ->
+                path.toActiveModel(backend, descriptor)
             }
         }
 
-    private fun String?.toActiveModel(backendId: String, nameForPath: (String) -> String): ActiveModel {
+    /**
+     * The descriptor's saved-model-path flow, falling back for backend ids the
+     * registry does not know: the disabled GGUF backend's dedicated preference,
+     * then the generic preference for any other unknown id.
+     */
+    private fun modelPathFlowFor(backend: String, descriptor: BackendDescriptor?): Flow<String?> =
+        when {
+            descriptor != null -> descriptor.modelPathFlow(preferencesManager)
+            backend == GGUF_BACKEND_ID -> preferencesManager.ggufModelPath
+            else -> preferencesManager.modelPath
+        }
+
+    /**
+     * Guards against a blank saved path and derives the [ActiveModel] fields:
+     * the backend id passes through untouched, and the name comes from the
+     * descriptor contract (fixed localized name, else its path-derived name),
+     * falling back to the model file name for unregistered backends.
+     */
+    private fun String?.toActiveModel(backendId: String, descriptor: BackendDescriptor?): ActiveModel {
         val effectivePath = this?.takeUnless { it.isBlank() }
         return ActiveModel(
             backendId = backendId,
             modelPath = effectivePath,
-            modelName = effectivePath?.let(nameForPath)
+            modelName = effectivePath?.let { path ->
+                when {
+                    descriptor == null -> File(path).name
+                    descriptor.displayNameResId != null -> context.getString(descriptor.displayNameResId)
+                    else -> descriptor.deriveDisplayName(context, path)
+                }
+            }
         )
+    }
+
+    private companion object {
+        /** Backend id of the disabled GGUF backend; see the class KDoc. */
+        const val GGUF_BACKEND_ID = "gemma4_gguf"
     }
 }
 
