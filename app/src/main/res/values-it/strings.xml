@@ -87,6 +87,9 @@
     <string name="processed_in">Elaborato in %1$s</string>
     <string name="today">Oggi</string>
     <string name="yesterday">Ieri</string>
+    <string name="time_seconds_ago">%1$d sec fa</string>
+    <string name="time_minutes_ago">%1$d min fa</string>
+    <string name="time_hours_ago">%1$d h fa</string>
 
     <!-- Model descriptions -->
     <string name="model_desc_gemma_4_e2b">2.6GB - Multimodale (testo + audio), ultima generazione, migliore per la maggior parte dei dispositivi</string>

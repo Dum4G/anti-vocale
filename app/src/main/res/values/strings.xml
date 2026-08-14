@@ -87,6 +87,9 @@
     <string name="processed_in">Processed in %1$s</string>
     <string name="today">Today</string>
     <string name="yesterday">Yesterday</string>
+    <string name="time_seconds_ago">%1$ds ago</string>
+    <string name="time_minutes_ago">%1$dm ago</string>
+    <string name="time_hours_ago">%1$dh ago</string>
 
     <!-- Model descriptions -->
     <string name="model_desc_gemma_4_e2b">2.6GB - Multimodal (text + audio), newest generation, best for most devices</string>

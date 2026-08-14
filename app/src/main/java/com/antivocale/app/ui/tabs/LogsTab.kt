@@ -1011,9 +1011,9 @@ private fun formatRelativeTime(timestamp: Long, context: Context): String {
     val diff = now - timestamp
     val locale = context.resources.configuration.locales.get(0)
     return when {
-        diff < 60_000 -> "${diff / 1000}s ago"
-        diff < 3_600_000 -> "${diff / 60_000}m ago"
-        diff < 86_400_000 -> "${diff / 3_600_000}h ago"
+        diff < 60_000 -> context.getString(R.string.time_seconds_ago, diff / 1000)
+        diff < 3_600_000 -> context.getString(R.string.time_minutes_ago, diff / 60_000)
+        diff < 86_400_000 -> context.getString(R.string.time_hours_ago, diff / 3_600_000)
         else -> {
             val date = Date(timestamp)
             val today = Date(now)
