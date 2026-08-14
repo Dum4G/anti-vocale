@@ -89,10 +89,10 @@ data class BackendDescriptor(
  *    modelPathForBackend, benchmark config)
  *  - [com.antivocale.app.ui.viewmodel.SettingsViewModel].loadCurrentModel
  *    (Settings active-model display; separate state from ModelViewModel)
- *  - [com.antivocale.app.transcription.TranscriptionOrchestrator]
- *    (when(preferredBackendId) + loadXxxBackend)
  *  - [com.antivocale.app.service.ExtractionService] (ModelType enum +
- *    download/cancel/displayName dispatch)
+ *    download/cancel/displayName dispatch. Assessed in TASK-322: the enum
+ *    stays as the persistence/bookkeeping scheme and the dispatch carries no
+ *    registry data, so nothing to migrate there)
  *  - [com.antivocale.app.di.TranscriptionModule] (Hilt @IntoSet DI registration)
  *  - [com.antivocale.app.data.ShareTargetManager] (TARGETS list + hasModel) and
  *    [com.antivocale.app.receiver.ShareReceiverActivity] (ALIAS_* constants +
@@ -104,7 +104,12 @@ data class BackendDescriptor(
  * Migrated onto this registry: [com.antivocale.app.data.ActiveModelRepository]
  * (TASK-321; backend ids without a descriptor keep their legacy fallbacks
  * there: GGUF's dedicated ggufModelPath, generic modelPath for other
- * unknowns).
+ * unknowns), and [com.antivocale.app.transcription.TranscriptionOrchestrator]
+ * (TASK-322; the backend-load dispatch keys on the descriptor's modelType and
+ * the saved-model-path lookup reads the descriptor's model-path flow, with the
+ * GGUF literal and unknown-id fallbacks kept locally; its calibration
+ * display-name derivation deliberately keeps its own dir-name semantics, see
+ * TranscriptionOrchestratorTest).
  *
  * Not registered: the disabled GGUF backend (`gemma4_gguf`,
  * [ExtractionService.ModelType.GEMMA4_GGUF]). It has no BACKEND_ID constant

@@ -12,6 +12,7 @@ import com.antivocale.app.data.TranscriptionCalibrator
 import com.antivocale.app.data.local.LogDao
 import com.antivocale.app.data.local.toEntity
 import com.antivocale.app.data.local.toLogEntry
+import com.antivocale.app.service.ExtractionService
 import com.antivocale.app.service.TranscriptionListener
 import com.antivocale.app.ui.viewmodel.LogEntry
 import kotlinx.coroutines.*
@@ -36,7 +37,11 @@ class TranscriptionOrchestrator @Inject constructor(
     private val logDao: LogDao,
     private val transcriptionCalibrator: TranscriptionCalibrator,
     private val backendManager: TranscriptionBackendManager,
-    private val audioPreprocessor: AudioPreprocessor
+    private val audioPreprocessor: AudioPreprocessor,
+    // Defaulted so direct construction without Hilt (unit tests) keeps the
+    // five-argument shape; the registry is stateless so a fresh instance is
+    // equivalent to the injected singleton.
+    private val backendRegistry: BackendRegistry = BackendRegistry(),
 ) {
     companion object {
         private const val TAG = "TranscriptionOrchestrator"
@@ -46,6 +51,9 @@ class TranscriptionOrchestrator @Inject constructor(
         // Headroom over the on-disk model size: absorbs sherpa inference buffers and reclaimable-cache
         // noise in availMem. Tunable; see TASK-314 spec. ~300MB derived from the SmoothQuant incident.
         private const val MEMORY_HEADROOM_BYTES = 300L * MB
+
+        /** Backend id of the disabled GGUF backend; deliberately unregistered in [BackendRegistry]. */
+        private const val GGUF_BACKEND_ID = "gemma4_gguf"
 
         internal fun isNoModelConfiguredError(error: Throwable): Boolean {
             return error is TranscriptionException.NotInitialized
@@ -309,13 +317,22 @@ class TranscriptionOrchestrator @Inject constructor(
                 backendManager.unloadActiveBackend()
             }
 
+            // TASK-322: dispatch on the registry descriptor's ModelType instead of the
+            // backend-id strings. The loaders keep their distinct bodies (only the keying
+            // changed). The disabled GGUF backend is unregistered, so its literal id is
+            // matched before the lookup; unknown ids yield a null descriptor and fall
+            // through to the LLM loader, exactly as the former string-keyed when did.
             val loadResult = when (preferredBackendId) {
-                SherpaOnnxBackend.BACKEND_ID -> loadSherpaOnnxBackend(context)
-                WhisperBackend.BACKEND_ID -> loadWhisperBackend(context)
-                Qwen3AsrBackend.BACKEND_ID -> loadQwen3AsrBackend(context)
-                NemotronStreamingBackend.BACKEND_ID -> loadNemotronBackend(context)
-                "gemma4_gguf" -> loadGgufBackend(context)
-                else -> loadLlmBackend(context)
+                GGUF_BACKEND_ID -> loadGgufBackend(context)
+                else -> when (backendRegistry.byBackendId(preferredBackendId)?.modelType) {
+                    ExtractionService.ModelType.PARAKEET -> loadSherpaOnnxBackend(context)
+                    ExtractionService.ModelType.WHISPER -> loadWhisperBackend(context)
+                    ExtractionService.ModelType.QWEN3_ASR -> loadQwen3AsrBackend(context)
+                    ExtractionService.ModelType.NEMOTRON -> loadNemotronBackend(context)
+                    // The registered LLM backend ("llm" -> GEMMA) loads here, as before.
+                    ExtractionService.ModelType.GEMMA -> loadLlmBackend(context)
+                    else -> loadLlmBackend(context)
+                }
             }
 
             loadResult.fold(
@@ -1269,15 +1286,21 @@ class TranscriptionOrchestrator @Inject constructor(
 
     // ---- Utilities ----
 
-    private suspend fun modelPathForBackend(backendId: String): String =
-        when (backendId) {
-            WhisperBackend.BACKEND_ID -> preferencesManager.whisperModelPath.first()
-            Qwen3AsrBackend.BACKEND_ID -> preferencesManager.qwen3AsrModelPath.first()
-            SherpaOnnxBackend.BACKEND_ID -> preferencesManager.parakeetModelPath.first()
-            NemotronStreamingBackend.BACKEND_ID -> preferencesManager.nemotronModelPath.first()
-            "gemma4_gguf" -> preferencesManager.ggufModelPath.first()
+    /**
+     * Saved model path for [backendId], read via the registry descriptor's model-path
+     * flow (TASK-322; the descriptor for the LLM backend already points at the generic
+     * [PreferencesManager.modelPath]). The unregistered GGUF backend keeps its dedicated
+     * preference and any other unknown id degrades to the generic one, matching the
+     * former string-keyed when.
+     */
+    private suspend fun modelPathForBackend(backendId: String): String {
+        val descriptor = backendRegistry.byBackendId(backendId)
+        return when {
+            descriptor != null -> descriptor.modelPathFlow(preferencesManager).first()
+            backendId == GGUF_BACKEND_ID -> preferencesManager.ggufModelPath.first()
             else -> preferencesManager.modelPath.first()
         } ?: ""
+    }
 
     internal fun deriveDisplayName(backendId: String, modelPath: String, fallbackName: String?): String {
         val dirName = File(modelPath).name
