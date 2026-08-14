@@ -108,6 +108,10 @@ data class BackendDescriptor(
  *    descriptors for component enable/disable and reads the descriptor's
  *    model-path flow for the has-model check (neither site had a GGUF
  *    target, so nothing literal needed preserving)
+ *  - [com.antivocale.app.ui.viewmodel.LogsViewModel] (TASK-325): the
+ *    re-transcribe picker's model-presence filter reads the descriptor's
+ *    model-path flow (the old hand-built id->path map was lookup-only, so
+ *    the picker order, driven by the backend manager, is unchanged)
  *  - [com.antivocale.app.ui.viewmodel.SettingsViewModel].loadCurrentModel
  *    (indirectly via TASK-258: it keeps no parallel mapping of its own but
  *    collects [com.antivocale.app.data.ActiveModelRepository]'s
@@ -120,12 +124,6 @@ data class BackendDescriptor(
  *    backend metadata)
  *
  * Remaining sites, deliberately (not migration targets):
- *  - [com.antivocale.app.ui.viewmodel.LogsViewModel]: hand-builds a
- *    backend-id -> saved-model-path map (~line 283). A sixth dispatch site
- *    missed by the original CLAUDE.md list (found by the TASK-324 review);
- *    migration is tracked as a follow-up because the map's insertion order
- *    drives a picker, so swapping to registry iteration order is a visible
- *    behavior change, not a pure refactor.
  *  - [com.antivocale.app.service.ExtractionService]: assessed in TASK-322,
  *    the ModelType enum stays as the persistence/bookkeeping scheme and the
  *    dispatch carries no registry data, so nothing to migrate there
