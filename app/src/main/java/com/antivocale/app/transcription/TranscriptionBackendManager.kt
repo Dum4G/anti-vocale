@@ -2,9 +2,12 @@ package com.antivocale.app.transcription
 
 import android.content.Context
 import android.util.Log
+import com.antivocale.app.data.ExternalModelRecord
+import com.antivocale.app.data.ExternalModelRecordsProvider
 import com.antivocale.app.manager.LlmManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -12,12 +15,27 @@ import javax.inject.Singleton
  * Manages transcription backends and coordinates between them.
  *
  * Only one backend can be active at a time due to memory constraints.
- * Backends are provided via Hilt multibinding ([TranscriptionModule]).
+ * Static backends are provided via Hilt multibinding ([TranscriptionModule]).
+ *
+ * External models (spec: external models platform v2a) are NOT in the injected set:
+ * the "external:" prefix routes to the single [ExternalSherpaBackend] engine, configured
+ * per record via [BackendConfig.ExternalConfig], so no consumer can address an
+ * unconfigured engine (its placeholder id is "external" and it is never registered
+ * under that value). [getAvailableBackends] additionally appends one inert
+ * [ExternalBackendHandle] per provider record so instance-enumerating consumers
+ * (the re-transcribe picker) see every imported model; handles are enumeration-only,
+ * the engine is the single loadable instance. For external ids, "known" in
+ * [getBackend] means the provider snapshot holds the record, not engine state.
  */
 @Singleton
 class TranscriptionBackendManager @Inject constructor(
     private val llmManager: LlmManager,
-    injectedBackends: Set<@JvmSuppressWildcards TranscriptionBackend>
+    injectedBackends: Set<@JvmSuppressWildcards TranscriptionBackend>,
+    private val externalRecordsProvider: ExternalModelRecordsProvider,
+    // Not multibound into the backend set; Hilt satisfies this parameter via the engine's
+    // own @Singleton @Inject constructor (Kotlin defaults are invisible to Dagger, so the
+    // @Inject must stay). The default exists for direct test construction with a mock.
+    private val externalEngine: ExternalSherpaBackend = ExternalSherpaBackend()
 ) {
 
     private val backends: Map<String, TranscriptionBackend> = injectedBackends.associateBy { it.id }
@@ -54,8 +72,23 @@ class TranscriptionBackendManager @Inject constructor(
         context: Context,
         config: BackendConfig
     ): Result<Unit> {
-        val backend = backends[backendId]
-            ?: return Result.failure(IllegalArgumentException("Unknown backend: $backendId"))
+        val backend: TranscriptionBackend
+        val effectiveConfig: BackendConfig
+        if (backendId.startsWith("external:")) {
+            if (externalRecordsProvider.records.value.none { it.backendId == backendId }) {
+                return Result.failure(IllegalArgumentException("Unknown backend: $backendId"))
+            }
+            // Threads/provider are resolved by the orchestrator; inventing defaults here
+            // would silently ignore the user's inference preferences.
+            effectiveConfig = config as? BackendConfig.ExternalConfig
+                ?: return Result.failure(IllegalArgumentException(
+                    "External backend requires ExternalConfig (threads/provider are resolved by the orchestrator): $backendId"))
+            backend = externalEngine
+        } else {
+            backend = backends[backendId]
+                ?: return Result.failure(IllegalArgumentException("Unknown backend: $backendId"))
+            effectiveConfig = config
+        }
 
         // Unload current backend if different
         if (_activeBackend != null && _activeBackend?.id != backendId) {
@@ -65,7 +98,7 @@ class TranscriptionBackendManager @Inject constructor(
 
         // Initialize new backend
         Log.i(TAG, "Initializing backend: $backendId")
-        val result = backend.initialize(context, config)
+        val result = backend.initialize(context, effectiveConfig)
 
         if (result.isSuccess) {
             _activeBackend = backend
@@ -86,19 +119,26 @@ class TranscriptionBackendManager @Inject constructor(
     fun getActiveBackend(): TranscriptionBackend? = _activeBackend
 
     /**
-     * Gets all registered backends.
+     * Gets all registered backends: the injected static set plus one inert handle per
+     * external-model record in the provider snapshot.
      *
      * @return List of available backends
      */
-    fun getAvailableBackends(): List<TranscriptionBackend> = backends.values.toList()
+    fun getAvailableBackends(): List<TranscriptionBackend> =
+        backends.values.toList() + externalRecordsProvider.records.value.map(::ExternalBackendHandle)
 
     /**
-     * Gets a specific backend by ID.
+     * Gets a specific backend by ID. For external ids, returns the engine when the
+     * provider snapshot holds the record ("known" = store resolution, not engine state).
      *
      * @param backendId The backend ID
      * @return The backend, or null if not found
      */
-    fun getBackend(backendId: String): TranscriptionBackend? = backends[backendId]
+    fun getBackend(backendId: String): TranscriptionBackend? =
+        if (backendId.startsWith("external:") &&
+            externalRecordsProvider.records.value.any { it.backendId == backendId }
+        ) externalEngine
+        else backends[backendId]
 
     /**
      * Checks if any backend is currently active.
@@ -139,5 +179,30 @@ class TranscriptionBackendManager @Inject constructor(
 
     companion object {
         private const val TAG = "TranscriptionBackendManager"
+    }
+
+    /**
+     * Inert enumeration handle for one external-model record (pickers and lists).
+     * Not loadable: [initialize] always fails and [transcribeAudio] reports
+     * NotInitialized; the [ExternalSherpaBackend] engine is the loadable instance.
+     */
+    private class ExternalBackendHandle(val record: ExternalModelRecord) : TranscriptionBackend {
+        override val id: String get() = record.backendId
+        override val displayName: String get() = record.displayName
+        override val supportsAudio: Boolean get() = true
+        override val supportsText: Boolean get() = false
+        override val maxChunkDurationSeconds: Int? get() = null
+        override suspend fun initialize(context: Context, config: BackendConfig): Result<Unit> =
+            Result.failure(IllegalStateException(
+                "External backend handles are enumeration-only; route ${record.backendId} through TranscriptionBackendManager"))
+        override suspend fun transcribeAudio(samples: FloatArray, sampleRate: Int, prompt: String): Result<TranscriptionResult> =
+            Result.failure(TranscriptionException.NotInitialized())
+        override suspend fun generateText(prompt: String): Result<String> =
+            Result.failure(UnsupportedOperationException("Enumeration-only external handle"))
+        override fun isReady(): Boolean = File(record.dir).exists()
+        override fun isAudioSupported(): Boolean = true
+        override fun unload() { /* enumeration-only */ }
+        override fun setKeepAliveTimeout(minutes: Int) { /* enumeration-only */ }
+        override fun getModelPath(): String? = record.dir
     }
 }
