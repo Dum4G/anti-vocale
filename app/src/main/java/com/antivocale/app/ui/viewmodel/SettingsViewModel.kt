@@ -17,7 +17,6 @@ import com.antivocale.app.data.PerAppPreferencesManager
 import com.antivocale.app.data.PreferencesManager
 import com.antivocale.app.data.ShareTargetManager
 import com.antivocale.app.data.TranscriptionCalibrator
-import com.antivocale.app.transcription.CustomTransducerBackend
 import com.antivocale.app.transcription.InferenceProvider
 import com.antivocale.app.manager.LlmManager
 // GGUF: import com.antivocale.app.transcription.Gemma4GgufBackend

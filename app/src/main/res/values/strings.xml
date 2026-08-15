@@ -12,7 +12,6 @@
     <string name="select_model_from_device">Select Model from Device</string>
 
     <!-- Custom transducer model (sideload) -->
-    <string name="custom_transducer_name">Custom model</string>
     <string name="import_custom_model">Import custom model</string>
     <string name="custom_transducer_select_folder">Select model folder</string>
     <string name="custom_transducer_model_type">Model architecture</string>

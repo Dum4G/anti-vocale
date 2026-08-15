@@ -92,7 +92,6 @@ interface PreferencesManager {
         const val DEFAULT_TRANSCRIPTION_BACKEND = "sherpa-onnx"
 
         // Backend id for user-imported sherpa-onnx transducer models (Strada B sideload).
-        const val CUSTOM_TRANSDUCER_BACKEND = "custom-transducer"
         // Default model architecture type for custom imports. Covers GigaAM-ru and Parakeet.
         // A wrong modelType causes an uncatchable native exit(255); user can change it in the import UI.
         const val DEFAULT_CUSTOM_TRANSDUCER_MODEL_TYPE = "nemo_transducer"

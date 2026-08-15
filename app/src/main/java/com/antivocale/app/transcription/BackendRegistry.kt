@@ -53,7 +53,9 @@ data class BackendDescriptor(
      * source since TASK-323 (ShareReceiverActivity's backendIdForAlias and
      * ShareTargetManager resolve it here); the manifest android:name
      * attributes cannot reference runtime values and stay literal strings,
-     * pinned by BackendRegistryTest.
+     * pinned by BackendRegistryTest. Blank is a valid sentinel: backends with
+     * no share target (e.g. the sideloaded custom-transducer) carry "", and
+     * ShareTargetManager skips them during component sync.
      */
     val shareAlias: String,
 
