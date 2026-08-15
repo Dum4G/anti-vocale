@@ -951,7 +951,8 @@ class ModelViewModel @Inject constructor(
                             ExtractionService.ModelType.QWEN3_ASR,
                             ExtractionService.ModelType.NEMOTRON,
                             ExtractionService.ModelType.GIGAAM,
-                            ExtractionService.ModelType.CUSTOM_TRANSDUCER -> {
+                            ExtractionService.ModelType.CUSTOM_TRANSDUCER,
+                            ExtractionService.ModelType.EXTERNAL -> {
                                 val dir = File(path)
                                 dir.exists() && dir.isDirectory
                             }

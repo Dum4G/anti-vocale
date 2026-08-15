@@ -244,6 +244,82 @@ class TranscriptionOrchestratorBackendOverrideTest : TranscriptionOrchestratorTe
     }
 
     @Test
+    fun `backend override routes external id to the engine with the record config`() = runTest {
+        val dir = createTempModelDir("external")
+        val record = externalRecord(id = "abc123def456", dir = dir.absolutePath)
+        fakeStore.add(record)
+        every { preferencesManager.threadCount } returns flowOf(4)
+        every { preferencesManager.inferenceProvider } returns flowOf("cpu")
+        every { backendManager.hasActiveBackend() } returns false
+        coEvery { backendManager.setActiveBackend(any(), any(), any()) } returns Result.success(Unit)
+
+        val context = createMockContext()
+        orchestrator.processRequest(
+            taskId = "test-override-external",
+            requestType = "text",
+            prompt = "hi",
+            filePath = null,
+            source = "share",
+            sourcePackage = null,
+            backendOverride = record.backendId,
+            queuePosition = 1,
+            queueTotal = 1,
+            context = context,
+            cacheDir = File("/cache"),
+            listener = listener,
+            coroutineScope = this
+        )
+
+        coVerify {
+            backendManager.setActiveBackend(
+                backendId = record.backendId,
+                context = any(),
+                config = match { c ->
+                    (c as BackendConfig.ExternalConfig).record == record && c.numThreads == 4
+                },
+            )
+        }
+    }
+
+    @Test
+    fun `backend override with unknown external id fails with NotInitialized even when preference is valid`() = runTest {
+        val dir = createTempModelDir("external-valid")
+        val record = externalRecord(id = "valid999", dir = dir.absolutePath)
+        fakeStore.add(record)
+
+        // Preference points at a valid external record, but override asks for a nonexistent one.
+        every { preferencesManager.transcriptionBackend } returns flowOf(record.backendId)
+        every { preferencesManager.threadCount } returns flowOf(4)
+        every { preferencesManager.inferenceProvider } returns flowOf("cpu")
+        every { backendManager.hasActiveBackend() } returns false
+
+        val context = createMockContext()
+        val result = orchestrator.processRequest(
+            taskId = "test-override-external-unknown",
+            requestType = "text",
+            prompt = "hi",
+            filePath = null,
+            source = "share",
+            sourcePackage = null,
+            backendOverride = "external:unknown",
+            queuePosition = 1,
+            queueTotal = 1,
+            context = context,
+            cacheDir = File("/cache"),
+            listener = listener,
+            coroutineScope = this
+        )
+
+        assertTrue(result.isFailure)
+        val error = result.exceptionOrNull()
+        assertTrue(
+            "Expected NotInitialized but got: ${error?.javaClass?.simpleName}: ${error?.message}",
+            error is TranscriptionException.NotInitialized
+        )
+        coVerify(exactly = 0) { backendManager.setActiveBackend(any(), any(), any()) }
+    }
+
+    @Test
     fun `override unloads backend after transcription`() = runTest {
         val parakeetDir = createTempModelDir("parakeet")
 

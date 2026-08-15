@@ -7,6 +7,8 @@ import com.antivocale.app.R
 import com.antivocale.app.audio.AudioPreprocessor
 import com.antivocale.app.audio.AudioPreprocessor.PreprocessingError
 import com.antivocale.app.audio.AudioPreprocessor.StreamEvent
+import com.antivocale.app.data.ExternalModelRecord
+import com.antivocale.app.data.ExternalModelStore
 import com.antivocale.app.data.PreferencesManager
 import com.antivocale.app.data.TranscriptionCalibrator
 import com.antivocale.app.data.local.LogDao
@@ -39,6 +41,7 @@ class TranscriptionOrchestrator @Inject constructor(
     private val backendManager: TranscriptionBackendManager,
     private val audioPreprocessor: AudioPreprocessor,
     private val backendRegistry: BackendRegistry,
+    private val externalModelStore: ExternalModelStore,
 ) {
     companion object {
         private const val TAG = "TranscriptionOrchestrator"
@@ -319,7 +322,12 @@ class TranscriptionOrchestrator @Inject constructor(
             // changed). The disabled GGUF backend is unregistered, so its literal id is
             // matched before the lookup; unknown ids yield a null descriptor and fall
             // through to the LLM loader, exactly as the former string-keyed when did.
-            val loadResult = when (preferredBackendId) {
+            // External ids ("external:<uuid>") are resolved from the store, not the
+            // registry, so they are intercepted before the registry lookup (same tier
+            // as the GGUF special case).
+            val loadResult = if (preferredBackendId.startsWith("external:")) {
+                loadExternalBackend(context, preferredBackendId)
+            } else when (preferredBackendId) {
                 GGUF_BACKEND_ID -> loadGgufBackend(context)
                 else -> when (backendRegistry.byBackendId(preferredBackendId)?.modelType) {
                     ExtractionService.ModelType.PARAKEET -> loadSherpaOnnxBackend(context)
@@ -384,21 +392,24 @@ class TranscriptionOrchestrator @Inject constructor(
     private fun formatMb(bytes: Long): String = "${bytes / MB}MB"
 
     /**
-     * Shared core for sherpa-onnx backends: validate the model dir, resolve the inference
-     * provider, and activate the backend. Called by [loadSherpaOnnxModel] (flow-sourced:
-     * Whisper/Qwen3) and [loadSherpaOnnxBackend] (Parakeet auto-fallback).
+     * Shared pre-flight + preference resolution + backend activation body.
+     *
+     * Validates the model directory, runs the OOM memory pre-flight gated by
+     * [forceModelLoad], resolves thread count and inference provider, then calls
+     * [backendManager.setActiveBackend] with the [configBlock] lambda.
+     *
+     * Shared by [configureSherpaBackend] (static sherpa-onnx backends) and
+     * [loadExternalBackend] (imported external models).
      */
-    private suspend fun configureSherpaBackend(
+    private suspend fun configureBackend(
         backendId: String,
-        modelPath: String,
         label: String,
-        language: String = "",
+        modelDir: File,
         context: Context,
-        modelType: String = "nemo_transducer"
+        configBlock: (threadCount: Int, provider: String) -> BackendConfig,
     ): Result<Unit> {
-        val modelDir = File(modelPath)
         if (!modelDir.exists() || !modelDir.isDirectory) {
-            return Result.failure(IllegalStateException("$label model directory not found: $modelPath"))
+            return Result.failure(IllegalStateException("$label model directory not found: ${modelDir.absolutePath}"))
         }
         // Pre-flight memory check: refuse to load if free memory is below the model size + headroom.
         // Gated by the forceModelLoad preference so a determined user can bypass it. availMem is a
@@ -422,21 +433,69 @@ class TranscriptionOrchestrator @Inject constructor(
                 }
             }
         }
-        Log.i(TAG, "Auto-loading $label model from: $modelPath (modelType='$modelType')")
+        Log.i(TAG, "Auto-loading $label model from: ${modelDir.absolutePath}")
         val providerPref = preferencesManager.inferenceProvider.first()
         val resolvedProvider = InferenceProvider.resolve(providerPref)
+        val threadCount = preferencesManager.threadCount.first()
         Log.i(TAG, "Inference provider: pref=$providerPref resolved=$resolvedProvider")
         return backendManager.setActiveBackend(
             backendId = backendId,
             context = context,
-            config = BackendConfig.SherpaOnnxConfig(
+            config = configBlock(threadCount, resolvedProvider),
+        )
+    }
+
+    /**
+     * Sherpa-onnx backend loader: validates the model dir, delegates to the shared
+     * [configureBackend] for memory pre-flight and preference resolution, and builds
+     * a [BackendConfig.SherpaOnnxConfig].
+     */
+    private suspend fun configureSherpaBackend(
+        backendId: String,
+        modelPath: String,
+        label: String,
+        language: String = "",
+        context: Context,
+        modelType: String = "nemo_transducer"
+    ): Result<Unit> {
+        return configureBackend(
+            backendId = backendId,
+            label = label,
+            modelDir = File(modelPath),
+            context = context,
+        ) { threadCount, provider ->
+            BackendConfig.SherpaOnnxConfig(
                 modelDir = modelPath,
                 modelType = modelType,
-                numThreads = preferencesManager.threadCount.first(),
+                numThreads = threadCount,
                 language = language,
-                provider = resolvedProvider
+                provider = provider,
             )
-        )
+        }
+    }
+
+    /**
+     * Loads an external (user-imported) model by resolving the record from the store.
+     * The [backendId] must start with "external:" and contain the record UUID after the prefix.
+     */
+    private suspend fun loadExternalBackend(context: Context, backendId: String): Result<Unit> {
+        val record = externalModelStore.byId(backendId.removePrefix("external:"))
+            ?: run {
+                Log.w(TAG, "no external model record for $backendId")
+                return Result.failure(TranscriptionException.NotInitialized())
+            }
+        return configureBackend(
+            backendId = record.backendId,
+            label = record.displayName,
+            modelDir = File(record.dir),
+            context = context,
+        ) { threadCount, provider ->
+            BackendConfig.ExternalConfig(
+                record = record,
+                numThreads = threadCount,
+                provider = provider,
+            )
+        }
     }
 
     private suspend fun loadCustomTransducerBackend(context: Context): Result<Unit> {
