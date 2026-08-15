@@ -50,20 +50,20 @@ jobs:
       - name: Fetch sherpa-onnx AAR
         run: ./scripts/fetch-sherpa-aar.sh
 
-      - name: Write google-services.json
-        # The gms plugin applies to any non-Fdroid task, including unit
-        # tests; without this file processPlayStoreDebugGoogleServices fails.
-        run: echo "${{ secrets.GOOGLE_SERVICES_JSON_B64 }}" | base64 -d > app/google-services.json
-
-      - name: Run unit tests (playStore debug)
-        run: ./gradlew :app:testPlayStoreDebugUnitTest --console=plain
+      # Fdroid flavor on purpose: the google-services plugin does not apply
+      # to Fdroid tasks, so unit tests need no Firebase json. (The playStore
+      # debug variant has the .debug applicationId suffix, which the Firebase
+      # client list does not contain.) The suite is flavor-shared: 611 tests
+      # pass identically under both flavors.
+      - name: Run unit tests (fdroid debug)
+        run: ./gradlew :app:testFdroidDebugUnitTest --console=plain
 
       - name: Upload test results on failure
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: unit-test-results
-          path: app/build/reports/tests/testPlayStoreDebugUnitTest/
+          path: app/build/reports/tests/testFdroidDebugUnitTest/
 
   build:
     name: Build
