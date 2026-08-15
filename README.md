@@ -35,6 +35,7 @@ Anti-Vocale intercepts shared audio files (from WhatsApp, Telegram, etc.), trans
 - **Per-app settings** - Configure notification behavior per messaging app
 - **Picture-in-Picture** - See live transcription in a floating window while using other apps
 - **Multilingual UI** - App interface fully translated in English and Italian
+- **Theming** - Three color palettes (Indigo, WhatsApp, Telegram) with light and dark modes
 - **Auto-copy** - Optionally copy transcription to clipboard automatically
 - **Save to folder** - Auto-save transcripts as .txt to a folder of your choice (Drive, Syncthing, Dropbox, etc.)
 - **Video file support** - Transcribe audio from video files; extract embedded subtitles
@@ -66,7 +67,15 @@ Anti-Vocale intercepts shared audio files (from WhatsApp, Telegram, etc.), trans
 ### Notification with Transcription Result
 
 <p align="center">
-  <img src="docs/screenshots/notification.png" width="300" alt="Notification showing transcription with Copy and Send to WhatsApp buttons">
+  <img src="docs/screenshots/notification.png" width="300" alt="Notification showing the transcription result with Copy and Save actions">
+</p>
+
+### Themes
+
+<p align="center">
+  <img src="docs/screenshots/themes/theme_default_light.png" width="240" alt="Default light theme">
+  <img src="docs/screenshots/themes/theme_telegram_dark.png" width="240" alt="Telegram dark theme">
+  <img src="docs/screenshots/themes/theme_whatsapp_light.png" width="240" alt="WhatsApp light theme">
 </p>
 
 ## Supported Models
@@ -143,6 +152,7 @@ Both flavors share the same `applicationId` and feature set. The only difference
 Or build from source:
 
 ```bash
+./scripts/fetch-sherpa-aar.sh   # one-time: download the sherpa-onnx AAR (not committed)
 ./scripts/install.sh
 ```
 

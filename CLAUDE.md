@@ -12,7 +12,7 @@ Android application written in Kotlin for transcribing voice messages locally on
 - Git protocol: SSH
 - **adb path:** `~/Android/Sdk/platform-tools/adb`
 - **Build & install on device:** `./scripts/install.sh` (ALWAYS use this — never `./gradlew installDebug`)
-- **Device:** Realme RMX3853 (Android 16, wireless debugging, paired once and persistently connected). It shows up in `adb devices` automatically, with a long mDNS serial like `adb-b51d20e6-XDR829 (2)._adb-tls-connect._tcp`. Do NOT run `adb disconnect` (it breaks the existing connection and `adb connect ip:port` will not re-establish it on a stale/rotated port). To target it, pass the serial to `-s` exactly as `adb devices` prints it; you can capture it with `D=$(adb devices | awk '/_adb-tls-connect/ && $NF=="device"{print $1}')` and then `adb -s "$D" ...`. The IP port (e.g. 192.168.20.174:40079) rotates and is irrelevant for commands. If the device ever drops off entirely, the user re-enables wireless debugging on the phone; otherwise no user input is needed.
+- **Device:** Realme RMX3853 (Android 16, wireless debugging, paired once and persistently connected). It shows up in `adb devices` automatically, with a long mDNS serial like `adb-b51d20e6-XDR829 (2)._adb-tls-connect._tcp`. Do NOT run `adb disconnect` (it breaks the existing connection and `adb connect ip:port` will not re-establish it on a stale/rotated port). To target it, pass the serial to `-s` exactly as `adb devices` prints it; you can capture it with `D=$(adb devices | sed -n 's/^\(.*_adb-tls-connect\._tcp\)[[:space:]]*device$/\1/p')` and then `adb -s "$D" ...` (the serial contains spaces: an awk `$1` capture truncates it and adb reports "device not found"). The IP port (e.g. 192.168.20.174:40079) rotates and is irrelevant for commands. If the device ever drops off entirely, the user re-enables wireless debugging on the phone; otherwise no user input is needed.
 
 @import docs/BUILD.md
 
@@ -36,7 +36,7 @@ Android application written in Kotlin for transcribing voice messages locally on
   - `util/` — `CrashReporter` (flavor-split), `TranscriptFileSaver` (SAF auto-save), `AppNotificationChannel`, etc.
 - `app/src/playStore/` — playStore-flavor source set: `CrashReporter` (Firebase-backed), `AndroidManifest.xml` (Firebase service suppression)
 - `app/src/fdroid/` — fdroid-flavor source set: `CrashReporter` (logcat-only no-op). Firebase-free build for F-Droid.
-- `app/libs/` — Prebuilt AARs (sherpa-onnx, tracked via Git LFS)
+- `app/libs/` — Prebuilt AAR (sherpa-onnx, NOT committed since v1.8.3): run `./scripts/fetch-sherpa-aar.sh` once after cloning, or Gradle fails resolving the runtime classpath
 - `docs/` — Build guides, research notes, scout reports
 - `scripts/` — Build/install helpers (`install.sh`)
 - `eval/` — Desktop eval harness (`run_baseline.py`: WER/CER/loops via sherpa-onnx Python; `smoke_nemotron.py`: model validation). Uses `eval/.venv` with sherpa-onnx 1.13.3 Python.
@@ -51,6 +51,8 @@ Android application written in Kotlin for transcribing voice messages locally on
 - Same `applicationId` (`com.antivocale.app`) for both — users can switch stores.
 - Build commands: `./gradlew assemblePlayStoreDebug`, `./gradlew assembleFdroidRelease`, etc.
 - `./gradlew assembleDebug` is ambiguous (must specify a flavor).
+
+**Unit tests:** `./gradlew :app:testPlayStoreDebugUnitTest` (CI runs the fdroid flavor, `testFdroidDebugUnitTest`: same shared suite, because the playStore debug build carries the `.debug` applicationIdSuffix, which the Firebase google-services.json has no client for). That suffix is a standing trap: the debug package is `com.antivocale.app.debug`, NOT `com.antivocale.app` (the user's real installed app). Whatever touches package ids, shares, or notifications: verify which of the two you are driving.
 
 **Adding a transcription backend → start from BackendRegistry (TASK-254..324 migrated the dispatch sites).** Add a `BackendDescriptor` in `transcription/BackendRegistry.kt` (backend id, ModelType, share alias, preference accessors, display-name derivation). The registry's KDoc carries the live checklist of what consumes it and what legitimately remains separate. Since the migrations:
 - `ActiveModelRepository` (active model name/path), `TranscriptionOrchestrator` (backend loading + saved-path lookup), `ShareTargetManager`/`ShareReceiverActivity` (share targets and alias resolution) all dispatch through the registry.
