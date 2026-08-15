@@ -12,7 +12,7 @@ object TranscriptPager {
     /** Max chars per page. Tuned to fit the expanded BigText clamp on the target device; verify on device before shipping. */
     const val PAGE_CHARS = 400
 
-    /** Above this length no nav actions are attached: the nav intents carry the full text, and binder transactions cap around 1 MB. */
+    /** Above this length no nav actions are attached: the nav intents carry the full text, and binder transactions cap around 1 MB. The guard also accounts for the text being embedded up to four times in one notification (copy, share, prev, next PendingIntents). */
     const val MAX_PAGED_LENGTH = 50_000
 
     private val WHITESPACE = Regex("\\s+")
@@ -24,8 +24,10 @@ object TranscriptPager {
     /**
      * Word-aligned split: accumulate whitespace-separated words while the page
      * stays within [PAGE_CHARS]; a single word longer than the limit is
-     * hard-cut into [PAGE_CHARS]-sized pages. Whitespace-normalized
-     * concatenation of the pages equals the original text.
+     * hard-cut into [PAGE_CHARS]-sized pages (rejoin by direct concatenation,
+     * no space inserted). Whitespace-normalized concatenation of the pages
+     * equals the original text. Whitespace-only input returns the original
+     * verbatim without paging.
      */
     fun pagesFor(text: String): List<String> {
         if (text.isEmpty()) return emptyList()

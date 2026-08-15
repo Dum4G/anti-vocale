@@ -110,14 +110,14 @@ class ResultNotificationFactory(private val context: Context) {
             builder.addAction(
                 android.R.drawable.ic_media_next,
                 context.getString(R.string.chunk_nav_next),
-                navPendingIntent(spec, direction = +1)
+                navPendingIntent(spec, pageIndex, direction = +1)
             )
         }
         if (paged && pageIndex > 0) {
             builder.addAction(
                 android.R.drawable.ic_media_previous,
                 context.getString(R.string.chunk_nav_prev),
-                navPendingIntent(spec, direction = -1)
+                navPendingIntent(spec, pageIndex, direction = -1)
             )
         }
 
@@ -220,7 +220,7 @@ class ResultNotificationFactory(private val context: Context) {
      * equality ignores extras, so shared codes would collapse distinct pages
      * into one cached intent.
      */
-    private fun navPendingIntent(spec: ResultNotificationSpec, direction: Int): PendingIntent {
+    private fun navPendingIntent(spec: ResultNotificationSpec, pageIndex: Int, direction: Int): PendingIntent {
         val intent = Intent(context, NotificationActionReceiver::class.java).apply {
             action = if (direction < 0) {
                 NotificationActionReceiver.ACTION_PAGE_PREV
@@ -228,7 +228,7 @@ class ResultNotificationFactory(private val context: Context) {
                 NotificationActionReceiver.ACTION_PAGE_NEXT
             }
             putExtra(NotificationActionReceiver.EXTRA_TRANSCRIPTION_TEXT, spec.transcriptionText)
-            putExtra(NotificationActionReceiver.EXTRA_PAGE_INDEX, spec.pageIndex)
+            putExtra(NotificationActionReceiver.EXTRA_PAGE_INDEX, pageIndex)
             putExtra(NotificationActionReceiver.EXTRA_NOTIFICATION_ID, spec.notificationId)
             putExtra(NotificationActionReceiver.EXTRA_FIRST_POSTED_AT, spec.firstPostedAt)
             putExtra(NotificationActionReceiver.EXTRA_IS_PARTIAL, spec.isPartial)
@@ -238,7 +238,7 @@ class ResultNotificationFactory(private val context: Context) {
             spec.confidence?.let { putExtra(NotificationActionReceiver.EXTRA_CONFIDENCE, it) }
             spec.detectedLanguage?.let { putExtra(NotificationActionReceiver.EXTRA_DETECTED_LANGUAGE, it) }
         }
-        val requestCode = spec.notificationId * 1000 + spec.pageIndex * 2 + if (direction < 0) 0 else 1
+        val requestCode = spec.notificationId * 1000 + pageIndex * 2 + if (direction < 0) 0 else 1
         return PendingIntent.getBroadcast(
             context,
             requestCode,

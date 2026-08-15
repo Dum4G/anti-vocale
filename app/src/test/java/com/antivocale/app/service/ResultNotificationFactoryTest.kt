@@ -46,6 +46,17 @@ class ResultNotificationFactoryTest {
         repost = repost
     )
 
+    private fun langSpec(text: String, page: Int = 0) = ResultNotificationSpec(
+        transcriptionText = text,
+        taskId = "task-1",
+        sourcePackage = "org.telegram.messenger",
+        confidence = 0.3f,
+        detectedLanguage = "it",
+        notificationId = 5_000,
+        pageIndex = page,
+        firstPostedAt = 1_000L
+    )
+
     private fun Notification.titles(): List<String> =
         actions?.map { it.title.toString() }.orEmpty()
 
@@ -123,6 +134,19 @@ class ResultNotificationFactoryTest {
         assertEquals(text, intent.getStringExtra(NotificationActionReceiver.EXTRA_TRANSCRIPTION_TEXT))
         assertEquals(0, intent.getIntExtra(NotificationActionReceiver.EXTRA_PAGE_INDEX, -1))
         assertEquals(5_000, intent.getIntExtra(NotificationActionReceiver.EXTRA_NOTIFICATION_ID, -1))
+        assertEquals(1_000L, intent.getLongExtra(NotificationActionReceiver.EXTRA_FIRST_POSTED_AT, -1L))
+    }
+
+    @Test
+    fun `prev intent carries full text and page index`() {
+        val text = longText(3)
+        val n = factory.build(spec(text, page = 1), prefs)
+        val intent = Shadows.shadowOf(n.actions!!.first { it.title == "◀" }.actionIntent).savedIntent
+        assertEquals(NotificationActionReceiver.ACTION_PAGE_PREV, intent.action)
+        assertEquals(text, intent.getStringExtra(NotificationActionReceiver.EXTRA_TRANSCRIPTION_TEXT))
+        assertEquals(1, intent.getIntExtra(NotificationActionReceiver.EXTRA_PAGE_INDEX, -1))
+        assertEquals(5_000, intent.getIntExtra(NotificationActionReceiver.EXTRA_NOTIFICATION_ID, -1))
+        assertEquals(1_000L, intent.getLongExtra(NotificationActionReceiver.EXTRA_FIRST_POSTED_AT, -1L))
     }
 
     @Test
@@ -139,5 +163,14 @@ class ResultNotificationFactoryTest {
         val n = factory.build(spec(longText(2), page = 1, repost = true), prefs)
         assertTrue(n.flags.toInt() and Notification.FLAG_ONLY_ALERT_ONCE != 0)
         assertEquals(1_000L, n.`when`)
+    }
+
+    @Test
+    fun `paged subtext shows language and low confidence`() {
+        // lang_italian nameResId resolves to "Italian" in the default (en) locale.
+        // detected_language format: "Detected: %1$s" → "Detected: Italian"
+        // confidence_low: "Low confidence"
+        val n = factory.build(langSpec(longText(3), page = 1), prefs)
+        assertEquals("Page 2 of 3 · Detected: Italian · Low confidence", n.subTextCompat())
     }
 }
