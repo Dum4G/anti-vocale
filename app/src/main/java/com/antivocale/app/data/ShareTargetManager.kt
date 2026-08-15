@@ -4,59 +4,47 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.pm.PackageManager
 import android.util.Log
-import com.antivocale.app.transcription.LlmTranscriptionBackend
-import com.antivocale.app.transcription.Qwen3AsrBackend
-import com.antivocale.app.transcription.SherpaOnnxBackend
-import com.antivocale.app.transcription.NemotronStreamingBackend
-import com.antivocale.app.transcription.WhisperBackend
+import com.antivocale.app.transcription.BackendDescriptor
+import com.antivocale.app.transcription.BackendRegistry
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 
+/**
+ * Keeps the manifest share-target activity-aliases in sync with model availability.
+ *
+ * The alias <-> backend-id <-> model-path mapping lives in [BackendRegistry]: each
+ * descriptor's [BackendDescriptor.shareAlias] is the activity-alias class name and its
+ * model-path flow supplies the has-model check. Targets iterate in the registry's
+ * canonical backend order; each component is set independently, so the order is not
+ * observable.
+ */
 class ShareTargetManager(
     private val context: Context,
-    private val preferencesManager: PreferencesManager
+    private val preferencesManager: PreferencesManager,
+    private val backendRegistry: BackendRegistry
 ) {
     companion object {
         private const val TAG = "ShareTargetManager"
-
-        private data class ShareTarget(
-            val className: String,
-            val backendId: String
-        )
-
-        private val TARGETS = listOf(
-            ShareTarget("com.antivocale.app.ShareParakeet", SherpaOnnxBackend.BACKEND_ID),
-            ShareTarget("com.antivocale.app.ShareWhisper", WhisperBackend.BACKEND_ID),
-            ShareTarget("com.antivocale.app.ShareQwen3", Qwen3AsrBackend.BACKEND_ID),
-            ShareTarget("com.antivocale.app.ShareGemma", LlmTranscriptionBackend.BACKEND_ID),
-            ShareTarget("com.antivocale.app.ShareNemotron", NemotronStreamingBackend.BACKEND_ID)
-        )
     }
 
     private fun hasModel(backendId: String): Boolean = runBlocking {
-        when (backendId) {
-            SherpaOnnxBackend.BACKEND_ID -> preferencesManager.parakeetModelPath.first() != null
-            WhisperBackend.BACKEND_ID -> preferencesManager.whisperModelPath.first() != null
-            Qwen3AsrBackend.BACKEND_ID -> preferencesManager.qwen3AsrModelPath.first() != null
-            LlmTranscriptionBackend.BACKEND_ID -> preferencesManager.modelPath.first() != null
-            NemotronStreamingBackend.BACKEND_ID -> preferencesManager.nemotronModelPath.first() != null
-            else -> false
-        }
+        val descriptor = backendRegistry.byBackendId(backendId) ?: return@runBlocking false
+        descriptor.modelPathFlow(preferencesManager).first() != null
     }
 
-    private fun setComponentEnabled(target: ShareTarget, enabled: Boolean) {
+    private fun setComponentEnabled(target: BackendDescriptor, enabled: Boolean) {
         val state = if (enabled)
             PackageManager.COMPONENT_ENABLED_STATE_ENABLED
         else
             PackageManager.COMPONENT_ENABLED_STATE_DISABLED
         try {
             context.packageManager.setComponentEnabledSetting(
-                ComponentName(context, target.className),
+                ComponentName(context, target.shareAlias),
                 state,
                 PackageManager.DONT_KILL_APP
             )
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to sync ${target.className}", e)
+            Log.e(TAG, "Failed to sync ${target.shareAlias}", e)
         }
     }
 
@@ -65,13 +53,13 @@ class ShareTargetManager(
             preferencesManager.advancedSharingEnabled.first()
         }
 
-        TARGETS.forEach { target ->
+        backendRegistry.backends.forEach { target ->
             setComponentEnabled(target, advancedEnabled && hasModel(target.backendId))
         }
     }
 
     fun onModelDeleted(backendId: String) {
-        val target = TARGETS.find { it.backendId == backendId } ?: return
+        val target = backendRegistry.backends.find { it.backendId == backendId } ?: return
         setComponentEnabled(target, false)
     }
 
@@ -83,7 +71,7 @@ class ShareTargetManager(
         if (enabled) {
             syncAll()
         } else {
-            TARGETS.forEach { setComponentEnabled(it, false) }
+            backendRegistry.backends.forEach { setComponentEnabled(it, false) }
         }
     }
 }

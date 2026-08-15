@@ -28,6 +28,7 @@ class PreferencesManagerImpl(
         private val KEEP_ALIVE_TIMEOUT_LEGACY = stringPreferencesKey("keep_alive_timeout")
         private val LANGUAGE_PREFERENCE = stringPreferencesKey("language_preference")
         private val THEME_PREFERENCE = stringPreferencesKey("theme_preference")
+        private val THEME_MODE = stringPreferencesKey("theme_mode")
         private val TRANSCRIPTION_BACKEND = stringPreferencesKey("transcription_backend")
         private val PARAKEET_MODEL_PATH = stringPreferencesKey("parakeet_model_path")
         private val CUSTOM_TRANSDUCER_MODEL_PATH = stringPreferencesKey("custom_transducer_model_path")
@@ -50,6 +51,7 @@ class PreferencesManagerImpl(
         private val GROUP_LOGS_BY_CONVERSATION = booleanPreferencesKey("group_logs_by_conversation")
         private val ADVANCED_SHARING_ENABLED = booleanPreferencesKey("advanced_sharing_enabled")
         private val SHOW_RETRANSCRIBE_BUTTON = booleanPreferencesKey("show_retranscribe_button")
+        private val FORCE_MODEL_LOAD = booleanPreferencesKey("force_model_load")
         private val PARTIAL_TRANSCRIPTION_TEXT = stringPreferencesKey("partial_transcription_text")
         private val PARTIAL_TRANSCRIPTION_TIMESTAMP = longPreferencesKey("partial_transcription_timestamp")
     }
@@ -60,6 +62,7 @@ class PreferencesManagerImpl(
         val modelPath: String? = null,
         val keepAliveTimeout: Int = PreferencesManager.DEFAULT_KEEP_ALIVE_TIMEOUT,
         val themePreference: String = PreferencesManager.DEFAULT_THEME,
+        val themeMode: String = PreferencesManager.DEFAULT_THEME_MODE,
         val transcriptionBackend: String = PreferencesManager.DEFAULT_TRANSCRIPTION_BACKEND,
         val parakeetModelPath: String? = null,
         val customTransducerModelPath: String? = null,
@@ -80,7 +83,8 @@ class PreferencesManagerImpl(
         val vadAdvisoryDismissed: Boolean = false,
         val groupLogsByConversation: Boolean = PreferencesManager.DEFAULT_GROUP_LOGS_BY_CONVERSATION,
         val advancedSharingEnabled: Boolean = PreferencesManager.DEFAULT_ADVANCED_SHARING_ENABLED,
-        val showRetranscribeButton: Boolean = PreferencesManager.DEFAULT_SHOW_RETRANSCRIBE_BUTTON
+        val showRetranscribeButton: Boolean = PreferencesManager.DEFAULT_SHOW_RETRANSCRIBE_BUTTON,
+        val forceModelLoad: Boolean = PreferencesManager.DEFAULT_FORCE_MODEL_LOAD
     )
 
     private fun Preferences.toCached() = CachedPreferences(
@@ -89,6 +93,7 @@ class PreferencesManagerImpl(
             ?: this[KEEP_ALIVE_TIMEOUT_LEGACY]?.toIntOrNull()
             ?: PreferencesManager.DEFAULT_KEEP_ALIVE_TIMEOUT,
         themePreference = this[THEME_PREFERENCE] ?: PreferencesManager.DEFAULT_THEME,
+        themeMode = this[THEME_MODE] ?: PreferencesManager.DEFAULT_THEME_MODE,
         transcriptionBackend = this[TRANSCRIPTION_BACKEND] ?: PreferencesManager.DEFAULT_TRANSCRIPTION_BACKEND,
         parakeetModelPath = this[PARAKEET_MODEL_PATH],
         customTransducerModelPath = this[CUSTOM_TRANSDUCER_MODEL_PATH],
@@ -110,7 +115,8 @@ class PreferencesManagerImpl(
         vadAdvisoryDismissed = this[VAD_ADVISORY_DISMISSED] ?: false,
         groupLogsByConversation = this[GROUP_LOGS_BY_CONVERSATION] ?: PreferencesManager.DEFAULT_GROUP_LOGS_BY_CONVERSATION,
         advancedSharingEnabled = this[ADVANCED_SHARING_ENABLED] ?: PreferencesManager.DEFAULT_ADVANCED_SHARING_ENABLED,
-        showRetranscribeButton = this[SHOW_RETRANSCRIBE_BUTTON] ?: PreferencesManager.DEFAULT_SHOW_RETRANSCRIBE_BUTTON
+        showRetranscribeButton = this[SHOW_RETRANSCRIBE_BUTTON] ?: PreferencesManager.DEFAULT_SHOW_RETRANSCRIBE_BUTTON,
+        forceModelLoad = this[FORCE_MODEL_LOAD] ?: PreferencesManager.DEFAULT_FORCE_MODEL_LOAD
     )
 
     fun initialize() {
@@ -162,6 +168,16 @@ class PreferencesManagerImpl(
             preferences[THEME_PREFERENCE] = theme
         }
         cache.updateAndGet { it.copy(themePreference = theme) }
+    }
+
+    override val themeMode: Flow<String> = context.dataStore.data.map { it[THEME_MODE] ?: PreferencesManager.DEFAULT_THEME_MODE }
+        .onStart { emit(cache.get().themeMode) }
+
+    override suspend fun saveThemeMode(mode: String) {
+        context.dataStore.edit { preferences ->
+            preferences[THEME_MODE] = mode
+        }
+        cache.updateAndGet { it.copy(themeMode = mode) }
     }
 
     override val transcriptionBackend: Flow<String> = context.dataStore.data.map { it[TRANSCRIPTION_BACKEND] ?: PreferencesManager.DEFAULT_TRANSCRIPTION_BACKEND }
@@ -482,5 +498,15 @@ class PreferencesManagerImpl(
             preferences[SHOW_RETRANSCRIBE_BUTTON] = enabled
         }
         cache.updateAndGet { it.copy(showRetranscribeButton = enabled) }
+    }
+
+    override val forceModelLoad: Flow<Boolean> = context.dataStore.data.map { it[FORCE_MODEL_LOAD] ?: PreferencesManager.DEFAULT_FORCE_MODEL_LOAD }
+        .onStart { emit(cache.get().forceModelLoad) }
+
+    override suspend fun saveForceModelLoad(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[FORCE_MODEL_LOAD] = enabled
+        }
+        cache.updateAndGet { it.copy(forceModelLoad = enabled) }
     }
 }

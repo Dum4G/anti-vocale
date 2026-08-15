@@ -104,6 +104,9 @@
     <string name="processed_in">Elaborato in %1$s</string>
     <string name="today">Oggi</string>
     <string name="yesterday">Ieri</string>
+    <string name="time_seconds_ago">%1$d sec fa</string>
+    <string name="time_minutes_ago">%1$d min fa</string>
+    <string name="time_hours_ago">%1$d h fa</string>
 
     <!-- Model descriptions -->
     <string name="model_desc_gemma_4_e2b">2.6GB - Multimodale (testo + audio), ultima generazione, migliore per la maggior parte dei dispositivi</string>
@@ -199,11 +202,17 @@
     <string name="error_native">Si è verificato un errore interno durante la trascrizione. Se persiste, prova un modello diverso.</string>
     <string name="error_not_initialized">Nessun modello caricato. Apri la scheda Modello per scaricarne o selezionarne uno.</string>
     <string name="native_crash_model_warning">L\'app si è chiusa in modo imprevisto durante l\'ultima trascrizione. Se è successo durante il caricamento di un modello, il file potrebbe essere danneggiato. Prova a scaricarlo di nuovo dalla scheda Modello.</string>
+    <string name="oom_crash_title">App chiusa per memoria insufficiente</string>
+    <string name="oom_crash_warning">L\'app è stata chiusa perché il dispositivo aveva poca memoria libera. Prova a chiudere le altre app o a usare un modello più piccolo prima di trascrivere di nuovo.</string>
     <string name="native_crash_title">Chiusura imprevista</string>
     <string name="native_crash_go_to_model">Vai alla scheda Modello</string>
+    <string name="model_load_low_memory">Memoria libera insufficiente per questo modello (%1$s disponibili, circa %2$s necessari). Chiudi altre app o usa un modello più piccolo. Puoi anche attivare \"Forza caricamento modello\" nelle Impostazioni per riprovare comunque.</string>
+    <string name="force_model_load">Forza caricamento modello</string>
+    <string name="force_model_load_desc">Carica il modello anche quando la memoria sembra insufficiente. Può far chiudere l\'app sui dispositivi con poca RAM.</string>
     <string name="copy">Copia</string>
     <string name="share">Condividi</string>
     <string name="char_counter">%1$d di %2$d caratteri</string>
+    <string name="page_counter">Pagina %1$d di %2$d</string>
     <string name="detected_language">Rilevato: %1$s</string>
     <string name="confidence_low">Bassa attendibilità</string>
     <string name="no_audio_file">Nessun file audio ricevuto</string>
@@ -396,6 +405,8 @@
     <!-- Settings Tab - Theme -->
     <string name="theme_title">Tema</string>
     <string name="theme_description">Scegli il tema cromatico dell\'app.</string>
+    <string name="theme_mode_title">Modalità tema</string>
+    <string name="theme_mode_description">Segui l\'impostazione di sistema, oppure forza scuro o chiaro.</string>
     <string name="theme_default">Predefinito (Indaco)</string>
     <string name="theme_whatsapp">WhatsApp</string>
     <string name="theme_telegram">Telegram</string>
@@ -726,4 +737,88 @@
     <string name="action_transcribe_audio">Trascrivi audio</string>
     <string name="subtitle_fallback_status">Estrazione sottotitoli non riuscita — trascrizione audio</string>
     <string name="subtitle_choice_notification_text">In attesa della tua scelta…</string>
+
+    <!-- TASK-319: chiavi mancanti recuperate dall'audit di parità -->
+
+    <!-- Cartella di salvataggio automatico -->
+    <string name="output_folder_title">Salva trascrizioni in una cartella</string>
+    <string name="output_folder_description">Salva automaticamente ogni trascrizione come file .txt in una cartella a tua scelta (es. una cartella di Drive o Syncthing).</string>
+    <string name="output_folder_choose">Scegli cartella</string>
+    <string name="output_folder_clear">Rimuovi cartella</string>
+
+    <!-- Notifiche e sistema -->
+    <string name="notification_copying_progress">Copia dei file… %1$d/%2$d</string>
+    <string name="notification_channel_tasker_fallback">Automazione Tasker</string>
+    <string name="notification_channel_tasker_fallback_description">Tocca per avviare la trascrizione quando attivata in background</string>
+    <string name="tasker_fallback_notification_text">Tocca per avviare la trascrizione</string>
+    <string name="transcription_interrupted_title">Trascrizione interrotta</string>
+
+    <!-- Filtro lingua -->
+    <string name="lang_filter_label">Filtra per lingua</string>
+    <string name="lang_filter_all">Tutte le lingue</string>
+    <string name="lang_filter_search">Cerca lingua…</string>
+    <string name="lang_filter_no_results">Nessuna lingua corrispondente</string>
+    <string name="lang_filter_clear">Cancella ricerca</string>
+
+    <!-- Benchmark -->
+    <string name="benchmark_provider_label">Provider</string>
+    <string name="benchmark_provider_value">%1$s</string>
+
+    <!-- Azioni -->
+    <string name="action_dismiss">Chiudi</string>
+
+    <!-- Nomi delle lingue (endonimi italiani) -->
+    <string name="lang_afrikaans">Afrikaans</string>
+    <string name="lang_albanian">Albanese</string>
+    <string name="lang_arabic">Arabo</string>
+    <string name="lang_azerbaijani">Azero</string>
+    <string name="lang_basque">Basco</string>
+    <string name="lang_belarusian">Bielorusso</string>
+    <string name="lang_bengali">Bengalese</string>
+    <string name="lang_bulgarian">Bulgaro</string>
+    <string name="lang_catalan">Catalano</string>
+    <string name="lang_chinese">Cinese</string>
+    <string name="lang_croatian">Croato</string>
+    <string name="lang_czech">Ceco</string>
+    <string name="lang_danish">Danese</string>
+    <string name="lang_dutch">Olandese</string>
+    <string name="lang_english">Inglese</string>
+    <string name="lang_estonian">Estone</string>
+    <string name="lang_finnish">Finlandese</string>
+    <string name="lang_french">Francese</string>
+    <string name="lang_galician">Galiziano</string>
+    <string name="lang_georgian">Georgiano</string>
+    <string name="lang_german">Tedesco</string>
+    <string name="lang_greek">Greco</string>
+    <string name="lang_hebrew">Ebraico</string>
+    <string name="lang_hindi">Hindi</string>
+    <string name="lang_hungarian">Ungherese</string>
+    <string name="lang_indonesian">Indonesiano</string>
+    <string name="lang_italian">Italiano</string>
+    <string name="lang_japanese">Giapponese</string>
+    <string name="lang_korean">Coreano</string>
+    <string name="lang_latvian">Lettone</string>
+    <string name="lang_lithuanian">Lituano</string>
+    <string name="lang_macedonian">Macedone</string>
+    <string name="lang_malay">Malese</string>
+    <string name="lang_norwegian">Norvegese</string>
+    <string name="lang_persian">Persiano</string>
+    <string name="lang_polish">Polacco</string>
+    <string name="lang_portuguese">Portoghese</string>
+    <string name="lang_romanian">Rumeno</string>
+    <string name="lang_russian">Russo</string>
+    <string name="lang_serbian">Serbo</string>
+    <string name="lang_slovak">Slovacco</string>
+    <string name="lang_slovenian">Sloveno</string>
+    <string name="lang_spanish">Spagnolo</string>
+    <string name="lang_swahili">Swahili</string>
+    <string name="lang_swedish">Svedese</string>
+    <string name="lang_tamil">Tamil</string>
+    <string name="lang_thai">Thai</string>
+    <string name="lang_turkish">Turco</string>
+    <string name="lang_ukrainian">Ucraino</string>
+    <string name="lang_urdu">Urdu</string>
+    <string name="lang_uzbek">Uzbeco</string>
+    <string name="lang_vietnamese">Vietnamita</string>
+    <string name="lang_welsh">Gallese</string>
 </resources>

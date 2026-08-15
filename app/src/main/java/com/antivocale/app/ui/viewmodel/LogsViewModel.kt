@@ -15,12 +15,9 @@ import com.antivocale.app.data.local.toLogEntry
 import com.antivocale.app.data.PreferencesManager
 import com.antivocale.app.receiver.TaskerRequestReceiver
 import com.antivocale.app.service.InferenceService
-import com.antivocale.app.transcription.LlmTranscriptionBackend
-import com.antivocale.app.transcription.NemotronStreamingBackend
-import com.antivocale.app.transcription.Qwen3AsrBackend
+import com.antivocale.app.transcription.BackendRegistry
 import com.antivocale.app.transcription.SherpaOnnxBackend
 import com.antivocale.app.transcription.TranscriptionBackendManager
-import com.antivocale.app.transcription.WhisperBackend
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -66,7 +63,11 @@ private const val RECOVERY_STALE_THRESHOLD_MS = 15_000L
 class LogsViewModel @Inject constructor(
     private val transcriptionBackendManager: TranscriptionBackendManager,
     private val logDao: LogDao,
-    private val preferencesManager: PreferencesManager
+    private val preferencesManager: PreferencesManager,
+    // Defaulted so direct construction without Hilt (unit tests) keeps the
+    // three-argument shape; the registry is stateless so a fresh instance is
+    // equivalent to the injected singleton.
+    private val backendRegistry: BackendRegistry = BackendRegistry()
 ) : ViewModel() {
 
     val logs: StateFlow<List<LogEntry>> = logDao.getAll()
@@ -281,16 +282,12 @@ class LogsViewModel @Inject constructor(
         val backends = transcriptionBackendManager.getAvailableBackends()
             .filter { it.supportsAudio }
 
-        val modelPaths = mapOf(
-            WhisperBackend.BACKEND_ID to preferencesManager.whisperModelPath.first(),
-            SherpaOnnxBackend.BACKEND_ID to preferencesManager.parakeetModelPath.first(),
-            Qwen3AsrBackend.BACKEND_ID to preferencesManager.qwen3AsrModelPath.first(),
-            LlmTranscriptionBackend.BACKEND_ID to preferencesManager.modelPath.first(),
-            NemotronStreamingBackend.BACKEND_ID to preferencesManager.nemotronModelPath.first()
-        )
-
         return backends
-            .filter { backend -> modelPaths[backend.id]?.isNotBlank() == true }
+            .filter { backend ->
+                backendRegistry.byBackendId(backend.id)
+                    ?.modelPathFlow(preferencesManager)?.first()
+                    ?.isNotBlank() == true
+            }
             .map { backend ->
                 BackendOption(
                     backendId = backend.id,

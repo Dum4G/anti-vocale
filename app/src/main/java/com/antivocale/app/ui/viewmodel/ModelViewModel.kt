@@ -8,11 +8,13 @@ import androidx.core.content.ContextCompat
 import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.antivocale.app.data.ActiveModelRepository
 import com.antivocale.app.data.HuggingFaceTokenManager
 import com.antivocale.app.BuildConfig
 import com.antivocale.app.data.ModelDownloader
 import com.antivocale.app.data.PreferencesManager
 import com.antivocale.app.data.ShareTargetManager
+import com.antivocale.app.transcription.BackendRegistry
 import com.antivocale.app.transcription.CustomTransducerBackend
 import com.antivocale.app.transcription.LlmTranscriptionBackend
 import com.antivocale.app.transcription.NemotronDownloader
@@ -49,6 +51,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.File
@@ -58,12 +61,17 @@ import javax.inject.Inject
 @HiltViewModel
 class ModelViewModel @Inject constructor(
     private val preferencesManager: PreferencesManager,
+    private val activeModelRepository: ActiveModelRepository,
     private val tokenManager: HuggingFaceTokenManager,
     private val benchmarkManager: BenchmarkManager,
     private val backendManager: TranscriptionBackendManager,
     private val llmManager: LlmManager,
     private val shareTargetManager: ShareTargetManager,
-    @ApplicationContext private val ctx: Context
+    @ApplicationContext private val ctx: Context,
+    // Defaulted so direct construction without Hilt (unit tests) keeps the
+    // eight-argument shape; the registry is stateless so a fresh instance is
+    // equivalent to the injected singleton.
+    private val backendRegistry: BackendRegistry = BackendRegistry(),
 ) : ViewModel() {
 
     val tokenState = tokenManager.tokenState
@@ -840,111 +848,57 @@ class ModelViewModel @Inject constructor(
 
     private fun loadSavedModelPath() {
         viewModelScope.launch {
-            // Check which backend is selected
-            val backend = preferencesManager.transcriptionBackend.first()
-
-            when (backend) {
-                SherpaOnnxBackend.BACKEND_ID -> {
-                    // Load Parakeet model path
-                    val parakeetPath = preferencesManager.parakeetModelPath.first()
-                    if (!parakeetPath.isNullOrBlank()) {
-                        val isValid = File(parakeetPath).exists()
-                        val parakeetName = ctx.getString(R.string.parakeet_name)
-                        _uiState.update { it.copy(
-                            modelPath = parakeetPath,
-                            modelName = parakeetName,
-                            statusMessage = if (isValid) ctx.getString(R.string.backend_model_ready, parakeetName) else ctx.getString(R.string.backend_model_not_found, parakeetName)
-                        )}
+            activeModelRepository.activeModelFlow.collect { active ->
+                val path = active.modelPath
+                val name = active.modelName
+                if (path.isNullOrBlank()) {
+                    // No model selected for this backend: clear the active model display.
+                    // Also clear statusMessage so a stale "ready" message from the previously
+                    // active backend does not linger after a backend switch.
+                    _uiState.update { it.copy(modelPath = "", modelName = "", statusMessage = "") }
+                } else {
+                    // File-existence validation is backend-specific (directory vs file vs custom
+                    // check). This when-block stays here because it drives the statusMessage, not
+                    // because it dispatches preferences (that is now the repository's job).
+                    // TASK-324: key on the registry descriptor's ModelType instead of the
+                    // backend-id strings, mirroring TranscriptionOrchestrator.ensureBackendLoaded.
+                    // The disabled GGUF backend is unregistered, so its literal id is matched
+                    // before the lookup; the registered LLM backend (GEMMA) and unknown ids
+                    // (null descriptor) both fall to validateModelPath, exactly as the former
+                    // string-keyed else did.
+                    val isValid = when (active.backendId) {
+                        "gemma4_gguf" -> {
+                            val file = File(path)
+                            file.exists() && file.isFile
+                        }
+                        else -> when (backendRegistry.byBackendId(active.backendId)?.modelType) {
+                            ExtractionService.ModelType.PARAKEET -> File(path).exists()
+                            ExtractionService.ModelType.WHISPER,
+                            ExtractionService.ModelType.QWEN3_ASR,
+                            ExtractionService.ModelType.NEMOTRON,
+                            ExtractionService.ModelType.CUSTOM_TRANSDUCER -> {
+                                val dir = File(path)
+                                dir.exists() && dir.isDirectory
+                            }
+                            // The registered LLM backend ("llm" -> GEMMA) validates as a file.
+                            ExtractionService.ModelType.GEMMA -> validateModelPath(path)
+                            else -> validateModelPath(path)
+                        }
                     }
-                }
-                WhisperBackend.BACKEND_ID -> {
-                    // Load Whisper model path
-                    val whisperPath = preferencesManager.whisperModelPath.first()
-                    if (!whisperPath.isNullOrBlank()) {
-                        val modelDir = File(whisperPath)
-                        val isValid = modelDir.exists() && modelDir.isDirectory
-                        val model = WhisperModelManager.validateModelDirectory(modelDir)
-                        val modelName = model?.variant?.let { v ->
-                            ctx.getString(v.titleResId)
-                        } ?: whisperPath.substringAfterLast("/")
-                        _uiState.update { it.copy(
-                            modelPath = whisperPath,
-                            modelName = modelName,
-                            statusMessage = if (isValid) ctx.getString(R.string.backend_model_ready, modelName) else ctx.getString(R.string.backend_model_not_found, modelName)
-                        )}
-                    }
-                }
-                Qwen3AsrBackend.BACKEND_ID -> {
-                    // Load Qwen3-ASR model path
-                    val qwen3Path = preferencesManager.qwen3AsrModelPath.first()
-                    if (!qwen3Path.isNullOrBlank()) {
-                        val modelDir = File(qwen3Path)
-                        val isValid = modelDir.exists() && modelDir.isDirectory
-                        val model = Qwen3AsrModelManager.validateModelDirectory(modelDir)
-                        val modelName = model?.variant?.let { v ->
-                            ctx.getString(v.titleResId)
-                        } ?: qwen3Path.substringAfterLast("/")
-                        _uiState.update { it.copy(
-                            modelPath = qwen3Path,
-                            modelName = modelName,
-                            statusMessage = if (isValid) ctx.getString(R.string.backend_model_ready, modelName) else ctx.getString(R.string.backend_model_not_found, modelName)
-                        )}
-                    }
-                }
-                NemotronStreamingBackend.BACKEND_ID -> {
-                    // Load Nemotron model path
-                    val nemotronPath = preferencesManager.nemotronModelPath.first()
-                    if (!nemotronPath.isNullOrBlank()) {
-                        val modelDir = File(nemotronPath)
-                        val isValid = modelDir.exists() && modelDir.isDirectory
-                        val modelName = ctx.getString(R.string.nemotron_name)
-                        _uiState.update { it.copy(
-                            modelPath = nemotronPath,
-                            modelName = modelName,
-                            statusMessage = if (isValid) ctx.getString(R.string.backend_model_ready, modelName) else ctx.getString(R.string.backend_model_not_found, modelName)
-                        )}
-                    }
-                }
-                "gemma4_gguf" -> {
-                    // GGUF: disabled, show filename only since Gemma4GgufModelManager is excluded.
-                    val ggufPath = preferencesManager.ggufModelPath.first()
-                    if (!ggufPath.isNullOrBlank()) {
-                        val ggufFile = File(ggufPath)
-                        val isValid = ggufFile.exists() && ggufFile.isFile
-                        val modelName = ggufPath.substringAfterLast("/")
-                        _uiState.update { it.copy(
-                            modelPath = ggufPath,
-                            modelName = modelName,
-                            statusMessage = if (isValid) ctx.getString(R.string.backend_model_ready, modelName) else ctx.getString(R.string.backend_model_not_found, modelName)
-                        )}
-                    }
-                }
-                CustomTransducerBackend.BACKEND_ID -> {
-                    // User-imported (sideloaded) transducer model. The card-state flows
-                    // (_customTransducerModelPath/Type) are hydrated unconditionally in init, so here
-                    // we only mirror the active-backend path into _uiState for the status card.
-                    val customPath = preferencesManager.customTransducerModelPath.first()
-                    if (!customPath.isNullOrBlank()) {
-                        val modelDir = File(customPath)
-                        val isValid = modelDir.exists() && modelDir.isDirectory
-                        val modelName = modelDir.name
-                        _uiState.update { it.copy(
-                            modelPath = customPath,
-                            modelName = modelName,
-                            statusMessage = if (isValid) ctx.getString(R.string.backend_model_ready, modelName) else ctx.getString(R.string.backend_model_not_found, modelName)
-                        )}
-                    }
-                }
-                else -> {
-                    // Load LLM model path (Gemma, etc.)
-                    val savedPath = preferencesManager.modelPath.first()
-                    if (!savedPath.isNullOrBlank()) {
-                        val isValid = validateModelPath(savedPath)
-                        _uiState.update { it.copy(
-                            modelPath = savedPath,
-                            modelName = extractFileName(savedPath),
-                            statusMessage = if (isValid) ctx.getString(R.string.saved_model_found) else ctx.getString(R.string.saved_model_not_found)
-                        )}
+                    val displayName = name ?: path.substringAfterLast("/")
+                    val isLlm = active.backendId == LlmTranscriptionBackend.BACKEND_ID
+                    _uiState.update {
+                        it.copy(
+                            modelPath = path,
+                            modelName = displayName,
+                            statusMessage = if (isValid) {
+                                if (isLlm) ctx.getString(R.string.saved_model_found)
+                                else ctx.getString(R.string.backend_model_ready, displayName)
+                            } else {
+                                if (isLlm) ctx.getString(R.string.saved_model_not_found)
+                                else ctx.getString(R.string.backend_model_not_found, displayName)
+                            }
+                        )
                     }
                 }
             }

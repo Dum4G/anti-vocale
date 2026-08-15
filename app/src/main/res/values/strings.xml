@@ -104,6 +104,9 @@
     <string name="processed_in">Processed in %1$s</string>
     <string name="today">Today</string>
     <string name="yesterday">Yesterday</string>
+    <string name="time_seconds_ago">%1$ds ago</string>
+    <string name="time_minutes_ago">%1$dm ago</string>
+    <string name="time_hours_ago">%1$dh ago</string>
 
     <!-- Model descriptions -->
     <string name="model_desc_gemma_4_e2b">2.6GB - Multimodal (text + audio), newest generation, best for most devices</string>
@@ -199,11 +202,17 @@
     <string name="error_native">An internal error occurred during transcription. If this persists, try a different model.</string>
     <string name="error_not_initialized">No model is loaded. Open the Model tab to download or select one.</string>
     <string name="native_crash_model_warning">The app closed unexpectedly during the last transcription. If this happened while loading a model, the file may be corrupt. Try re-downloading it from the Model tab.</string>
+    <string name="oom_crash_title">App closed for low memory</string>
+    <string name="oom_crash_warning">The app was closed because the device was running low on memory. Try closing other apps or using a smaller model before transcribing again.</string>
     <string name="native_crash_title">App closed unexpectedly</string>
     <string name="native_crash_go_to_model">Go to Model tab</string>
+    <string name="model_load_low_memory">Not enough free memory for this model (%1$s available, about %2$s needed). Close other apps or use a smaller model. You can also enable \"Force model load\" in Settings to try anyway.</string>
+    <string name="force_model_load">Force model load</string>
+    <string name="force_model_load_desc">Load the model even when memory seems insufficient. May close the app on devices with little RAM.</string>
     <string name="copy">Copy</string>
     <string name="share">Share</string>
     <string name="char_counter">%1$d of %2$d chars</string>
+    <string name="page_counter">Page %1$d of %2$d</string>
     <string name="detected_language">Detected: %1$s</string>
     <string name="confidence_low">Low confidence</string>
     <string name="no_audio_file">No audio file received</string>
@@ -406,6 +415,8 @@
     <!-- Settings Tab - Theme -->
     <string name="theme_title">Theme</string>
     <string name="theme_description">Choose the app color theme.</string>
+    <string name="theme_mode_title">Theme mode</string>
+    <string name="theme_mode_description">Follow the system setting, or force dark or light.</string>
     <string name="theme_default">Default (Indigo)</string>
     <string name="theme_whatsapp">WhatsApp</string>
     <string name="theme_telegram">Telegram</string>

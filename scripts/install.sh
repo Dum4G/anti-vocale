@@ -6,6 +6,8 @@
 #   ./scripts/install.sh                              # auto-detect device
 #   ./scripts/install.sh telefonopaolo:40615          # override address
 #   ./scripts/install.sh telefonopaolo:40615 794996   # override address + pairing code
+#   FLAVOR=fdroid ./scripts/install.sh                # install the fdroid flavor
+#   APK_ABI=x86_64 ./scripts/install.sh               # for an x86_64 emulator
 #
 # When no address is given, the device is auto-detected rather than assumed:
 #   1. mDNS discovery (`adb mdns services`) → wireless ip:port
@@ -14,13 +16,13 @@
 # avoids relying on a hardcoded port that is usually stale.
 #
 # Config can also be set via environment variables or ~/.config/anti-vocale/device.env
-# (DEVICE_ADDRESS / DEVICE_PAIRING_CODE). An explicit address always wins over auto-detect.
+# (DEVICE_ADDRESS / DEVICE_PAIRING_CODE / FLAVOR / APK_ABI). An explicit address
+# always wins over auto-detect.
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-APK="$PROJECT_DIR/app/build/outputs/apk/debug/app-debug.apk"
 ADB="${ADB:-$HOME/Android/Sdk/platform-tools/adb}"
 
 # Load config from env file if present
@@ -29,20 +31,26 @@ if [[ -f "$ENV_FILE" ]]; then
     source "$ENV_FILE"
 fi
 
+# Product flavors + ABI splits produce per-flavor, per-ABI APKs:
+#   app/build/outputs/apk/<flavor>/debug/app-<flavor>-<abi>-debug.apk
+FLAVOR="${FLAVOR:-playStore}"
+APK_ABI="${APK_ABI:-arm64-v8a}"
+APK="$PROJECT_DIR/app/build/outputs/apk/$FLAVOR/debug/app-$FLAVOR-$APK_ABI-debug.apk"
+
 DEVICE="${1:-${DEVICE_ADDRESS:-}}"
 PAIRING_CODE="${2:-${DEVICE_PAIRING_CODE:-}}"
 
 if [[ ! -f "$APK" ]]; then
     echo "APK not found at $APK"
-    echo "Run ./gradlew assembleDebug first"
+    echo "Run ./gradlew assemble${FLAVOR^}Debug first (or set FLAVOR/APK_ABI)"
     exit 1
 fi
 
 APK_AGE_SEC=$(( $(date +%s) - $(date +%s -r "$APK") ))
 if (( APK_AGE_SEC > 60 )); then
     AGE_MIN=$(( APK_AGE_SEC / 60 ))
-    echo "APK is ${AGE_MIN}m old — rebuild first:"
-    echo "  ./gradlew assembleDebug"
+    echo "APK is ${AGE_MIN}m old - rebuild first:"
+    echo "  ./gradlew assemble${FLAVOR^}Debug"
     exit 1
 fi
 
@@ -71,27 +79,27 @@ connected_count() {
 }
 
 # Resolve the target when no explicit address was given. `|| true` so a hung/empty
-# mDNS query falls through to the next strategy instead of tripping `set -e`.
+# probe falls through to the next strategy instead of tripping `set -e`.
+# Order: an existing connection always beats discovery (a connected device, in any
+# serial form, is current; mDNS records can advertise stale rotated ports).
 USE_CONNECTED_SINGLE=0
 if [[ -z "$DEVICE" ]]; then
     DEVICE="$(connected_ipport || true)"
     if [[ -n "$DEVICE" ]]; then
         echo "Using connected device: $DEVICE"
+    elif [[ "$(connected_count || true)" == "1" ]]; then
+        echo "Installing to the single connected device (mDNS-serial form)."
+        USE_CONNECTED_SINGLE=1
     else
         DEVICE="$(mdns_address || true)"
         if [[ -n "$DEVICE" ]]; then
             echo "Auto-detected device via mDNS: $DEVICE"
         else
             n="$(connected_count || true)"
-            if (( n == 1 )); then
-                echo "No address resolved; installing to the single connected device."
-                USE_CONNECTED_SINGLE=1
-            else
-                echo "No device address given and auto-detection failed ($n device(s) connected)." >&2
-                echo "Specify one, e.g.: ./scripts/install.sh <ip:port>" >&2
-                "$ADB" devices >&2
-                exit 1
-            fi
+            echo "No device address given and auto-detection failed ($n device(s) connected)." >&2
+            echo "Specify one, e.g.: ./scripts/install.sh <ip:port>" >&2
+            "$ADB" devices >&2
+            exit 1
         fi
     fi
 fi

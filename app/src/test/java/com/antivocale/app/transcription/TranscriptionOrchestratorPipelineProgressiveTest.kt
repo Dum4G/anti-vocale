@@ -123,17 +123,26 @@ class TranscriptionOrchestratorPipelineProgressiveTest : TranscriptionOrchestrat
             listener.onInterimResult(
                 contentText = "first",
                 bigText = "first",
-                subText = "Chunk 1/3"
+                subText = "Chunk 1/3",
+                chunkIndex = 0,
+                chunkText = "first",
+                totalChunks = 3
             )
             listener.onInterimResult(
                 contentText = "second",
                 bigText = "second",
-                subText = "Chunk 2/3"
+                subText = "Chunk 2/3",
+                chunkIndex = 1,
+                chunkText = "second",
+                totalChunks = 3
             )
             listener.onInterimResult(
                 contentText = "third",
                 bigText = "third",
-                subText = "Chunk 3/3"
+                subText = "Chunk 3/3",
+                chunkIndex = 2,
+                chunkText = "third",
+                totalChunks = 3
             )
         }
     }
@@ -178,14 +187,20 @@ class TranscriptionOrchestratorPipelineProgressiveTest : TranscriptionOrchestrat
             listener.onInterimResult(
                 contentText = "first",
                 bigText = "first",
-                subText = "Chunk 1/3"
+                subText = "Chunk 1/3",
+                chunkIndex = 0,
+                chunkText = "first",
+                totalChunks = 3
             )
         }
         verify(exactly = 1) {
             listener.onInterimResult(
                 contentText = "third",
                 bigText = "third",
-                subText = "Chunk 3/3"
+                subText = "Chunk 3/3",
+                chunkIndex = 2,
+                chunkText = "third",
+                totalChunks = 3
             )
         }
     }
@@ -221,14 +236,20 @@ class TranscriptionOrchestratorPipelineProgressiveTest : TranscriptionOrchestrat
             listener.onInterimResult(
                 contentText = "first",
                 bigText = "first",
-                subText = "Chunk 1/3"
+                subText = "Chunk 1/3",
+                chunkIndex = 0,
+                chunkText = "first",
+                totalChunks = 3
             )
         }
         verify(exactly = 1) {
             listener.onInterimResult(
                 contentText = "third",
                 bigText = "third",
-                subText = "Chunk 3/3"
+                subText = "Chunk 3/3",
+                chunkIndex = 2,
+                chunkText = "third",
+                totalChunks = 3
             )
         }
     }

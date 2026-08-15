@@ -19,6 +19,7 @@ CARATTERISTICHE
 
 - Condividi messaggi vocali da qualsiasi app tramite la condivisione Android
 - Copia automatica della trascrizione negli appunti (incolla direttamente in chat)
+- Leggi le trascrizioni lunghe a pagine nella notifica (navigazione avanti/indietro, senza aprire l'app)
 - Salvataggio automatico delle trascrizioni in una cartella a scelta (Drive, Syncthing, Dropbox)
 - Trascrizione di file video (estrae la traccia audio)
 - Visualizzazione progressiva — il testo appare in tempo reale durante la decodifica

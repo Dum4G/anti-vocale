@@ -22,13 +22,9 @@ import com.antivocale.app.R
 import com.antivocale.app.data.PreferencesManager
 import com.antivocale.app.receiver.ChooserBroadcastReceiver
 import com.antivocale.app.service.InferenceService
-import com.antivocale.app.transcription.LlmTranscriptionBackend
-import com.antivocale.app.transcription.Qwen3AsrBackend
-import com.antivocale.app.transcription.SherpaOnnxBackend
-import com.antivocale.app.transcription.NemotronStreamingBackend
+import com.antivocale.app.transcription.BackendRegistry
 import com.antivocale.app.transcription.SubtitleExtractor
 import com.antivocale.app.transcription.SubtitleTrack
-import com.antivocale.app.transcription.WhisperBackend
 import com.antivocale.app.util.AppNotificationChannel
 import com.antivocale.app.util.SharedAudioHandler
 import com.antivocale.app.work.SubtitleChoiceTimeoutWorker
@@ -74,11 +70,10 @@ class ShareReceiverActivity : Activity() {
     companion object {
         const val TAG = "ShareReceiverActivity"
         const val EXTRA_SOURCE_PACKAGE = "source_package"
-        private const val ALIAS_PARAKEET = "com.antivocale.app.ShareParakeet"
-        private const val ALIAS_WHISPER = "com.antivocale.app.ShareWhisper"
-        private const val ALIAS_QWEN3 = "com.antivocale.app.ShareQwen3"
-        private const val ALIAS_GEMMA = "com.antivocale.app.ShareGemma"
-        private const val ALIAS_NEMOTRON = "com.antivocale.app.ShareNemotron"
+        // This Activity is deliberately not @AndroidEntryPoint, so the registry cannot be
+        // constructor-injected; it is stateless, so a companion-held instance is equivalent
+        // to the injected singleton.
+        private val backendRegistry = BackendRegistry()
 
         // The choice prompt auto-resolves to ASR after this delay if the user does nothing.
         // Keeps a shared video from silently hanging when the notification is ignored.
@@ -89,14 +84,8 @@ class ShareReceiverActivity : Activity() {
         internal fun choiceNotificationId(taskId: String): Int = taskId.hashCode()
 
 
-        internal fun backendIdForAlias(aliasClassName: String): String? = when (aliasClassName) {
-            ALIAS_PARAKEET -> SherpaOnnxBackend.BACKEND_ID
-            ALIAS_WHISPER -> WhisperBackend.BACKEND_ID
-            ALIAS_QWEN3 -> Qwen3AsrBackend.BACKEND_ID
-            ALIAS_GEMMA -> LlmTranscriptionBackend.BACKEND_ID
-            ALIAS_NEMOTRON -> NemotronStreamingBackend.BACKEND_ID
-            else -> null
-        }
+        internal fun backendIdForAlias(aliasClassName: String): String? =
+            backendRegistry.byShareAlias(aliasClassName)?.backendId
     }
 
     private var sourcePackage: String? = null

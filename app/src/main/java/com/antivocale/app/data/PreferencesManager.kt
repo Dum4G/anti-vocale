@@ -7,6 +7,7 @@ interface PreferencesManager {
     val modelPath: Flow<String?>
     val keepAliveTimeout: Flow<Int>
     val themePreference: Flow<String>
+    val themeMode: Flow<String>
     val transcriptionBackend: Flow<String>
     val parakeetModelPath: Flow<String?>
     val customTransducerModelPath: Flow<String?>
@@ -28,11 +29,13 @@ interface PreferencesManager {
     val groupLogsByConversation: Flow<Boolean>
     val advancedSharingEnabled: Flow<Boolean>
     val showRetranscribeButton: Flow<Boolean>
+    val forceModelLoad: Flow<Boolean>
 
     suspend fun saveModelPath(path: String)
     suspend fun clearModelPath()
     suspend fun saveKeepAliveTimeout(minutes: Int)
     suspend fun saveThemePreference(theme: String)
+    suspend fun saveThemeMode(mode: String)
     suspend fun saveTranscriptionBackend(backendId: String)
     suspend fun saveParakeetModelPath(path: String)
     suspend fun clearParakeetModelPath()
@@ -62,6 +65,7 @@ interface PreferencesManager {
     suspend fun saveGroupLogsByConversation(enabled: Boolean)
     suspend fun saveAdvancedSharingEnabled(enabled: Boolean)
     suspend fun saveShowRetranscribeButton(enabled: Boolean)
+    suspend fun saveForceModelLoad(enabled: Boolean)
 
     suspend fun saveBenchmarkResult(modelId: String, jsonResult: String)
     fun getBenchmarkResult(modelId: String): Flow<String?>
@@ -84,6 +88,7 @@ interface PreferencesManager {
         const val DEFAULT_PROGRESSIVE_TRANSCRIPTION = true
         const val DEFAULT_PROMPT_VALUE = ""
         const val DEFAULT_THEME = "DEFAULT"
+        const val DEFAULT_THEME_MODE = "SYSTEM"
         const val DEFAULT_TRANSCRIPTION_BACKEND = "sherpa-onnx"
 
         // Backend id for user-imported sherpa-onnx transducer models (Strada B sideload).
@@ -98,5 +103,6 @@ interface PreferencesManager {
         const val DEFAULT_GROUP_LOGS_BY_CONVERSATION = true
         const val DEFAULT_ADVANCED_SHARING_ENABLED = false
         const val DEFAULT_SHOW_RETRANSCRIBE_BUTTON = true
+        const val DEFAULT_FORCE_MODEL_LOAD = false
     }
 }

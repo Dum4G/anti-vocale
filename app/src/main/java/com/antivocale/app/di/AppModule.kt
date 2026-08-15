@@ -13,6 +13,7 @@ import com.antivocale.app.data.TranscriptionCalibrator
 import java.util.concurrent.TimeUnit
 import com.antivocale.app.data.local.AppDatabase
 import com.antivocale.app.data.local.LogDao
+import com.antivocale.app.transcription.BackendRegistry
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -47,9 +48,10 @@ object AppModule {
     @Singleton
     fun provideShareTargetManager(
         @ApplicationContext context: Context,
-        preferencesManager: PreferencesManager
+        preferencesManager: PreferencesManager,
+        backendRegistry: BackendRegistry
     ): ShareTargetManager {
-        return ShareTargetManager(context, preferencesManager)
+        return ShareTargetManager(context, preferencesManager, backendRegistry)
     }
 
     @Provides
