@@ -19,6 +19,7 @@ FEATURES
 
 - Share voice messages from any app via the Android share sheet
 - Auto-copy transcription to clipboard (paste straight back into chat)
+- Read long transcripts page-by-page in the notification (back/forward paging, no app needed)
 - Auto-save transcripts to a folder of your choice (Drive, Syncthing, Dropbox)
 - Video file transcription (extracts the audio track)
 - Progressive display — text appears in real time as it decodes
