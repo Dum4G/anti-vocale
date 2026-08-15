@@ -58,8 +58,10 @@ today documents the duplication as contained). Synchronous and testable:
 - Output: the built `Notification`, posted by the caller via
   `notify(notificationId, …)`.
 - Owns the notification-id allocator: one companion `AtomicInteger` seeded at
-  `InferenceService.RESULT_NOTIFICATION_ID` (1002), replacing the two
-  independent counters that currently both start at 1002 and can collide.
+  `InferenceService.RESULT_NOTIFICATION_ID` (1002), replacing the per-class
+  counters. Every notification post in both classes draws from it: result,
+  error, and no-model notifications alike (six posting sites total, three per
+  class), so no two posts can collide; the old instance counters are removed.
 - The service and the listener delegate to it; their auto-copy side effects
   stay where they are.
 
@@ -71,18 +73,30 @@ today documents the duplication as contained). Synchronous and testable:
   failedChunkCount).
 - Handler: clamp the page (prev: `max(0, i-1)`, next: `min(last, i+1)`),
   re-read per-app preferences (fresh Send-to label), rebuild through the
-  factory, `notify(carriedId, …)`.
+  factory, `notify(carriedId, …)`. `getCurrentPreferences` is a suspend
+  DataStore call, so the handler uses `goAsync()` plus a coroutine (within the
+  ~10 s window); on failure it falls back to `AppNotificationPreferences.default()`
+  and the re-post happens from inside the coroutine. If the coroutine dies, the
+  old notification simply stands.
 - Manifest receiver, so the process starts on demand: paging survives
-  `InferenceService` destruction and even app force-stop.
+  `InferenceService` destruction and later process death. Force-stop is out of
+  scope by platform behavior: Android cancels the app's notifications and
+  blocks manifest receivers for stopped packages, so there is nothing to page.
 
 ## Notification layout
 
 - Actions in order: Copy, Send-to-Telegram/Share (unchanged; both always carry
   the full text, never the visible page), then Next when `page < last`, Prev
   when `page > 0`. Reuses `chunk_nav_prev`/`chunk_nav_next` resources.
-- Collapsed budget (system caps at 3): first page shows Copy + Share + Next;
-  middle pages have four actions with Next elided collapsed, reachable
-  expanded; last page shows Copy + Share + Prev.
+- Collapsed budget: Android elides trailing actions beyond its display cap, so
+  the order above means first page shows Copy + Share + Next; middle pages
+  carry four actions with Prev collapsed-elided (Copy + Share + Next visible,
+  Prev reachable expanded); last page shows Copy + Share + Prev. Whether the
+  platform surfaces the fourth action when expanded on Android 16 is unproven
+  in this repo and is an explicit on-device DoD check. Fallback if it does
+  not: omit the Share action while on a middle page (progressive disclosure
+  applied to Share instead of to paging) so paging stays fully functional
+  within three actions.
 - Single page: no nav actions, no truncation ellipsis, no counter. Medium
   transcripts (101-400 chars) that today show a truncated preview plus
   "100 of N chars" become fully readable in one page.
@@ -105,7 +119,9 @@ intent.
 
 ## Error handling and edge cases
 
-- Missing or blank text extra: log and no-op.
+- Missing or blank text extra: log and no-op. A missing `notificationId` extra
+  is also a no-op (re-posting under a fresh id would strand the old
+  notification).
 - Page index out of range: clamp.
 - Rebuild exception: log and leave the old notification standing; a button tap
   must never crash.
@@ -124,9 +140,13 @@ intent.
   last page, Copy carries the full text even mid-paging, subtext page counter,
   short text unchanged, oversized fallback keeps `char_counter`, same-id
   re-post, page clamping.
-- On-device (project DoD): >400-char voice note on the Realme RMX3853
-  (Android 16), paging after force-stopping the app, collapsed action elision
-  behaves as designed.
+- On-device (project DoD), Realme RMX3853 (Android 16): a >400-char voice note
+  pages with the buttons; paging still works after `InferenceService` has
+  stopped and after the app process has been killed (not force-stop, which the
+  platform itself makes impossible); the fourth action is reachable when
+  expanded (else the documented Share-omission fallback applies); a full
+  400-char page is readable without clamping in the expanded BigText view
+  (else lower `PAGE_CHARS` before shipping).
 
 ## Targeted fixes riding along
 
