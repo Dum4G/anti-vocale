@@ -41,7 +41,8 @@ reads like a pager position but is purely informational.
 - `MAX_PAGED_LENGTH = 50_000`. Above this, no nav actions are attached
   (binder-transaction guard for the nav intents) and the notification keeps
   today's truncated-preview + `char_counter` behavior.
-- Paging is active iff `pagesFor(text).size >= 2`.
+- Paging is active iff `pagesFor(text).size >= 2` and
+  `text.length <= MAX_PAGED_LENGTH`.
 
 ### `ResultNotificationFactory` (new, `service/`)
 
@@ -62,6 +63,9 @@ today documents the duplication as contained). Synchronous and testable:
   counters. Every notification post in both classes draws from it: result,
   error, and no-model notifications alike (six posting sites total, three per
   class), so no two posts can collide; the old instance counters are removed.
+  Ids are unique within a process lifetime only: after process death the
+  sequence restarts at 1002, so a fresh post can overwrite a pre-death
+  notification (pre-existing behavior of both current counters, unchanged).
 - The service and the listener delegate to it; their auto-copy side effects
   stay where they are.
 
@@ -78,6 +82,9 @@ today documents the duplication as contained). Synchronous and testable:
   ~10 s window); on failure it falls back to `AppNotificationPreferences.default()`
   and the re-post happens from inside the coroutine. If the coroutine dies, the
   old notification simply stands.
+- The two new actions are also declared in the receiver's manifest
+  intent-filter alongside the existing five, for pattern consistency (the nav
+  PendingIntents are component-explicit, so the filter is not load-bearing).
 - Manifest receiver, so the process starts on demand: paging survives
   `InferenceService` destruction and later process death. Force-stop is out of
   scope by platform behavior: Android cancels the app's notifications and
