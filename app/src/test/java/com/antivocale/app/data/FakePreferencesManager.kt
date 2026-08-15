@@ -28,6 +28,8 @@ internal class FakePreferencesManager : PreferencesManager {
     val _qwen3AsrModelPath = MutableStateFlow<String?>(null)
     val _nemotronModelPath = MutableStateFlow<String?>(null)
     val _gigaamModelPath = MutableStateFlow<String?>(null)
+    val _customTransducerModelPath = MutableStateFlow<String?>(null)
+    val _customTransducerModelType = MutableStateFlow(PreferencesManager.DEFAULT_CUSTOM_TRANSDUCER_MODEL_TYPE)
     val _ggufModelPath = MutableStateFlow<String?>(null)
     val _autoCopyEnabled = MutableStateFlow(false)
     val _outputFolderUri = MutableStateFlow<String?>(null)
@@ -57,6 +59,8 @@ internal class FakePreferencesManager : PreferencesManager {
     override val qwen3AsrModelPath: Flow<String?> get() = _qwen3AsrModelPath
     override val nemotronModelPath: Flow<String?> get() = _nemotronModelPath
     override val gigaamModelPath: Flow<String?> get() = _gigaamModelPath
+    override val customTransducerModelPath: Flow<String?> get() = _customTransducerModelPath
+    override val customTransducerModelType: Flow<String> get() = _customTransducerModelType
     override val ggufModelPath: Flow<String?> get() = _ggufModelPath
     override val autoCopyEnabled: Flow<Boolean> get() = _autoCopyEnabled
     override val outputFolderUri: Flow<String?> get() = _outputFolderUri
@@ -92,6 +96,9 @@ internal class FakePreferencesManager : PreferencesManager {
     override suspend fun clearNemotronModelPath() { _nemotronModelPath.value = null }
     override suspend fun saveGigaAmModelPath(path: String) { _gigaamModelPath.value = path }
     override suspend fun clearGigaAmModelPath() { _gigaamModelPath.value = null }
+    override suspend fun saveCustomTransducerModelPath(path: String) { _customTransducerModelPath.value = path }
+    override suspend fun clearCustomTransducerModelPath() { _customTransducerModelPath.value = null }
+    override suspend fun saveCustomTransducerModelType(modelType: String) { _customTransducerModelType.value = modelType }
     override suspend fun saveGgufModelPath(path: String) { _ggufModelPath.value = path }
     override suspend fun clearGgufModelPath() { _ggufModelPath.value = null }
     override suspend fun saveAutoCopyEnabled(enabled: Boolean) { _autoCopyEnabled.value = enabled }

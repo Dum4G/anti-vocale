@@ -33,6 +33,8 @@ class ShareTargetManager(
     }
 
     private fun setComponentEnabled(target: BackendDescriptor, enabled: Boolean) {
+        // Sideload-only backends have no manifest activity-alias; skip them.
+        if (target.shareAlias.isBlank()) return
         val state = if (enabled)
             PackageManager.COMPONENT_ENABLED_STATE_ENABLED
         else

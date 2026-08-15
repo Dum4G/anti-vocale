@@ -31,6 +31,8 @@ class PreferencesManagerImpl(
         private val THEME_MODE = stringPreferencesKey("theme_mode")
         private val TRANSCRIPTION_BACKEND = stringPreferencesKey("transcription_backend")
         private val PARAKEET_MODEL_PATH = stringPreferencesKey("parakeet_model_path")
+        private val CUSTOM_TRANSDUCER_MODEL_PATH = stringPreferencesKey("custom_transducer_model_path")
+        private val CUSTOM_TRANSDUCER_MODEL_TYPE = stringPreferencesKey("custom_transducer_model_type")
         private val WHISPER_MODEL_PATH = stringPreferencesKey("whisper_model_path")
         private val QWEN3_ASR_MODEL_PATH = stringPreferencesKey("qwen3_asr_model_path")
         private val NEMOTRON_MODEL_PATH = stringPreferencesKey("nemotron_model_path")
@@ -64,6 +66,8 @@ class PreferencesManagerImpl(
         val themeMode: String = PreferencesManager.DEFAULT_THEME_MODE,
         val transcriptionBackend: String = PreferencesManager.DEFAULT_TRANSCRIPTION_BACKEND,
         val parakeetModelPath: String? = null,
+        val customTransducerModelPath: String? = null,
+        val customTransducerModelType: String = PreferencesManager.DEFAULT_CUSTOM_TRANSDUCER_MODEL_TYPE,
         val whisperModelPath: String? = null,
         val qwen3AsrModelPath: String? = null,
         val nemotronModelPath: String? = null,
@@ -94,6 +98,9 @@ class PreferencesManagerImpl(
         themeMode = this[THEME_MODE] ?: PreferencesManager.DEFAULT_THEME_MODE,
         transcriptionBackend = this[TRANSCRIPTION_BACKEND] ?: PreferencesManager.DEFAULT_TRANSCRIPTION_BACKEND,
         parakeetModelPath = this[PARAKEET_MODEL_PATH],
+        customTransducerModelPath = this[CUSTOM_TRANSDUCER_MODEL_PATH],
+        customTransducerModelType = this[CUSTOM_TRANSDUCER_MODEL_TYPE]
+            ?: PreferencesManager.DEFAULT_CUSTOM_TRANSDUCER_MODEL_TYPE,
         whisperModelPath = this[WHISPER_MODEL_PATH],
         qwen3AsrModelPath = this[QWEN3_ASR_MODEL_PATH],
         nemotronModelPath = this[NEMOTRON_MODEL_PATH],
@@ -201,6 +208,34 @@ class PreferencesManagerImpl(
             preferences.remove(PARAKEET_MODEL_PATH)
         }
         cache.updateAndGet { it.copy(parakeetModelPath = null) }
+    }
+
+    override val customTransducerModelPath: Flow<String?> = context.dataStore.data.map { it[CUSTOM_TRANSDUCER_MODEL_PATH] }
+        .onStart { emit(cache.get().customTransducerModelPath) }
+
+    override val customTransducerModelType: Flow<String> = context.dataStore.data
+        .map { it[CUSTOM_TRANSDUCER_MODEL_TYPE] ?: PreferencesManager.DEFAULT_CUSTOM_TRANSDUCER_MODEL_TYPE }
+        .onStart { emit(cache.get().customTransducerModelType) }
+
+    override suspend fun saveCustomTransducerModelPath(path: String) {
+        context.dataStore.edit { preferences ->
+            preferences[CUSTOM_TRANSDUCER_MODEL_PATH] = path
+        }
+        cache.updateAndGet { it.copy(customTransducerModelPath = path) }
+    }
+
+    override suspend fun clearCustomTransducerModelPath() {
+        context.dataStore.edit { preferences ->
+            preferences.remove(CUSTOM_TRANSDUCER_MODEL_PATH)
+        }
+        cache.updateAndGet { it.copy(customTransducerModelPath = null) }
+    }
+
+    override suspend fun saveCustomTransducerModelType(modelType: String) {
+        context.dataStore.edit { preferences ->
+            preferences[CUSTOM_TRANSDUCER_MODEL_TYPE] = modelType
+        }
+        cache.updateAndGet { it.copy(customTransducerModelType = modelType) }
     }
 
     override val whisperModelPath: Flow<String?> = context.dataStore.data.map { it[WHISPER_MODEL_PATH] }

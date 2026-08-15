@@ -52,13 +52,14 @@ class BackendRegistryTest {
 
     private val registry = BackendRegistry()
 
-    /** The six enabled backends, in canonical order (default backend first). */
+    /** The seven enabled backends, in canonical order (default backend first). */
     private val expectedIds = listOf(
         SherpaOnnxBackend.BACKEND_ID,
         WhisperBackend.BACKEND_ID,
         Qwen3AsrBackend.BACKEND_ID,
         NemotronStreamingBackend.BACKEND_ID,
         GigaAmBackend.BACKEND_ID,
+        CustomTransducerBackend.BACKEND_ID,
         LlmTranscriptionBackend.BACKEND_ID,
     )
 
@@ -69,6 +70,7 @@ class BackendRegistryTest {
         Qwen3AsrBackend.BACKEND_ID to FakePreferencesManager::_qwen3AsrModelPath,
         NemotronStreamingBackend.BACKEND_ID to FakePreferencesManager::_nemotronModelPath,
         GigaAmBackend.BACKEND_ID to FakePreferencesManager::_gigaamModelPath,
+        CustomTransducerBackend.BACKEND_ID to FakePreferencesManager::_customTransducerModelPath,
         LlmTranscriptionBackend.BACKEND_ID to FakePreferencesManager::_modelPath,
     )
 
@@ -101,7 +103,7 @@ class BackendRegistryTest {
         // GEMMA4_GGUF is the disabled GGUF backend: no BACKEND_ID constant and its
         // manager is disabled (TranscriptionModule), so the registry skips it.
         val mapped = ExtractionService.ModelType.entries - ExtractionService.ModelType.GEMMA4_GGUF
-        assertEquals(6, mapped.size)
+        assertEquals(7, mapped.size)
         for (modelType in mapped) {
             assertNotNull("ModelType.$modelType must resolve to a descriptor", registry.byModelType(modelType))
         }
@@ -124,6 +126,7 @@ class BackendRegistryTest {
             "com.antivocale.app.ShareQwen3",
             "com.antivocale.app.ShareNemotron",
             "com.antivocale.app.ShareGigaam",
+            "",  // custom-transducer: sideload only, no manifest share target
             "com.antivocale.app.ShareGemma",
         )
         val aliases = registry.backends.map { it.shareAlias }
@@ -137,7 +140,8 @@ class BackendRegistryTest {
         assertNull(registry.byBackendId(null))
         assertNull(registry.byShareAlias("com.antivocale.app.ShareNoSuch"))
         assertNull(registry.byShareAlias(null))
-        assertNull(registry.byShareAlias(""))
+        // "" is the custom-transducer sideload alias (not a real share target but a valid alias key).
+        assertNotNull(registry.byShareAlias(""))
     }
 
     @Test
@@ -181,6 +185,7 @@ class BackendRegistryTest {
         assertEquals(R.string.gigaam_name, registry.byBackendId(GigaAmBackend.BACKEND_ID)?.displayNameResId)
         assertNull(registry.byBackendId(WhisperBackend.BACKEND_ID)?.displayNameResId)
         assertNull(registry.byBackendId(Qwen3AsrBackend.BACKEND_ID)?.displayNameResId)
+        assertNull(registry.byBackendId(CustomTransducerBackend.BACKEND_ID)?.displayNameResId)
         assertNull(registry.byBackendId(LlmTranscriptionBackend.BACKEND_ID)?.displayNameResId)
     }
 

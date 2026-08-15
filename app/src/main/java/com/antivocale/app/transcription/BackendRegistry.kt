@@ -53,7 +53,9 @@ data class BackendDescriptor(
      * source since TASK-323 (ShareReceiverActivity's backendIdForAlias and
      * ShareTargetManager resolve it here); the manifest android:name
      * attributes cannot reference runtime values and stay literal strings,
-     * pinned by BackendRegistryTest.
+     * pinned by BackendRegistryTest. Blank is a valid sentinel: backends with
+     * no share target (e.g. the sideloaded custom-transducer) carry "", and
+     * ShareTargetManager skips them during component sync.
      */
     val shareAlias: String,
 
@@ -151,7 +153,7 @@ data class BackendDescriptor(
 @Singleton
 class BackendRegistry @Inject constructor() {
 
-    /** The six enabled backends in canonical order (default backend first). */
+    /** The seven enabled backends in canonical order (default backend first). */
     val backends: List<BackendDescriptor> = listOf(
         BackendDescriptor(
             backendId = SherpaOnnxBackend.BACKEND_ID,
@@ -207,6 +209,16 @@ class BackendRegistry @Inject constructor() {
             modelPathFlow = { it.gigaamModelPath },
             saveModelPath = { prefs, path -> prefs.saveGigaAmModelPath(path) },
             clearModelPath = { it.clearGigaAmModelPath() },
+        ),
+        BackendDescriptor(
+            backendId = CustomTransducerBackend.BACKEND_ID,
+            modelType = ExtractionService.ModelType.CUSTOM_TRANSDUCER,
+            // Sideload models have no manifest activity-alias (no share target).
+            shareAlias = "",
+            // Display name derives from the imported model directory name.
+            modelPathFlow = { it.customTransducerModelPath },
+            saveModelPath = { prefs, path -> prefs.saveCustomTransducerModelPath(path) },
+            clearModelPath = { it.clearCustomTransducerModelPath() },
         ),
         BackendDescriptor(
             backendId = LlmTranscriptionBackend.BACKEND_ID,

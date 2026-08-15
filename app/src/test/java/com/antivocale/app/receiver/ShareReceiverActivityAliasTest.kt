@@ -1,5 +1,6 @@
 package com.antivocale.app.receiver
 
+import com.antivocale.app.transcription.CustomTransducerBackend
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -44,7 +45,10 @@ class ShareReceiverActivityAliasTest {
     }
 
     @Test
-    fun `empty string returns null`() {
-        assertNull(ShareReceiverActivity.backendIdForAlias(""))
+    fun `empty string returns custom-transducer backend id`() {
+        assertEquals(
+            CustomTransducerBackend.BACKEND_ID,
+            ShareReceiverActivity.backendIdForAlias("")
+        )
     }
 }

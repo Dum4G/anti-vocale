@@ -79,6 +79,7 @@ class ExtractionService : Service() {
         QWEN3_ASR("qwen3-asr"),
         NEMOTRON("nemotron"),
         GIGAAM("gigaam"),
+        CUSTOM_TRANSDUCER("custom-transducer"),
         GEMMA("gemma"),
         GEMMA4_GGUF("gemma4-gguf");
 
@@ -129,6 +130,7 @@ class ExtractionService : Service() {
             }
             ModelType.NEMOTRON -> getString(R.string.nemotron_name)
             ModelType.GIGAAM -> getString(R.string.gigaam_name)
+            ModelType.CUSTOM_TRANSDUCER -> variant ?: "Custom model"
             ModelType.GEMMA -> GemmaVariant.fromString(variant).displayName
             // GGUF: disabled
             // ModelType.GEMMA4_GGUF -> { val gv = GgufVariant.fromString(variant); gv?.let { getString(it.titleResId) } ?: "Gemma 4 GGUF" }
@@ -308,6 +310,10 @@ class ExtractionService : Service() {
                 ModelType.GEMMA4_GGUF -> {
                     _progressState.tryEmit(ExtractionProgress(modelType, variant, DownloadState.Error("GGUF not available")))
                 }
+                // Custom transducer: sideload only, no server download.
+                ModelType.CUSTOM_TRANSDUCER -> {
+                    _progressState.tryEmit(ExtractionProgress(modelType, variant, DownloadState.Error("Custom transducer models are imported locally")))
+                }
             }
         } catch (e: CancellationException) {
             Log.i(TAG, "Download cancelled: $key")
@@ -385,6 +391,8 @@ class ExtractionService : Service() {
             }
             // GGUF: disabled
             ModelType.GEMMA4_GGUF -> { /* no-op: GGUF downloader not available */ }
+            // Custom transducer: sideload only, no download to cancel.
+            ModelType.CUSTOM_TRANSDUCER -> { /* no-op: sideload models have no download job */ }
         }
     }
 
