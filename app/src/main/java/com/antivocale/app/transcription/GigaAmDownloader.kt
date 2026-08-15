@@ -10,7 +10,7 @@ import java.io.File
  * Downloads the GigaAM v3 model for sherpa-onnx from the govorun-lite GitHub release.
  *
  * The ONNX files are NOT hosted on HuggingFace; they are published as GitHub release
- * assets at `http://github.com/amidexe/govorun-lite/releases/download/model-gigaam-v3`.
+ * assets at `https://github.com/amidexe/govorun-lite/releases/download/model-gigaam-v3`.
  * A custom [SherpaOnnxModelConfig.urlBuilder] points the shared downloader at those URLs.
  *
  * Single-variant (like [NemotronDownloader]). Delegates to [SherpaOnnxModelDownloader].

@@ -65,17 +65,17 @@ class GigaAmBackend @Inject constructor() : TranscriptionBackend {
 
         // Pre-native validation (inside IO dispatcher): sherpa-onnx calls exit(255)
         // when the encoder is missing critical metadata, killing the app silently.
-        val encoderFile = File(dir, "gigaam_v3_e2e_rnnt_encoder_int8.onnx")
-        val missingMeta = SherpaOnnxBackend.missingOnnxMetadata(encoderFile, listOf("vocab_size", "subsampling_factor", "model_type"))
-        if (missingMeta.isNotEmpty()) {
-            Log.e(TAG, "Encoder missing required ONNX metadata: $missingMeta")
-            return Result.failure(TranscriptionException.ModelLoadError(
-                "model file is missing required metadata ($missingMeta). " +
-                    "The model may be corrupt or an incompatible export. Try re-downloading it."
-            ))
-        }
-
         return withContext(Dispatchers.IO) {
+            val encoderFile = File(dir, "gigaam_v3_e2e_rnnt_encoder_int8.onnx")
+            val missingMeta = SherpaOnnxBackend.missingOnnxMetadata(encoderFile, listOf("vocab_size", "subsampling_factor", "model_type"))
+            if (missingMeta.isNotEmpty()) {
+                Log.e(TAG, "Encoder missing required ONNX metadata: $missingMeta")
+                return@withContext Result.failure(TranscriptionException.ModelLoadError(
+                    "model file is missing required metadata ($missingMeta). " +
+                        "The model may be corrupt or an incompatible export. Try re-downloading it."
+                ))
+            }
+
             try {
                 Log.i(TAG, "Creating OfflineRecognizer config for GigaAM...")
 
@@ -127,6 +127,10 @@ class GigaAmBackend @Inject constructor() : TranscriptionBackend {
             ?: return Result.failure(TranscriptionException.NotInitialized())
 
         return withContext(Dispatchers.IO) {
+            // Release the native OfflineStream on EVERY path (happy, exception, blank-result)
+            // so the JNI handle is freed deterministically, not left to GC finalization
+            // (same shape as NemotronStreamingBackend).
+            var stream: OfflineStream? = null
             try {
                 Log.d(TAG, "Transcribing audio: ${samples.size} samples at ${sampleRate}Hz")
 
@@ -134,7 +138,7 @@ class GigaAmBackend @Inject constructor() : TranscriptionBackend {
                 val silencePad = FloatArray(sampleRate)
                 val padded = samples + silencePad
 
-                val stream = rec.createStream()
+                stream = rec.createStream()
                 stream.acceptWaveform(padded, sampleRate)
                 rec.decode(stream)
 
@@ -142,14 +146,13 @@ class GigaAmBackend @Inject constructor() : TranscriptionBackend {
                 val transcription = result.text
                 val detectedLang = result.lang.ifBlank { null }
 
-                stream.release()
-
                 Log.d(TAG, "Transcription complete: '${transcription.take(100)}...' (${transcription.length} chars)")
 
                 if (transcription.isBlank()) {
                     Result.failure(TranscriptionException.NoTranscriptionProduced())
                 } else {
-                    val confidence = TranscriptionResult.computeConfidence(transcription, padded.size, sampleRate)
+                    // Words-per-second heuristic: keep the original length, not the padded one.
+                    val confidence = TranscriptionResult.computeConfidence(transcription, samples.size, sampleRate)
                     Result.success(TranscriptionResult(
                         text = transcription,
                         confidence = confidence,
@@ -160,6 +163,8 @@ class GigaAmBackend @Inject constructor() : TranscriptionBackend {
             } catch (e: Exception) {
                 Log.e(TAG, "Transcription failed", e)
                 Result.failure(TranscriptionException.NativeError(e.message ?: "unknown", e))
+            } finally {
+                stream?.release()
             }
         }
     }
