@@ -111,6 +111,15 @@ class ExternalModelStoreTest {
         assertTrue(validity.invalidRecordIds().contains(rec.id))
         assertNull(validity.byId(rec.id))
     }
+
+    @Test
+    fun `validRecordsFlow filters records whose directory is missing`() = runTest {
+        val rec = record()
+        store.add(rec)
+        val filtered = ExternalModelStore(fake) { false }
+        assertEquals(emptyList(), filtered.validRecordsFlow.first())
+        assertEquals(listOf(rec), ExternalModelStore(fake) { true }.validRecordsFlow.first())
+    }
 }
 ```
 
@@ -263,7 +272,7 @@ In `FakePreferencesManager.kt`: `val _externalModelsJson = MutableStateFlow<Stri
 - [ ] **Step 1.4: Run the test to verify it passes**
 
 Run: `./gradlew :app:testFdroidDebugUnitTest --tests "com.antivocale.app.data.ExternalModelStoreTest"`
-Expected: 3 tests PASS.
+Expected: 4 tests PASS.
 
 - [ ] **Step 1.5: Full suite + commit**
 
@@ -279,13 +288,14 @@ git commit -m "feat(external): external model record types and store"
 - Modify: `app/src/main/java/com/antivocale/app/transcription/BackendRegistry.kt`
 - Create: `app/src/main/java/com/antivocale/app/data/ExternalModelRecordsProvider.kt` (the StateFlow seam between store and registry)
 - Modify: `app/src/main/java/com/antivocale/app/di/TranscriptionModule.kt` (provides the records provider)
-- Modify the FIVE production construction sites of bare `BackendRegistry()` (default parameter values that relied on statelessness; all become constructor injection or explicit construction with the provider):
+- Modify the FIVE production construction sites of bare `BackendRegistry()` (default parameter values that relied on statelessness; four become constructor injection, the Activity one uses the EntryPoint path below):
   - `app/src/main/java/com/antivocale/app/transcription/TranscriptionOrchestrator.kt:44`
   - `app/src/main/java/com/antivocale/app/data/ActiveModelRepository.kt:38`
   - `app/src/main/java/com/antivocale/app/receiver/ShareReceiverActivity.kt:76`
   - `app/src/main/java/com/antivocale/app/ui/viewmodel/LogsViewModel.kt:70`
   - `app/src/main/java/com/antivocale/app/ui/viewmodel/ModelViewModel.kt:75`
 - Modify: `app/src/test/java/com/antivocale/app/transcription/BackendRegistryTest.kt:53` and `app/src/test/java/com/antivocale/app/transcription/TranscriptionOrchestratorTestBase.kt` (construct with a fake provider)
+- Modify: `app/src/test/java/com/antivocale/app/receiver/ShareReceiverActivityAliasTest.kt` (nine static `backendIdForAlias(...)` call sites gain the registry parameter; construct `BackendRegistry(fakeStore, providerWith())` in the fixture and pass it)
 - Modify: `app/src/main/java/com/antivocale/app/service/ExtractionService.kt` (add `EXTERNAL("external")` enum value HERE, not in Task 3; see Step 2.3 for the two mandatory arms)
 
 - [ ] **Step 2.1: Write the failing tests (add to BackendRegistryTest)**
@@ -301,12 +311,17 @@ git commit -m "feat(external): external model record types and store"
         sizeBytes = 1L, importedAt = 0L,
     )
 
+    private fun providerWith(vararg records: com.antivocale.app.data.ExternalModelRecord): com.antivocale.app.data.ExternalModelRecordsProvider =
+        object : com.antivocale.app.data.ExternalModelRecordsProvider {
+            override val records = kotlinx.coroutines.flow.MutableStateFlow(records.toList())
+        }
+
     @Test
     fun `external records derive descriptors with no share alias`() = runTest {
         val fake = FakePreferencesManager()
         val store = com.antivocale.app.data.ExternalModelStore(fake, dirExists = { true })
         store.add(externalRecord())
-        val registry = BackendRegistry(store)
+        val registry = BackendRegistry(store, providerWith(externalRecord()))
 
         val descriptor = registry.byBackendId("external:a1b2c3d4e5f6")
         assertNotNull(descriptor)
@@ -316,11 +331,11 @@ git commit -m "feat(external): external model record types and store"
     }
 
     @Test
-    fun `invalid records derive nothing`() = runTest {
+    fun `provider with no records derives nothing`() = runTest {
         val fake = FakePreferencesManager()
         val store = com.antivocale.app.data.ExternalModelStore(fake, dirExists = { false })
         store.add(externalRecord())
-        val registry = BackendRegistry(store)
+        val registry = BackendRegistry(store, providerWith())   // empty: the real provider filters invalid records out
         assertNull(registry.byBackendId("external:a1b2c3d4e5f6"))
     }
 
@@ -329,7 +344,7 @@ git commit -m "feat(external): external model record types and store"
         val fake = FakePreferencesManager()
         val store = com.antivocale.app.data.ExternalModelStore(fake, dirExists = { true })
         store.add(externalRecord("111111111111")); store.add(externalRecord("222222222222"))
-        val registry = BackendRegistry(store)
+        val registry = BackendRegistry(store, providerWith(externalRecord("111111111111"), externalRecord("222222222222")))
         val ids = registry.backends.map { it.backendId }
         assertEquals(expectedIds.size + 2, ids.size)
         assertEquals(ids.size, ids.toSet().size)
@@ -341,7 +356,7 @@ git commit -m "feat(external): external model record types and store"
         val fake = FakePreferencesManager()
         val store = com.antivocale.app.data.ExternalModelStore(fake, dirExists = { true })
         store.add(externalRecord())
-        val registry = BackendRegistry(store)
+        val registry = BackendRegistry(store, providerWith(externalRecord()))
         val descriptor = registry.byBackendId("external:a1b2c3d4e5f6")!!
         descriptor.saveModelPath(fake, "/new/dir")
         // Store records are keyed by identity, not a path preference: saving redirects the record's dir.
@@ -349,7 +364,7 @@ git commit -m "feat(external): external model record types and store"
     }
 ```
 
-Also update the existing six-backend tests to construct `BackendRegistry(store)` with an empty fake store, and rename the count test's wording from "six" to "static six (dynamic externals counted separately)".
+Also update the existing six-backend tests to construct `BackendRegistry(store, providerWith())` (empty adapter), and rename the count test's wording from "six" to "static six (dynamic externals counted separately)".
 
 - [ ] **Step 2.2: Run to verify they fail**
 
@@ -421,11 +436,11 @@ class BackendRegistry @Inject constructor(
 }
 ```
 
-Tests construct `BackendRegistry(store, provider)` (two arguments, matching the signature above; update the four Step 2.1 snippets accordingly) where `provider` is a synchronous adapter: `object : ExternalModelRecordsProvider { override val records = MutableStateFlow(listOf(...)) }`, set before each assertion, no collector race. Per-test adapter contents: the three positive tests seed the record; the `invalid records derive nothing` test seeds an EMPTY list and is renamed `provider with no records derives nothing` (validity filtering is the provider's contract and is pinned where it lives: add to `ExternalModelStoreTest` a test `validRecordsFlow filters records whose directory is missing`, `dirExists = { false }`). The store instance passed in tests is the same fake-backed store, so `saveModelPath` mutations are observable.
+Tests construct `BackendRegistry(store, providerWith(...))` via the snippet-local `providerWith` helper (a synchronous `MutableStateFlow` adapter, set before each assertion, no collector race). The `provider with no records derives nothing` test seeds an empty adapter: validity filtering is the provider's contract and is pinned where it lives (the `validRecordsFlow` test lives in Task 1's Step 1.1). The store instance passed in tests is the same fake-backed store, so `saveModelPath` mutations are observable.
 
 `ModelType.EXTERNAL` is added in THIS task (the test references it), and it is not a one-line change: `ExtractionService.resolveDisplayName` (~line 117) is an exhaustive `when` with no `else`; add `ModelType.EXTERNAL -> "External model"` (the per-model name comes from the registry descriptor, this is the fallback for bookkeeping contexts). `executeDownload` (~line 216) enumerates every value; add `ModelType.EXTERNAL -> { /* no service-driven download: imports run through the importer in the ViewModel */ }`. Also fix the existing pin test `every active ModelType except GEMMA4_GGUF maps to a descriptor`: change its set to `entries - GEMMA4_GGUF - EXTERNAL` for the `assertNotNull` loop (with an empty store there is no EXTERNAL descriptor by design) and add one assertion that EXTERNAL maps once the fake provider holds a record.
 
-Construction-site retrofit: remove the `= BackendRegistry()` default values and inject `backendRegistry: BackendRegistry` via constructor (Hilt resolves it) in the four Hilt-injected classes (`TranscriptionOrchestrator:44`, `ActiveModelRepository:38`, `LogsViewModel:70`, `ModelViewModel:75`). The fifth site is structurally different: `ShareReceiverActivity:76` holds the registry in a companion object consumed by the static `backendIdForAlias` (that class is deliberately NOT `@AndroidEntryPoint`, its own comment at lines 73-75 explains Hilt needs ComponentActivity), so constructor injection is impossible. Retrofit that one with an entry-point lookup on the instance path: define `@EntryPoint @InstallIn(SingletonComponent::class) interface BackendRegistryEntryPoint { fun backendRegistry(): BackendRegistry }` in the file (or the di package), and in the instance method that calls `backendIdForAlias` (around line 246) obtain the registry via `EntryPointAccessors.fromApplication(applicationContext, BackendRegistryEntryPoint::class.java).backendRegistry()` and pass it as a parameter to `backendIdForAlias(alias, registry)`; the companion function becomes stateless-with-a-parameter. In `TranscriptionOrchestratorTestBase`, construct `BackendRegistry(fakeStore, fakeProvider)` explicitly. Run `git grep -n "BackendRegistry()" app/src` after the change: it must return zero hits.
+Construction-site retrofit: remove the `= BackendRegistry()` default values and inject `backendRegistry: BackendRegistry` via constructor (Hilt resolves it) in the four Hilt-injected classes (`TranscriptionOrchestrator:44`, `ActiveModelRepository:38`, `LogsViewModel:70`, `ModelViewModel:75`). The fifth site is structurally different: `ShareReceiverActivity:76` holds the registry in a companion object consumed by the static `backendIdForAlias` (that class is deliberately NOT `@AndroidEntryPoint`, its own comment at lines 73-75 explains Hilt needs ComponentActivity), so constructor injection is impossible. Retrofit that one with an entry-point lookup on the instance path: define `@EntryPoint @InstallIn(SingletonComponent::class) interface BackendRegistryEntryPoint { fun backendRegistry(): BackendRegistry }` in the file (or the di package), and in the instance method that calls `backendIdForAlias` (around line 246) obtain the registry via `EntryPointAccessors.fromApplication(applicationContext, BackendRegistryEntryPoint::class.java).backendRegistry()` and pass it as a parameter to `backendIdForAlias(alias, registry)`; the companion function becomes stateless-with-a-parameter; also rewrite the stale companion comment (lines 73-75) that documents the now-dead "stateless so companion-held is equivalent" rationale. In `TranscriptionOrchestratorTestBase`, construct `BackendRegistry(fakeStore, fakeProvider)` explicitly. Run `git grep -n "BackendRegistry()" app/src` after the change: it must return zero hits.
 
 - [ ] **Step 2.4: Run the tests**
 
@@ -455,13 +470,15 @@ git commit -m "feat(external): dynamic BackendRegistry descriptors from the exte
 ```kotlin
     @Test
     fun `backend override routes external id to the engine with the record config`() = runTest {
-        val dir = createTempModelDir(listOf("encoder.int8.onnx", "decoder.int8.onnx", "joiner.int8.onnx", "tokens.txt"))
+        val dir = createTempModelDir("external")  // then write the four canonical files into it
         val record = externalRecord(id = "abc123def456", dir = dir.absolutePath)
         fakeStore.add(record)                       // FakePreferencesManager-backed store, dirExists = { true }
-        coEvery { preferencesManager.threadCount } returns flowOf(4)
-        coEvery { preferencesManager.inferenceProvider } returns flowOf("cpu")
+        every { preferencesManager.threadCount } returns flowOf(4)
+        every { preferencesManager.inferenceProvider } returns flowOf("cpu")
 
-        orchestrator.processRequest(request, backendOverride = record.backendId)
+        // Invoke processRequest with the SAME full parameter list the existing override
+        // test in this file uses (copy its call verbatim, changing only backendOverride).
+        orchestrator.processRequest(/* existing-test params */, backendOverride = record.backendId)
 
         coVerify {
             backendManager.setActiveBackend(
@@ -474,7 +491,7 @@ git commit -m "feat(external): dynamic BackendRegistry descriptors from the exte
     }
 ```
 
-Also a negative test: `backendOverride = "external:unknown"` fails the request with a `NotInitialized` error and never calls `setActiveBackend`, EVEN when the persisted `transcriptionBackend` preference points at a valid external record (this pins the override-over-preference resolution the spec requires). Invocation shape: mirror the `processRequest` call of the EXISTING override test verbatim (its full parameter list: taskId, samples or uri per the existing test, queuePosition, queueTotal, context, cacheDir, listener, coroutineScope; do not invent a shorter signature) and populate the temp dir via the existing `createTempModelDir(prefix)` helper followed by writing the four canonical file names into it.
+Also a negative test: `backendOverride = "external:unknown"` fails the request with a `NotInitialized` error and never calls `setActiveBackend`, EVEN when the persisted `transcriptionBackend` preference points at a valid external record (this pins the override-over-preference resolution the spec requires). Invocation shape: copy the existing override test's `processRequest` call verbatim, changing only the `backendOverride` argument (the real signature: taskId, requestType, prompt, filePath, source, sourcePackage, backendOverride, trackIndex, queuePosition, queueTotal, context, cacheDir, listener, coroutineScope). Populate the temp dir via the existing `createTempModelDir(prefix)` helper followed by writing the four canonical file names into it.
 
 - [ ] **Step 3.2: Run to see it fail** (`ExternalConfig` unresolved).
 
@@ -493,7 +510,9 @@ Orchestrator: in `ensureBackendLoaded`, special-case the `external:` prefix BEFO
 ```kotlin
     private suspend fun loadExternalBackend(context: Context, backendId: String): Result<Unit> {
         val record = externalModelStore.byId(backendId.removePrefix("external:"))
-            ?: return Result.failure(TranscriptionException.NotInitialized("no external model record for $backendId"))
+            ?: // TranscriptionException.NotInitialized takes no arguments (fixed message); log the id before failing.
+            Log.w(TAG, "no external model record for $backendId")
+            return Result.failure(TranscriptionException.NotInitialized())
         return configureBackend(
             backendId = record.backendId,
             label = record.displayName,
@@ -597,9 +616,11 @@ The full method bodies are mechanical ports of `GigaAmBackend.kt` with the file 
 
 ```kotlin
 class TranscriptionBackendManagerExternalTest {
-    // Fixture: FakePreferencesManager-backed ExternalModelStore (dirExists = { true }),
-    // one record; an ExternalModelRecordsProvider adapter seeded with that record (the
-    // manager reads the SNAPSHOT, see 5.3); the manager's engine is a
+    // Fixture: one ExternalModelRecord; an ExternalModelRecordsProvider adapter seeded
+    // with that record (the manager reads the SNAPSHOT, see 5.3) with a seedProvider(...)
+    // helper to re-seed; sherpaConfig() builds a BackendConfig.SherpaOnnxConfig(modelDir =
+    // "/x", numThreads = 4, provider = "cpu") for the failure-path tests; the manager's
+    // engine is a
     // mockk<ExternalSherpaBackend>() with an explicit
     //   coEvery { engine.initialize(any(), any()) } returns Result.success(Unit)
     // (do not rely on the relaxed strategy for a Result return); llmManager mockk relaxed.
@@ -619,23 +640,28 @@ class TranscriptionBackendManagerExternalTest {
     }
 
     @Test fun `unknown external id fails with Unknown backend`() = runTest {
-        assertTrue(manager.setActiveBackend("external:nosuch", context, anyConfig()).isFailure)
+        assertTrue(manager.setActiveBackend("external:nosuch", context, sherpaConfig()).isFailure)
     }
 
     @Test fun `invalid external id (dir gone) fails the same way`() = runTest {
-        // same record id, store built with dirExists = { false }
-        assertTrue(manager.setActiveBackend(record.backendId, context, anyConfig()).isFailure)
+        // Provider seeded empty: that is what the real provider emits once validity filters the record out.
+        val coldManager = createManager(providerSeeded = emptyList())
+        assertTrue(coldManager.setActiveBackend(record.backendId, context, sherpaConfig()).isFailure)
     }
 
     @Test fun `getAvailableBackends appends one handle per valid record`() {
-        val handles = manager.getAvailableBackends().filter { it.id == record.backendId }
+        // isReady() is a real File(dir).exists() check: the record's dir must be an actual temp dir.
+        val dir = createTempDir("external-handle")
+        val present = record.copy(dir = dir.absolutePath)
+        seedProvider(present)
+        val handles = manager.getAvailableBackends().filter { it.id == present.backendId }
         assertEquals(1, handles.size)
-        assertEquals(record.displayName, handles[0].displayName)
+        assertEquals(present.displayName, handles[0].displayName)
         assertTrue(handles[0].isReady())
     }
 
-    @Test fun `getBackend resolves store-known external ids to the engine`() = runTest {
-        assertSame(engine, manager.getBackend(record.backendId))   // "known" = store resolution, not engine state
+    @Test fun `getBackend resolves provider-known external ids to the engine`() = runTest {
+        assertSame(engine, manager.getBackend(record.backendId))   // "known" = the provider snapshot holds the record, not engine state
         assertNull(manager.getBackend("external:nosuch"))
     }
 }
@@ -643,7 +669,7 @@ class TranscriptionBackendManagerExternalTest {
 
 - [ ] **Step 5.2: Run to fail.**
 
-- [ ] **Step 5.3: Implement** (manager constructor gains `externalModelStore: ExternalModelStore`, `externalRecordsProvider: ExternalModelRecordsProvider`, and an `externalEngine: ExternalSherpaBackend` parameter defaulting to `ExternalSherpaBackend()` so tests inject the mock; `llmManager` stays. Read APIs stay NON-SUSPEND by reading the provider's snapshot, never the store's suspend methods):
+- [ ] **Step 5.3: Implement** (manager constructor gains `externalRecordsProvider: ExternalModelRecordsProvider` and an `externalEngine: ExternalSherpaBackend` parameter defaulting to `ExternalSherpaBackend()` so tests inject the mock; NO store parameter, nothing reads it anymore; `llmManager` stays. Read APIs stay NON-SUSPEND by reading the provider's snapshot):
 
 ```kotlin
     // Not multibound into the backend set; Hilt satisfies this parameter via the engine's
@@ -656,9 +682,9 @@ class TranscriptionBackendManagerExternalTest {
         val backend: TranscriptionBackend
         val effectiveConfig: BackendConfig
         if (backendId.startsWith("external:")) {
-            val record = externalRecordsProvider.records.value
-                .firstOrNull { it.backendId == backendId }
-                ?: return Result.failure(IllegalArgumentException("Unknown backend: $backendId"))
+            if (externalRecordsProvider.records.value.none { it.backendId == backendId }) {
+                return Result.failure(IllegalArgumentException("Unknown backend: $backendId"))
+            }
             effectiveConfig = config as? BackendConfig.ExternalConfig
                 ?: return Result.failure(IllegalArgumentException(
                     "External backend requires ExternalConfig (threads/provider are resolved by the orchestrator): $backendId"))
