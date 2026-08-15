@@ -1,0 +1,143 @@
+package com.antivocale.app.service
+
+import android.app.Notification
+import android.content.Context
+import androidx.test.core.app.ApplicationProvider
+import com.antivocale.app.data.AppNotificationPreferences
+import com.antivocale.app.receiver.NotificationActionReceiver
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows
+import org.robolectric.annotation.Config
+
+/** Robolectric tests for the shared result-notification builder (TASK-327). */
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [31])
+class ResultNotificationFactoryTest {
+
+    private val context = ApplicationProvider.getApplicationContext<Context>()
+    private val factory = ResultNotificationFactory(context)
+
+    /** Share action on, quick share back to Telegram, matching the triggering user scenario. */
+    private val prefs = AppNotificationPreferences(
+        autoCopy = false, showShareAction = true,
+        notificationSound = "default", quickShareBack = true
+    )
+
+    /** Whole pages of "parola" words: n words occupy 7n - 1 chars (see plan conventions). */
+    private fun longText(pages: Int): String {
+        val perPage = (TranscriptPager.PAGE_CHARS + 1) / 7
+        return List(pages * perPage) { "parola" }.joinToString(" ")
+    }
+
+    private fun spec(text: String, page: Int = 0, repost: Boolean = false) = ResultNotificationSpec(
+        transcriptionText = text,
+        taskId = "task-1",
+        sourcePackage = "org.telegram.messenger",
+        confidence = 0.9f,
+        detectedLanguage = null,
+        notificationId = 5_000,
+        pageIndex = page,
+        firstPostedAt = 1_000L,
+        repost = repost
+    )
+
+    private fun Notification.titles(): List<String> =
+        actions?.map { it.title.toString() }.orEmpty()
+
+    private fun Notification.contentViewText(): String? =
+        extras.getCharSequence(Notification.EXTRA_TEXT)?.toString()
+
+    private fun Notification.subTextCompat(): String? =
+        extras.getCharSequence(Notification.EXTRA_SUB_TEXT)?.toString()
+
+    @Test
+    fun `allocator hands out consecutive unique ids`() {
+        val first = ResultNotificationFactory.nextNotificationId()
+        val second = ResultNotificationFactory.nextNotificationId()
+        assertEquals(first + 1, second)
+        // Not asserting the absolute value: earlier tests in the same process may draw ids.
+    }
+
+    @Test
+    fun `short single page text keeps today's layout`() {
+        val text = "ciao come stai"
+        val n = factory.build(spec(text), prefs)
+        assertEquals(listOf("Copy", "Send to Telegram"), n.titles())
+        assertEquals(text, n.contentViewText())
+        assertNull(n.subTextCompat())
+    }
+
+    @Test
+    fun `medium text fits one page without truncation or counter`() {
+        val text = List(45) { "parola" }.joinToString(" ") // 314 chars (7n - 1)
+        val n = factory.build(spec(text), prefs)
+        assertEquals(text, n.contentViewText())
+        assertNull(n.subTextCompat())
+        assertEquals(listOf("Copy", "Send to Telegram"), n.titles())
+    }
+
+    @Test
+    fun `first page shows Copy Share Next in that order`() {
+        val n = factory.build(spec(longText(3)), prefs)
+        assertEquals(listOf("Copy", "Send to Telegram", "▶"), n.titles())
+    }
+
+    @Test
+    fun `middle page shows Next before Prev`() {
+        val n = factory.build(spec(longText(3), page = 1), prefs)
+        assertEquals(listOf("Copy", "Send to Telegram", "▶", "◀"), n.titles())
+    }
+
+    @Test
+    fun `last page has Prev and no Next`() {
+        val n = factory.build(spec(longText(3), page = 2), prefs)
+        assertEquals(listOf("Copy", "Send to Telegram", "◀"), n.titles())
+    }
+
+    @Test
+    fun `paged subtext shows page counter`() {
+        val n = factory.build(spec(longText(3), page = 1), prefs)
+        assertEquals("Page 2 of 3", n.subTextCompat())
+    }
+
+    @Test
+    fun `copy action carries the full text even mid paging`() {
+        val text = longText(3)
+        val n = factory.build(spec(text, page = 1), prefs)
+        val intent = Shadows.shadowOf(n.actions!!.first { it.title == "Copy" }.actionIntent).savedIntent
+        assertEquals(NotificationActionReceiver.ACTION_COPY_TRANSCRIPTION, intent.action)
+        assertEquals(text, intent.getStringExtra(NotificationActionReceiver.EXTRA_TRANSCRIPTION_TEXT))
+    }
+
+    @Test
+    fun `nav intent carries full text page and notification id`() {
+        val text = longText(2)
+        val n = factory.build(spec(text), prefs)
+        val intent = Shadows.shadowOf(n.actions!!.first { it.title == "▶" }.actionIntent).savedIntent
+        assertEquals(NotificationActionReceiver.ACTION_PAGE_NEXT, intent.action)
+        assertEquals(text, intent.getStringExtra(NotificationActionReceiver.EXTRA_TRANSCRIPTION_TEXT))
+        assertEquals(0, intent.getIntExtra(NotificationActionReceiver.EXTRA_PAGE_INDEX, -1))
+        assertEquals(5_000, intent.getIntExtra(NotificationActionReceiver.EXTRA_NOTIFICATION_ID, -1))
+    }
+
+    @Test
+    fun `oversized text falls back to truncated preview and char counter`() {
+        val text = List(9_000) { "parola" }.joinToString(" ")
+        val n = factory.build(spec(text), prefs)
+        assertTrue(n.contentViewText()!!.endsWith("…"))
+        assertTrue(n.subTextCompat()!!.startsWith("100 of"))
+        assertEquals(listOf("Copy", "Send to Telegram"), n.titles())
+    }
+
+    @Test
+    fun `repost never re-alerts and keeps firstPostedAt`() {
+        val n = factory.build(spec(longText(2), page = 1, repost = true), prefs)
+        assertTrue(n.flags.toInt() and Notification.FLAG_ONLY_ALERT_ONCE != 0)
+        assertEquals(1_000L, n.`when`)
+    }
+}

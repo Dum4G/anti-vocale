@@ -30,6 +30,16 @@ class NotificationActionReceiver : BroadcastReceiver() {
         const val ACTION_TRANSCRIBE_AUDIO = "com.antivocale.app.TRANSCRIBE_AUDIO"
         const val EXTRA_TRANSCRIPTION_TEXT = "transcription_text"
         const val EXTRA_SOURCE_PACKAGE = "source_package"
+        const val ACTION_PAGE_PREV = "com.antivocale.app.PAGE_PREV"
+        const val ACTION_PAGE_NEXT = "com.antivocale.app.PAGE_NEXT"
+        const val EXTRA_PAGE_INDEX = "page_index"
+        const val EXTRA_NOTIFICATION_ID = "notification_id"
+        const val EXTRA_FIRST_POSTED_AT = "first_posted_at"
+        const val EXTRA_TASK_ID = "task_id"
+        const val EXTRA_CONFIDENCE = "confidence"
+        const val EXTRA_DETECTED_LANGUAGE = "detected_language"
+        const val EXTRA_IS_PARTIAL = "is_partial"
+        const val EXTRA_FAILED_CHUNK_COUNT = "failed_chunk_count"
     }
 
     override fun onReceive(context: Context, intent: Intent) {
