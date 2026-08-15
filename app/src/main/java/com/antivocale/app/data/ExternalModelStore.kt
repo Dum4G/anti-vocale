@@ -6,6 +6,12 @@ import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/**
+ * Single source of truth for imported external models (spec: External models
+ * platform v2a). Persists the record list as one JSON preference via
+ * [PreferencesManager]; derives nothing else. Directory validity is injected
+ * so the class stays JVM-testable.
+ */
 @Singleton
 class ExternalModelStore @Inject constructor(
     private val preferencesManager: PreferencesManager,
@@ -19,6 +25,7 @@ class ExternalModelStore @Inject constructor(
 
     suspend fun records(): List<ExternalModelRecord> = recordsFlow.first()
 
+    /** Valid records only: a record whose directory vanished derives no descriptor anywhere. */
     suspend fun validRecords(): List<ExternalModelRecord> = records().filter { dirExists(it.dir) }
 
     suspend fun byId(id: String): ExternalModelRecord? =

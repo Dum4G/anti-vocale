@@ -10,11 +10,11 @@ enum class ExternalModelSource { LOCAL, URL, CATALOG }
 data class FilePin(val sha256: String, val verified: Boolean)
 
 data class ExternalModelRecord(
-    val id: String,
+    val id: String,                 // uuid; also the dir-fragment source
     val displayName: String,
-    val dir: String,
+    val dir: String,                // models/external/<sanitized-name>-<id-fragment>/
     val family: ModelFamily,
-    val modelType: String,
+    val modelType: String,          // sherpa modelType: nemo_transducer, "", conformer_transducer
     val languages: List<String>,
     val source: ExternalModelSource,
     val sourceUrl: String?,
@@ -50,7 +50,7 @@ data class ExternalModelRecord(
                 sourceUrl = if (o.isNull("sourceUrl")) null else o.getString("sourceUrl"),
                 files = files, sizeBytes = o.getLong("sizeBytes"), importedAt = o.getLong("importedAt"),
             )
-        } catch (e: Exception) { null }
+        } catch (e: Exception) { null }  // malformed entry: whole list rejected, never a crash
     }
 }
 
