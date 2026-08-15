@@ -492,7 +492,7 @@ git commit -m "feat(external): dynamic BackendRegistry descriptors from the exte
     }
 ```
 
-Also a negative test: `backendOverride = "external:unknown"` fails the request with a `NotInitialized` error and never calls `setActiveBackend`, EVEN when the persisted `transcriptionBackend` preference points at a valid external record (this pins the override-over-preference resolution the spec requires). Invocation shape: copy the existing override test's `processRequest` call verbatim, changing only the `backendOverride` argument (the real signature: taskId, requestType, prompt, filePath, source, sourcePackage, backendOverride, trackIndex, queuePosition, queueTotal, context, cacheDir, listener, coroutineScope). Populate the temp dir via the existing `createTempModelDir(prefix)` helper followed by writing the four canonical file names into it.
+Also a negative test: `backendOverride = "external:unknown"` fails the request with a `NotInitialized` error and never calls `setActiveBackend`, EVEN when the persisted `transcriptionBackend` preference points at a valid external record (this pins the override-over-preference resolution the spec requires). Invocation shape: copy the existing override test's `processRequest` call verbatim, changing only the `backendOverride` argument (the real signature: taskId, requestType, prompt, filePath, source, sourcePackage, backendOverride, trackIndex, queuePosition, queueTotal, context, cacheDir, listener, coroutineScope). The existing `createTempModelDir(prefix)` helper already writes `ParakeetModelManager.REQUIRED_FILES`, exactly the four files the engine needs.
 
 - [ ] **Step 3.2: Run to see it fail** (`ExternalConfig` unresolved).
 
@@ -510,10 +510,12 @@ Orchestrator: in `ensureBackendLoaded`, special-case the `external:` prefix BEFO
 
 ```kotlin
     private suspend fun loadExternalBackend(context: Context, backendId: String): Result<Unit> {
+        // TranscriptionException.NotInitialized takes no arguments (fixed message); log the id before failing.
         val record = externalModelStore.byId(backendId.removePrefix("external:"))
-            ?: // TranscriptionException.NotInitialized takes no arguments (fixed message); log the id before failing.
-            Log.w(TAG, "no external model record for $backendId")
-            return Result.failure(TranscriptionException.NotInitialized())
+            ?: run {
+                Log.w(TAG, "no external model record for $backendId")
+                return Result.failure(TranscriptionException.NotInitialized())
+            }
         return configureBackend(
             backendId = record.backendId,
             label = record.displayName,
