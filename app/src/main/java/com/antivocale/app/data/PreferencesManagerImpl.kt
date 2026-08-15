@@ -55,6 +55,7 @@ class PreferencesManagerImpl(
         private val FORCE_MODEL_LOAD = booleanPreferencesKey("force_model_load")
         private val PARTIAL_TRANSCRIPTION_TEXT = stringPreferencesKey("partial_transcription_text")
         private val PARTIAL_TRANSCRIPTION_TIMESTAMP = longPreferencesKey("partial_transcription_timestamp")
+        private val EXTERNAL_MODELS_JSON = stringPreferencesKey("external_models_json")
     }
 
     private val cache = AtomicReference(CachedPreferences())
@@ -86,7 +87,8 @@ class PreferencesManagerImpl(
         val groupLogsByConversation: Boolean = PreferencesManager.DEFAULT_GROUP_LOGS_BY_CONVERSATION,
         val advancedSharingEnabled: Boolean = PreferencesManager.DEFAULT_ADVANCED_SHARING_ENABLED,
         val showRetranscribeButton: Boolean = PreferencesManager.DEFAULT_SHOW_RETRANSCRIBE_BUTTON,
-        val forceModelLoad: Boolean = PreferencesManager.DEFAULT_FORCE_MODEL_LOAD
+        val forceModelLoad: Boolean = PreferencesManager.DEFAULT_FORCE_MODEL_LOAD,
+        val externalModelsJson: String? = null
     )
 
     private fun Preferences.toCached() = CachedPreferences(
@@ -119,7 +121,8 @@ class PreferencesManagerImpl(
         groupLogsByConversation = this[GROUP_LOGS_BY_CONVERSATION] ?: PreferencesManager.DEFAULT_GROUP_LOGS_BY_CONVERSATION,
         advancedSharingEnabled = this[ADVANCED_SHARING_ENABLED] ?: PreferencesManager.DEFAULT_ADVANCED_SHARING_ENABLED,
         showRetranscribeButton = this[SHOW_RETRANSCRIBE_BUTTON] ?: PreferencesManager.DEFAULT_SHOW_RETRANSCRIBE_BUTTON,
-        forceModelLoad = this[FORCE_MODEL_LOAD] ?: PreferencesManager.DEFAULT_FORCE_MODEL_LOAD
+        forceModelLoad = this[FORCE_MODEL_LOAD] ?: PreferencesManager.DEFAULT_FORCE_MODEL_LOAD,
+        externalModelsJson = this[EXTERNAL_MODELS_JSON]
     )
 
     fun initialize() {
@@ -528,5 +531,15 @@ class PreferencesManagerImpl(
             preferences[FORCE_MODEL_LOAD] = enabled
         }
         cache.updateAndGet { it.copy(forceModelLoad = enabled) }
+    }
+
+    override val externalModelsJson: Flow<String?> = context.dataStore.data.map { it[EXTERNAL_MODELS_JSON] }
+        .onStart { emit(cache.get().externalModelsJson) }
+
+    override suspend fun saveExternalModelsJson(json: String) {
+        context.dataStore.edit { preferences ->
+            preferences[EXTERNAL_MODELS_JSON] = json
+        }
+        cache.updateAndGet { it.copy(externalModelsJson = json) }
     }
 }

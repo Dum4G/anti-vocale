@@ -32,6 +32,9 @@ interface PreferencesManager {
     val showRetranscribeButton: Flow<Boolean>
     val forceModelLoad: Flow<Boolean>
 
+    val externalModelsJson: Flow<String?>
+    suspend fun saveExternalModelsJson(json: String)
+
     suspend fun saveModelPath(path: String)
     suspend fun clearModelPath()
     suspend fun saveKeepAliveTimeout(minutes: Int)
