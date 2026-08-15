@@ -10,9 +10,12 @@ import android.widget.Toast
 import androidx.work.WorkManager
 import com.antivocale.app.R
 import com.antivocale.app.service.InferenceService
+import com.antivocale.app.util.CrashReporter
 import com.antivocale.app.util.ShareBackHelper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
 /**
@@ -118,9 +121,11 @@ class NotificationActionReceiver : BroadcastReceiver() {
     private fun handlePageAction(context: Context, intent: Intent) {
         val pendingResult = goAsync()
         val appContext = context.applicationContext
-        CoroutineScope(Dispatchers.Default).launch {
+        CoroutineScope(Dispatchers.IO + SupervisorJob() + CrashReporter.handler).launch {
             try {
                 ResultNotificationRefresher.refresh(appContext, intent)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to rebuild paged notification", e)
             } finally {

@@ -87,4 +87,31 @@ class ResultNotificationRefresherTest {
         ResultNotificationRefresher.refresh(context, intent)
         assertEquals(0, shadowNm().allNotifications.size)
     }
+
+    @Test
+    fun `repost keeps the quick share back action from per-app prefs`() = runBlocking {
+        // Regression test for the DataStore double-activation bug (TASK-327): the refresher
+        // constructed its own PerAppPreferencesManager, whose instance-level DataStore delegate
+        // collided with the Hilt singleton's on the same file, silently forcing default prefs.
+        val manager = com.antivocale.app.data.PerAppPreferencesManager(context)
+        manager.updatePreferencesForPackage("org.telegram.messenger") {
+            copy(showShareAction = true, quickShareBack = true)
+        }
+        ResultNotificationRefresher.refresh(
+            context,
+            pageIntent(NotificationActionReceiver.ACTION_PAGE_NEXT, longText(3), 0)
+        )
+        val titles = postedNotification(7).actions!!.map { it.title.toString() }
+        assertTrue("expected quick-share-back action, got $titles", titles.contains("Send to Telegram"))
+    }
+
+    @Test
+    fun `oversized text page action is a no-op`() = runBlocking {
+        val text = List(9_000) { "parola" }.joinToString(" ") // 62_999 chars, above MAX_PAGED_LENGTH
+        ResultNotificationRefresher.refresh(
+            context,
+            pageIntent(NotificationActionReceiver.ACTION_PAGE_NEXT, text, 0)
+        )
+        assertEquals(0, shadowNm().allNotifications.size)
+    }
 }
