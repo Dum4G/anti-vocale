@@ -59,7 +59,7 @@ class BackendRegistryTest {
         FakePreferencesManager(),
         dirExists = { true },
     )
-    private val registry = BackendRegistry(store, providerWith())
+    private val registry = BackendRegistry(store, emptyRecordsProvider())
 
     /** The seven enabled backends, in canonical order (default backend first). */
     private val expectedIds = listOf(
@@ -283,7 +283,8 @@ class BackendRegistryTest {
         val fake = FakePreferencesManager()
         val store = com.antivocale.app.data.ExternalModelStore(fake, dirExists = { false })
         store.add(externalRecord())
-        val registry = BackendRegistry(store, providerWith())   // empty: the real provider filters invalid records out
+        // Empty provider: the real provider filters invalid records out, so nothing derives.
+        val registry = BackendRegistry(store, emptyRecordsProvider())
         assertNull(registry.byBackendId("external:a1b2c3d4e5f6"))
     }
 

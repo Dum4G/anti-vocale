@@ -33,7 +33,7 @@ class ShareTargetManager(
     }
 
     private fun setComponentEnabled(target: BackendDescriptor, enabled: Boolean) {
-        // Sideload-only backends have no manifest activity-alias; skip them.
+        // Sideload-only and external backends have no manifest activity-alias; skip them.
         if (target.shareAlias.isBlank()) return
         val state = if (enabled)
             PackageManager.COMPONENT_ENABLED_STATE_ENABLED
@@ -56,6 +56,9 @@ class ShareTargetManager(
         }
 
         backendRegistry.backends.forEach { target ->
+            // Skip alias-less targets before the has-model check: externals would
+            // otherwise buy a pointless blocking DataStore read per sync.
+            if (target.shareAlias.isBlank()) return@forEach
             setComponentEnabled(target, advancedEnabled && hasModel(target.backendId))
         }
     }

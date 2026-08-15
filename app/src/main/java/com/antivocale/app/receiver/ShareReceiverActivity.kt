@@ -91,10 +91,10 @@ class ShareReceiverActivity : Activity() {
         // tap receiver or replaced on a re-share of the same taskId.
         internal fun choiceNotificationId(taskId: String): Int = taskId.hashCode()
 
-        // The registry is NOT held here: it derives dynamic external-model descriptors from
-        // the store, so a companion-held instance built at class-init time would snapshot a
-        // stale descriptor set. Callers resolve the app singleton via [BackendRegistryEntryPoint]
-        // and pass it in.
+        // The registry is NOT held here. Only DI assembles the store+provider pair this
+        // registry needs; a second hand-built instance would add a second records collector
+        // and split store mutations across racing read-modify-write domains. Callers resolve
+        // the app singleton via [BackendRegistryEntryPoint] and pass it in.
         internal fun backendIdForAlias(aliasClassName: String, registry: BackendRegistry): String? =
             registry.byShareAlias(aliasClassName)?.backendId
     }

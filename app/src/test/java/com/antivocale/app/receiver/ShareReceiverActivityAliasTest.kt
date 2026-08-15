@@ -1,27 +1,19 @@
 package com.antivocale.app.receiver
 
-import com.antivocale.app.data.ExternalModelRecord
-import com.antivocale.app.data.ExternalModelRecordsProvider
 import com.antivocale.app.data.ExternalModelStore
 import com.antivocale.app.data.FakePreferencesManager
 import com.antivocale.app.transcription.BackendRegistry
 import com.antivocale.app.transcription.CustomTransducerBackend
-import kotlinx.coroutines.flow.MutableStateFlow
+import com.antivocale.app.transcription.emptyRecordsProvider
 import org.junit.Assert.*
 import org.junit.Test
 
 class ShareReceiverActivityAliasTest {
 
-    /** Same shape as BackendRegistryTest's providerWith: an empty synchronous adapter. */
-    private fun localAdapter(): ExternalModelRecordsProvider =
-        object : ExternalModelRecordsProvider {
-            override val records = MutableStateFlow(emptyList<ExternalModelRecord>())
-        }
-
     /** Registry with no external records: the static alias set only. */
     private val registry = BackendRegistry(
         ExternalModelStore(FakePreferencesManager(), dirExists = { true }),
-        localAdapter(),
+        emptyRecordsProvider(),
     )
 
     @Test

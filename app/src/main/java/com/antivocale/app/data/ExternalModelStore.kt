@@ -33,6 +33,16 @@ class ExternalModelStore(
 
     suspend fun add(record: ExternalModelRecord) = mutate { it + record }
     suspend fun update(record: ExternalModelRecord) = mutate { list -> list.map { if (it.id == record.id) record else it } }
+
+    /**
+     * Targeted dir redirect: a read-modify-write over the CURRENT record, so
+     * concurrent edits to other fields (e.g. the importer rewriting pins on
+     * re-import) survive. Callers holding a stale record snapshot must use
+     * this instead of [update], whose whole-record writeback would revert them.
+     */
+    suspend fun updateDir(id: String, dir: String) = mutate { list ->
+        list.map { if (it.id == id) it.copy(dir = dir) else it }
+    }
     suspend fun delete(id: String): ExternalModelRecord? {
         val removed = records().firstOrNull { it.id == id }
         mutate { list -> list.filterNot { it.id == id } }

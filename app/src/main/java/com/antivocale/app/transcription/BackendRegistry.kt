@@ -98,8 +98,10 @@ data class BackendDescriptor(
  * backends. The registry is therefore NO LONGER STATELESS, and the
  * construction assumptions built on statelessness are retired: consumers
  * must use the injected singleton (or resolve it via an entry point), never
- * a privately constructed or companion-held instance; a fresh instance would
- * derive its own descriptor set and silently diverge from the rest of the app.
+ * a privately constructed or companion-held instance. Only DI assembles the
+ * store+provider pair; extra instances would add duplicate records
+ * collectors and split store mutations across racing read-modify-write
+ * domains that can lose updates.
  *
  * TASK-254 introduced the abstraction; the migration is complete as of
  * TASK-324. Status of the dispatch sites from the CLAUDE.md "Architecture
@@ -266,8 +268,9 @@ class BackendRegistry @Inject constructor(
         modelPathFlow = { prefs -> prefs.externalModelsJson.map { js ->
             ExternalModelListJson.decode(js).firstOrNull { r -> r.id == record.id }?.dir } },
         saveModelPath = { _, path ->
-            // Identity is the uuid, not a path preference: a save redirects the record's dir.
-            externalModelStore.update(record.copy(dir = path)) },
+            // Identity is the uuid, not a path preference: a save redirects the record's
+            // dir via a targeted update, so the captured snapshot reverts nothing else.
+            externalModelStore.updateDir(record.id, path) },
         clearModelPath = { externalModelStore.delete(record.id) },
     )
 
@@ -278,11 +281,20 @@ class BackendRegistry @Inject constructor(
     fun byBackendId(backendId: String?): BackendDescriptor? =
         backendId?.let { id -> backends.firstOrNull { it.backendId == id } }
 
-    /** Returns the descriptor for [modelType], or null if none is registered (GEMMA4_GGUF). */
+    /**
+     * Returns the descriptor for [modelType], or null if none is registered
+     * (GEMMA4_GGUF). The mapping is 1:N for [ExtractionService.ModelType.EXTERNAL]:
+     * several external records share it, and the first one wins.
+     */
     fun byModelType(modelType: ExtractionService.ModelType): BackendDescriptor? =
         backends.firstOrNull { it.modelType == modelType }
 
-    /** Returns the descriptor for a share-target [alias], or null if unknown (including null/blank). */
+    /**
+     * Returns the descriptor for a share-target [alias], or null if unknown
+     * (including null/blank). The blank alias is order-dependent: statics
+     * precede externals, so "" resolves to the custom-transducer descriptor
+     * while any external record is present.
+     */
     fun byShareAlias(alias: String?): BackendDescriptor? =
         alias?.let { a -> backends.firstOrNull { it.shareAlias == a } }
 }

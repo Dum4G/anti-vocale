@@ -57,6 +57,19 @@ class ExternalModelStoreTest {
     }
 
     @Test
+    fun `updateDir is a targeted read-modify-write that preserves concurrent edits`() = runTest {
+        val rec = record()
+        store.add(rec)
+        // An unrelated edit lands first (e.g. the importer rewriting pins on re-import);
+        // a whole-record writeback from the dir redirect must not revert it.
+        store.update(rec.copy(displayName = "GigaAM v3 (reimported)"))
+        store.updateDir(rec.id, "/new/dir")
+        val landed = store.records().single()
+        assertEquals("GigaAM v3 (reimported)", landed.displayName)
+        assertEquals("/new/dir", landed.dir)
+    }
+
+    @Test
     fun `validity requires the directory to exist`() = runTest {
         val rec = record()
         store.add(rec)

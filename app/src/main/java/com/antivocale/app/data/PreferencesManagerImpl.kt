@@ -11,6 +11,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import java.util.concurrent.atomic.AtomicReference
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
@@ -535,6 +536,9 @@ class PreferencesManagerImpl(
 
     override val externalModelsJson: Flow<String?> = context.dataStore.data.map { it[EXTERNAL_MODELS_JSON] }
         .onStart { emit(cache.get().externalModelsJson) }
+        // The JSON string is the natural key: unrelated preference writes re-emit the
+        // same value, and every downstream consumer re-decodes it. Skip the duplicates.
+        .distinctUntilChanged()
 
     override suspend fun saveExternalModelsJson(json: String) {
         context.dataStore.edit { preferences ->
