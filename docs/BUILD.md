@@ -4,11 +4,12 @@ This document describes the verified steps to build the Anti-Vocale app with Lit
 
 ## Prerequisites
 
-- **Java**: 21+ (JDK 21 required — LiteRT-LM v0.10.0+ ships Java 21 bytecode)
+- **Java**: 21+ (JDK 21 required, LiteRT-LM v0.10.0+ ships Java 21 bytecode)
 - **Gradle**: 8.11.1 (via wrapper `./gradlew`)
 - **Android SDK**: API 36 (compileSdk = 36, targetSdk = 36)
 - **adb**: Must be in PATH
 - **Kotlin**: 2.2.0
+- **sherpa-onnx AAR**: NOT committed to the repo. Run `./scripts/fetch-sherpa-aar.sh` once after cloning (downloads the pinned release into `app/libs/`; CI does the same in both workflow jobs). Without it Gradle fails resolving `app/libs/sherpa-onnx.aar`.
 
 ## Quick Start (One-Liner Build)
 

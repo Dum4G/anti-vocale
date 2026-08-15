@@ -47,6 +47,14 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
+      - name: Fetch sherpa-onnx AAR
+        run: ./scripts/fetch-sherpa-aar.sh
+
+      - name: Write google-services.json
+        # The gms plugin applies to any non-Fdroid task, including unit
+        # tests; without this file processPlayStoreDebugGoogleServices fails.
+        run: echo "${{ secrets.GOOGLE_SERVICES_JSON_B64 }}" | base64 -d > app/google-services.json
+
       - name: Run unit tests (playStore debug)
         run: ./gradlew :app:testPlayStoreDebugUnitTest --console=plain
 
@@ -83,11 +91,17 @@ jobs:
       - name: Write google-services.json
         run: echo "${{ secrets.GOOGLE_SERVICES_JSON_B64 }}" | base64 -d > app/google-services.json
 
-      - name: Download sherpa-onnx AAR
+      - name: Fetch sherpa-onnx AAR
+        # Tag dispatches may check out a pre-script commit; fall back to the
+        # inline download there (same pinned URL the script uses).
         run: |
-          mkdir -p app/libs
-          curl -L -o app/libs/sherpa-onnx.aar \
-            https://github.com/k2-fsa/sherpa-onnx/releases/download/v1.13.4/sherpa-onnx-1.13.4.aar
+          if [ -x scripts/fetch-sherpa-aar.sh ]; then
+            ./scripts/fetch-sherpa-aar.sh
+          else
+            mkdir -p app/libs
+            curl -fL --retry 3 -o app/libs/sherpa-onnx.aar \
+              https://github.com/k2-fsa/sherpa-onnx/releases/download/v1.13.4/sherpa-onnx-1.13.4.aar
+          fi
 
       - name: Build fdroid Release APK
         id: fdroid-apk
