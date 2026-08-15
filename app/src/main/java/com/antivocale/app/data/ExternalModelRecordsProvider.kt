@@ -41,8 +41,8 @@ class DefaultExternalModelRecordsProvider @Inject constructor(
     init {
         scope.launch {
             // Keep the last snapshot on failure: an upstream error must not kill
-            // the process-wide collector, it just stops refreshing until the next
-            // successful emission.
+            // the process-wide collector permanently (catch completes the flow);
+            // recovery comes only with a process restart.
             store.validRecordsFlow
                 .catch { Log.w(TAG, "external records collector failed", it) }
                 .collect { _records.value = it }
