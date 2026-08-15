@@ -340,6 +340,8 @@
                 <action android:name="com.antivocale.app.SHARE_BACK" />
                 <action android:name="com.antivocale.app.USE_SUBTITLES" />
                 <action android:name="com.antivocale.app.TRANSCRIBE_AUDIO" />
+                <action android:name="com.antivocale.app.PAGE_PREV" />
+                <action android:name="com.antivocale.app.PAGE_NEXT" />
             </intent-filter>
         </receiver>
 

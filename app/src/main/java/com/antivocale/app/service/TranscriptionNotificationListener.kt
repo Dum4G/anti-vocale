@@ -36,7 +36,8 @@ import kotlinx.coroutines.withContext
  * **Design note:** Both this listener and [InferenceService] now delegate result
  * notification building to [ResultNotificationFactory], eliminating the earlier
  * contained duplication. This class retains its own error and no-model notification
- * builders (those are Worker-only paths not shared with the service).
+ * builders (those are not yet delegated to the factory; near-copies still exist
+ * in InferenceService and are out of scope for TASK-327).
  *
  * @param appContext Application context used for notificationManager / getString / packages.
  * @param preferencesManager For the global auto-copy preference fallback.

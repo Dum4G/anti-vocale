@@ -11,6 +11,9 @@ import androidx.work.WorkManager
 import com.antivocale.app.R
 import com.antivocale.app.service.InferenceService
 import com.antivocale.app.util.ShareBackHelper
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 /**
  * BroadcastReceiver for handling notification actions.
@@ -18,6 +21,7 @@ import com.antivocale.app.util.ShareBackHelper
  * Handles:
  * - Copy transcription to clipboard
  * - Share transcription to other apps
+ * - Page through long result notifications (prev/next)
  */
 class NotificationActionReceiver : BroadcastReceiver() {
 
@@ -49,6 +53,7 @@ class NotificationActionReceiver : BroadcastReceiver() {
             ACTION_SHARE_BACK -> handleShareBackAction(context, intent)
             ACTION_USE_SUBTITLES -> handleSubtitleChoice(context, intent, requestType = "subtitles")
             ACTION_TRANSCRIBE_AUDIO -> handleSubtitleChoice(context, intent, requestType = "audio")
+            ACTION_PAGE_PREV, ACTION_PAGE_NEXT -> handlePageAction(context, intent)
             else -> Log.d(TAG, "Unknown action: ${intent.action}")
         }
     }
@@ -101,6 +106,26 @@ class NotificationActionReceiver : BroadcastReceiver() {
             Log.i(TAG, "Subtitle choice '$requestType' → started InferenceService (taskId=$taskId)")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to start InferenceService for subtitle choice '$requestType'", e)
+        }
+    }
+
+    /**
+     * Pages the result notification. The work runs in a coroutine because
+     * [com.antivocale.app.data.PerAppPreferencesManager.getCurrentPreferences]
+     * is a suspend DataStore call; if it fails, the old notification simply
+     * stands (a button tap must never crash).
+     */
+    private fun handlePageAction(context: Context, intent: Intent) {
+        val pendingResult = goAsync()
+        val appContext = context.applicationContext
+        CoroutineScope(Dispatchers.Default).launch {
+            try {
+                ResultNotificationRefresher.refresh(appContext, intent)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to rebuild paged notification", e)
+            } finally {
+                pendingResult.finish()
+            }
         }
     }
 
