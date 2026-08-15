@@ -757,6 +757,7 @@ class ExternalModelImporterTest {
         val first = importer.importFromDirectory(src)
         val second = importer.importFromDirectory(src)
         assertEquals(first.id, second.id)                          // update path returns the same record
+        assertEquals(1, store.records().size)                     // no duplicate record either
     }
 }
 ```
@@ -765,7 +766,7 @@ class ExternalModelImporterTest {
 
 - [ ] **Step 7.3: Implement.** `ExternalModelImporter` constructor: `(private val store: ExternalModelStore, private val filesRoot: (android.content.Context) -> File = { File(it.filesDir, "models/external") })` plus an injectable `uuid: () -> String = { java.util.UUID.randomUUID().toString().replace("-", "") }` for determinism in tests (unit tests pass a constant lambda returning the temp root). TWO entry points share one core; the SAF one is the primary v2a path:
   - `importFromTreeUri(context: Context, treeUri: Uri, modelType: String): ExternalModelRecord`: enumerate `DocumentFile.fromTreeUri(context, treeUri).listFiles()` and copy via `context.contentResolver.openInputStream(srcFile.uri)` (the landed TASK-313 `onCustomModelDirSelected` loop; port it, do NOT use `File(uri.path)`, a SAF tree URI is not a filesystem path).
-  - `importFromDirectory(src: File, modelType: String): ExternalModelRecord`: direct-file variant used by tests and the migration.
+  - `importFromDirectory(src: File, modelType: String = "nemo_transducer"): ExternalModelRecord`: direct-file variant used by tests. The Task 9 migration deliberately does NOT call it: the migrator hand-computes pins over the already-copied TASK-313 directory and keeps it at its legacy `models/custom-transducer/` location (the record's dir points there; no re-copy, no doubling of ~326MB, matching the spec's "hashes computed from the copied files" where copied refers to TASK-313's original import).
   Both run:
   1. Build the copy plan with the ROLE-BASED matcher lifted from TASK-313's `ModelViewModel.buildCopyPlan` (move it INTO the importer as `internal fun buildCopyPlan(files: List<String>): Map<String, String>?` mapping source name to canonical role name; keyword match encoder/decoder/joiner + tokens; null when any role is missing). Null plan = clean import error, nothing registered (the Step 7.1 missing-role test).
   2. Unconditional disk pre-flight (spec binding, BOTH entries): sum the source file sizes and require `filesRoot(ctx).usableSpace` above it, mirroring the downloader's pre-flight (`SherpaOnnxModelDownloader.kt` ~line 111); failure surfaces a clear error before any copy.
