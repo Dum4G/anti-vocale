@@ -93,8 +93,10 @@ today documents the duplication as contained). Synchronous and testable:
 ## Notification layout
 
 - Actions in order: Copy, Send-to-Telegram/Share (unchanged; both always carry
-  the full text, never the visible page), then Next when `page < last`, Prev
-  when `page > 0`. Reuses `chunk_nav_prev`/`chunk_nav_next` resources.
+  the full text, never the visible page), then Prev when `page > 0`, Next when
+  `page < last`, so a middle page reads Copy, ◀, ▶ (user decision, on-device:
+  the natural back-then-forward order, matching the in-progress notification).
+  Reuses `chunk_nav_prev`/`chunk_nav_next` resources.
 - Action budget: VERIFIED on-device (Realme RMX3853, Android 16, 2026-08-15):
   the Oplus shade renders at most three action buttons, collapsed AND expanded.
   The documented fallback is therefore ACTIVE: on middle pages Share is omitted

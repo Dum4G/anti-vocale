@@ -101,19 +101,20 @@ class ResultNotificationFactory(private val context: Context) {
         }
 
         // Nav actions mirror the in-progress notification's structure (user
-        // decision): fixed anchors first, nav after, progressive disclosure.
-        if (paged && pageIndex < pages.size - 1) {
-            builder.addAction(
-                android.R.drawable.ic_media_next,
-                context.getString(R.string.chunk_nav_next),
-                navPendingIntent(spec, pageIndex, isPrev = false)
-            )
-        }
+        // decision): fixed anchors first, nav after, progressive disclosure,
+        // and Prev before Next so a middle page reads Copy, ◀, ▶.
         if (paged && pageIndex > 0) {
             builder.addAction(
                 android.R.drawable.ic_media_previous,
                 context.getString(R.string.chunk_nav_prev),
                 navPendingIntent(spec, pageIndex, isPrev = true)
+            )
+        }
+        if (paged && pageIndex < pages.size - 1) {
+            builder.addAction(
+                android.R.drawable.ic_media_next,
+                context.getString(R.string.chunk_nav_next),
+                navPendingIntent(spec, pageIndex, isPrev = false)
             )
         }
 
