@@ -1,6 +1,5 @@
 package com.antivocale.app.service
 
-import android.app.Notification
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.ClipData
@@ -17,9 +16,6 @@ import com.antivocale.app.R
 import com.antivocale.app.data.AppNotificationPreferences
 import com.antivocale.app.data.PerAppPreferencesManager
 import com.antivocale.app.data.PreferencesManager
-import com.antivocale.app.receiver.NotificationActionReceiver
-import com.antivocale.app.transcription.Language
-import com.antivocale.app.util.AppInfoUtils
 import com.antivocale.app.util.AppNotificationChannel
 import com.antivocale.app.util.TranscriptFileSaver
 import kotlinx.coroutines.CoroutineScope
@@ -27,7 +23,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * A [TranscriptionListener] that posts the result/error notifications the same way
@@ -38,13 +33,10 @@ import java.util.concurrent.atomic.AtomicInteger
  * the background on Android 12+. Instead the Worker runs the orchestrator directly and uses
  * this listener to surface the result to the user.
  *
- * **Design note (approach (b) from the plan):** [InferenceService]'s own notification
- * helpers are deeply entangled with Service-specific state (foreground notification id,
- * `serviceScope`, `getString` from the Service context). Extracting and delegating them
- * without a compiler would risk subtle regressions in the working ASR flow. This class
- * therefore ports ONLY the result/error notification building needed by the Worker, which
- * is an acceptable, contained duplication. The service keeps its own implementation
- * unchanged.
+ * **Design note:** Both this listener and [InferenceService] now delegate result
+ * notification building to [ResultNotificationFactory], eliminating the earlier
+ * contained duplication. This class retains its own error and no-model notification
+ * builders (those are Worker-only paths not shared with the service).
  *
  * @param appContext Application context used for notificationManager / getString / packages.
  * @param preferencesManager For the global auto-copy preference fallback.
@@ -61,7 +53,7 @@ class TranscriptionNotificationListener(
 
     private val notificationManager: NotificationManager =
         appContext.getSystemService(NotificationManager::class.java)
-    private val resultNotificationCounter = AtomicInteger(InferenceService.RESULT_NOTIFICATION_ID)
+    private val resultNotificationFactory = ResultNotificationFactory(appContext)
 
     init {
         // Ensure the result channel exists (idempotent). The service also creates it in
@@ -198,102 +190,21 @@ class TranscriptionNotificationListener(
             AppNotificationPreferences.default()
         }
 
-        val copyIntent = Intent(appContext, NotificationActionReceiver::class.java).apply {
-            action = NotificationActionReceiver.ACTION_COPY_TRANSCRIPTION
-            putExtra(NotificationActionReceiver.EXTRA_TRANSCRIPTION_TEXT, transcriptionText)
-        }
-        val copyPendingIntent = PendingIntent.getBroadcast(
-            appContext,
-            System.currentTimeMillis().toInt(),
-            copyIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        val id = ResultNotificationFactory.nextNotificationId()
+        val spec = ResultNotificationSpec(
+            transcriptionText = transcriptionText,
+            taskId = taskId,
+            sourcePackage = sourcePackage,
+            confidence = confidence,
+            detectedLanguage = detectedLanguage,
+            isPartial = isPartial,
+            failedChunkCount = failedChunkCount,
+            notificationId = id,
+            firstPostedAt = System.currentTimeMillis()
         )
-
-        val openPendingIntent = buildLaunchPendingIntent(highlightTaskId = taskId)
-
-        val isTruncated = transcriptionText.length > 100
-        val previewText = if (isTruncated) transcriptionText.take(100) + "…" else transcriptionText
-
-        val title = if (isPartial) {
-            appContext.getString(R.string.transcription_partial, failedChunkCount)
-        } else {
-            appContext.getString(R.string.transcription_complete)
-        }
-
-        val builder = NotificationCompat.Builder(appContext, AppNotificationChannel.TRANSCRIPTION_RESULT.id)
-            .setContentTitle(title)
-            .setContentText(previewText)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(transcriptionText))
-            .setSmallIcon(android.R.drawable.ic_dialog_info)
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setContentIntent(openPendingIntent)
-            .addAction(android.R.drawable.ic_menu_save, appContext.getString(R.string.copy), copyPendingIntent)
-            .setAutoCancel(true)
-
-        if (prefs.showShareAction) {
-            val useQuickShareBack = prefs.quickShareBack && sourcePackage != null
-            if (useQuickShareBack) {
-                val shareBackIntent = Intent(Intent.ACTION_SEND).apply {
-                    type = "text/plain"
-                    putExtra(Intent.EXTRA_TEXT, transcriptionText)
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    val targetPackage = when {
-                        sourcePackage == "com.whatsapp" || sourcePackage!!.startsWith("com.whatsapp") -> "com.whatsapp"
-                        sourcePackage == "org.telegram.messenger" || sourcePackage.startsWith("org.telegram") -> "org.telegram.messenger"
-                        sourcePackage == "org.thoughtcrime.securesms" -> "org.thoughtcrime.securesms"
-                        else -> sourcePackage
-                    }
-                    setPackage(targetPackage)
-                }
-                val shareBackPendingIntent = PendingIntent.getActivity(
-                    appContext,
-                    System.currentTimeMillis().toInt() + 1,
-                    shareBackIntent,
-                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                )
-                builder.addAction(
-                    android.R.drawable.ic_menu_revert,
-                    AppInfoUtils.getSendToText(appContext, sourcePackage),
-                    shareBackPendingIntent
-                )
-            } else {
-                val shareChooserIntent = Intent(Intent.ACTION_SEND).apply {
-                    type = "text/plain"
-                    putExtra(Intent.EXTRA_TEXT, transcriptionText)
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                }
-                val sharePickerIntent = Intent.createChooser(
-                    shareChooserIntent,
-                    appContext.getString(R.string.share_transcription)
-                ).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
-                val sharePendingIntent = PendingIntent.getActivity(
-                    appContext,
-                    System.currentTimeMillis().toInt() + 1,
-                    sharePickerIntent,
-                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                )
-                builder.addAction(android.R.drawable.ic_menu_share, appContext.getString(R.string.share), sharePendingIntent)
-            }
-        }
-
-        val subTextParts = mutableListOf<String>()
-        if (isTruncated) {
-            subTextParts.add(appContext.getString(R.string.char_counter, 100, transcriptionText.length))
-        }
-        val langLabel = detectedLanguage?.let { lang ->
-            Language.FILTER_ENTRIES.find { it.code == lang }?.let { appContext.getString(it.nameResId) }
-        }
-        if (langLabel != null) {
-            subTextParts.add(appContext.getString(R.string.detected_language, langLabel))
-        }
-        if (confidence != null && confidence < CONFIDENCE_MEDIUM_THRESHOLD) {
-            subTextParts.add(appContext.getString(R.string.confidence_low))
-        }
-        if (subTextParts.isNotEmpty()) {
-            builder.setSubText(subTextParts.joinToString(" · "))
-        }
-
-        postUniqueNotification(builder.build(), "Worker showed result notification (${transcriptionText.length} chars)")
+        val notification = resultNotificationFactory.build(spec, prefs)
+        notificationManager.notify(id, notification)
+        Log.i(TAG, "Worker showed result notification (${transcriptionText.length} chars) (id=$id)")
     }
 
     private fun showErrorNotification(errorMessage: String) {
@@ -305,7 +216,9 @@ class TranscriptionNotificationListener(
             .setContentIntent(buildLaunchPendingIntent())
             .setAutoCancel(true)
             .build()
-        postUniqueNotification(notification, "Worker showed error notification: $errorMessage")
+        val id = ResultNotificationFactory.nextNotificationId()
+        notificationManager.notify(id, notification)
+        Log.i(TAG, "Worker showed error notification: $errorMessage (id=$id)")
     }
 
     private fun showNoModelNotification() {
@@ -323,13 +236,9 @@ class TranscriptionNotificationListener(
                 openPendingIntent
             )
             .build()
-        postUniqueNotification(notification, "Worker showed no-model notification")
-    }
-
-    private fun postUniqueNotification(notification: Notification, description: String) {
-        val id = resultNotificationCounter.getAndIncrement()
+        val id = ResultNotificationFactory.nextNotificationId()
         notificationManager.notify(id, notification)
-        Log.i(TAG, "$description (id=$id)")
+        Log.i(TAG, "Worker showed no-model notification (id=$id)")
     }
 
     private fun buildLaunchPendingIntent(
@@ -360,7 +269,6 @@ class TranscriptionNotificationListener(
 
     companion object {
         private const val TAG = "TranscriptionNotificationListener"
-        private const val CONFIDENCE_MEDIUM_THRESHOLD = 0.5f
         private const val RC_LAUNCH_DEFAULT = 0
         private const val RC_LAUNCH_MODEL_TAB = 1
     }
