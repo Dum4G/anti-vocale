@@ -151,7 +151,7 @@ data class BackendDescriptor(
 @Singleton
 class BackendRegistry @Inject constructor() {
 
-    /** The five enabled backends in canonical order (default backend first). */
+    /** The six enabled backends in canonical order (default backend first). */
     val backends: List<BackendDescriptor> = listOf(
         BackendDescriptor(
             backendId = SherpaOnnxBackend.BACKEND_ID,
@@ -198,6 +198,16 @@ class BackendRegistry @Inject constructor() {
             modelPathFlow = { it.nemotronModelPath },
             saveModelPath = { prefs, path -> prefs.saveNemotronModelPath(path) },
             clearModelPath = { it.clearNemotronModelPath() },
+        ),
+        BackendDescriptor(
+            backendId = CustomTransducerBackend.BACKEND_ID,
+            modelType = ExtractionService.ModelType.CUSTOM_TRANSDUCER,
+            // Sideload models have no manifest activity-alias (no share target).
+            shareAlias = "",
+            // Display name derives from the imported model directory name.
+            modelPathFlow = { it.customTransducerModelPath },
+            saveModelPath = { prefs, path -> prefs.saveCustomTransducerModelPath(path) },
+            clearModelPath = { it.clearCustomTransducerModelPath() },
         ),
         BackendDescriptor(
             backendId = LlmTranscriptionBackend.BACKEND_ID,

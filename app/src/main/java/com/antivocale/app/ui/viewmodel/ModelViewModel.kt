@@ -271,6 +271,8 @@ class ModelViewModel @Inject constructor(
                     ExtractionService.ModelType.NEMOTRON -> handleServiceProgressNemotron(progress)
                     // GGUF: disabled
                     ExtractionService.ModelType.GEMMA4_GGUF -> { /* no-op */ }
+                    // Custom transducer: sideload only, no service download progress.
+                    ExtractionService.ModelType.CUSTOM_TRANSDUCER -> { /* no-op */ }
                     ExtractionService.ModelType.GEMMA -> handleServiceProgressGemma(progress)
                 }
             }

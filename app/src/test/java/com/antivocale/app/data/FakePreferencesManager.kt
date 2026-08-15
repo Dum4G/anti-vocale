@@ -27,6 +27,8 @@ internal class FakePreferencesManager : PreferencesManager {
     val _whisperModelPath = MutableStateFlow<String?>(null)
     val _qwen3AsrModelPath = MutableStateFlow<String?>(null)
     val _nemotronModelPath = MutableStateFlow<String?>(null)
+    val _customTransducerModelPath = MutableStateFlow<String?>(null)
+    val _customTransducerModelType = MutableStateFlow(PreferencesManager.DEFAULT_CUSTOM_TRANSDUCER_MODEL_TYPE)
     val _ggufModelPath = MutableStateFlow<String?>(null)
     val _autoCopyEnabled = MutableStateFlow(false)
     val _outputFolderUri = MutableStateFlow<String?>(null)
@@ -55,6 +57,8 @@ internal class FakePreferencesManager : PreferencesManager {
     override val whisperModelPath: Flow<String?> get() = _whisperModelPath
     override val qwen3AsrModelPath: Flow<String?> get() = _qwen3AsrModelPath
     override val nemotronModelPath: Flow<String?> get() = _nemotronModelPath
+    override val customTransducerModelPath: Flow<String?> get() = _customTransducerModelPath
+    override val customTransducerModelType: Flow<String> get() = _customTransducerModelType
     override val ggufModelPath: Flow<String?> get() = _ggufModelPath
     override val autoCopyEnabled: Flow<Boolean> get() = _autoCopyEnabled
     override val outputFolderUri: Flow<String?> get() = _outputFolderUri
@@ -88,6 +92,9 @@ internal class FakePreferencesManager : PreferencesManager {
     override suspend fun clearQwen3AsrModelPath() { _qwen3AsrModelPath.value = null }
     override suspend fun saveNemotronModelPath(path: String) { _nemotronModelPath.value = path }
     override suspend fun clearNemotronModelPath() { _nemotronModelPath.value = null }
+    override suspend fun saveCustomTransducerModelPath(path: String) { _customTransducerModelPath.value = path }
+    override suspend fun clearCustomTransducerModelPath() { _customTransducerModelPath.value = null }
+    override suspend fun saveCustomTransducerModelType(modelType: String) { _customTransducerModelType.value = modelType }
     override suspend fun saveGgufModelPath(path: String) { _ggufModelPath.value = path }
     override suspend fun clearGgufModelPath() { _ggufModelPath.value = null }
     override suspend fun saveAutoCopyEnabled(enabled: Boolean) { _autoCopyEnabled.value = enabled }

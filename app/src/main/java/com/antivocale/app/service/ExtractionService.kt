@@ -301,7 +301,6 @@ class ExtractionService : Service() {
                 ModelType.CUSTOM_TRANSDUCER -> {
                     _progressState.tryEmit(ExtractionProgress(modelType, variant, DownloadState.Error("Custom transducer models are imported locally")))
                 }
-                }
             }
         } catch (e: CancellationException) {
             Log.i(TAG, "Download cancelled: $key")
