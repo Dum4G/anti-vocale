@@ -46,6 +46,7 @@
 package com.antivocale.app.data
 
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -295,7 +296,7 @@ git commit -m "feat(external): external model record types and store"
   - `app/src/main/java/com/antivocale/app/ui/viewmodel/LogsViewModel.kt:70`
   - `app/src/main/java/com/antivocale/app/ui/viewmodel/ModelViewModel.kt:75`
 - Modify: `app/src/test/java/com/antivocale/app/transcription/BackendRegistryTest.kt:53` and `app/src/test/java/com/antivocale/app/transcription/TranscriptionOrchestratorTestBase.kt` (construct with a fake provider)
-- Modify: `app/src/test/java/com/antivocale/app/receiver/ShareReceiverActivityAliasTest.kt` (nine static `backendIdForAlias(...)` call sites gain the registry parameter; construct `BackendRegistry(fakeStore, providerWith())` in the fixture and pass it)
+- Modify: `app/src/test/java/com/antivocale/app/receiver/ShareReceiverActivityAliasTest.kt` (nine static `backendIdForAlias(...)` call sites gain the registry parameter; construct `BackendRegistry(fakeStore, localAdapter())` in the fixture (a local adapter with the same shape as BackendRegistryTest's snippet-local `providerWith`; no shared helper exists) and pass it)
 - Modify: `app/src/main/java/com/antivocale/app/service/ExtractionService.kt` (add `EXTERNAL("external")` enum value HERE, not in Task 3; see Step 2.3 for the two mandatory arms)
 
 - [ ] **Step 2.1: Write the failing tests (add to BackendRegistryTest)**
@@ -470,7 +471,7 @@ git commit -m "feat(external): dynamic BackendRegistry descriptors from the exte
 ```kotlin
     @Test
     fun `backend override routes external id to the engine with the record config`() = runTest {
-        val dir = createTempModelDir("external")  // then write the four canonical files into it
+        val dir = createTempModelDir("external")  // the helper already writes ParakeetModelManager.REQUIRED_FILES (encoder/decoder/joiner/tokens)
         val record = externalRecord(id = "abc123def456", dir = dir.absolutePath)
         fakeStore.add(record)                       // FakePreferencesManager-backed store, dirExists = { true }
         every { preferencesManager.threadCount } returns flowOf(4)
@@ -609,7 +610,7 @@ The full method bodies are mechanical ports of `GigaAmBackend.kt` with the file 
 
 **Files:**
 - Modify: `app/src/main/java/com/antivocale/app/transcription/TranscriptionBackendManager.kt`
-- Modify: `app/src/test/java/com/antivocale/app/transcription/TranscriptionBackendManagerTest.kt` (its `createManager(llmManager, backends.toSet())` helper breaks at the new constructor arity: extend it with the fake store and a real `ExternalSherpaBackend()`)
+- Modify: `app/src/test/java/com/antivocale/app/transcription/TranscriptionBackendManagerTest.kt` (its `createManager(llmManager, backends.toSet())` helper breaks at the new constructor arity: extend it with a records-provider adapter and a real `ExternalSherpaBackend()`; NO store, the manager does not take one)
 - Test: `app/src/test/java/com/antivocale/app/transcription/TranscriptionBackendManagerExternalTest.kt`
 
 - [ ] **Step 5.1: Failing tests**
@@ -651,7 +652,7 @@ class TranscriptionBackendManagerExternalTest {
 
     @Test fun `getAvailableBackends appends one handle per valid record`() {
         // isReady() is a real File(dir).exists() check: the record's dir must be an actual temp dir.
-        val dir = createTempDir("external-handle")
+        val dir = createTempModelDir("external-handle")  // same helper the suite already uses; kotlin.io.createTempDir is deprecated
         val present = record.copy(dir = dir.absolutePath)
         seedProvider(present)
         val handles = manager.getAvailableBackends().filter { it.id == present.backendId }
