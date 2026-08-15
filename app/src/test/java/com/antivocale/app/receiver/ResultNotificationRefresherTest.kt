@@ -99,7 +99,7 @@ class ResultNotificationRefresherTest {
         }
         ResultNotificationRefresher.refresh(
             context,
-            pageIntent(NotificationActionReceiver.ACTION_PAGE_NEXT, longText(3), 0)
+            pageIntent(NotificationActionReceiver.ACTION_PAGE_PREV, longText(2), 1)
         )
         val titles = postedNotification(7).actions!!.map { it.title.toString() }
         assertTrue("expected quick-share-back action, got $titles", titles.contains("Send to Telegram"))

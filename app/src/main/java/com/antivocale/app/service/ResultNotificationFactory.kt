@@ -90,14 +90,18 @@ class ResultNotificationFactory(private val context: Context) {
                 copyPendingIntent(text)
             )
 
-        if (prefs.showShareAction) {
+        // On-device finding (TASK-327 Task 8, Realme RMX3853 / Android 16): the shade
+        // renders at most three action buttons, collapsed AND expanded. On middle
+        // pages both nav arrows must stay visible for bidirectional paging, so Share
+        // is the action that gives way there; it returns on first/last pages and on
+        // unpaged notifications.
+        val middlePage = paged && pageIndex > 0 && pageIndex < pages.size - 1
+        if (prefs.showShareAction && !middlePage) {
             addShareAction(builder, spec, prefs)
         }
 
         // Nav actions mirror the in-progress notification's structure (user
         // decision): fixed anchors first, nav after, progressive disclosure.
-        // Android elides trailing actions beyond its collapsed cap, so a middle
-        // page keeps Copy + Share + Next visible and elides Prev.
         if (paged && pageIndex < pages.size - 1) {
             builder.addAction(
                 android.R.drawable.ic_media_next,

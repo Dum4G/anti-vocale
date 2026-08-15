@@ -99,9 +99,9 @@ class ResultNotificationFactoryTest {
     }
 
     @Test
-    fun `middle page shows Next before Prev`() {
+    fun `middle page drops Share and shows Next before Prev`() {
         val n = factory.build(spec(longText(3), page = 1), prefs)
-        assertEquals(listOf("Copy", "Send to Telegram", "▶", "◀"), n.titles())
+        assertEquals(listOf("Copy", "▶", "◀"), n.titles())
     }
 
     @Test

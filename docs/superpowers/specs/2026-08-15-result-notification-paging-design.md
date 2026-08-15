@@ -95,15 +95,11 @@ today documents the duplication as contained). Synchronous and testable:
 - Actions in order: Copy, Send-to-Telegram/Share (unchanged; both always carry
   the full text, never the visible page), then Next when `page < last`, Prev
   when `page > 0`. Reuses `chunk_nav_prev`/`chunk_nav_next` resources.
-- Collapsed budget: Android elides trailing actions beyond its display cap, so
-  the order above means first page shows Copy + Share + Next; middle pages
-  carry four actions with Prev collapsed-elided (Copy + Share + Next visible,
-  Prev reachable expanded); last page shows Copy + Share + Prev. Whether the
-  platform surfaces the fourth action when expanded on Android 16 is unproven
-  in this repo and is an explicit on-device DoD check. Fallback if it does
-  not: omit the Share action while on a middle page (progressive disclosure
-  applied to Share instead of to paging) so paging stays fully functional
-  within three actions.
+- Action budget: VERIFIED on-device (Realme RMX3853, Android 16, 2026-08-15):
+  the Oplus shade renders at most three action buttons, collapsed AND expanded.
+  The documented fallback is therefore ACTIVE: on middle pages Share is omitted
+  and the set is Copy + Next + Prev, so bidirectional paging is always visible;
+  first page shows Copy + Share + Next; last page shows Copy + Share + Prev.
 - Single page: no nav actions, no truncation ellipsis, no counter. Medium
   transcripts (101-400 chars) that today show a truncated preview plus
   "100 of N chars" become fully readable in one page.
@@ -150,8 +146,8 @@ intent.
 - On-device (project DoD), Realme RMX3853 (Android 16): a >400-char voice note
   pages with the buttons; paging still works after `InferenceService` has
   stopped and after the app process has been killed (not force-stop, which the
-  platform itself makes impossible); the fourth action is reachable when
-  expanded (else the documented Share-omission fallback applies); a full
+  platform itself makes impossible); the three-button cap was CONFIRMED even
+  expanded, so the Share-omission fallback was activated (2026-08-15); a full
   400-char page is readable without clamping in the expanded BigText view
   (else lower `PAGE_CHARS` before shipping).
 
