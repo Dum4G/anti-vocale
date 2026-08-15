@@ -3,7 +3,6 @@ package com.antivocale.app.data
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
-import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
@@ -11,9 +10,11 @@ import javax.inject.Singleton
  * platform v2a). Persists the record list as one JSON preference via
  * [PreferencesManager]; derives nothing else. Directory validity is injected
  * so the class stays JVM-testable.
+ *
+ * Provided via [AppModule] (not `@Inject`) because the `dirExists` default
+ * parameter is invisible to Dagger and would cause a MissingBinding at use sites.
  */
-@Singleton
-class ExternalModelStore @Inject constructor(
+class ExternalModelStore constructor(
     private val preferencesManager: PreferencesManager,
     private val dirExists: (String) -> Boolean = { java.io.File(it).exists() },
 ) {

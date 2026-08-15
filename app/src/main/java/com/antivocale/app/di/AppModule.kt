@@ -10,6 +10,7 @@ import com.antivocale.app.data.PreferencesManager
 import com.antivocale.app.data.PreferencesManagerImpl
 import com.antivocale.app.data.ShareTargetManager
 import com.antivocale.app.data.TranscriptionCalibrator
+import com.antivocale.app.data.ExternalModelStore
 import java.util.concurrent.TimeUnit
 import com.antivocale.app.data.local.AppDatabase
 import com.antivocale.app.data.local.LogDao
@@ -53,6 +54,11 @@ object AppModule {
     ): ShareTargetManager {
         return ShareTargetManager(context, preferencesManager, backendRegistry)
     }
+
+    @Provides
+    @Singleton
+    fun provideExternalModelStore(preferencesManager: PreferencesManager): ExternalModelStore =
+        ExternalModelStore(preferencesManager)
 
     @Provides
     @Singleton

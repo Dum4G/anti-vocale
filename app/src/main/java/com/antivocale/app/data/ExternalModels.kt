@@ -1,5 +1,6 @@
 package com.antivocale.app.data
 
+import android.util.Log
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -34,6 +35,8 @@ data class ExternalModelRecord(
     }
 
     companion object {
+        private const val TAG = "ExternalModelRecord"
+
         fun fromJson(o: JSONObject): ExternalModelRecord? = try {
             val filesObj = o.getJSONObject("files")
             val files = buildMap {
@@ -50,11 +53,16 @@ data class ExternalModelRecord(
                 sourceUrl = if (o.isNull("sourceUrl")) null else o.getString("sourceUrl"),
                 files = files, sizeBytes = o.getLong("sizeBytes"), importedAt = o.getLong("importedAt"),
             )
-        } catch (e: Exception) { null }  // malformed entry: whole list rejected, never a crash
+        } catch (e: Exception) {
+            Log.w(TAG, "Skipping malformed ExternalModelRecord", e)
+            null
+        }
     }
 }
 
 object ExternalModelListJson {
+    private const val TAG = "ExternalModelListJson"
+
     fun encode(records: List<ExternalModelRecord>): String =
         JSONArray(records.map { it.toJson() }).toString()
 
@@ -63,6 +71,7 @@ object ExternalModelListJson {
         return runCatching {
             val a = JSONArray(raw)
             buildList { for (i in 0 until a.length()) add(ExternalModelRecord.fromJson(a.getJSONObject(i)) ?: return emptyList()) }
-        }.getOrDefault(emptyList())
+        }.onFailure { Log.w(TAG, "Failed to decode external models JSON", it) }
+         .getOrDefault(emptyList())
     }
 }

@@ -73,4 +73,14 @@ class ExternalModelStoreTest {
         assertEquals(emptyList<ExternalModelRecord>(), filtered.validRecordsFlow.first())
         assertEquals(listOf(rec), ExternalModelStore(fake) { true }.validRecordsFlow.first())
     }
+
+    @Test
+    fun `corrupt entry in JSON causes whole list to decode as empty, no crash`() = runTest {
+        val rec = record()
+        val validJson = rec.toJson().toString()
+        // Two entries: one valid, one garbage. decode must return emptyList (first bad entry stops).
+        val raw = """[$validJson,{"id":"x","displayName":"bad","dir":"/tmp","family":"CTC"}]"""
+        val decoded = ExternalModelListJson.decode(raw)
+        assertEquals(emptyList<ExternalModelRecord>(), decoded)
+    }
 }
