@@ -56,8 +56,10 @@ class ResultNotificationFactory(private val context: Context) {
 
     fun build(spec: ResultNotificationSpec, prefs: AppNotificationPreferences): Notification {
         val text = spec.transcriptionText
-        val paged = TranscriptPager.isPaged(text)
-        val pages = if (paged) TranscriptPager.pagesFor(text) else listOf(text)
+        // One split pass: skip it entirely for unpageable oversized texts.
+        val oversized = text.length > TranscriptPager.MAX_PAGED_LENGTH
+        val pages = if (oversized) listOf(text) else TranscriptPager.pagesFor(text)
+        val paged = !oversized && pages.size >= 2
         val pageIndex = spec.pageIndex.coerceIn(0, pages.size - 1)
 
         val title = if (spec.isPartial) {
@@ -66,26 +68,16 @@ class ResultNotificationFactory(private val context: Context) {
             context.getString(R.string.transcription_complete)
         }
 
+        // Body text: the current page when paged, the whole text otherwise.
         // Legacy truncation applies only to texts too big to page (binder
         // guard): everything pageable is fully readable, single page or paged.
-        val oversized = text.length > TranscriptPager.MAX_PAGED_LENGTH
-        val contentText: String
-        val bigText: String
-        if (paged) {
-            contentText = pages[pageIndex]
-            bigText = pages[pageIndex]
-        } else if (oversized) {
-            contentText = text.take(CHAR_PREVIEW_LIMIT) + "…"
-            bigText = text
-        } else {
-            contentText = text
-            bigText = text
-        }
+        val displayed = if (paged) pages[pageIndex] else text
+        val contentText = if (!paged && oversized) text.take(CHAR_PREVIEW_LIMIT) + "…" else displayed
 
         val builder = NotificationCompat.Builder(context, AppNotificationChannel.TRANSCRIPTION_RESULT.id)
             .setContentTitle(title)
             .setContentText(contentText)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(bigText))
+            .setStyle(NotificationCompat.BigTextStyle().bigText(displayed))
             .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setContentIntent(buildLaunchPendingIntent(spec.taskId))
@@ -110,14 +102,14 @@ class ResultNotificationFactory(private val context: Context) {
             builder.addAction(
                 android.R.drawable.ic_media_next,
                 context.getString(R.string.chunk_nav_next),
-                navPendingIntent(spec, pageIndex, direction = +1)
+                navPendingIntent(spec, pageIndex, isPrev = false)
             )
         }
         if (paged && pageIndex > 0) {
             builder.addAction(
                 android.R.drawable.ic_media_previous,
                 context.getString(R.string.chunk_nav_prev),
-                navPendingIntent(spec, pageIndex, direction = -1)
+                navPendingIntent(spec, pageIndex, isPrev = true)
             )
         }
 
@@ -220,9 +212,9 @@ class ResultNotificationFactory(private val context: Context) {
      * equality ignores extras, so shared codes would collapse distinct pages
      * into one cached intent.
      */
-    private fun navPendingIntent(spec: ResultNotificationSpec, pageIndex: Int, direction: Int): PendingIntent {
+    private fun navPendingIntent(spec: ResultNotificationSpec, pageIndex: Int, isPrev: Boolean): PendingIntent {
         val intent = Intent(context, NotificationActionReceiver::class.java).apply {
-            action = if (direction < 0) {
+            action = if (isPrev) {
                 NotificationActionReceiver.ACTION_PAGE_PREV
             } else {
                 NotificationActionReceiver.ACTION_PAGE_NEXT
@@ -238,7 +230,7 @@ class ResultNotificationFactory(private val context: Context) {
             spec.confidence?.let { putExtra(NotificationActionReceiver.EXTRA_CONFIDENCE, it) }
             spec.detectedLanguage?.let { putExtra(NotificationActionReceiver.EXTRA_DETECTED_LANGUAGE, it) }
         }
-        val requestCode = spec.notificationId * 1000 + pageIndex * 2 + if (direction < 0) 0 else 1
+        val requestCode = spec.notificationId * 1000 + pageIndex * 2 + if (isPrev) 0 else 1
         return PendingIntent.getBroadcast(
             context,
             requestCode,

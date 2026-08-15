@@ -25,11 +25,18 @@ object ResultNotificationRefresher {
     suspend fun refresh(appContext: Context, intent: Intent) {
         val text = intent.getStringExtra(NotificationActionReceiver.EXTRA_TRANSCRIPTION_TEXT)
         val notificationId = intent.getIntExtra(NotificationActionReceiver.EXTRA_NOTIFICATION_ID, -1)
-        if (text.isNullOrBlank() || notificationId == -1 || !TranscriptPager.isPaged(text)) {
+        if (text.isNullOrBlank() || notificationId == -1 ||
+            text.length > TranscriptPager.MAX_PAGED_LENGTH
+        ) {
             Log.w(TAG, "Page action with unusable extras (id=$notificationId, ${text?.length ?: 0} chars); ignoring")
             return
         }
+        // One split pass; the guards above already ruled out the unpageable cases.
         val pageCount = TranscriptPager.pagesFor(text).size
+        if (pageCount < 2) {
+            Log.w(TAG, "Page action for an unpaged text (${text.length} chars); ignoring")
+            return
+        }
         val current = intent.getIntExtra(NotificationActionReceiver.EXTRA_PAGE_INDEX, 0)
             .coerceIn(0, pageCount - 1)
         val target = if (intent.action == NotificationActionReceiver.ACTION_PAGE_PREV) {
