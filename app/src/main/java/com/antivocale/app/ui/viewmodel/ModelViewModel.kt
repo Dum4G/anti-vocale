@@ -2310,7 +2310,7 @@ class ModelViewModel @Inject constructor(
                 preferencesManager.clearCustomTransducerModelPath()
                 _customTransducerModelPath.value = null
                 _uiState.update { it.copy(modelPath = "", modelName = "") }
-                // Uniform with the five sibling delete paths; a no-op today
+                // Uniform with the sibling delete paths; a no-op today
                 // (blank alias) but future-proof if custom ever gains a target.
                 shareTargetManager.onModelDeleted(CustomTransducerBackend.BACKEND_ID)
             }
