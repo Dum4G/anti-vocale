@@ -7,11 +7,13 @@ import com.antivocale.app.data.download.SherpaOnnxModelDownloader
 import java.io.File
 
 /**
- * Downloads the GigaAM v3 model for sherpa-onnx from the govorun-lite GitHub release.
+ * Downloads the GigaAM v3 model for sherpa-onnx from the project's HuggingFace mirror.
  *
- * The ONNX files are NOT hosted on HuggingFace; they are published as GitHub release
- * assets at `https://github.com/amidexe/govorun-lite/releases/download/model-gigaam-v3`.
- * A custom [SherpaOnnxModelConfig.urlBuilder] points the shared downloader at those URLs.
+ * The files are mirrored (byte-identical) at `pantinor/gigaam-v3`, the default HF
+ * namespace the shared downloader derives from [modelDirName], so no repo override
+ * is needed. Original source: the govorun-lite GitHub release `model-gigaam-v3`
+ * (int8 sherpa-onnx export of Sber's GigaAM v3, MIT). Every file is pinned by
+ * SHA-256 below.
  *
  * Single-variant (like [NemotronDownloader]). Delegates to [SherpaOnnxModelDownloader].
  */
@@ -23,10 +25,6 @@ object GigaAmDownloader {
      */
     val modelDirName: String get() = GigaAmModelManager.GIGAAM_MODEL_DIR
 
-    /** Releases download root for the sherpa-onnx-prepackaged GigaAM v3 files. */
-    private const val RELEASE_BASE_URL =
-        "https://github.com/amidexe/govorun-lite/releases/download/model-gigaam-v3"
-
     private val config = SherpaOnnxModelConfig(
         tag = "GigaAmDownloader",
         modelDirNames = mapOf(Unit to modelDirName),
@@ -36,9 +34,16 @@ object GigaAmDownloader {
         estimatedSizeMB = { GigaAmModelManager.ESTIMATED_SIZE_MB },
         modelStorageDir = { context -> GigaAmModelManager.getModelStorageDir(context) },
         isValidModel = { dir -> GigaAmModelManager.validateModelDirectory(dir) != null },
-        // GigaAM ships as GitHub release assets, not a HuggingFace repo (which the
-        // default downloader would otherwise hit). Build the direct asset URL.
-        urlBuilder = { _, fileName -> "$RELEASE_BASE_URL/$fileName" }
+        // Pinned because the bytes transit from a third-party export: the mirror is
+        // ours, but the hashes document exactly which artifacts were validated.
+        expectedSha256 = mapOf(
+            Unit to mapOf(
+                "gigaam_v3_e2e_rnnt_encoder_int8.onnx" to "2cac62d0c270bd128f898f2be1a2d34780d524a6e9483888ebac7b00f97410f1",
+                "gigaam_v3_e2e_rnnt_decoder.onnx" to "781971998e6a355d6a714f6932a30eab295e7ba0d14fd7e0f78c83b87e811860",
+                "gigaam_v3_e2e_rnnt_joint.onnx" to "602ff7017a93311aad34df1437c8d7f49911353c13d6eae7a6ee7b041339465c",
+                "gigaam_v3_e2e_rnnt_tokens.txt" to "7ddf22514c42c531358182c81446a8159771e9921019f09ae743ea622d40221d"
+            )
+        )
     )
 
     private val delegate = SherpaOnnxModelDownloader(config)
