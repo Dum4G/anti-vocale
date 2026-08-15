@@ -33,6 +33,11 @@ abstract class TranscriptionOrchestratorTestBase {
         orchestrator = TranscriptionOrchestrator(
             preferencesManager, logDao, transcriptionCalibrator, backendManager, audioPreprocessor
         )
+
+        // Default the OOM pre-flight to off in tests so it does not interfere with orchestrator
+        // behaviour assertions. (The memory check itself is fail-open on a mock Context anyway,
+        // but stubbing the preference keeps the intent explicit.)
+        every { preferencesManager.forceModelLoad } returns flowOf(false)
     }
 
     protected fun stubWhisperBackend(): TranscriptionBackend =

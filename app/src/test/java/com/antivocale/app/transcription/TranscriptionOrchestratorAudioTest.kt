@@ -141,7 +141,10 @@ class TranscriptionOrchestratorAudioTest : TranscriptionOrchestratorTestBase() {
 
         assertTrue(result.isFailure)
         val error = result.exceptionOrNull()
-        assertTrue(error is IllegalStateException)
+        assertTrue(
+            "Expected NoTranscriptionProduced but got: ${error?.javaClass?.simpleName}: ${error?.message}",
+            error is TranscriptionException.NoTranscriptionProduced
+        )
         assertEquals("No transcription produced", error?.message)
         verify {
             listener.onError(eq("test-1"), eq("INFERENCE_ERROR"), any(), eq(false), eq(false), any())

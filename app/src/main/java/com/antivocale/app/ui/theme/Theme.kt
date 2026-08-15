@@ -1,12 +1,15 @@
 package com.antivocale.app.ui.theme
 
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
 /**
- * Available theme options for the app.
+ * Available brand theme options for the app. Each has a dark and a light palette; which one is
+ * used is decided by [ThemeMode] (System / Dark / Light) in [AntiVocaleTheme].
  */
 enum class ThemeType(val displayName: String) {
     DEFAULT("Default (Indigo)"),
@@ -14,7 +17,18 @@ enum class ThemeType(val displayName: String) {
     TELEGRAM("Telegram")
 }
 
-// Default Indigo theme
+/**
+ * How the brand theme's dark/light palette is chosen.
+ * - [SYSTEM]: follow the device's system dark setting ([isSystemInDarkTheme]).
+ * - [DARK] / [LIGHT]: force that palette regardless of the system setting.
+ */
+enum class ThemeMode(val displayName: String) {
+    SYSTEM("System"),
+    DARK("Dark"),
+    LIGHT("Light")
+}
+
+// ---------------- Default Indigo ----------------
 private val DefaultDarkColorScheme = darkColorScheme(
     primary = Color(0xFF818CF8),
     onPrimary = Color(0xFF1E1B4B),
@@ -35,7 +49,27 @@ private val DefaultDarkColorScheme = darkColorScheme(
     onError = Color(0xFF450A0A)
 )
 
-// WhatsApp-inspired dark theme (green accents)
+private val DefaultLightColorScheme = lightColorScheme(
+    primary = Color(0xFF4F46E5),
+    onPrimary = Color(0xFFFFFFFF),
+    primaryContainer = Color(0xFFE0E7FF),
+    onPrimaryContainer = Color(0xFF1E1B4B),
+    secondary = Color(0xFF4338CA),
+    onSecondary = Color(0xFFFFFFFF),
+    secondaryContainer = Color(0xFFE0E7FF),
+    onSecondaryContainer = Color(0xFF1E1B4B),
+    tertiary = Color(0xFF7C3AED),
+    background = Color(0xFFF8FAFC),
+    onBackground = Color(0xFF0F172A),
+    surface = Color(0xFFFFFFFF),
+    onSurface = Color(0xFF1E293B),
+    surfaceVariant = Color(0xFFE2E8F0),
+    onSurfaceVariant = Color(0xFF475569),
+    error = Color(0xFFDC2626),
+    onError = Color(0xFFFFFFFF)
+)
+
+// ---------------- WhatsApp (green) ----------------
 private val WhatsAppDarkColorScheme = darkColorScheme(
     primary = Color(0xFF25D366),
     onPrimary = Color(0xFF004D25),
@@ -56,7 +90,27 @@ private val WhatsAppDarkColorScheme = darkColorScheme(
     onError = Color(0xFF2D0A0A)
 )
 
-// Telegram-inspired dark theme (blue accents)
+private val WhatsAppLightColorScheme = lightColorScheme(
+    primary = Color(0xFF128C7E),
+    onPrimary = Color(0xFFFFFFFF),
+    primaryContainer = Color(0xFFDCF8C6),
+    onPrimaryContainer = Color(0xFF004D25),
+    secondary = Color(0xFF25D366),
+    onSecondary = Color(0xFF003D1F),
+    secondaryContainer = Color(0xFFDCF8C6),
+    onSecondaryContainer = Color(0xFF004D25),
+    tertiary = Color(0xFF16A34A),
+    background = Color(0xFFE8F5E9),
+    onBackground = Color(0xFF0B141A),
+    surface = Color(0xFFFFFFFF),
+    onSurface = Color(0xFF1B2E23),
+    surfaceVariant = Color(0xFFC8E6C9),
+    onSurfaceVariant = Color(0xFF3B5240),
+    error = Color(0xFFD32F2F),
+    onError = Color(0xFFFFFFFF)
+)
+
+// ---------------- Telegram (blue) ----------------
 private val TelegramDarkColorScheme = darkColorScheme(
     primary = Color(0xFF64B5F6),
     onPrimary = Color(0xFF0D47A1),
@@ -77,15 +131,42 @@ private val TelegramDarkColorScheme = darkColorScheme(
     onError = Color(0xFF2D0A0A)
 )
 
+private val TelegramLightColorScheme = lightColorScheme(
+    primary = Color(0xFF1976D2),
+    onPrimary = Color(0xFFFFFFFF),
+    primaryContainer = Color(0xFFE3F2FD),
+    onPrimaryContainer = Color(0xFF0D47A1),
+    secondary = Color(0xFF42A5F5),
+    onSecondary = Color(0xFFFFFFFF),
+    secondaryContainer = Color(0xFFE3F2FD),
+    onSecondaryContainer = Color(0xFF0D47A1),
+    tertiary = Color(0xFF1565C0),
+    background = Color(0xFFEFF5FB),
+    onBackground = Color(0xFF0A0E14),
+    surface = Color(0xFFFFFFFF),
+    onSurface = Color(0xFF17202A),
+    surfaceVariant = Color(0xFFBBDEFB),
+    onSurfaceVariant = Color(0xFF37474F),
+    error = Color(0xFFD32F2F),
+    onError = Color(0xFFFFFFFF)
+)
+
 @Composable
 fun AntiVocaleTheme(
-    theme: ThemeType = ThemeType.DEFAULT,
+    brand: ThemeType = ThemeType.DEFAULT,
+    mode: ThemeMode = ThemeMode.SYSTEM,
     content: @Composable () -> Unit
 ) {
-    val colorScheme = when (theme) {
-        ThemeType.DEFAULT -> DefaultDarkColorScheme
-        ThemeType.WHATSAPP -> WhatsAppDarkColorScheme
-        ThemeType.TELEGRAM -> TelegramDarkColorScheme
+    val isDark = when (mode) {
+        ThemeMode.SYSTEM -> isSystemInDarkTheme()
+        ThemeMode.DARK -> true
+        ThemeMode.LIGHT -> false
+    }
+
+    val colorScheme = when (brand) {
+        ThemeType.DEFAULT -> if (isDark) DefaultDarkColorScheme else DefaultLightColorScheme
+        ThemeType.WHATSAPP -> if (isDark) WhatsAppDarkColorScheme else WhatsAppLightColorScheme
+        ThemeType.TELEGRAM -> if (isDark) TelegramDarkColorScheme else TelegramLightColorScheme
     }
 
     MaterialTheme(

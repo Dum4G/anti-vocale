@@ -12,6 +12,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import kotlinx.coroutines.runBlocking
 
 /**
  * Unit tests for PerAppPreferencesManager.
@@ -27,9 +28,10 @@ class PerAppPreferencesManagerTest {
     private lateinit var manager: PerAppPreferencesManager
 
     @Before
-    fun setup() {
+    fun setup() = runBlocking {
         context = ApplicationProvider.getApplicationContext()
         manager = PerAppPreferencesManager(context)
+        manager.clearAllPreferences()
     }
 
     @Test

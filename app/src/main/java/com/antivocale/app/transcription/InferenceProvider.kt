@@ -1,6 +1,7 @@
 package com.antivocale.app.transcription
 
 import android.os.Build
+import androidx.annotation.VisibleForTesting
 
 /**
  * Resolves the ONNX Runtime execution provider for inference.
@@ -17,13 +18,48 @@ object InferenceProvider {
     const val CPU = "cpu"
 
     /**
+     * MediaTek SoCs ship notoriously buggy NNAPI drivers (NeuroPilot) that crash with
+     * ANEURALNETWORKS_BAD_DATA or SIGABRT on many ONNX models. Detect them and force CPU
+     * to avoid native crashes. This is a blunt instrument but pragmatic: the research
+     * (docs/scout-reports/2026-08-13-mediatek-crash-research.md) found no safe way to
+     * use NNAPI on MediaTek for our model shapes.
+     */
+    private fun isMediaTek(): Boolean {
+        return isMediaTek(
+            Build.HARDWARE.orEmpty(),
+            Build.BOARD.orEmpty(),
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) Build.SOC_MANUFACTURER.orEmpty() else ""
+        )
+    }
+
+    /**
+     * Pure, testable MediaTek detection. Checks hardware/board/SOC manufacturer strings.
+     * Visible for testing.
+     */
+    @VisibleForTesting
+    internal fun isMediaTek(hardware: String, board: String, socManufacturer: String): Boolean {
+        val hw = hardware.lowercase()
+        val bd = board.lowercase()
+        val soc = socManufacturer.lowercase()
+        return soc.contains("mediatek") ||
+            hw.startsWith("mt") || bd.startsWith("mt") ||
+            hw.contains("mediatek") || bd.contains("mediatek")
+    }
+
+    /**
      * Resolves the actual provider string to pass to sherpa-onnx.
      *
-     * - "auto" → "cpu" (NNAPI driver overhead often hurts small models)
-     * - "nnapi" → "nnapi" (user explicitly wants NNAPI)
-     * - "cpu" → "cpu" (user explicitly wants CPU)
+     * - "auto" -> "cpu" (NNAPI driver overhead often hurts small models)
+     * - "nnapi" -> "nnapi" (user explicitly wants NNAPI), EXCEPT on MediaTek where
+     *   the driver crashes are so severe we override to CPU for safety
+     * - "cpu" -> "cpu" (user explicitly wants CPU)
      */
     fun resolve(preference: String): String {
+        // MediaTek guard: force CPU regardless of user preference. The NNAPI driver
+        // crashes are uncatchable native SIGABRTs that kill the process.
+        if (isMediaTek() && preference == NNAPI) {
+            return CPU
+        }
         return when (preference) {
             NNAPI -> NNAPI
             CPU -> CPU
@@ -34,14 +70,19 @@ object InferenceProvider {
     /**
      * Checks whether NNAPI is available on this device.
      *
-     * NNAPI was introduced in API 27 (Android 8.1). We don't try to
-     * probe specific driver capabilities here — if NNAPI is present,
-     * we attempt it and let the fallback mechanism handle failures.
+     * NNAPI was introduced in API 27 (Android 8.1). Disabled on MediaTek due to
+     * driver crashes (see isMediaTek). We don't probe specific driver capabilities
+     * here; if NNAPI is present and not MediaTek, we let the user opt in.
      */
     fun isNnapiAvailable(): Boolean {
+        if (isMediaTek()) return false
         return Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1
     }
 
-    /** All valid preference values for the settings dropdown. */
-    val options = listOf(AUTO, NNAPI, CPU)
+    /**
+     * Valid preference values for the settings dropdown. On MediaTek devices, NNAPI is
+     * excluded because the driver crashes are uncatchable native SIGABRTs.
+     */
+    val options: List<String>
+        get() = if (isMediaTek()) listOf(AUTO, CPU) else listOf(AUTO, NNAPI, CPU)
 }

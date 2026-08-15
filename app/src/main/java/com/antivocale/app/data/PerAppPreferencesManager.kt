@@ -23,14 +23,20 @@ import kotlinx.coroutines.flow.map
  * - notificationSound: Notification sound identifier
  * - quickShareBack: Use one-tap "Send to [App]" vs share sheet
  */
+
+/**
+ * Single process-wide DataStore for per-app notification preferences. Top-level on
+ * purpose: the androidx `preferencesDataStore` delegate must exist once per file;
+ * instance-level delegates create competing DataStores on the same file and throw
+ * "multiple DataStores active" when a second instance reads (TASK-327: the result
+ * notification refresher constructs its own manager per page tap).
+ */
+private val Context.perAppPreferencesDataStore: DataStore<Preferences> by
+    preferencesDataStore(name = "per_app_notification_preferences")
+
 class PerAppPreferencesManager(private val context: Context) {
 
     companion object {
-        /**
-         * DataStore file name for per-app notification preferences
-         */
-        private const val DATASTORE_NAME = "per_app_notification_preferences"
-
         /**
          * Key for tracking whether the user has seen the per-app onboarding tooltip
          */
@@ -51,11 +57,6 @@ class PerAppPreferencesManager(private val context: Context) {
         const val TELEGRAM = "org.telegram.messenger"
         const val SIGNAL = "org.thoughtcrime.securesms"
     }
-
-    /**
-     * DataStore instance for per-app preferences
-     */
-    private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = DATASTORE_NAME)
 
     /**
      * Get preference key for auto-copy setting for a specific package
@@ -88,7 +89,7 @@ class PerAppPreferencesManager(private val context: Context) {
      * @return Flow emitting AppNotificationPreferences
      */
     fun getPreferencesForPackage(packageName: String): Flow<AppNotificationPreferences> {
-        return context.dataStore.data.map { preferences ->
+        return context.perAppPreferencesDataStore.data.map { preferences ->
             val defaultPrefs = getDefaultPreferences(packageName)
             AppNotificationPreferences(
                 autoCopy = preferences[autoCopyKeyForPackage(packageName)] ?: defaultPrefs.autoCopy,
@@ -119,7 +120,7 @@ class PerAppPreferencesManager(private val context: Context) {
         packageName: String,
         update: AppNotificationPreferences.() -> AppNotificationPreferences
     ) {
-        context.dataStore.edit { preferences ->
+        context.perAppPreferencesDataStore.edit { preferences ->
             val current = getCurrentPreferences(packageName)
             val updated = current.update()
 
@@ -158,7 +159,7 @@ class PerAppPreferencesManager(private val context: Context) {
      * @param packageName Package name
      */
     suspend fun clearPreferencesForPackage(packageName: String) {
-        context.dataStore.edit { preferences ->
+        context.perAppPreferencesDataStore.edit { preferences ->
             preferences.remove(autoCopyKeyForPackage(packageName))
             preferences.remove(showShareActionKeyForPackage(packageName))
             preferences.remove(notificationSoundKeyForPackage(packageName))
@@ -172,7 +173,7 @@ class PerAppPreferencesManager(private val context: Context) {
      * This will reset everything to defaults.
      */
     suspend fun clearAllPreferences() {
-        context.dataStore.edit { preferences ->
+        context.perAppPreferencesDataStore.edit { preferences ->
             preferences.clear()
         }
     }
@@ -180,7 +181,7 @@ class PerAppPreferencesManager(private val context: Context) {
     /**
      * Flow emitting whether the user has seen the per-app onboarding tooltip.
      */
-    val hasSeenOnboarding: Flow<Boolean> = context.dataStore.data.map { preferences ->
+    val hasSeenOnboarding: Flow<Boolean> = context.perAppPreferencesDataStore.data.map { preferences ->
         preferences[SEEN_PER_APP_ONBOARDING] ?: false
     }
 
@@ -188,7 +189,7 @@ class PerAppPreferencesManager(private val context: Context) {
      * Mark the per-app onboarding tooltip as seen.
      */
     suspend fun markOnboardingSeen() {
-        context.dataStore.edit { preferences ->
+        context.perAppPreferencesDataStore.edit { preferences ->
             preferences[SEEN_PER_APP_ONBOARDING] = true
         }
     }

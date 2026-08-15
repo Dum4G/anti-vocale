@@ -10,6 +10,23 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
 
+    <!-- Package visibility (Android 11+): see every app that can share audio with us,
+         so AppInfoUtils can resolve real app labels for the Logs grouping even after
+         the automatic recent-interaction window closes (TASK-320: Google Files showed
+         as its raw package name otherwise). -->
+    <queries>
+        <!-- Broadest: every app with a share (SEND) intent filter. -->
+        <intent>
+            <action android:name="android.intent.action.SEND" />
+        </intent>
+        <!-- Plus explicit audio matches for SEND_MULTIPLE, which the data-less
+             query above does not cover. -->
+        <intent>
+            <action android:name="android.intent.action.SEND_MULTIPLE" />
+            <data android:mimeType="audio/*" />
+        </intent>
+    </queries>
+
     <!-- Post notifications (Android 13+) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
@@ -355,6 +372,8 @@
                 <action android:name="com.antivocale.app.SHARE_BACK" />
                 <action android:name="com.antivocale.app.USE_SUBTITLES" />
                 <action android:name="com.antivocale.app.TRANSCRIBE_AUDIO" />
+                <action android:name="com.antivocale.app.PAGE_PREV" />
+                <action android:name="com.antivocale.app.PAGE_NEXT" />
             </intent-filter>
         </receiver>
 

@@ -21,7 +21,7 @@ Anti-Vocale intercepts shared audio files (from WhatsApp, Telegram, etc.), trans
 - **Share integration** - Share audio from any messaging app to transcribe
 - **Model-specific share targets** - Pick a specific model directly from the Android share sheet
 - **Re-transcribe** - Retry any transcription with a different model from the log
-- **Smart notifications** - Copy result or send it back to the source app with one tap
+- **Smart notifications** - Read long transcripts page-by-page without leaving the shade, copy the full result, or send it back to the source app with one tap
 - **Confidence indicator** - Shows detected language and warns about low-confidence results
 - **Progressive display** - See transcription text appear segment-by-segment instead of waiting for the full result
 - **Swipe actions** - Swipe log entries to copy, share, or delete
@@ -35,6 +35,7 @@ Anti-Vocale intercepts shared audio files (from WhatsApp, Telegram, etc.), trans
 - **Per-app settings** - Configure notification behavior per messaging app
 - **Picture-in-Picture** - See live transcription in a floating window while using other apps
 - **Multilingual UI** - App interface fully translated in English and Italian
+- **Theming** - Three color palettes (Indigo, WhatsApp, Telegram) with light and dark modes
 - **Auto-copy** - Optionally copy transcription to clipboard automatically
 - **Save to folder** - Auto-save transcripts as .txt to a folder of your choice (Drive, Syncthing, Dropbox, etc.)
 - **Video file support** - Transcribe audio from video files; extract embedded subtitles
@@ -63,10 +64,22 @@ Anti-Vocale intercepts shared audio files (from WhatsApp, Telegram, etc.), trans
   <img src="docs/screenshots/settings_tab_bottom.png" width="300" alt="Settings showing theme, default prompt, per-app settings">
 </p>
 
-### Notification with Transcription Result
+### Notification with Paged Transcription Result
+
+Long transcripts are split into pages you can read without leaving the notification shade: the arrows move back and forward, Copy always grabs the full text, and one-tap send-back to the source app stays one page away.
 
 <p align="center">
-  <img src="docs/screenshots/notification.png" width="300" alt="Notification showing transcription with Copy and Send to WhatsApp buttons">
+  <img src="docs/screenshots/notification_page1.jpg" width="300" alt="Result notification on page 1 of 3 with Copy, Send to Telegram and next-page actions">
+  <img src="docs/screenshots/notification_page2.jpg" width="300" alt="Result notification on page 2 of 3 with Copy and both back and forward paging arrows">
+  <img src="docs/screenshots/notification_page3.jpg" width="300" alt="Result notification on the last page with Copy, Send to Telegram and back-page actions">
+</p>
+
+### Themes
+
+<p align="center">
+  <img src="docs/screenshots/themes/theme_default_light.png" width="240" alt="Default light theme">
+  <img src="docs/screenshots/themes/theme_telegram_dark.png" width="240" alt="Telegram dark theme">
+  <img src="docs/screenshots/themes/theme_whatsapp_light.png" width="240" alt="WhatsApp light theme">
 </p>
 
 ## Supported Models
@@ -143,6 +156,7 @@ Both flavors share the same `applicationId` and feature set. The only difference
 Or build from source:
 
 ```bash
+./scripts/fetch-sherpa-aar.sh   # one-time: download the sherpa-onnx AAR (not committed)
 ./scripts/install.sh
 ```
 
@@ -178,7 +192,7 @@ TranscriptionOrchestrator
     |--- LlmTranscriptionBackend (Gemma via LiteRT-LM)
     |
     v
-Notification (Copy / Send to [App]) + Confidence Indicator
+Notification (Paging / Copy / Send to [App]) + Confidence Indicator
 ```
 
 ## Automation

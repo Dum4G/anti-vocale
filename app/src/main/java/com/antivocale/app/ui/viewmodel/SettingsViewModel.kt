@@ -12,21 +12,17 @@ import com.antivocale.app.data.HuggingFaceAuthManager
 import com.antivocale.app.data.HuggingFaceOAuthConfig
 import com.antivocale.app.data.HuggingFaceTokenManager
 import com.antivocale.app.data.ModelDiscovery
+import com.antivocale.app.data.ActiveModelRepository
 import com.antivocale.app.data.PerAppPreferencesManager
 import com.antivocale.app.data.PreferencesManager
 import com.antivocale.app.data.ShareTargetManager
 import com.antivocale.app.data.TranscriptionCalibrator
 import com.antivocale.app.transcription.InferenceProvider
 import com.antivocale.app.manager.LlmManager
-import com.antivocale.app.transcription.Qwen3AsrBackend
-import com.antivocale.app.transcription.Qwen3AsrModelManager
 // GGUF: import com.antivocale.app.transcription.Gemma4GgufBackend
 // GGUF: import com.antivocale.app.transcription.Gemma4GgufModelManager
-import com.antivocale.app.transcription.SherpaOnnxBackend
-import com.antivocale.app.transcription.GigaAmBackend
-import com.antivocale.app.transcription.NemotronStreamingBackend
-import com.antivocale.app.transcription.WhisperBackend
 import com.antivocale.app.transcription.TranscriptionBackendManager
+import com.antivocale.app.ui.theme.ThemeMode
 import com.antivocale.app.ui.theme.ThemeType
 import com.antivocale.app.util.LocaleManager
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -36,7 +32,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -60,7 +55,8 @@ class SettingsViewModel @Inject constructor(
     val transcriptionCalibrator: TranscriptionCalibrator,
     private val backendManager: TranscriptionBackendManager,
     private val llmManager: LlmManager,
-    private val shareTargetManager: ShareTargetManager
+    private val shareTargetManager: ShareTargetManager,
+    private val activeModelRepository: ActiveModelRepository
 ) : AndroidViewModel(application) {
 
     companion object {
@@ -97,6 +93,7 @@ class SettingsViewModel @Inject constructor(
 
     // Theme options
     val themeOptions = ThemeType.entries
+    val themeModeOptions = ThemeMode.entries
 
     // Current keep-alive timeout from preferences
     val keepAliveTimeout: StateFlow<Int> = preferencesManager.keepAliveTimeout
@@ -221,6 +218,19 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    val forceModelLoad: StateFlow<Boolean> = preferencesManager.forceModelLoad
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = PreferencesManager.DEFAULT_FORCE_MODEL_LOAD
+        )
+
+    fun saveForceModelLoad(enabled: Boolean) {
+        viewModelScope.launch {
+            preferencesManager.saveForceModelLoad(enabled)
+        }
+    }
+
     // Current language from Per-App Language API (not DataStore)
     private val _currentLanguage = MutableStateFlow(LocaleManager.getCurrentLocaleCode())
     val currentLanguage: StateFlow<String> = _currentLanguage.asStateFlow()
@@ -228,6 +238,10 @@ class SettingsViewModel @Inject constructor(
     // Current theme from preferences
     private val _currentTheme = MutableStateFlow(ThemeType.DEFAULT)
     val currentTheme: StateFlow<ThemeType> = _currentTheme.asStateFlow()
+
+    // Current theme mode (System / Dark / Light) from preferences
+    private val _currentThemeMode = MutableStateFlow(ThemeMode.SYSTEM)
+    val currentThemeMode: StateFlow<ThemeMode> = _currentThemeMode.asStateFlow()
 
     // HuggingFace token state
     val tokenState = huggingFaceTokenManager.tokenState
@@ -254,6 +268,16 @@ class SettingsViewModel @Inject constructor(
                     ThemeType.valueOf(themeName)
                 } catch (e: IllegalArgumentException) {
                     ThemeType.DEFAULT
+                }
+            }
+        }
+        // Load theme mode from preferences
+        viewModelScope.launch {
+            preferencesManager.themeMode.collect { modeName ->
+                _currentThemeMode.value = try {
+                    ThemeMode.valueOf(modeName)
+                } catch (e: IllegalArgumentException) {
+                    ThemeMode.SYSTEM
                 }
             }
         }
@@ -468,6 +492,16 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Saves the theme mode (System / Dark / Light). Takes effect immediately via StateFlow.
+     */
+    fun saveThemeMode(mode: ThemeMode) {
+        viewModelScope.launch {
+            preferencesManager.saveThemeMode(mode.name)
+            _currentThemeMode.value = mode
+        }
+    }
+
     // ========== HuggingFace Token Management ==========
 
     /**
@@ -629,99 +663,19 @@ class SettingsViewModel @Inject constructor(
     // ========== Model Selection ==========
 
     /**
-     * Loads the current model path from preferences.
-     * Checks backend preference to determine which model to show.
+     * Collects the active model from [ActiveModelRepository], which derives
+     * backend, path and display name reactively from preferences; the uiState
+     * stays in sync with any backend or model-path change without a manual reload.
      */
     fun loadCurrentModel() {
         viewModelScope.launch {
-            // Check which backend is selected
-            val backend = preferencesManager.transcriptionBackend.first()
-            _uiState.update { it.copy(transcriptionBackend = backend) }
-
-            when (backend) {
-                SherpaOnnxBackend.BACKEND_ID -> {
-                    // Show Parakeet model
-                    preferencesManager.parakeetModelPath.collect { path ->
-                        _uiState.update { it.copy(
-                            currentModelPath = path,
-                            currentModelName = if (!path.isNullOrBlank()) getApplication<Application>().getString(R.string.parakeet_name) else null
-                        )}
-                    }
-                }
-                WhisperBackend.BACKEND_ID -> {
-                    // Show Whisper model
-                    preferencesManager.whisperModelPath.collect { path ->
-                        val modelName = if (!path.isNullOrBlank()) {
-                            val modelDir = java.io.File(path)
-                            val model = com.antivocale.app.transcription.WhisperModelManager.validateModelDirectory(modelDir)
-                            model?.variant?.let { v ->
-                                getApplication<Application>().getString(v.titleResId)
-                            } ?: path.substringAfterLast("/")
-                        } else null
-                        _uiState.update { it.copy(
-                            currentModelPath = path,
-                            currentModelName = modelName
-                        )}
-                    }
-                }
-                Qwen3AsrBackend.BACKEND_ID -> {
-                    preferencesManager.qwen3AsrModelPath.collect { path ->
-                        val modelName = if (!path.isNullOrBlank()) {
-                            val modelDir = java.io.File(path)
-                            Qwen3AsrModelManager.detectVariant(modelDir.name)?.let { v ->
-                                getApplication<Application>().getString(v.titleResId)
-                            } ?: path.substringAfterLast("/")
-                        } else null
-                        _uiState.update { it.copy(
-                            currentModelPath = path,
-                            currentModelName = modelName
-                        )}
-                    }
-                }
-                NemotronStreamingBackend.BACKEND_ID -> {
-                    // Show Nemotron streaming model
-                    preferencesManager.nemotronModelPath.collect { path ->
-                        val modelName = if (!path.isNullOrBlank()) {
-                            getApplication<Application>().getString(R.string.nemotron_name)
-                        } else null
-                        _uiState.update { it.copy(
-                            currentModelPath = path,
-                            currentModelName = modelName
-                        )}
-                    }
-                }
-                GigaAmBackend.BACKEND_ID -> {
-                    // Show GigaAM model
-                    preferencesManager.gigaamModelPath.collect { path ->
-                        val modelName = if (!path.isNullOrBlank()) {
-                            getApplication<Application>().getString(R.string.gigaam_name)
-                        } else null
-                        _uiState.update { it.copy(
-                            currentModelPath = path,
-                            currentModelName = modelName
-                        )}
-                    }
-                }
-                "gemma4_gguf" -> {
-                    // GGUF: disabled — show filename only
-                    preferencesManager.ggufModelPath.collect { path ->
-                        val modelName = if (!path.isNullOrBlank()) {
-                            java.io.File(path).name
-                        } else null
-                        _uiState.update { it.copy(
-                            currentModelPath = path,
-                            currentModelName = modelName
-                        )}
-                    }
-                }
-                else -> {
-                    // Show LLM model (Gemma, etc.)
-                    preferencesManager.modelPath.collect { path ->
-                        _uiState.update { it.copy(
-                            currentModelPath = path,
-                            currentModelName = path?.let { File(it).name }
-                        )}
-                    }
+            activeModelRepository.activeModelFlow.collect { active ->
+                _uiState.update {
+                    it.copy(
+                        transcriptionBackend = active.backendId,
+                        currentModelPath = active.modelPath,
+                        currentModelName = active.modelName
+                    )
                 }
             }
         }

@@ -10,7 +10,13 @@ import android.widget.Toast
 import androidx.work.WorkManager
 import com.antivocale.app.R
 import com.antivocale.app.service.InferenceService
+import com.antivocale.app.util.CrashReporter
 import com.antivocale.app.util.ShareBackHelper
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 
 /**
  * BroadcastReceiver for handling notification actions.
@@ -18,6 +24,7 @@ import com.antivocale.app.util.ShareBackHelper
  * Handles:
  * - Copy transcription to clipboard
  * - Share transcription to other apps
+ * - Page through long result notifications (prev/next)
  */
 class NotificationActionReceiver : BroadcastReceiver() {
 
@@ -30,6 +37,16 @@ class NotificationActionReceiver : BroadcastReceiver() {
         const val ACTION_TRANSCRIBE_AUDIO = "com.antivocale.app.TRANSCRIBE_AUDIO"
         const val EXTRA_TRANSCRIPTION_TEXT = "transcription_text"
         const val EXTRA_SOURCE_PACKAGE = "source_package"
+        const val ACTION_PAGE_PREV = "com.antivocale.app.PAGE_PREV"
+        const val ACTION_PAGE_NEXT = "com.antivocale.app.PAGE_NEXT"
+        const val EXTRA_PAGE_INDEX = "page_index"
+        const val EXTRA_NOTIFICATION_ID = "notification_id"
+        const val EXTRA_FIRST_POSTED_AT = "first_posted_at"
+        const val EXTRA_TASK_ID = "task_id"
+        const val EXTRA_CONFIDENCE = "confidence"
+        const val EXTRA_DETECTED_LANGUAGE = "detected_language"
+        const val EXTRA_IS_PARTIAL = "is_partial"
+        const val EXTRA_FAILED_CHUNK_COUNT = "failed_chunk_count"
     }
 
     override fun onReceive(context: Context, intent: Intent) {
@@ -39,6 +56,7 @@ class NotificationActionReceiver : BroadcastReceiver() {
             ACTION_SHARE_BACK -> handleShareBackAction(context, intent)
             ACTION_USE_SUBTITLES -> handleSubtitleChoice(context, intent, requestType = "subtitles")
             ACTION_TRANSCRIBE_AUDIO -> handleSubtitleChoice(context, intent, requestType = "audio")
+            ACTION_PAGE_PREV, ACTION_PAGE_NEXT -> handlePageAction(context, intent)
             else -> Log.d(TAG, "Unknown action: ${intent.action}")
         }
     }
@@ -91,6 +109,28 @@ class NotificationActionReceiver : BroadcastReceiver() {
             Log.i(TAG, "Subtitle choice '$requestType' → started InferenceService (taskId=$taskId)")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to start InferenceService for subtitle choice '$requestType'", e)
+        }
+    }
+
+    /**
+     * Pages the result notification. The work runs in a coroutine because
+     * [com.antivocale.app.data.PerAppPreferencesManager.getCurrentPreferences]
+     * is a suspend DataStore call; if it fails, the old notification simply
+     * stands (a button tap must never crash).
+     */
+    private fun handlePageAction(context: Context, intent: Intent) {
+        val pendingResult = goAsync()
+        val appContext = context.applicationContext
+        CoroutineScope(Dispatchers.IO + SupervisorJob() + CrashReporter.handler).launch {
+            try {
+                ResultNotificationRefresher.refresh(appContext, intent)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to rebuild paged notification", e)
+            } finally {
+                pendingResult.finish()
+            }
         }
     }
 

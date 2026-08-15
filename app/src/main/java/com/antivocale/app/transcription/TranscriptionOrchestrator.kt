@@ -1,5 +1,6 @@
 package com.antivocale.app.transcription
 
+import android.app.ActivityManager
 import android.content.Context
 import android.util.Log
 import com.antivocale.app.R
@@ -11,6 +12,7 @@ import com.antivocale.app.data.TranscriptionCalibrator
 import com.antivocale.app.data.local.LogDao
 import com.antivocale.app.data.local.toEntity
 import com.antivocale.app.data.local.toLogEntry
+import com.antivocale.app.service.ExtractionService
 import com.antivocale.app.service.TranscriptionListener
 import com.antivocale.app.ui.viewmodel.LogEntry
 import kotlinx.coroutines.*
@@ -35,12 +37,23 @@ class TranscriptionOrchestrator @Inject constructor(
     private val logDao: LogDao,
     private val transcriptionCalibrator: TranscriptionCalibrator,
     private val backendManager: TranscriptionBackendManager,
-    private val audioPreprocessor: AudioPreprocessor
+    private val audioPreprocessor: AudioPreprocessor,
+    // Defaulted so direct construction without Hilt (unit tests) keeps the
+    // five-argument shape; the registry is stateless so a fresh instance is
+    // equivalent to the injected singleton.
+    private val backendRegistry: BackendRegistry = BackendRegistry(),
 ) {
     companion object {
         private const val TAG = "TranscriptionOrchestrator"
         private const val MAX_CONCURRENT_CHUNKS = 2
         private const val PARTIAL_SAVE_INTERVAL_MS = 5000L
+        private const val MB = 1024L * 1024L
+        // Headroom over the on-disk model size: absorbs sherpa inference buffers and reclaimable-cache
+        // noise in availMem. Tunable; see TASK-314 spec. ~300MB derived from the SmoothQuant incident.
+        private const val MEMORY_HEADROOM_BYTES = 300L * MB
+
+        /** Backend id of the disabled GGUF backend; deliberately unregistered in [BackendRegistry]. */
+        private const val GGUF_BACKEND_ID = "gemma4_gguf"
 
         internal fun isNoModelConfiguredError(error: Throwable): Boolean {
             return error is TranscriptionException.NotInitialized
@@ -54,6 +67,10 @@ class TranscriptionOrchestrator @Inject constructor(
             return when (error) {
                 is TranscriptionException.ModelLoadError ->
                     context.getString(R.string.error_model_load)
+                is TranscriptionException.InsufficientMemory ->
+                    // The exception already carries the localized low-memory message with the
+                    // measured numbers; surface it directly instead of the generic model-load string.
+                    error.message ?: context.getString(R.string.error_model_load)
                 is TranscriptionException.NativeError ->
                     context.getString(R.string.error_native)
                 is TranscriptionException.NotInitialized ->
@@ -300,14 +317,23 @@ class TranscriptionOrchestrator @Inject constructor(
                 backendManager.unloadActiveBackend()
             }
 
+            // TASK-322: dispatch on the registry descriptor's ModelType instead of the
+            // backend-id strings. The loaders keep their distinct bodies (only the keying
+            // changed). The disabled GGUF backend is unregistered, so its literal id is
+            // matched before the lookup; unknown ids yield a null descriptor and fall
+            // through to the LLM loader, exactly as the former string-keyed when did.
             val loadResult = when (preferredBackendId) {
-                SherpaOnnxBackend.BACKEND_ID -> loadSherpaOnnxBackend(context)
-                WhisperBackend.BACKEND_ID -> loadWhisperBackend(context)
-                Qwen3AsrBackend.BACKEND_ID -> loadQwen3AsrBackend(context)
-                NemotronStreamingBackend.BACKEND_ID -> loadNemotronBackend(context)
-                GigaAmBackend.BACKEND_ID -> loadGigaAmBackend(context)
-                "gemma4_gguf" -> loadGgufBackend(context)
-                else -> loadLlmBackend(context)
+                GGUF_BACKEND_ID -> loadGgufBackend(context)
+                else -> when (backendRegistry.byBackendId(preferredBackendId)?.modelType) {
+                    ExtractionService.ModelType.PARAKEET -> loadSherpaOnnxBackend(context)
+                    ExtractionService.ModelType.WHISPER -> loadWhisperBackend(context)
+                    ExtractionService.ModelType.QWEN3_ASR -> loadQwen3AsrBackend(context)
+                    ExtractionService.ModelType.NEMOTRON -> loadNemotronBackend(context)
+                    ExtractionService.ModelType.GIGAAM -> loadGigaAmBackend(context)
+                    // The registered LLM backend ("llm" -> GEMMA) loads here, as before.
+                    ExtractionService.ModelType.GEMMA -> loadLlmBackend(context)
+                    else -> loadLlmBackend(context)
+                }
             }
 
             loadResult.fold(
@@ -329,7 +355,7 @@ class TranscriptionOrchestrator @Inject constructor(
             return Result.failure(TranscriptionException.NotInitialized())
         }
         return backendManager.setActiveBackend(
-            backendId = PreferencesManager.DEFAULT_TRANSCRIPTION_BACKEND,
+            backendId = LlmTranscriptionBackend.BACKEND_ID,
             context = context,
             config = BackendConfig.LiteRTConfig(modelPath = modelPath)
         )
@@ -349,9 +375,19 @@ class TranscriptionOrchestrator @Inject constructor(
         return configureSherpaBackend(backendId, modelPath, label, language, context)
     }
 
+    /** Returns the system's available memory (the closest user-space analog to MemAvailable). */
+    private fun availableMemoryBytes(context: Context): Long {
+        val info = ActivityManager.MemoryInfo()
+        val am = context.getSystemService(ActivityManager::class.java)
+        am?.getMemoryInfo(info)
+        return info.availMem
+    }
+
+    private fun formatMb(bytes: Long): String = "${bytes / MB}MB"
+
     /**
      * Shared core for sherpa-onnx backends: validate the model dir, resolve the inference
-     * provider, and activate the backend. Called by [loadSherpaOnnxModel] (flow-sourced —
+     * provider, and activate the backend. Called by [loadSherpaOnnxModel] (flow-sourced:
      * Whisper/Qwen3) and [loadSherpaOnnxBackend] (Parakeet auto-fallback).
      */
     private suspend fun configureSherpaBackend(
@@ -364,6 +400,28 @@ class TranscriptionOrchestrator @Inject constructor(
         val modelDir = File(modelPath)
         if (!modelDir.exists() || !modelDir.isDirectory) {
             return Result.failure(IllegalStateException("$label model directory not found: $modelPath"))
+        }
+        // Pre-flight memory check: refuse to load if free memory is below the model size + headroom.
+        // Gated by the forceModelLoad preference so a determined user can bypass it. availMem is a
+        // coarse predictor (lmkd uses PSI + oom_score_adj, not a literal MemAvailable comparison);
+        // the headroom absorbs inference overhead and reclaimable-cache noise.
+        if (!preferencesManager.forceModelLoad.first()) {
+            val availBytes = availableMemoryBytes(context)
+            // Fail open if we could not read available memory (e.g. no ActivityManager service in
+            // a test/local context): blocking on an unknown value would regress those contexts and
+            // offer no real protection. Only compute the model size and compare when we have a
+            // concrete measurement. This also avoids touching the filesystem (walkTopDown) when the
+            // measurement is unavailable.
+            if (availBytes > 0) {
+                val modelSizeBytes = modelDir.walkTopDown().filter { it.isFile }.sumOf { it.length() }
+                val requiredBytes = modelSizeBytes + MEMORY_HEADROOM_BYTES
+                if (availBytes < requiredBytes) {
+                    Log.w(TAG, "Blocking $label load: avail=${availBytes / MB}MB < required=${requiredBytes / MB}MB (model=${modelSizeBytes / MB}MB + headroom=${MEMORY_HEADROOM_BYTES / MB}MB)")
+                    return Result.failure(TranscriptionException.InsufficientMemory(
+                        context.getString(R.string.model_load_low_memory, formatMb(availBytes), formatMb(requiredBytes))
+                    ))
+                }
+            }
         }
         Log.i(TAG, "Auto-loading $label model from: $modelPath")
         val providerPref = preferencesManager.inferenceProvider.first()
@@ -1242,16 +1300,21 @@ class TranscriptionOrchestrator @Inject constructor(
 
     // ---- Utilities ----
 
-    private suspend fun modelPathForBackend(backendId: String): String =
-        when (backendId) {
-            WhisperBackend.BACKEND_ID -> preferencesManager.whisperModelPath.first()
-            Qwen3AsrBackend.BACKEND_ID -> preferencesManager.qwen3AsrModelPath.first()
-            SherpaOnnxBackend.BACKEND_ID -> preferencesManager.parakeetModelPath.first()
-            NemotronStreamingBackend.BACKEND_ID -> preferencesManager.nemotronModelPath.first()
-            GigaAmBackend.BACKEND_ID -> preferencesManager.gigaamModelPath.first()
-            "gemma4_gguf" -> preferencesManager.ggufModelPath.first()
+    /**
+     * Saved model path for [backendId], read via the registry descriptor's model-path
+     * flow (TASK-322; the descriptor for the LLM backend already points at the generic
+     * [PreferencesManager.modelPath]). The unregistered GGUF backend keeps its dedicated
+     * preference and any other unknown id degrades to the generic one, matching the
+     * former string-keyed when.
+     */
+    private suspend fun modelPathForBackend(backendId: String): String {
+        val descriptor = backendRegistry.byBackendId(backendId)
+        return when {
+            descriptor != null -> descriptor.modelPathFlow(preferencesManager).first()
+            backendId == GGUF_BACKEND_ID -> preferencesManager.ggufModelPath.first()
             else -> preferencesManager.modelPath.first()
         } ?: ""
+    }
 
     internal fun deriveDisplayName(backendId: String, modelPath: String, fallbackName: String?): String {
         val dirName = File(modelPath).name

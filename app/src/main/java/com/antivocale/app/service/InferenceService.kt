@@ -21,12 +21,9 @@ import com.antivocale.app.data.PerAppPreferencesManager
 import com.antivocale.app.data.PreferencesManager
 import com.antivocale.app.data.TranscriptionCalibrator
 import com.antivocale.app.data.local.LogDao
-import com.antivocale.app.receiver.NotificationActionReceiver
 import com.antivocale.app.receiver.TaskerRequestReceiver
 import com.antivocale.app.transcription.TranscriptionBackendManager
 import com.antivocale.app.transcription.TranscriptionOrchestrator
-import com.antivocale.app.transcription.Language
-import com.antivocale.app.util.AppInfoUtils
 import com.antivocale.app.util.CrashReporter
 import com.antivocale.app.util.TranscriptFileSaver
 import dagger.hilt.android.AndroidEntryPoint
@@ -59,8 +56,6 @@ class InferenceService : Service(), TranscriptionListener {
         val RESULT_CHANNEL_ID = AppNotificationChannel.TRANSCRIPTION_RESULT.id
         const val NOTIFICATION_ID = 1001
         const val RESULT_NOTIFICATION_ID = 1002
-
-        private const val CONFIDENCE_MEDIUM_THRESHOLD = 0.5f
 
         private const val RC_LAUNCH_DEFAULT = 0
         private const val RC_LAUNCH_MODEL_TAB = 1
@@ -96,7 +91,7 @@ class InferenceService : Service(), TranscriptionListener {
     private var currentProcessingJob: Job? = null
     @Volatile private var transcriptionStartTime: Long = 0
     private val pendingCount = AtomicInteger(0)
-    private val resultNotificationCounter = AtomicInteger(RESULT_NOTIFICATION_ID)
+    private val resultNotificationFactory: ResultNotificationFactory by lazy { ResultNotificationFactory(this) }
 
     // ---- Chunk navigation state (TASK-242) ----
     // Null outside a multi-chunk progressive job; created on the first interim chunk result
@@ -684,120 +679,21 @@ class InferenceService : Service(), TranscriptionListener {
             com.antivocale.app.data.AppNotificationPreferences.default()
         }
 
-        val copyIntent = Intent(this, NotificationActionReceiver::class.java).apply {
-            action = NotificationActionReceiver.ACTION_COPY_TRANSCRIPTION
-            putExtra(NotificationActionReceiver.EXTRA_TRANSCRIPTION_TEXT, transcriptionText)
-        }
-        val copyPendingIntent = android.app.PendingIntent.getBroadcast(
-            this,
-            System.currentTimeMillis().toInt(),
-            copyIntent,
-            android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
+        val id = ResultNotificationFactory.nextNotificationId()
+        val spec = ResultNotificationSpec(
+            transcriptionText = transcriptionText,
+            taskId = taskId,
+            sourcePackage = sourcePackage,
+            confidence = confidence,
+            detectedLanguage = detectedLanguage,
+            isPartial = isPartial,
+            failedChunkCount = failedChunkCount,
+            notificationId = id,
+            firstPostedAt = System.currentTimeMillis()
         )
-
-        val openPendingIntent = buildLaunchPendingIntent(highlightTaskId = taskId)
-
-        val isTruncated = transcriptionText.length > 100
-        val previewText = if (isTruncated) {
-            transcriptionText.take(100) + "…"
-        } else {
-            transcriptionText
-        }
-
-        val title = if (isPartial) {
-            getString(R.string.transcription_partial, failedChunkCount)
-        } else {
-            getString(R.string.transcription_complete)
-        }
-
-        val builder = NotificationCompat.Builder(this, RESULT_CHANNEL_ID)
-            .setContentTitle(title)
-            .setContentText(previewText)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(transcriptionText))
-            .setSmallIcon(android.R.drawable.ic_dialog_info)
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setContentIntent(openPendingIntent)
-            .addAction(
-                android.R.drawable.ic_menu_save,
-                getString(R.string.copy),
-                copyPendingIntent
-            )
-            .setAutoCancel(true)
-
-        if (prefs.showShareAction) {
-            val useQuickShareBack = prefs.quickShareBack && sourcePackage != null
-
-            if (useQuickShareBack) {
-                val shareBackIntent = Intent(Intent.ACTION_SEND).apply {
-                    type = "text/plain"
-                    putExtra(Intent.EXTRA_TEXT, transcriptionText)
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    val targetPackage = when {
-                        sourcePackage == "com.whatsapp" || sourcePackage.startsWith("com.whatsapp") -> "com.whatsapp"
-                        sourcePackage == "org.telegram.messenger" || sourcePackage.startsWith("org.telegram") -> "org.telegram.messenger"
-                        sourcePackage == "org.thoughtcrime.securesms" -> "org.thoughtcrime.securesms"
-                        else -> sourcePackage
-                    }
-                    setPackage(targetPackage)
-                }
-                val shareBackPendingIntent = android.app.PendingIntent.getActivity(
-                    this,
-                    System.currentTimeMillis().toInt() + 1,
-                    shareBackIntent,
-                    android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
-                )
-                builder.addAction(
-                    android.R.drawable.ic_menu_revert,
-                    AppInfoUtils.getSendToText(this, sourcePackage),
-                    shareBackPendingIntent
-                )
-            } else {
-                val shareChooserIntent = Intent(Intent.ACTION_SEND).apply {
-                    type = "text/plain"
-                    putExtra(Intent.EXTRA_TEXT, transcriptionText)
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                }
-                val sharePickerIntent = Intent.createChooser(shareChooserIntent, getString(R.string.share_transcription)).apply {
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                }
-                val sharePendingIntent = android.app.PendingIntent.getActivity(
-                    this,
-                    System.currentTimeMillis().toInt() + 1,
-                    sharePickerIntent,
-                    android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
-                )
-                builder.addAction(
-                    android.R.drawable.ic_menu_share,
-                    getString(R.string.share),
-                    sharePendingIntent
-                )
-            }
-        }
-
-        if (prefs.notificationSound != "default" && prefs.notificationSound != "silent") {
-            Log.d(TAG, "Custom notification sound: ${prefs.notificationSound} (not yet implemented)")
-        }
-
-        // Confidence and language indicator in subtext
-        val subTextParts = mutableListOf<String>()
-        if (isTruncated) {
-            subTextParts.add(getString(R.string.char_counter, 100, transcriptionText.length))
-        }
-        val langLabel = detectedLanguage?.let { lang ->
-            Language.FILTER_ENTRIES.find { it.code == lang }?.let { getString(it.nameResId) }
-        }
-        if (langLabel != null) {
-            subTextParts.add(getString(R.string.detected_language, langLabel))
-        }
-        if (confidence != null && confidence < CONFIDENCE_MEDIUM_THRESHOLD) {
-            subTextParts.add(getString(R.string.confidence_low))
-        }
-        if (subTextParts.isNotEmpty()) {
-            builder.setSubText(subTextParts.joinToString(" · "))
-        }
-
-        val notification = builder.build()
-        postUniqueNotification(notification, "Showed result notification (${transcriptionText.length} chars), source=$sourcePackage, showShare=${prefs.showShareAction}")
+        val notification = resultNotificationFactory.build(spec, prefs)
+        notificationManager.notify(id, notification)
+        Log.i(TAG, "Showed result notification (${transcriptionText.length} chars), source=$sourcePackage, showShare=${prefs.showShareAction} (id=$id)")
     }
 
     private fun showErrorNotification(errorMessage: String) {
@@ -810,7 +706,9 @@ class InferenceService : Service(), TranscriptionListener {
             .setAutoCancel(true)
             .build()
 
-        postUniqueNotification(notification, "Showed error notification: $errorMessage")
+        val id = ResultNotificationFactory.nextNotificationId()
+        notificationManager.notify(id, notification)
+        Log.i(TAG, "Showed error notification: $errorMessage (id=$id)")
     }
 
     private fun showNoModelNotification() {
@@ -830,16 +728,12 @@ class InferenceService : Service(), TranscriptionListener {
             )
             .build()
 
-        postUniqueNotification(notification, "Showed no-model notification")
+        val id = ResultNotificationFactory.nextNotificationId()
+        notificationManager.notify(id, notification)
+        Log.i(TAG, "Showed no-model notification (id=$id)")
     }
 
     // ---- Notification Helpers ----
-
-    private fun postUniqueNotification(notification: Notification, description: String) {
-        val id = resultNotificationCounter.getAndIncrement()
-        notificationManager.notify(id, notification)
-        Log.i(TAG, "$description (id=$id)")
-    }
 
     private fun buildLaunchPendingIntent(
         navigateToModelTab: Boolean = false,
