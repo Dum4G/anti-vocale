@@ -75,7 +75,7 @@ class BackendRegistryTest {
     )
 
     @Test
-    fun `registry registers exactly the six backend ids, all unique`() {
+    fun `registry registers exactly the seven backend ids, all unique`() {
         val ids = registry.backends.map { it.backendId }
         assertEquals(expectedIds.size, ids.size)
         assertEquals(expectedIds, ids)
