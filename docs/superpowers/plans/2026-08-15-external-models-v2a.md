@@ -721,4 +721,170 @@ Per-record handles: a private `class ExternalBackendHandle(val record: ExternalM
 
 ## Chunk 2: Import pipelines, migration, UI, share, verification
 
-(covered in the next plan chunk: Task 7 local import absorbing TASK-313 machinery, Task 8 URL import with HF API + entry JSON + TOFU pins, Task 9 one-shot migration from custom-transducer with idempotence and backend removal, Task 10 ShareExternal alias + ShareTargetManager sync rule + chooser, Task 11 ModelTab external section + URL dialog + strings en/it, Task 12 full verification incl. device import of the GigaAM mirror files and Russian transcription, /code-review + /simplify gates)
+### Task 7: ExternalModelImporter, local entry
+
+**Files:**
+- Create: `app/src/main/java/com/antivocale/app/data/ExternalModelImporter.kt`
+- Modify: `app/src/main/java/com/antivocale/app/ui/viewmodel/ModelViewModel.kt` (repoint the TASK-313 folder-picker flow at the importer; keep the OpenDocumentTree launcher)
+- Test: `app/src/test/java/com/antivocale/app/data/ExternalModelImporterTest.kt`
+
+- [ ] **Step 7.1: Failing tests** (fixture: temp source dir with the four canonical files as bytes; temp filesRoot)
+
+```kotlin
+class ExternalModelImporterTest {
+    // importer = ExternalModelImporter(store, dirExistsCanBeDefault); ctx not needed: pass filesRoot as File.
+
+    @Test fun `local import copies to id-fragment dir, records pins, registers the record`() = runTest {
+        val src = createTempModelDir("src")                       // writes REQUIRED_FILES
+        val record = importer.importFromDirectory(src)
+        assertEquals(4, record.files.size)
+        assertTrue(record.files.values.all { it.verified })       // hashes computed during the copy
+        assertTrue(File(record.dir).isDirectory)
+        assertEquals(1, store.records().size)
+        // Dir uniqueness: the id fragment is embedded.
+        assertTrue(record.dir.endsWith(record.id.take(6)))
+    }
+
+    @Test fun `missing role fails with a clean error and registers nothing`() = runTest {
+        val src = createTempDirWithOnly("tokens.txt")
+        val result = runCatching { importer.importFromDirectory(src) }
+        assertTrue(result.isFailure)
+        assertEquals(0, store.records().size)
+    }
+
+    @Test fun `same-hash reimport offers no second directory`() = runTest {
+        val src = createTempModelDir("src")
+        val first = importer.importFromDirectory(src)
+        val second = importer.importFromDirectory(src)
+        assertEquals(first.id, second.id)                          // update path returns the same record
+    }
+}
+```
+
+- [ ] **Step 7.2: Run to fail.** `./gradlew :app:testFdroidDebugUnitTest --tests "com.antivocale.app.data.ExternalModelImporterTest"` (compile error).
+
+- [ ] **Step 7.3: Implement.** `ExternalModelImporter` constructor: `(private val store: ExternalModelStore, private val filesRoot: (android.content.Context) -> File = { File(it.filesDir, "models/external") })` plus an injectable `uuid: () -> String = { java.util.UUID.randomUUID().toString().replace("-", "") }` for determinism in tests. `importFromDirectory(src: File): ExternalModelRecord`:
+  1. Build the copy plan with the ROLE-BASED matcher lifted from TASK-313's `ModelViewModel.buildCopyPlan` (move it INTO the importer as `internal fun buildCopyPlan(files: List<String>): Map<String, String>?` mapping source name to canonical role name; keyword match encoder/decoder/joiner + tokens; null when any role is missing).
+  2. Target dir `File(filesRoot(ctx), sanitize(displayName) + "-" + uuid().take(6))`; clean-replace if it exists (deleteRecursively + mkdirs, the TASK-313 collision fix).
+  3. Copy each file, computing SHA-256 while streaming (`java.security.MessageDigest`), record `FilePin(hex, verified = true)`.
+  4. Build the record (family TRANSDUCER, modelType from the caller's selection, default `"nemo_transducer"`), `store.add`, return.
+  5. Same-hash dedupe: before creating, if an existing record's files map equals the computed one, `store.update(existing.copy(displayName = ...))` and return it.
+  The ViewModel folder-picker flow calls `importer.importFromDirectory(File(uri.path))` inside its existing IO scope; the modelType dropdown state passes through as the parameter.
+
+- [ ] **Step 7.4: Green, full suite, commit** `feat(external): local import pipeline with role-based copy and pins`.
+
+### Task 8: URL import (HuggingFace repo and entry JSON)
+
+**Files:**
+- Modify: `app/src/main/java/com/antivocale/app/data/ExternalModelImporter.kt` (URL entries)
+- Create: `app/src/main/java/com/antivocale/app/data/HuggingFaceRepoListing.kt` (API client: file list + LFS oid map)
+- Test: `app/src/test/java/com/antivocale/app/data/HuggingFaceRepoListingTest.kt` (parsing only, no network in unit tests)
+- Test: extend `ExternalModelImporterTest`
+
+- [ ] **Step 8.1: Failing tests.** Parsing tests with embedded JSON fixtures: (a) `https://huggingface.co/pantinor/gigaam-v3` parses to repo id `pantinor/gigaam-v3`; (b) tree JSON with one LFS file (64-hex oid, `lfs.size`) and one plain file (git sha1 oid) yields `LfsFile(name, sha256, verified=true)` and `PlainFile(name)`; (c) entry-JSON (the catalog single-model schema) parses to a download plan with hashes; missing sha256 in any file entry raises `IllegalArgumentException`. Importer tests: `importFromHuggingFaceRepo` with a MockWebServer serving the tree JSON and the two files (hash of the plain file computed at download, `verified=false`); `importFromEntryJson` downloads all files and rejects an entry without hashes.
+
+- [ ] **Step 8.2: Run to fail.**
+
+- [ ] **Step 8.3: Implement.** `HuggingFaceRepoListing` uses `HttpURLConnection` (no new dependency; the codebase avoids OkHttp in data/ download paths today, verify with `git grep okhttp app/src/main` and follow whichever convention you find) against `https://huggingface.co/api/models/<repo>/tree/main`, mapping the JSON as in the tests. The importer's URL entries produce the same `(url, fileName, sha256?)` triple list and share one download core with the catalog path (Chunk-of-v2b will reuse it): resume via the existing `ResumeDownloadHelper`, per-file `DownloadState` progress callback, sha256 verification when a pin exists, TOFU compute-and-record when not (`FilePin(hex, verified = false)`), and the Task 7 registration tail. Disk pre-flight runs unconditionally using the summed Content-Lengths (spec binding).
+
+- [ ] **Step 8.4: Green, full suite, commit** `feat(external): URL import from HF repos and catalog-entry JSON with TOFU pins`.
+
+### Task 9: One-shot migration from custom-transducer
+
+**Files:**
+- Create: `app/src/main/java/com/antivocale/app/data/CustomTransducerMigrator.kt`
+- Modify: `app/src/main/java/com/antivocale/app/ui/viewmodel/ModelViewModel.kt` (call the migrator in init, before state hydration)
+- Modify: delete the `custom-transducer` backend wiring absorbed by v2a: `CustomTransducerBackend.kt`, its descriptor in `BackendRegistry`, its arms in Orchestrator/ExtractionService/PreferencesManager(customTransducer* accessors REMOVED only after the migration reads them: see ordering), `FakePreferencesManager`, `BackendRegistryTest`, `TranscriptionModule` provider, ModelTab import card, related strings (keep strings that the external section reuses).
+- Test: `app/src/test/java/com/antivocale/app/data/CustomTransducerMigratorTest.kt`
+
+- [ ] **Step 9.1: Failing tests**
+
+```kotlin
+class CustomTransducerMigratorTest {
+    @Test fun `migrates a valid custom-transducer preference into an external record`() = runTest {
+        val dir = createTempModelDir("custom")            // the four canonical files
+        fake._customTransducerModelPath.value = dir.absolutePath
+        fake._customTransducerModelType.value = ""
+        fake._transcriptionBackend.value = "custom-transducer"
+        migrator.migrate()
+        val record = store.records().single()
+        assertEquals(ModelFamily.TRANSDUCER, record.family)
+        assertEquals("", record.modelType)
+        assertEquals(record.backendId, fake._transcriptionBackend.value)   // active pointer rewritten
+        assertTrue(fake._externalMigrationDone.value == true)              // idempotence marker
+    }
+
+    @Test fun `done marker prevents re-migration and duplication`() = runTest {
+        fake._externalMigrationDone.value = true
+        migrator.migrate()
+        assertEquals(0, store.records().size)
+    }
+
+    @Test fun `marker is written before the record is created`() = runTest {
+        // Ordering pin: a migrator that creates the record first would duplicate on a crash
+        // between the two writes. Assert via a store wrapper that fails on add-after-marker.
+        val failingStore = StoreThatRejectsAddsAfterMarker(fake)
+        assertFailsWith<IllegalStateException> { CustomTransducerMigrator(fake, failingStore).migrate() }
+        assertTrue(fake._externalMigrationDone.value == true)
+    }
+
+    @Test fun `absent preference is a no-op`() = runTest {
+        migrator.migrate()
+        assertEquals(0, store.records().size)
+        assertTrue(fake._externalMigrationDone.value == true)
+    }
+
+    @Test fun `invalid directory marks done and skips`() = runTest {
+        fake._customTransducerModelPath.value = "/gone"
+        migrator.migrate()
+        assertEquals(0, store.records().size)
+    }
+}
+```
+
+- [ ] **Step 9.2: Run to fail.**
+
+- [ ] **Step 9.3: Implement.** `CustomTransducerMigrator(preferencesManager, store)`: read the done-marker preference (`external_migration_done`, boolean, plus its FakePreferencesManager field); if set, return. Write the marker. Read `customTransducerModelPath`/`Type`; if absent or the dir is invalid, return. Compute pins from the files on disk, build the record (source LOCAL, `displayName` from the dir name), `store.add`, and if `transcriptionBackend == "custom-transducer"` rewrite it to `record.backendId`. Ordering is marker-before-record (pinned by the third test). Then DELETE the custom-transducer wiring listed in Files; the migration is the last reader of those preferences, so remove the PreferencesManager members in the same commit. Audience note (spec): if TASK-313 never shipped to a store, the migration is exercised only by tests; the code stays because the maintainer's own device ran the branch.
+
+- [ ] **Step 9.4: Green, full suite, commit** `feat(external): absorb custom-transducer via one-shot idempotent migration`.
+
+### Task 10: ShareExternal alias, sync rule, chooser
+
+**Files:**
+- Modify: `app/src/main/AndroidManifest.xml` (new `activity-alias` `com.antivocale.app.ShareExternal`, `android:enabled="false"`, same intent-filter set as `.ShareGigaam`, label from `@string/share_target_external`)
+- Modify: `app/src/main/java/com/antivocale/app/data/ShareTargetManager.kt`
+- Modify: `app/src/main/java/com/antivocale/app/receiver/ShareReceiverActivity.kt`
+- Modify: `app/src/test/java/com/antivocale/app/transcription/BackendRegistryTest.kt` (alias set pin: ShareExternal is NOT in the descriptor alias set; it is family-level)
+- Test: extend/creat `ShareTargetManagerExternalTest.kt`
+
+- [ ] **Step 10.1: Failing tests.** (a) `syncAll` with advanced sharing ON and one valid record enables exactly the `ShareExternal` component; (b) advanced sharing OFF disables it even with records present; (c) zero valid records disables it; (d) per-descriptor sync never issues a `setComponentEnabledSetting` with an empty className (mock PackageManager, verify the className list). (e) `backendIdForAlias("com.antivocale.app.ShareExternal", registry)` returns the sentinel `EXTERNAL_FAMILY_BACKEND_ID` constant (define it in ShareReceiverActivity's companion, value `"external"`; the chooser resolves it).
+
+- [ ] **Step 10.2: Run to fail.**
+
+- [ ] **Step 10.3: Implement.** ShareTargetManager: in the per-descriptor loop skip `target.shareAlias.isEmpty()`; after the loop, sync the family component: `setComponentEnabledSetting(ComponentName(ctx, "com.antivocale.app.ShareExternal"), advancedEnabled && externalRecordsPresent)`, where `externalRecordsPresent` reads the records provider snapshot (inject the provider; the manager already takes runBlocking paths for preferences, follow its existing style). `setAdvancedSharingEnabled(false)` and the "disable all" paths also disable the family component. ShareReceiverActivity: when the resolved backend id equals `EXTERNAL_FAMILY_BACKEND_ID`, show the chooser bottom sheet listing `externalModelStore.validRecords()` (name + languages); on selection continue the existing flow with `backendOverride = record.backendId`; with zero records the alias is disabled so the path is unreachable, but guard anyway with a friendly toast + finish. Strings: `share_target_external` = "Anti-Vocale (External)" / it "Anti-Vocale (Esterno)".
+
+- [ ] **Step 10.4: Green, full suite, commit** `feat(external): ShareExternal family alias with chooser and sync rule`.
+
+### Task 11: Model tab external section and strings
+
+**Files:**
+- Modify: `app/src/main/java/com/antivocale/app/ui/tabs/ModelTab.kt`
+- Modify: `app/src/main/java/com/antivocale/app/ui/viewmodel/ModelViewModel.kt`
+- Modify: `app/src/main/res/values/strings.xml`, `app/src/main/res/values-it/strings.xml`
+
+- [ ] **Step 11.1: Strings first** (en + it, both files, `external_` prefix): `external_section_title` ("External models" / "Modelli esterni"), `external_import_folder` ("Import from folder" / "Importa da cartella"), `external_import_url` ("Import from URL" / "Importa da URL"), `external_url_hint` ("HuggingFace repo or catalog-entry JSON URL" / "URL repo HuggingFace o voce di catalogo JSON"), `external_importing` ("Importing model..." / "Importazione modello..."), `external_import_failed` ("Import failed: %1$s" / "Importazione non riuscita: %1$s"), `external_delete_confirm` ("Delete external model %1$s?" / "Eliminare il modello esterno %1$s?"), `external_notice_single_pass` and `external_notice_family` (the two standing notices inherited from TASK-313: single-pass long-audio risk; wrong family can crash transcription with no error, correct it from the card), `share_target_external` (Task 10). StringResourceParityTest enforces en/it parity automatically.
+
+- [ ] **Step 11.2: ViewModel surface**: `externalModels: StateFlow<List<ExternalModelRecord>>` (from the store), `importState` (idle/importing/error(message)), `importFromFolder(uri, modelType)` (delegates to the importer; on success snackbar + auto-select if nothing active), `importFromUrl(url, modelType)`, `deleteExternalModel(id)` (store.delete + directory deleteRecursively + reset `transcriptionBackend` to the default when it pointed at the record, spec binding; snackbar), `useExternalModel(id)` (set transcriptionBackend preference; mirrors `useGigaAmModel` minus downloader lookups), `correctExternalFamily(id, modelType)` (store.update + orchestrator unload hint).
+
+- [ ] **Step 11.3: ModelTab section**: after the static backend cards, an "External models" section: header + the two import action buttons + one card per record (name, family chip, languages, size via `formatFileSize`, Use / Correct family / Delete actions, the two standing notices as info rows, `DeleteConfirmationDialog` wired like GigaAM's with `external_delete_confirm`). Importing state disables the buttons and shows `external_importing`. Follow the `GigaAmDownloadSection` card structure; a single `ExternalModelCard(record, ...)` composable in the same file keeps it cohesive.
+
+- [ ] **Step 11.4: Full suite (StringResourceParityTest included), manual smoke of the tab in the debug build, commit** `feat(external): external models UI section with import actions`.
+
+### Task 12: Verification and landing gates
+
+- [ ] `./gradlew testFdroidDebugUnitTest` green; `./gradlew assembleFdroidDebug` green; `./gradlew assemblePlayStoreRelease` compiles (R8: new classes live under `com.antivocale.app.transcription.**` and `com.antivocale.app.data.**`, both covered by existing keep rules; verify with the pre-release audit greps in CLAUDE.md).
+- [ ] Device test (Realme RMX3853, `./scripts/install.sh`): (1) import the GigaAM mirror files from local storage (`/tmp/gigaam-mirror` pushed to the device), transcribe a Russian voice message, verify output and active-model display in both Model and Settings tabs; (2) import via URL from `https://huggingface.co/pantinor/gigaam-v3`, same verification; (3) share-sheet: ShareExternal appears after import, chooser lists the model, transcription runs via the override path; (4) delete while active: active model falls back to the default backend, no LLM fallthrough error; (5) negative: folder missing the decoder fails with the clean error.
+- [ ] `/code-review high` on the branch diff, fix findings; then `/simplify`, fix findings (project standing rule before device-done).
+- [ ] `pa:reflect`, then verification-before-completion: every "green" claim above backed by a command output read this session.
+- [ ] Update TASK-313 notes (absorption complete) and mark the v2a backlog task accordingly; close issue #24 referencing both deliverables once merged to main.
+
