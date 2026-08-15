@@ -19,7 +19,7 @@
 
 - A user can run any supported sherpa-onnx offline model (any language) without an app release, via folder import, URL import, or the catalog.
 - External models behave like first-class backends everywhere the `BackendRegistry` already dispatches: orchestrator load, active-model repository, settings display, re-transcribe picker, model tab.
-- Integrity: every imported byte set is pinned by SHA-256 in the store; catalog entries without hashes are rejected.
+- Integrity: every imported byte set is pinned by SHA-256 in the store (pins for non-LFS HuggingFace files are computed on first download from the user-chosen repo and marked as such; catalog entries without hashes are rejected).
 
 ## Non-goals (v1/v2a)
 
@@ -42,7 +42,7 @@ Derived descriptor: `backendId = "external:<record.id>"`, `modelType = Extractio
 - `ExternalModelImporter` (`data/`): the single pipeline (see Import pipelines). Generalizes `SherpaOnnxModelDownloader` to an arbitrary set of (url, fileName, sha256) triples without touching the existing static-backend paths.
 - `CatalogRepository` (v2b): fetches and caches the official `catalog.json` plus user-added community catalog URLs; parses and validates the schema; exposes entries for the UI.
 
-Unchanged: the five static backends and their preferences, the manifest aliases of static backends, the orphan-dir cleaner (external models live under a dedicated `models/external/` root it ignores), the share flow of static backends.
+Unchanged: the six static backends (Parakeet, Whisper, Qwen3-ASR, Nemotron, GigaAM, Gemma) and their preferences, the manifest aliases of static backends, the orphan-dir cleaner (external models live under a dedicated `models/external/` root it ignores), the share flow of static backends.
 
 ## Data model
 
@@ -56,7 +56,7 @@ family: enum           (TRANSDUCER first; CTC, PARAFORMER, SENSE_VOICE, WHISPER 
 modelType: String      (sherpa modelType: nemo_transducer, "", conformer_transducer, ...)
 languages: List<String> (informational; from catalog entry or user)
 source: enum + url     (LOCAL / URL / CATALOG, plus provenance URL or catalog id)
-files: Map<String,String>  (fileName -> sha256; the integrity pin)
+files: Map<String,Pin>    (fileName -> sha256 plus a computed/verified marker; settled at plan time)
 sizeBytes: Long
 importedAt: Long (epoch millis)
 ```
@@ -93,13 +93,13 @@ Parsing rules: `schemaVersion` above the supported maximum rejects the catalog w
 ## Registry integration and share
 
 - `ShareReceiverActivity` resolves the `ShareExternal` alias to the chooser: bottom sheet listing imported external models (name, languages). Selection dispatches transcription with `backendOverride = "external:<id>"` (the override path already exists in the orchestrator).
-- **Component sync rule (binding decision):** `ShareTargetManager`'s per-descriptor iteration skips descriptors with an empty `shareAlias` (an empty `ComponentName` per derived record would otherwise be toggled on every sync). The family-level `ShareExternal` component is enabled if and only if the store holds at least one valid record, disabled when the last one is removed or invalidated (the `onModelDeleted` analog of the static backends, driven by the store flow).
+- **Component sync rule (binding decision):** `ShareTargetManager`'s per-descriptor iteration skips descriptors with an empty `shareAlias` (an empty `ComponentName` per derived record would otherwise be toggled on every sync). The family-level `ShareExternal` component is enabled if and only if advanced sharing is enabled AND the store holds at least one valid record (the same conjunction `syncAll` applies to every static alias); it is disabled when either condition fails, including when the last record is removed or invalidated (the `onModelDeleted` analog of the static backends, driven by the store flow).
 - `TranscriptionOrchestrator.ensureBackendLoaded` gains one arm: `ModelType.EXTERNAL -> loadExternalBackend(context)`, which resolves the record (override id or the persisted active backend), validates it, and configures `ExternalSherpaBackend`.
 - `BackendRegistryTest` extends to cover the static list plus N derived descriptors with a fake store (id round-trip, uniqueness, alias behavior, invalid-record exclusion).
 
 ## Import pipelines
 
-One pipeline, three entries, one outcome: canonical files under `models/external/<name>/`, hashes in the record, pre-native validation, store registration.
+One pipeline, three entries, one outcome: canonical files under `models/external/<sanitized-name>-<id-fragment>/`, hashes in the record, pre-native validation, store registration.
 
 1. **Local folder** (absorbs TASK-313): SAF folder pick; role-based file matching (TASK-313's `buildCopyPlan`); copy with hashes computed during the copy.
 2. **URL (v2a)**: two forms. (a) HuggingFace repo URL: enumerate files via the HF API, propose the ones recognized for a family, adopt the LFS oids as sha256. Non-LFS files (typically small ones such as `tokens.txt`) expose only a git blob sha1 server-side, so their sha256 is computed on first download and recorded (trust-on-first-use, the source is the user-chosen repo); the record marks such pins as `computed`, and a later re-import upgrades them to verified values. (b) Catalog-entry JSON URL: the same schema as a catalog entry, single model; this is how third parties share one model with integrity.
@@ -152,3 +152,4 @@ One-shot at first launch after the v2a update: read `customTransducerModelPath` 
 - i18n of catalog entry descriptions (single language from the entry vs device-locale field in schema v2).
 - Soft disk-space warning threshold beyond the 1GB hard pre-flight.
 - Whether the official catalog ships a bundled snapshot inside the APK for first-launch offline browsing, in addition to the remote fetch.
+- Soft disk-space warning threshold (the pre-flight itself is unconditional; only an advisory warning level remains open).
