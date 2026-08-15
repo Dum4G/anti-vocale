@@ -52,12 +52,13 @@ class BackendRegistryTest {
 
     private val registry = BackendRegistry()
 
-    /** The five enabled backends, in canonical order (default backend first). */
+    /** The six enabled backends, in canonical order (default backend first). */
     private val expectedIds = listOf(
         SherpaOnnxBackend.BACKEND_ID,
         WhisperBackend.BACKEND_ID,
         Qwen3AsrBackend.BACKEND_ID,
         NemotronStreamingBackend.BACKEND_ID,
+        GigaAmBackend.BACKEND_ID,
         LlmTranscriptionBackend.BACKEND_ID,
     )
 
@@ -67,11 +68,12 @@ class BackendRegistryTest {
         WhisperBackend.BACKEND_ID to FakePreferencesManager::_whisperModelPath,
         Qwen3AsrBackend.BACKEND_ID to FakePreferencesManager::_qwen3AsrModelPath,
         NemotronStreamingBackend.BACKEND_ID to FakePreferencesManager::_nemotronModelPath,
+        GigaAmBackend.BACKEND_ID to FakePreferencesManager::_gigaamModelPath,
         LlmTranscriptionBackend.BACKEND_ID to FakePreferencesManager::_modelPath,
     )
 
     @Test
-    fun `registry registers exactly the five backend ids, all unique`() {
+    fun `registry registers exactly the six backend ids, all unique`() {
         val ids = registry.backends.map { it.backendId }
         assertEquals(expectedIds.size, ids.size)
         assertEquals(expectedIds, ids)
@@ -99,7 +101,7 @@ class BackendRegistryTest {
         // GEMMA4_GGUF is the disabled GGUF backend: no BACKEND_ID constant and its
         // manager is disabled (TranscriptionModule), so the registry skips it.
         val mapped = ExtractionService.ModelType.entries - ExtractionService.ModelType.GEMMA4_GGUF
-        assertEquals(5, mapped.size)
+        assertEquals(6, mapped.size)
         for (modelType in mapped) {
             assertNotNull("ModelType.$modelType must resolve to a descriptor", registry.byModelType(modelType))
         }
@@ -121,6 +123,7 @@ class BackendRegistryTest {
             "com.antivocale.app.ShareWhisper",
             "com.antivocale.app.ShareQwen3",
             "com.antivocale.app.ShareNemotron",
+            "com.antivocale.app.ShareGigaam",
             "com.antivocale.app.ShareGemma",
         )
         val aliases = registry.backends.map { it.shareAlias }
@@ -172,9 +175,10 @@ class BackendRegistryTest {
     }
 
     @Test
-    fun `parakeet and nemotron expose dedicated display-name resources, others derive from path`() {
+    fun `parakeet, nemotron and gigaam expose dedicated display-name resources, others derive from path`() {
         assertEquals(R.string.parakeet_name, registry.byBackendId(SherpaOnnxBackend.BACKEND_ID)?.displayNameResId)
         assertEquals(R.string.nemotron_name, registry.byBackendId(NemotronStreamingBackend.BACKEND_ID)?.displayNameResId)
+        assertEquals(R.string.gigaam_name, registry.byBackendId(GigaAmBackend.BACKEND_ID)?.displayNameResId)
         assertNull(registry.byBackendId(WhisperBackend.BACKEND_ID)?.displayNameResId)
         assertNull(registry.byBackendId(Qwen3AsrBackend.BACKEND_ID)?.displayNameResId)
         assertNull(registry.byBackendId(LlmTranscriptionBackend.BACKEND_ID)?.displayNameResId)

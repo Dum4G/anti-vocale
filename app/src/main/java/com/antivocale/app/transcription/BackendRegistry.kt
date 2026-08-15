@@ -151,7 +151,7 @@ data class BackendDescriptor(
 @Singleton
 class BackendRegistry @Inject constructor() {
 
-    /** The five enabled backends in canonical order (default backend first). */
+    /** The six enabled backends in canonical order (default backend first). */
     val backends: List<BackendDescriptor> = listOf(
         BackendDescriptor(
             backendId = SherpaOnnxBackend.BACKEND_ID,
@@ -198,6 +198,15 @@ class BackendRegistry @Inject constructor() {
             modelPathFlow = { it.nemotronModelPath },
             saveModelPath = { prefs, path -> prefs.saveNemotronModelPath(path) },
             clearModelPath = { it.clearNemotronModelPath() },
+        ),
+        BackendDescriptor(
+            backendId = GigaAmBackend.BACKEND_ID,
+            modelType = ExtractionService.ModelType.GIGAAM,
+            shareAlias = "com.antivocale.app.ShareGigaam",
+            displayNameResId = R.string.gigaam_name,
+            modelPathFlow = { it.gigaamModelPath },
+            saveModelPath = { prefs, path -> prefs.saveGigaAmModelPath(path) },
+            clearModelPath = { it.clearGigaAmModelPath() },
         ),
         BackendDescriptor(
             backendId = LlmTranscriptionBackend.BACKEND_ID,
