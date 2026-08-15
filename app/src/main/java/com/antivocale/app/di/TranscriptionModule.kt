@@ -1,5 +1,7 @@
 package com.antivocale.app.di
 
+import com.antivocale.app.data.DefaultExternalModelRecordsProvider
+import com.antivocale.app.data.ExternalModelRecordsProvider
 import com.antivocale.app.manager.LlmManager
 import com.antivocale.app.transcription.CustomTransducerBackend
 import com.antivocale.app.transcription.GigaAmBackend
@@ -60,5 +62,11 @@ class TranscriptionModule {
         // GGUF: re-enable by moving files from gguf-disabled/ and adding back:
         // @Binds abstract fun bindGgufInferenceEngine(impl: LlamaBroEngine): GgufInferenceEngine
         // @Provides @IntoSet @Singleton fun provideGemma4GgufBackend(engine: GgufInferenceEngine): TranscriptionBackend = Gemma4GgufBackend(engine)
+
+        @Provides
+        @Singleton
+        fun provideExternalModelRecordsProvider(
+            impl: DefaultExternalModelRecordsProvider
+        ): ExternalModelRecordsProvider = impl
     }
 }

@@ -1,6 +1,7 @@
 package com.antivocale.app.data
 
 import android.content.Context
+import com.antivocale.app.transcription.staticRegistry
 import io.mockk.mockk
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -59,7 +60,7 @@ class ActiveModelRepositoryTest {
     private val mockContext: Context = mockk<Context>(relaxed = true)
 
     private fun makeRepo(): ActiveModelRepository {
-        return ActiveModelRepository(fakePrefs, mockContext)
+        return ActiveModelRepository(fakePrefs, mockContext, staticRegistry())
     }
 
     // -- (a) Backend change propagates to activeModelFlow --

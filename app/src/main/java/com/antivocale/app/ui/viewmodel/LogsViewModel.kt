@@ -64,10 +64,7 @@ class LogsViewModel @Inject constructor(
     private val transcriptionBackendManager: TranscriptionBackendManager,
     private val logDao: LogDao,
     private val preferencesManager: PreferencesManager,
-    // Defaulted so direct construction without Hilt (unit tests) keeps the
-    // three-argument shape; the registry is stateless so a fresh instance is
-    // equivalent to the injected singleton.
-    private val backendRegistry: BackendRegistry = BackendRegistry()
+    private val backendRegistry: BackendRegistry
 ) : ViewModel() {
 
     val logs: StateFlow<List<LogEntry>> = logDao.getAll()

@@ -57,6 +57,18 @@ interface SubtitlePrefsEntryPoint {
 }
 
 /**
+ * Hilt entry point for fetching [BackendRegistry] in the same no-@AndroidEntryPoint
+ * situation as [SubtitlePrefsEntryPoint]: the registry derives dynamic external-model
+ * descriptors from the store, so callers must resolve the app-wide singleton rather
+ * than constructing their own instance.
+ */
+@EntryPoint
+@InstallIn(SingletonComponent::class)
+interface BackendRegistryEntryPoint {
+    fun backendRegistry(): BackendRegistry
+}
+
+/**
  * Transparent activity for receiving shared audio files.
  * Handles ACTION_SEND intents with audio MIME types from other apps.
  *
@@ -70,10 +82,6 @@ class ShareReceiverActivity : Activity() {
     companion object {
         const val TAG = "ShareReceiverActivity"
         const val EXTRA_SOURCE_PACKAGE = "source_package"
-        // This Activity is deliberately not @AndroidEntryPoint, so the registry cannot be
-        // constructor-injected; it is stateless, so a companion-held instance is equivalent
-        // to the injected singleton.
-        private val backendRegistry = BackendRegistry()
 
         // The choice prompt auto-resolves to ASR after this delay if the user does nothing.
         // Keeps a shared video from silently hanging when the notification is ignored.
@@ -83,9 +91,12 @@ class ShareReceiverActivity : Activity() {
         // tap receiver or replaced on a re-share of the same taskId.
         internal fun choiceNotificationId(taskId: String): Int = taskId.hashCode()
 
-
-        internal fun backendIdForAlias(aliasClassName: String): String? =
-            backendRegistry.byShareAlias(aliasClassName)?.backendId
+        // The registry is NOT held here: it derives dynamic external-model descriptors from
+        // the store, so a companion-held instance built at class-init time would snapshot a
+        // stale descriptor set. Callers resolve the app singleton via [BackendRegistryEntryPoint]
+        // and pass it in.
+        internal fun backendIdForAlias(aliasClassName: String, registry: BackendRegistry): String? =
+            registry.byShareAlias(aliasClassName)?.backendId
     }
 
     private var sourcePackage: String? = null
@@ -244,7 +255,10 @@ class ShareReceiverActivity : Activity() {
         // Resolve the backend override once (applies to both the ASR path and the subtitle
         // choice's "Transcribe audio" action). A share-target alias forces a specific backend.
         val backendOverride: String? = intent?.component?.className?.let { alias ->
-            backendIdForAlias(alias)?.also { backendId ->
+            val registry = EntryPointAccessors.fromApplication(
+                applicationContext, BackendRegistryEntryPoint::class.java
+            ).backendRegistry()
+            backendIdForAlias(alias, registry)?.also { backendId ->
                 Log.i(TAG, "Share target alias detected: $alias -> backend: $backendId")
             }
         }

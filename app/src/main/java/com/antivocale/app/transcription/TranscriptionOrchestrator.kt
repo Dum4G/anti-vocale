@@ -38,10 +38,7 @@ class TranscriptionOrchestrator @Inject constructor(
     private val transcriptionCalibrator: TranscriptionCalibrator,
     private val backendManager: TranscriptionBackendManager,
     private val audioPreprocessor: AudioPreprocessor,
-    // Defaulted so direct construction without Hilt (unit tests) keeps the
-    // five-argument shape; the registry is stateless so a fresh instance is
-    // equivalent to the injected singleton.
-    private val backendRegistry: BackendRegistry = BackendRegistry(),
+    private val backendRegistry: BackendRegistry,
 ) {
     companion object {
         private const val TAG = "TranscriptionOrchestrator"

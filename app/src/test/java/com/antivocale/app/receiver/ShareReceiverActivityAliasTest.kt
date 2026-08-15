@@ -1,46 +1,64 @@
 package com.antivocale.app.receiver
 
+import com.antivocale.app.data.ExternalModelRecord
+import com.antivocale.app.data.ExternalModelRecordsProvider
+import com.antivocale.app.data.ExternalModelStore
+import com.antivocale.app.data.FakePreferencesManager
+import com.antivocale.app.transcription.BackendRegistry
 import com.antivocale.app.transcription.CustomTransducerBackend
+import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Assert.*
 import org.junit.Test
 
 class ShareReceiverActivityAliasTest {
 
+    /** Same shape as BackendRegistryTest's providerWith: an empty synchronous adapter. */
+    private fun localAdapter(): ExternalModelRecordsProvider =
+        object : ExternalModelRecordsProvider {
+            override val records = MutableStateFlow(emptyList<ExternalModelRecord>())
+        }
+
+    /** Registry with no external records: the static alias set only. */
+    private val registry = BackendRegistry(
+        ExternalModelStore(FakePreferencesManager(), dirExists = { true }),
+        localAdapter(),
+    )
+
     @Test
     fun `parakeet alias maps to sherpa-onnx backend`() {
-        assertEquals("sherpa-onnx", ShareReceiverActivity.backendIdForAlias("com.antivocale.app.ShareParakeet"))
+        assertEquals("sherpa-onnx", ShareReceiverActivity.backendIdForAlias("com.antivocale.app.ShareParakeet", registry))
     }
 
     @Test
     fun `whisper alias maps to whisper backend`() {
-        assertEquals("whisper", ShareReceiverActivity.backendIdForAlias("com.antivocale.app.ShareWhisper"))
+        assertEquals("whisper", ShareReceiverActivity.backendIdForAlias("com.antivocale.app.ShareWhisper", registry))
     }
 
     @Test
     fun `gemma alias maps to llm backend`() {
-        assertEquals("llm", ShareReceiverActivity.backendIdForAlias("com.antivocale.app.ShareGemma"))
+        assertEquals("llm", ShareReceiverActivity.backendIdForAlias("com.antivocale.app.ShareGemma", registry))
     }
 
     @Test
     fun `default activity class returns null`() {
-        assertNull(ShareReceiverActivity.backendIdForAlias("com.antivocale.app.receiver.ShareReceiverActivity"))
+        assertNull(ShareReceiverActivity.backendIdForAlias("com.antivocale.app.receiver.ShareReceiverActivity", registry))
     }
 
     @Test
     fun `unknown class returns null`() {
-        assertNull(ShareReceiverActivity.backendIdForAlias("com.antivocale.app.UnknownActivity"))
+        assertNull(ShareReceiverActivity.backendIdForAlias("com.antivocale.app.UnknownActivity", registry))
     }
 
     @Test
     fun `qwen3 alias maps to qwen3-asr backend`() {
-        assertEquals("qwen3-asr", ShareReceiverActivity.backendIdForAlias("com.antivocale.app.ShareQwen3"))
+        assertEquals("qwen3-asr", ShareReceiverActivity.backendIdForAlias("com.antivocale.app.ShareQwen3", registry))
     }
 
     @Test
     fun `nemotron alias maps to nemotron-streaming backend`() {
         assertEquals(
             "nemotron-streaming",
-            ShareReceiverActivity.backendIdForAlias("com.antivocale.app.ShareNemotron")
+            ShareReceiverActivity.backendIdForAlias("com.antivocale.app.ShareNemotron", registry)
         )
     }
 
@@ -48,7 +66,7 @@ class ShareReceiverActivityAliasTest {
     fun `empty string returns custom-transducer backend id`() {
         assertEquals(
             CustomTransducerBackend.BACKEND_ID,
-            ShareReceiverActivity.backendIdForAlias("")
+            ShareReceiverActivity.backendIdForAlias("", registry)
         )
     }
 }

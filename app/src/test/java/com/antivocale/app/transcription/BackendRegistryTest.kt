@@ -31,7 +31,10 @@ import kotlin.reflect.KProperty1
  *       val saveModelPath: suspend (PreferencesManager, String) -> Unit,
  *       val clearModelPath: suspend (PreferencesManager) -> Unit,
  *   )
- *   @Singleton class BackendRegistry @Inject constructor() {
+ *   @Singleton class BackendRegistry @Inject constructor(
+ *       externalModelStore: ExternalModelStore,
+ *       recordsProvider: ExternalModelRecordsProvider,
+ *   ) {
  *       val backends: List<BackendDescriptor>
  *       fun byBackendId(backendId: String?): BackendDescriptor?
  *       fun byModelType(modelType: ExtractionService.ModelType): BackendDescriptor?
@@ -50,7 +53,13 @@ import kotlin.reflect.KProperty1
  */
 class BackendRegistryTest {
 
-    private val registry = BackendRegistry()
+    // Static-backend fixture: an empty external-model provider derives no dynamic
+    // descriptors, so the static tests below pin exactly the static seven.
+    private val store = com.antivocale.app.data.ExternalModelStore(
+        FakePreferencesManager(),
+        dirExists = { true },
+    )
+    private val registry = BackendRegistry(store, providerWith())
 
     /** The seven enabled backends, in canonical order (default backend first). */
     private val expectedIds = listOf(
@@ -75,7 +84,7 @@ class BackendRegistryTest {
     )
 
     @Test
-    fun `registry registers exactly the seven backend ids, all unique`() {
+    fun `static seven backend ids, dynamic externals counted separately`() {
         val ids = registry.backends.map { it.backendId }
         assertEquals(expectedIds.size, ids.size)
         assertEquals(expectedIds, ids)
@@ -102,12 +111,21 @@ class BackendRegistryTest {
     fun `every active ModelType except GEMMA4_GGUF maps to a descriptor`() {
         // GEMMA4_GGUF is the disabled GGUF backend: no BACKEND_ID constant and its
         // manager is disabled (TranscriptionModule), so the registry skips it.
-        val mapped = ExtractionService.ModelType.entries - ExtractionService.ModelType.GEMMA4_GGUF
+        // EXTERNAL maps only through dynamic descriptors: an empty provider derives
+        // none by design, so it is excluded here and pinned separately below.
+        val mapped = ExtractionService.ModelType.entries -
+            ExtractionService.ModelType.GEMMA4_GGUF -
+            ExtractionService.ModelType.EXTERNAL
         assertEquals(7, mapped.size)
         for (modelType in mapped) {
             assertNotNull("ModelType.$modelType must resolve to a descriptor", registry.byModelType(modelType))
         }
         assertNull(registry.byModelType(ExtractionService.ModelType.GEMMA4_GGUF))
+        assertNull("empty provider derives no EXTERNAL descriptor", registry.byModelType(ExtractionService.ModelType.EXTERNAL))
+        assertNotNull(
+            "provider holding a record derives the EXTERNAL descriptor",
+            BackendRegistry(store, providerWith(externalRecord())).byModelType(ExtractionService.ModelType.EXTERNAL),
+        )
     }
 
     @Test
@@ -229,5 +247,67 @@ class BackendRegistryTest {
     fun `only nemotron is a streaming backend`() {
         val streaming = registry.backends.filter { it.isStreaming }.map { it.backendId }
         assertEquals(listOf(NemotronStreamingBackend.BACKEND_ID), streaming)
+    }
+
+    // ---- dynamic external descriptors (spec v2a) ----
+
+    private fun externalRecord(id: String = "a1b2c3d4e5f6") = com.antivocale.app.data.ExternalModelRecord(
+        id = id, displayName = "GigaAM v3", dir = "/x/gigaam-v3-$id",
+        family = com.antivocale.app.data.ModelFamily.TRANSDUCER, modelType = "nemo_transducer",
+        languages = listOf("ru"), source = com.antivocale.app.data.ExternalModelSource.LOCAL, sourceUrl = null,
+        files = mapOf("encoder.int8.onnx" to com.antivocale.app.data.FilePin("00", verified = true)),
+        sizeBytes = 1L, importedAt = 0L,
+    )
+
+    private fun providerWith(vararg records: com.antivocale.app.data.ExternalModelRecord): com.antivocale.app.data.ExternalModelRecordsProvider =
+        object : com.antivocale.app.data.ExternalModelRecordsProvider {
+            override val records = kotlinx.coroutines.flow.MutableStateFlow(records.toList())
+        }
+
+    @Test
+    fun `external records derive descriptors with no share alias`() = runTest {
+        val fake = FakePreferencesManager()
+        val store = com.antivocale.app.data.ExternalModelStore(fake, dirExists = { true })
+        store.add(externalRecord())
+        val registry = BackendRegistry(store, providerWith(externalRecord()))
+
+        val descriptor = registry.byBackendId("external:a1b2c3d4e5f6")
+        assertNotNull(descriptor)
+        assertEquals(ExtractionService.ModelType.EXTERNAL, descriptor!!.modelType)
+        assertEquals("", descriptor.shareAlias)
+        assertEquals("GigaAM v3", descriptor.deriveDisplayName(mockk(), "/anywhere"))
+    }
+
+    @Test
+    fun `provider with no records derives nothing`() = runTest {
+        val fake = FakePreferencesManager()
+        val store = com.antivocale.app.data.ExternalModelStore(fake, dirExists = { false })
+        store.add(externalRecord())
+        val registry = BackendRegistry(store, providerWith())   // empty: the real provider filters invalid records out
+        assertNull(registry.byBackendId("external:a1b2c3d4e5f6"))
+    }
+
+    @Test
+    fun `static seven plus N external backends coexist and stay unique`() = runTest {
+        val fake = FakePreferencesManager()
+        val store = com.antivocale.app.data.ExternalModelStore(fake, dirExists = { true })
+        store.add(externalRecord("111111111111")); store.add(externalRecord("222222222222"))
+        val registry = BackendRegistry(store, providerWith(externalRecord("111111111111"), externalRecord("222222222222")))
+        val ids = registry.backends.map { it.backendId }
+        assertEquals(expectedIds.size + 2, ids.size)
+        assertEquals(ids.size, ids.toSet().size)
+        assertEquals(expectedIds, ids.take(expectedIds.size))  // static first, canonical order preserved
+    }
+
+    @Test
+    fun `model-path accessors delegate to the store record`() = runTest {
+        val fake = FakePreferencesManager()
+        val store = com.antivocale.app.data.ExternalModelStore(fake, dirExists = { true })
+        store.add(externalRecord())
+        val registry = BackendRegistry(store, providerWith(externalRecord()))
+        val descriptor = registry.byBackendId("external:a1b2c3d4e5f6")!!
+        descriptor.saveModelPath(fake, "/new/dir")
+        // Store records are keyed by identity, not a path preference: saving redirects the record's dir.
+        assertEquals("/new/dir", store.records().first().dir)
     }
 }

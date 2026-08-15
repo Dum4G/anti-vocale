@@ -31,7 +31,10 @@ abstract class TranscriptionOrchestratorTestBase {
         listener = mockk(relaxed = true)
 
         orchestrator = TranscriptionOrchestrator(
-            preferencesManager, logDao, transcriptionCalibrator, backendManager, audioPreprocessor
+            preferencesManager, logDao, transcriptionCalibrator, backendManager, audioPreprocessor,
+            // Static seven only: these tests exercise static-backend loading. Dynamic
+            // external descriptors get their own store-backed fixture in Task 3.
+            staticRegistry()
         )
 
         // Default the OOM pre-flight to off in tests so it does not interfere with orchestrator

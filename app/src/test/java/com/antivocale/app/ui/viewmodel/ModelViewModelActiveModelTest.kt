@@ -4,6 +4,7 @@ import android.content.Context
 import com.antivocale.app.R
 import com.antivocale.app.data.ActiveModelRepository
 import com.antivocale.app.data.FakePreferencesManager
+import com.antivocale.app.transcription.staticRegistry
 import io.mockk.every
 import io.mockk.mockk
 import java.nio.file.Files
@@ -66,13 +67,14 @@ class ModelViewModelActiveModelTest {
         fakePrefs = FakePreferencesManager()
         viewModel = ModelViewModel(
             preferencesManager = fakePrefs,
-            activeModelRepository = ActiveModelRepository(fakePrefs, mockContext),
+            activeModelRepository = ActiveModelRepository(fakePrefs, mockContext, staticRegistry()),
             tokenManager = mockk(relaxed = true),
             benchmarkManager = mockk(relaxed = true),
             backendManager = mockk(relaxed = true),
             llmManager = mockk(relaxed = true),
             shareTargetManager = mockk(relaxed = true),
             ctx = mockContext,
+            backendRegistry = staticRegistry(),
         )
     }
 

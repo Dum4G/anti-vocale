@@ -71,10 +71,7 @@ class ModelViewModel @Inject constructor(
     private val llmManager: LlmManager,
     private val shareTargetManager: ShareTargetManager,
     @ApplicationContext private val ctx: Context,
-    // Defaulted so direct construction without Hilt (unit tests) keeps the
-    // eight-argument shape; the registry is stateless so a fresh instance is
-    // equivalent to the injected singleton.
-    private val backendRegistry: BackendRegistry = BackendRegistry(),
+    private val backendRegistry: BackendRegistry,
 ) : ViewModel() {
 
     val tokenState = tokenManager.tokenState
@@ -295,6 +292,8 @@ class ModelViewModel @Inject constructor(
                     ExtractionService.ModelType.GEMMA4_GGUF -> { /* no-op */ }
                     // Custom transducer: sideload only, no service download progress.
                     ExtractionService.ModelType.CUSTOM_TRANSDUCER -> { /* no-op */ }
+                    // External models: imported locally, no service download progress.
+                    ExtractionService.ModelType.EXTERNAL -> { /* no-op */ }
                     ExtractionService.ModelType.GEMMA -> handleServiceProgressGemma(progress)
                 }
             }
