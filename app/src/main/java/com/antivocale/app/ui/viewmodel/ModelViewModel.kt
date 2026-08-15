@@ -14,10 +14,10 @@ import com.antivocale.app.data.ModelDownloader
 import com.antivocale.app.data.PreferencesManager
 import com.antivocale.app.data.ShareTargetManager
 import com.antivocale.app.transcription.BackendRegistry
-import com.antivocale.app.transcription.LlmTranscriptionBackend
 import com.antivocale.app.transcription.GigaAmBackend
 import com.antivocale.app.transcription.GigaAmDownloader
 import com.antivocale.app.transcription.GigaAmModelManager
+import com.antivocale.app.transcription.LlmTranscriptionBackend
 import com.antivocale.app.transcription.NemotronDownloader
 import com.antivocale.app.transcription.NemotronModelManager
 import com.antivocale.app.transcription.NemotronStreamingBackend

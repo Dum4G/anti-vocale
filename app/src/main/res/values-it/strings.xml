@@ -155,7 +155,6 @@
     <string name="gigaam_download_confirm_title">Scaricare GigaAM v3?</string>
     <string name="gigaam_download_confirm_message">Verranno scaricati ~%1$dMB. GigaAM v3 è un modello ASR solo-russo di Sber con ottima accuratezza sul russo.</string>
     <string name="gigaam_download">Scarica GigaAM</string>
-    <string name="gigaam_delete_message">Eliminare il modello GigaAM v3?</string>
     <string name="gigaam_downloaded">%1$s scaricato</string>
     <string name="gigaam_deleted">%1$s eliminato</string>
 

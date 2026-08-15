@@ -56,17 +56,16 @@ class GigaAmBackend @Inject constructor() : TranscriptionBackend {
             return Result.failure(TranscriptionException.ModelLoadError("directory not found: $modelDirectory"))
         }
 
-        val model = GigaAmModelManager.validateModelDirectory(dir)
-        if (model == null) {
-            return Result.failure(TranscriptionException.ModelLoadError(
-                "missing files in $modelDirectory: ${GigaAmModelManager.REQUIRED_FILES.joinToString()}"
-            ))
-        }
-
         // Pre-native validation (inside IO dispatcher): sherpa-onnx calls exit(255)
         // when the encoder is missing critical metadata, killing the app silently.
         return withContext(Dispatchers.IO) {
-            val encoderFile = File(dir, "gigaam_v3_e2e_rnnt_encoder_int8.onnx")
+            if (GigaAmModelManager.validateModelDirectory(dir) == null) {
+                return@withContext Result.failure(TranscriptionException.ModelLoadError(
+                    "missing files in $modelDirectory: ${GigaAmModelManager.REQUIRED_FILES.joinToString()}"
+                ))
+            }
+
+            val encoderFile = File(dir, GigaAmModelManager.ENCODER_FILE)
             val missingMeta = SherpaOnnxBackend.missingOnnxMetadata(encoderFile, listOf("vocab_size", "subsampling_factor", "model_type"))
             if (missingMeta.isNotEmpty()) {
                 Log.e(TAG, "Encoder missing required ONNX metadata: $missingMeta")
@@ -82,12 +81,12 @@ class GigaAmBackend @Inject constructor() : TranscriptionBackend {
                 // Configure the transducer model (GigaAM v3 E2E RNNT uses nemo_transducer)
                 val modelConfig = OfflineModelConfig(
                     transducer = OfflineTransducerModelConfig(
-                        encoder = "${modelDirectory}/gigaam_v3_e2e_rnnt_encoder_int8.onnx",
-                        decoder = "${modelDirectory}/gigaam_v3_e2e_rnnt_decoder.onnx",
-                        joiner = "${modelDirectory}/gigaam_v3_e2e_rnnt_joint.onnx"
+                        encoder = "${modelDirectory}/${GigaAmModelManager.ENCODER_FILE}",
+                        decoder = "${modelDirectory}/${GigaAmModelManager.DECODER_FILE}",
+                        joiner = "${modelDirectory}/${GigaAmModelManager.JOINER_FILE}"
                     ),
-                    tokens = "${modelDirectory}/gigaam_v3_e2e_rnnt_tokens.txt",
-                    modelType = "nemo_transducer",
+                    tokens = "${modelDirectory}/${GigaAmModelManager.TOKENS_FILE}",
+                    modelType = sherpaConfig.modelType,
                     numThreads = sherpaConfig.numThreads,
                     debug = false,
                     provider = sherpaConfig.provider

@@ -155,7 +155,6 @@
     <string name="gigaam_download_confirm_title">Download GigaAM v3?</string>
     <string name="gigaam_download_confirm_message">This will download ~%1$dMB. GigaAM v3 is a Russian-only ASR model from Sber with strong Russian accuracy.</string>
     <string name="gigaam_download">Download GigaAM</string>
-    <string name="gigaam_delete_message">Delete GigaAM v3 model?</string>
     <string name="gigaam_downloaded">%1$s downloaded successfully</string>
     <string name="gigaam_deleted">%1$s deleted</string>
 

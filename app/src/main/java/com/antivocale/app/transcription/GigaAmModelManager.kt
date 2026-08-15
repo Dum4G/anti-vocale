@@ -25,12 +25,12 @@ object GigaAmModelManager {
     const val GIGAAM_MODEL_DIR = "gigaam-v3"
 
     // Required model files for GigaAM v3 (nemo_transducer, sherpa-onnx format).
-    val REQUIRED_FILES = listOf(
-        "gigaam_v3_e2e_rnnt_encoder_int8.onnx",
-        "gigaam_v3_e2e_rnnt_decoder.onnx",
-        "gigaam_v3_e2e_rnnt_joint.onnx",
-        "gigaam_v3_e2e_rnnt_tokens.txt"
-    )
+    const val ENCODER_FILE = "gigaam_v3_e2e_rnnt_encoder_int8.onnx"
+    const val DECODER_FILE = "gigaam_v3_e2e_rnnt_decoder.onnx"
+    const val JOINER_FILE = "gigaam_v3_e2e_rnnt_joint.onnx"
+    const val TOKENS_FILE = "gigaam_v3_e2e_rnnt_tokens.txt"
+
+    val REQUIRED_FILES = listOf(ENCODER_FILE, DECODER_FILE, JOINER_FILE, TOKENS_FILE)
 
     /** Approximate total size in MB (~310MB of ONNX + tokens). */
     const val ESTIMATED_SIZE_MB = 326L

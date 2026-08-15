@@ -494,18 +494,12 @@ class TranscriptionOrchestrator @Inject constructor(
         )
     }
 
-    private suspend fun loadGigaAmBackend(context: Context): Result<Unit> {
-        val modelPath = preferencesManager.gigaamModelPath.first()
-        if (modelPath.isNullOrBlank()) {
-            return Result.failure(TranscriptionException.NotInitialized())
-        }
-        return configureSherpaBackend(
-            backendId = GigaAmBackend.BACKEND_ID,
-            modelPath = modelPath,
-            label = "GigaAM",
-            context = context
-        )
-    }
+    private suspend fun loadGigaAmBackend(context: Context): Result<Unit> = loadSherpaOnnxModel(
+        backendId = GigaAmBackend.BACKEND_ID,
+        modelPathFlow = preferencesManager.gigaamModelPath,
+        label = "GigaAM",
+        context = context
+    )
 
     // GGUF: disabled — move files from gguf-disabled/ to re-enable the body below
     private suspend fun loadGgufBackend(context: Context): Result<Unit> {
