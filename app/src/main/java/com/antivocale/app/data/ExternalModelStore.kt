@@ -3,7 +3,6 @@ package com.antivocale.app.data
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
-import javax.inject.Singleton
 
 /**
  * Single source of truth for imported external models (spec: External models
@@ -14,7 +13,7 @@ import javax.inject.Singleton
  * Provided via [AppModule] (not `@Inject`) because the `dirExists` default
  * parameter is invisible to Dagger and would cause a MissingBinding at use sites.
  */
-class ExternalModelStore constructor(
+class ExternalModelStore(
     private val preferencesManager: PreferencesManager,
     private val dirExists: (String) -> Boolean = { java.io.File(it).exists() },
 ) {

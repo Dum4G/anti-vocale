@@ -54,7 +54,7 @@ data class ExternalModelRecord(
                 files = files, sizeBytes = o.getLong("sizeBytes"), importedAt = o.getLong("importedAt"),
             )
         } catch (e: Exception) {
-            Log.w(TAG, "Skipping malformed ExternalModelRecord", e)
+            Log.w(TAG, "Malformed ExternalModelRecord; whole list will be rejected", e)
             null
         }
     }
