@@ -390,13 +390,13 @@ class DefaultExternalModelRecordsProvider @Inject constructor(
 
 `TranscriptionModule` gains `@Provides @Singleton fun provideExternalModelRecordsProvider(impl: DefaultExternalModelRecordsProvider): ExternalModelRecordsProvider = impl` (or `@Binds` if the module has an abstract section; follow the module's existing style).
 
-In `BackendRegistry.kt` (constructor property, so `descriptorFor` can capture the store through the provider? No: the accessors need the STORE for mutations; inject both, the provider for reads and the store for the save/clear closures):
+In `BackendRegistry.kt` (both dependencies injected: the provider for reads, the store for the save/clear mutations):
 
 ```kotlin
 @Singleton
 class BackendRegistry @Inject constructor(
     private val externalModelStore: ExternalModelStore,
-    recordsProvider: ExternalModelRecordsProvider,
+    private val recordsProvider: ExternalModelRecordsProvider,   // val: referenced in the backends getter
 ) {
     private val staticBackends: List<BackendDescriptor> = listOf( /* the existing six, unchanged */ )
 
@@ -421,20 +421,15 @@ class BackendRegistry @Inject constructor(
 }
 ```
 
-Tests construct `BackendRegistry(store, provider)` where `provider` is a `MutableStateFlow` adapter (`object : ExternalModelRecordsProvider { override val records = MutableStateFlow(listOf(record())) }`), set synchronously before each assertion: deterministic, no collector race. The store instance passed in tests is the same fake-backed store, so `saveModelPath` mutations are observable.
+Tests construct `BackendRegistry(store, provider)` (two arguments, matching the signature above; update the four Step 2.1 snippets accordingly) where `provider` is a synchronous adapter: `object : ExternalModelRecordsProvider { override val records = MutableStateFlow(listOf(...)) }`, set before each assertion, no collector race. Per-test adapter contents: the three positive tests seed the record; the `invalid records derive nothing` test seeds an EMPTY list and is renamed `provider with no records derives nothing` (validity filtering is the provider's contract and is pinned where it lives: add to `ExternalModelStoreTest` a test `validRecordsFlow filters records whose directory is missing`, `dirExists = { false }`). The store instance passed in tests is the same fake-backed store, so `saveModelPath` mutations are observable.
 
 `ModelType.EXTERNAL` is added in THIS task (the test references it), and it is not a one-line change: `ExtractionService.resolveDisplayName` (~line 117) is an exhaustive `when` with no `else`; add `ModelType.EXTERNAL -> "External model"` (the per-model name comes from the registry descriptor, this is the fallback for bookkeeping contexts). `executeDownload` (~line 216) enumerates every value; add `ModelType.EXTERNAL -> { /* no service-driven download: imports run through the importer in the ViewModel */ }`. Also fix the existing pin test `every active ModelType except GEMMA4_GGUF maps to a descriptor`: change its set to `entries - GEMMA4_GGUF - EXTERNAL` for the `assertNotNull` loop (with an empty store there is no EXTERNAL descriptor by design) and add one assertion that EXTERNAL maps once the fake provider holds a record.
 
-Construction-site retrofit (all five + two test files): remove the `= BackendRegistry()` default values, add `backendRegistry: BackendRegistry` as an injected constructor parameter (Hilt resolves it; all five classes are already Hilt-injected). In `TranscriptionOrchestratorTestBase`, construct `BackendRegistry(fakeStore, fakeProvider)` explicitly. Run `git grep -n "BackendRegistry()" app/src` after the change: it must return zero hits.
+Construction-site retrofit: remove the `= BackendRegistry()` default values and inject `backendRegistry: BackendRegistry` via constructor (Hilt resolves it) in the four Hilt-injected classes (`TranscriptionOrchestrator:44`, `ActiveModelRepository:38`, `LogsViewModel:70`, `ModelViewModel:75`). The fifth site is structurally different: `ShareReceiverActivity:76` holds the registry in a companion object consumed by the static `backendIdForAlias` (that class is deliberately NOT `@AndroidEntryPoint`, its own comment at lines 73-75 explains Hilt needs ComponentActivity), so constructor injection is impossible. Retrofit that one with an entry-point lookup on the instance path: define `@EntryPoint @InstallIn(SingletonComponent::class) interface BackendRegistryEntryPoint { fun backendRegistry(): BackendRegistry }` in the file (or the di package), and in the instance method that calls `backendIdForAlias` (around line 246) obtain the registry via `EntryPointAccessors.fromApplication(applicationContext, BackendRegistryEntryPoint::class.java).backendRegistry()` and pass it as a parameter to `backendIdForAlias(alias, registry)`; the companion function becomes stateless-with-a-parameter. In `TranscriptionOrchestratorTestBase`, construct `BackendRegistry(fakeStore, fakeProvider)` explicitly. Run `git grep -n "BackendRegistry()" app/src` after the change: it must return zero hits.
 
 - [ ] **Step 2.4: Run the tests**
 
 Run: `./gradlew :app:testFdroidDebugUnitTest --tests "com.antivocale.app.transcription.BackendRegistryTest"`
-Expected: all PASS including the four new ones.
-
-- [ ] **Step 2.4: Run the tests**
-
-Run: `./gradlew :app:testFdroidDebugUnitTest --tests "com.antivocale.app.transcription.BacklogRegistryTest" ` (typo guard: the real name is `BackendRegistryTest`)
 Expected: all PASS including the four new ones.
 
 - [ ] **Step 2.5: Full suite + commit**
@@ -450,6 +445,7 @@ git commit -m "feat(external): dynamic BackendRegistry descriptors from the exte
 **Files:**
 - Modify: `app/src/main/java/com/antivocale/app/transcription/TranscriptionBackend.kt` (add `ExternalConfig` to the sealed `BackendConfig`)
 - Modify: `app/src/main/java/com/antivocale/app/transcription/TranscriptionOrchestrator.kt` (dispatch arm + loader)
+- Modify: `app/src/test/java/com/antivocale/app/transcription/TranscriptionOrchestratorTestBase.kt` (SECOND arity retrofit: the orchestrator gains `externalModelStore`; the base also gains a `fakeStore` field (FakePreferencesManager-backed `ExternalModelStore`, `dirExists = { true }`) and an `externalRecord(id, dir)` helper used by Step 3.1)
 - Test: extend `app/src/test/java/com/antivocale/app/transcription/TranscriptionOrchestratorBackendOverrideTest.kt`
 
 (The enum value and its two mandatory arms land in Task 2; `TranscriptionModule` needs NO change: the engine is constructed by the manager, never Hilt-injected into the backend set, per the spec's no-half-configured-engine rule.)
@@ -478,7 +474,7 @@ git commit -m "feat(external): dynamic BackendRegistry descriptors from the exte
     }
 ```
 
-Also a negative test: `backendOverride = "external:unknown"` fails the request with a `NotInitialized` error and never calls `setActiveBackend`, EVEN when the persisted `transcriptionBackend` preference points at a valid external record (this pins the override-over-preference resolution the spec requires).
+Also a negative test: `backendOverride = "external:unknown"` fails the request with a `NotInitialized` error and never calls `setActiveBackend`, EVEN when the persisted `transcriptionBackend` preference points at a valid external record (this pins the override-over-preference resolution the spec requires). Invocation shape: mirror the `processRequest` call of the EXISTING override test verbatim (its full parameter list: taskId, samples or uri per the existing test, queuePosition, queueTotal, context, cacheDir, listener, coroutineScope; do not invent a shorter signature) and populate the temp dir via the existing `createTempModelDir(prefix)` helper followed by writing the four canonical file names into it.
 
 - [ ] **Step 3.2: Run to see it fail** (`ExternalConfig` unresolved).
 
@@ -492,7 +488,7 @@ Also a negative test: `backendOverride = "external:unknown"` fails the request w
     )
 ```
 
-Orchestrator: in the registry-keyed `when` add `ExtractionService.ModelType.EXTERNAL -> loadExternalBackend(context, preferredBackendId)`. The loader receives the EFFECTIVE id (override or preference; `ensureBackendLoaded` already computed it, pass it down instead of re-reading the preference, otherwise the share-chooser flow loads the wrong record) and resolves thread/provider exactly the way `loadSherpaOnnxModel` does:
+Orchestrator: in `ensureBackendLoaded`, special-case the `external:` prefix BEFORE the registry lookup (`if (preferredBackendId.startsWith("external:")) -> loadExternalBackend(context, preferredBackendId)`, the same early-special-case `GGUF_BACKEND_ID` gets today): this removes the cold-start race where the provider's background collection has not delivered the record yet and the registry-keyed `when` would momentarily fall through to `loadLlmBackend`. The loader receives the EFFECTIVE id (override or preference; `ensureBackendLoaded` already computed it, pass it down instead of re-reading the preference, otherwise the share-chooser flow loads the wrong record) and resolves thread/provider exactly the way `loadSherpaOnnxModel` does:
 
 ```kotlin
     private suspend fun loadExternalBackend(context: Context, backendId: String): Result<Unit> {
@@ -508,9 +504,9 @@ Orchestrator: in the registry-keyed `when` add `ExtractionService.ModelType.EXTE
     }
 ```
 
-where `configureBackend` is the shared resolve-thread/provider-then-setActiveBackend body: extract it from `configureSherpaBackend` (TASK-313-era, has `modelType` param) so both loaders share one preference-resolution path; `configureSherpaBackend` keeps its signature and delegates. Inject `externalModelStore: ExternalModelStore` into the orchestrator constructor next to `backendRegistry`.
+where `configureBackend` is the shared resolve-thread/provider-then-setActiveBackend body: extract it from `configureSherpaBackend` (TASK-313-era, has `modelType` param) so both loaders share one preference-resolution path. The extraction KEEPS the `forceModelLoad`-gated OOM memory pre-flight that `configureSherpaBackend` performs today (`TranscriptionOrchestrator.kt` lines ~404-425): external models are the riskiest loads (unknown sizes, the flagship import is 326MB) and must get the same guard via the shared body, not a weaker path. `configureSherpaBackend` keeps its signature and delegates. Inject `externalModelStore: ExternalModelStore` into the orchestrator constructor next to `backendRegistry`.
 
-- [ ] **Step 3.4: Green run, full suite, commit** `feat(external): EXTERNAL model type, Hilt provider, orchestrator load arm`.
+- [ ] **Step 3.4: Green run, full suite, commit** `feat(external): orchestrator external load arm with ExternalConfig`.
 
 ### Task 4: ExternalSherpaBackend engine
 
@@ -594,6 +590,7 @@ The full method bodies are mechanical ports of `GigaAmBackend.kt` with the file 
 
 **Files:**
 - Modify: `app/src/main/java/com/antivocale/app/transcription/TranscriptionBackendManager.kt`
+- Modify: `app/src/test/java/com/antivocale/app/transcription/TranscriptionBackendManagerTest.kt` (its `createManager(llmManager, backends.toSet())` helper breaks at the new constructor arity: extend it with the fake store and a real `ExternalSherpaBackend()`)
 - Test: `app/src/test/java/com/antivocale/app/transcription/TranscriptionBackendManagerExternalTest.kt`
 
 - [ ] **Step 5.1: Failing tests**
@@ -601,8 +598,11 @@ The full method bodies are mechanical ports of `GigaAmBackend.kt` with the file 
 ```kotlin
 class TranscriptionBackendManagerExternalTest {
     // Fixture: FakePreferencesManager-backed ExternalModelStore (dirExists = { true }),
-    // one record; the manager's engine is a mockk<ExternalSherpaBackend>(relaxed = true)
-    // injected via the manager's engine constructor parameter (see 5.3); llmManager mockk relaxed.
+    // one record; an ExternalModelRecordsProvider adapter seeded with that record (the
+    // manager reads the SNAPSHOT, see 5.3); the manager's engine is a
+    // mockk<ExternalSherpaBackend>() with an explicit
+    //   coEvery { engine.initialize(any(), any()) } returns Result.success(Unit)
+    // (do not rely on the relaxed strategy for a Result return); llmManager mockk relaxed.
 
     @Test fun `setActiveBackend routes external ids to the engine with the exact config`() = runTest {
         val config = BackendConfig.ExternalConfig(record, numThreads = 4, provider = "cpu")
@@ -643,18 +643,21 @@ class TranscriptionBackendManagerExternalTest {
 
 - [ ] **Step 5.2: Run to fail.**
 
-- [ ] **Step 5.3: Implement** (manager constructor gains `externalModelStore: ExternalModelStore` AND an `externalEngine: ExternalSherpaBackend` parameter defaulting to `ExternalSherpaBackend()` so tests inject the mock; `llmManager` stays):
+- [ ] **Step 5.3: Implement** (manager constructor gains `externalModelStore: ExternalModelStore`, `externalRecordsProvider: ExternalModelRecordsProvider`, and an `externalEngine: ExternalSherpaBackend` parameter defaulting to `ExternalSherpaBackend()` so tests inject the mock; `llmManager` stays. Read APIs stay NON-SUSPEND by reading the provider's snapshot, never the store's suspend methods):
 
 ```kotlin
-    // NOT registered in the injected set and NOT Hilt-provided: the engine is routed only
-    // through the external: prefix, so no consumer can address the unconfigured placeholder.
+    // Not multibound into the backend set; Hilt satisfies this parameter via the engine's
+    // own @Singleton @Inject constructor (Kotlin defaults are invisible to Dagger, so keep
+    // the @Inject). The engine is routed only through the external: prefix, so no consumer
+    // can address the unconfigured placeholder.
     private val externalEngine: ExternalSherpaBackend,
 
     suspend fun setActiveBackend(backendId: String, context: Context, config: BackendConfig): Result<Unit> {
         val backend: TranscriptionBackend
         val effectiveConfig: BackendConfig
         if (backendId.startsWith("external:")) {
-            val record = externalModelStore.byId(backendId.removePrefix("external:"))
+            val record = externalRecordsProvider.records.value
+                .firstOrNull { it.backendId == backendId }
                 ?: return Result.failure(IllegalArgumentException("Unknown backend: $backendId"))
             effectiveConfig = config as? BackendConfig.ExternalConfig
                 ?: return Result.failure(IllegalArgumentException(
@@ -667,9 +670,14 @@ class TranscriptionBackendManagerExternalTest {
         }
         // ... unchanged unload-then-initialize body, using backend/effectiveConfig ...
     }
+
+    // getAvailableBackends(): append ExternalBackendHandle(record) for every entry of
+    // externalRecordsProvider.records.value (snapshot; non-suspend).
+    // getBackend(backendId): for external ids return externalEngine when
+    // externalRecordsProvider.records.value.any { it.backendId == backendId }, else null.
 ```
 
-Per-record handles: a private `class ExternalBackendHandle(val record: ExternalModelRecord) : TranscriptionBackend` implementing every member inertly (`initialize` returns failure, `transcribeAudio` returns `NotInitialized`, `id = record.backendId`, `displayName = record.displayName`, `isReady() = File(record.dir).exists()`, `unload()` no-op), appended from `externalModelStore.validRecords()` in `getAvailableBackends()`. The manager KDoc documents: handles are enumeration-only (pickers), the engine is the single loadable instance, and `getBackend` "known" for an external id means store resolution succeeded (engine state is irrelevant). No change to the init duplicate-id warning (handles never enter the injected set; the placeholder registration is prevented by the engine never being injected).
+Per-record handles: a private `class ExternalBackendHandle(val record: ExternalModelRecord) : TranscriptionBackend` implementing every member inertly (`initialize` returns failure, `transcribeAudio` returns `NotInitialized`, `id = record.backendId`, `displayName = record.displayName`, `isReady() = File(record.dir).exists()`, `unload()` no-op). The manager KDoc documents: handles are enumeration-only (pickers), the engine is the single loadable instance, and `getBackend` "known" for an external id means the provider snapshot holds the record (engine state is irrelevant). No change to the init duplicate-id warning (handles never enter the injected set; the placeholder registration is prevented by the engine never being multibound).
 
 - [ ] **Step 5.4: Green, full suite, commit** `feat(external): manager routing for external ids with per-record handles`.
 
