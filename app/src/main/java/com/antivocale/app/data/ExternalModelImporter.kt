@@ -4,6 +4,8 @@ import android.content.Context
 import android.net.Uri
 import android.util.Log
 import androidx.documentfile.provider.DocumentFile
+import com.antivocale.app.data.download.DownloadConfig
+import com.antivocale.app.data.download.ResumeDownloadHelper
 import com.antivocale.app.transcription.SherpaOnnxBackend
 import java.io.File
 import java.io.InputStream
@@ -29,6 +31,7 @@ class ExternalModelImporter(
     private val store: ExternalModelStore,
     private val filesRoot: () -> File,
     private val uuid: () -> String = { java.util.UUID.randomUUID().toString().replace("-", "") },
+    private val repoListing: HuggingFaceRepoListing = HuggingFaceRepoListing(),
 ) {
 
     companion object {
@@ -112,6 +115,49 @@ class ExternalModelImporter(
         return importCore(children, modelType, src.name)
     }
 
+    /**
+     * HuggingFace repo import (plan Task 8): file names map to canonical roles via
+     * [buildCopyPlan] so downloads land under canonical names; LFS files carry a
+     * server-side sha256 pin, plain files get a computed trust-on-first-use pin.
+     */
+    suspend fun importFromHuggingFaceRepo(
+        repoUrl: String,
+        modelType: String = "nemo_transducer",
+    ): ExternalModelRecord {
+        val repoId = HuggingFaceRepoListing.parseRepoId(repoUrl)
+            ?: throw IllegalArgumentException("not a HuggingFace repository URL: $repoUrl")
+        val files = repoListing.listFiles(repoId)
+        val plan = buildCopyPlan(files.map { it.name })
+            ?: throw IllegalArgumentException(
+                "repository $repoId has no complete transducer role set (encoder/decoder/joiner/tokens)")
+        val triples = plan.map { (canonical, sourceName) ->
+            val source = files.first { it.name == sourceName }
+            val url = repoListing.resolveUrl(repoId, sourceName)
+            when (source) {
+                is HuggingFaceRepoListing.HfFile.Lfs -> DownloadTriple(url, canonical, source.sha256, source.size)
+                is HuggingFaceRepoListing.HfFile.Plain -> DownloadTriple(url, canonical, null, source.size)
+            }
+        }
+        return downloadCore(triples, modelType, repoId.substringAfter('/'), ExternalModelSource.URL, repoUrl)
+    }
+
+    /** Catalog-entry JSON import: every file must carry a sha256 pin (hashless entries rejected). */
+    suspend fun importFromEntryJson(
+        entryUrl: String,
+    ): ExternalModelRecord {
+        val text = repoListing.fetchText(entryUrl)
+        val entry = ExternalModelEntryJson.parse(text)
+        val plan = buildCopyPlan(entry.files.map { it.name })
+            ?: throw IllegalArgumentException(
+                "entry ${entry.name} has no complete transducer role set (encoder/decoder/joiner/tokens)")
+        val byName = entry.files.associateBy { it.name }
+        val triples = plan.map { (canonical, sourceName) ->
+            val f = byName.getValue(sourceName)
+            DownloadTriple(f.url, canonical, f.sha256, f.size)
+        }
+        return downloadCore(triples, entry.modelType, entry.name, ExternalModelSource.URL, entryUrl, entry.languages)
+    }
+
     private suspend fun importCore(
         children: List<SourceFile>,
         modelType: String,
@@ -157,57 +203,148 @@ class ExternalModelImporter(
                 pins[canonical] = FilePin(digest.digest().joinToString("") { "%02x".format(it) }, verified = true)
             }
 
-            // 5. Pre-native metadata validation BEFORE persisting: a wrong family is an
-            //    import-time error, never a transcription-time exit(255). Key rule mirrors
-            //    the engine: vocab_size always; the nemo keys only for the nemo family.
-            val requiredKeys = mutableListOf("vocab_size")
-            if (modelType == "nemo_transducer") {
-                requiredKeys += "subsampling_factor"
-                requiredKeys += "model_type"
-            }
-            val missingMeta = SherpaOnnxBackend.missingOnnxMetadata(File(targetDir, CANONICAL_ENCODER), requiredKeys)
-            if (missingMeta.isNotEmpty()) {
-                throw IllegalArgumentException(
-                    "the encoder is missing required ONNX metadata ($missingMeta): " +
-                        "the files may be corrupt, an incompatible export, or the wrong family")
-            }
-
-            // 6. Same-hash dedupe BEFORE creating a new record. The fresh copy is removed
-            //    unless it landed on the existing record's own directory (same-path
-            //    re-import: the files are identical, deleting them would destroy the record).
-            val sizeBytes = targetDir.walkBottomUp().filter { it.isFile }.sumOf { it.length() }
-            val existing = store.records().firstOrNull { it.files == pins }
-            if (existing != null) {
-                if (existing.dir != targetDir.absolutePath) {
-                    targetDir.deleteRecursively()
-                }
-                val updated = existing.copy(displayName = sanitizeDirName(displayName), modelType = modelType)
-                store.update(updated)
-                Log.i(TAG, "Re-import deduped onto existing record ${existing.backendId}")
-                return updated
-            }
-
-            // 7. Register.
-            val record = ExternalModelRecord(
-                id = uuid(),
-                displayName = sanitizeDirName(displayName),
-                dir = targetDir.absolutePath,
-                family = ModelFamily.TRANSDUCER,
-                modelType = modelType,
-                languages = emptyList(),
-                source = ExternalModelSource.LOCAL,
-                sourceUrl = null,
-                files = pins,
-                sizeBytes = sizeBytes,
-                importedAt = System.currentTimeMillis(),
-            )
-            store.add(record)
-            Log.i(TAG, "Imported external model ${record.backendId} from $displayName ($sizeBytes bytes)")
-            return record
+            return registerImported(targetDir, pins, ModelFamily.TRANSDUCER, modelType, emptyList(),
+                ExternalModelSource.LOCAL, null, displayName)
         } catch (e: Exception) {
             targetDir.deleteRecursively()
             throw e
         }
+    }
+
+    /** One downloadable file: source url, canonical destination, optional server-side pin, optional size. */
+    internal data class DownloadTriple(val url: String, val canonicalName: String, val sha256: String?, val size: Long?)
+
+    /**
+     * Shared download core for the URL entries (plan Task 8): canonical-name landing,
+     * unconditional pre-flight over known sizes, resumable per-file download
+     * ([com.antivocale.app.data.download.ResumeDownloadHelper]), sha256 verification
+     * when a pin exists and a computed trust-on-first-use pin when not, then the same
+     * registration tail as the local entry (metadata validation, dedupe, store.add).
+     */
+    private suspend fun downloadCore(
+        triples: List<DownloadTriple>,
+        modelType: String,
+        displayName: String,
+        source: ExternalModelSource,
+        sourceUrl: String?,
+        languages: List<String> = emptyList(),
+    ): ExternalModelRecord {
+        val root = filesRoot()
+        val knownTotal = triples.map { it.size }.filterNotNull().sum()
+        if (knownTotal > 0 && knownTotal > root.usableSpace) {
+            throw IllegalArgumentException(
+                "not enough disk space: need ${knownTotal / (1024 * 1024)}MB, available ${root.usableSpace / (1024 * 1024)}MB")
+        }
+        root.mkdirs()
+        val targetDir = File(root, sanitizeDirName(displayName) + "-" + uuid().take(6))
+        if (targetDir.exists()) targetDir.deleteRecursively()
+        targetDir.mkdirs()
+
+        try {
+            val pins = HashMap<String, FilePin>()
+            for (triple in triples) {
+                val target = File(targetDir, triple.canonicalName)
+                val result = ResumeDownloadHelper.downloadWithResume(
+                    DownloadConfig(
+                        url = triple.url,
+                        tempFile = target,
+                        targetFile = target,
+                        estimatedSizeBytes = triple.size ?: 0L,
+                    ),
+                )
+                val file = result.getOrThrow()
+                val actual = sha256OfFile(file)
+                val pin = when (triple.sha256) {
+                    null -> FilePin(actual, verified = false)  // TOFU: computed on first download
+                    else -> {
+                        if (!actual.equals(triple.sha256, ignoreCase = true)) {
+                            throw IllegalArgumentException(
+                                "integrity check failed for ${triple.canonicalName}: " +
+                                    "expected ${triple.sha256}, got $actual")
+                        }
+                        FilePin(actual, verified = true)
+                    }
+                }
+                pins[triple.canonicalName] = pin
+            }
+
+            return registerImported(targetDir, pins, ModelFamily.TRANSDUCER, modelType, languages, source, sourceUrl, displayName)
+        } catch (e: Exception) {
+            targetDir.deleteRecursively()
+            throw e
+        }
+    }
+
+    /** Shared registration tail: metadata validation, same-hash dedupe, store.add. */
+    private suspend fun registerImported(
+        targetDir: File,
+        pins: Map<String, FilePin>,
+        family: ModelFamily,
+        modelType: String,
+        languages: List<String>,
+        source: ExternalModelSource,
+        sourceUrl: String?,
+        displayName: String,
+    ): ExternalModelRecord {
+        // Pre-native metadata validation BEFORE persisting: a wrong family is an
+        // import-time error, never a transcription-time exit(255). Key rule mirrors
+        // the engine: vocab_size always; the nemo keys only for the nemo family.
+        val requiredKeys = mutableListOf("vocab_size")
+        if (modelType == "nemo_transducer") {
+            requiredKeys += "subsampling_factor"
+            requiredKeys += "model_type"
+        }
+        val missingMeta = SherpaOnnxBackend.missingOnnxMetadata(File(targetDir, CANONICAL_ENCODER), requiredKeys)
+        if (missingMeta.isNotEmpty()) {
+            throw IllegalArgumentException(
+                "the encoder is missing required ONNX metadata ($missingMeta): " +
+                    "the files may be corrupt, an incompatible export, or the wrong family")
+        }
+
+        // Same-hash dedupe BEFORE creating a new record. The fresh copy is removed
+        // unless it landed on the existing record's own directory (same-path
+        // re-import: the files are identical, deleting them would destroy the record).
+        val sizeBytes = targetDir.walkBottomUp().filter { it.isFile }.sumOf { it.length() }
+        val existing = store.records().firstOrNull { it.files == pins }
+        if (existing != null) {
+            if (existing.dir != targetDir.absolutePath) {
+                targetDir.deleteRecursively()
+            }
+            val updated = existing.copy(displayName = displayName.trim(), modelType = modelType)
+            store.update(updated)
+            Log.i(TAG, "Re-import deduped onto existing record ${existing.backendId}")
+            return updated
+        }
+
+        val record = ExternalModelRecord(
+            id = uuid(),
+            displayName = displayName.trim(),
+            dir = targetDir.absolutePath,
+            family = family,
+            modelType = modelType,
+            languages = languages,
+            source = source,
+            sourceUrl = sourceUrl,
+            files = pins,
+            sizeBytes = sizeBytes,
+            importedAt = System.currentTimeMillis(),
+        )
+        store.add(record)
+        Log.i(TAG, "Imported external model ${record.backendId} from $displayName ($sizeBytes bytes)")
+        return record
+    }
+
+    private fun sha256OfFile(file: File): String {
+        val digest = MessageDigest.getInstance("SHA-256")
+        file.inputStream().use { input ->
+            val buffer = ByteArray(COPY_BUFFER)
+            while (true) {
+                val read = input.read(buffer)
+                if (read < 0) break
+                digest.update(buffer, 0, read)
+            }
+        }
+        return digest.digest().joinToString("") { "%02x".format(it) }
     }
 
     private fun sanitizeDirName(name: String): String =
