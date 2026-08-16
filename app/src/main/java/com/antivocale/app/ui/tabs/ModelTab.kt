@@ -1647,7 +1647,7 @@ private fun ParakeetDownloadSection(
                     onCancelClick = { viewModel.cancelParakeetDownload(variant) },
                     onResumeClick = { viewModel.resumeParakeetDownload(variant) },
                     onClearPartialClick = { viewModel.clearParakeetPartialDownload(variant) },
-                    onUseClick = { guardedModelSwitch { viewModel.useParakeetModel() } },
+                    onUseClick = { guardedModelSwitch { viewModel.useParakeetModel(variant) } },
                     onDeleteClick = { viewModel.showParakeetDeleteDialog(variant) },
                     onBenchmarkClick = {
                         val path = ParakeetDownloader.getModelPath(context, variant)

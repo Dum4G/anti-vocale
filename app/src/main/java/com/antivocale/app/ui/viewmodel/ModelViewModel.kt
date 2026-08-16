@@ -1489,10 +1489,13 @@ class ModelViewModel @Inject constructor(
      * The active variant is auto-resolved via [ParakeetModelManager.resolveActiveModelPath]
      * (prefer SmoothQuant, else Stock int8). There is no user variant selector for Parakeet.
      */
-    fun useParakeetModel() {
+    fun useParakeetModel(variant: ParakeetModelManager.Variant? = null) {
         viewModelScope.launch {
             val context = ctx
-            val modelPath = ParakeetModelManager.resolveActiveModelPath(context)
+            // When the user picks a specific variant from its card, honor that
+            // choice; otherwise auto-resolve (prefer SmoothQuant, else Stock int8).
+            val modelPath = variant?.let { ParakeetDownloader.getModelPath(context, it) }
+                ?: ParakeetModelManager.resolveActiveModelPath(context)
                 ?: _parakeetState.value.modelPath
             if (modelPath != null) {
                 // Save resolved Parakeet path and switch backend preference

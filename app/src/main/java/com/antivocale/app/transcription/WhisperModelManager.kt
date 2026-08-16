@@ -93,25 +93,11 @@ object WhisperModelManager {
         override val estimatedSizeMB: Long,
         override val supportedLanguageCodes: Set<String> = emptySet()
     ) : ModelVariant {
-        SMALL(
-            titleResId = R.string.whisper_small_title,
-            descriptionResId = R.string.whisper_small_description,
-            dirName = "sherpa-onnx-whisper-small",
-            estimatedSizeMB = 358,
-            supportedLanguageCodes = Language.WHISPER_MULTILINGUAL
-        ),
         TURBO(
             titleResId = R.string.whisper_turbo_title,
             descriptionResId = R.string.whisper_turbo_description,
             dirName = "sherpa-onnx-whisper-turbo",
             estimatedSizeMB = 988,
-            supportedLanguageCodes = Language.WHISPER_MULTILINGUAL
-        ),
-        MEDIUM(
-            titleResId = R.string.whisper_medium_title,
-            descriptionResId = R.string.whisper_medium_description,
-            dirName = "sherpa-onnx-whisper-medium",
-            estimatedSizeMB = 903,
             supportedLanguageCodes = Language.WHISPER_MULTILINGUAL
         ),
         DISTIL_LARGE_V3(
@@ -120,6 +106,20 @@ object WhisperModelManager {
             dirName = "sherpa-onnx-whisper-distil-large-v3-it",
             estimatedSizeMB = 938,
             supportedLanguageCodes = Language.WHISPER_DISTIL_IT
+        ),
+        MEDIUM(
+            titleResId = R.string.whisper_medium_title,
+            descriptionResId = R.string.whisper_medium_description,
+            dirName = "sherpa-onnx-whisper-medium",
+            estimatedSizeMB = 903,
+            supportedLanguageCodes = Language.WHISPER_MULTILINGUAL
+        ),
+        SMALL(
+            titleResId = R.string.whisper_small_title,
+            descriptionResId = R.string.whisper_small_description,
+            dirName = "sherpa-onnx-whisper-small",
+            estimatedSizeMB = 358,
+            supportedLanguageCodes = Language.WHISPER_MULTILINGUAL
         )
     }
 
