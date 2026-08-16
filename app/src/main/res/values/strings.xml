@@ -782,7 +782,7 @@
     <string name="share_target_external">Anti-Vocale (External)</string>
     <string name="external_none_imported">No external models imported</string>
     <string name="external_section_title">External models</string>
-    <string name="external_import_folder">Import from folder</string>
+    <string name="external_import_folder">Select folder</string>
     <string name="model_advanced_section">Advanced</string>
     <string name="model_advanced_description">Manually import model files</string>
     <string name="external_import_url">Import from URL</string>

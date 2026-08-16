@@ -629,23 +629,40 @@ fun ModelTab(
                     modifier = Modifier.padding(top = 12.dp, bottom = 4.dp)
                 )
 
-                // LiteRT-LM (Gemma): single-file picker.
+                // LiteRT-LM (Gemma): same double-container structure as ONNX Sherpa.
                 // SAF (OpenDocument) grants its own URI access, no storage permission
                 // needed (TASK-301).
-                Text(
-                    "LiteRT-LM",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 4.dp, bottom = 2.dp)
-                )
-                OutlinedButton(
-                    onClick = { viewModel.openFilePicker() },
-                    modifier = Modifier.fillMaxWidth()
+                Card(
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
                 ) {
-                    Icon(Icons.Default.FolderOpen, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(stringResource(R.string.select_model_from_device))
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                Icons.Default.Memory,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text("LiteRT-LM", style = MaterialTheme.typography.titleMedium)
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+                        OutlinedButton(
+                            onClick = { viewModel.openFilePicker() },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(Icons.Default.FolderOpen, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(stringResource(R.string.select_model_from_device))
+                        }
+                    }
                 }
+
+                Spacer(modifier = Modifier.height(8.dp))
 
                 // ONNX (sherpa): the section Card carries the header; no
                 // separate label needed here.
@@ -1085,11 +1102,6 @@ private fun ExternalModelsSection(
                 Spacer(modifier = Modifier.width(12.dp))
                 Column {
                     Text("ONNX Sherpa", style = MaterialTheme.typography.titleMedium)
-                    Text(
-                        stringResource(R.string.external_section_title),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
                 }
             }
 
