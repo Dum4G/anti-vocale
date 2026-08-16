@@ -1191,44 +1191,65 @@ private fun ExternalModelCard(
     onUse: () -> Unit,
     onDelete: () -> Unit,
 ) {
+    // Same container, padding, and button-row pattern as ModelVariantCard:
+    // surface color, 12dp inner padding, buttons aligned End with 8dp spacing.
     Card(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+        modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = if (isActive) MaterialTheme.colorScheme.secondaryContainer
-            else MaterialTheme.colorScheme.surfaceVariant
+            containerColor = MaterialTheme.colorScheme.surface
         )
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                Icon(
-                    Icons.Default.Memory,
-                    contentDescription = null,
-                    tint = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Column {
-                    Text(record.displayName, style = MaterialTheme.typography.titleMedium)
-                    Text(
-                        record.family.name + " · " + record.modelType.ifBlank { "zipformer" } +
-                            " · " + com.antivocale.app.util.formatFileSize(record.sizeBytes) +
-                            if (record.languages.isEmpty()) "" else " · " + record.languages.joinToString(", "),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+            ) {
+                Row(
+                    modifier = Modifier.weight(1f),
+                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                ) {
+                    Icon(
+                        Icons.Default.Memory,
+                        contentDescription = null,
+                        tint = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Column {
+                        Text(record.displayName, style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            record.family.name + " · " + record.modelType.ifBlank { "zipformer" } +
+                                " · " + com.antivocale.app.util.formatFileSize(record.sizeBytes) +
+                                if (record.languages.isEmpty()) "" else " · " + record.languages.joinToString(", "),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+                if (isActive) {
+                    Icon(
+                        Icons.Default.CheckCircle,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
                     )
                 }
             }
 
+            // Action buttons: same arrangement as ModelVariantCard
             Spacer(modifier = Modifier.height(8.dp))
-            // Same icon-button pattern as ModelVariantCard: Check to use,
-            // Delete trash, side by side on one row.
-            Row {
-                Button(
-                    onClick = onUse,
-                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary
-                    )
-                ) {
-                    Icon(Icons.Default.Check, contentDescription = stringResource(R.string.use_model))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)
+            ) {
+                if (!isActive) {
+                    Button(
+                        onClick = onUse,
+                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary
+                        )
+                    ) {
+                        Icon(Icons.Default.Check, contentDescription = stringResource(R.string.use_model))
+                    }
                 }
                 OutlinedButton(
                     onClick = onDelete,
