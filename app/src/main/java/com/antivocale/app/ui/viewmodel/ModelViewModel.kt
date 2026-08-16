@@ -2162,6 +2162,12 @@ class ModelViewModel @Inject constructor(
         externalModelStore.validRecordsFlow
             .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5_000), emptyList())
 
+    /** Persisted active backend id, for card active-state keyed on identity (not display name). */
+    val activeBackendId: StateFlow<String> =
+        preferencesManager.transcriptionBackend
+            .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5_000),
+                PreferencesManager.DEFAULT_TRANSCRIPTION_BACKEND)
+
     /** Folder import (SAF): the primary v2a entry. */
     fun importExternalFromFolder(context: Context, treeUri: Uri, modelType: String) {
         _externalImportState.value = ExternalImportState.Importing
@@ -2254,6 +2260,14 @@ class ModelViewModel @Inject constructor(
     fun correctExternalFamily(record: com.antivocale.app.data.ExternalModelRecord, modelType: String) {
         viewModelScope.launch {
             externalModelStore.update(record.copy(modelType = modelType))
+            // Unload hint (plan binding): while the corrected model is the loaded active
+            // backend, ensureBackendLoaded sees same-id-and-ready and the engine's
+            // already-initialized short-circuit would keep the OLD recognizer running.
+            if (preferencesManager.transcriptionBackend.first() == record.backendId &&
+                backendManager.getActiveBackend()?.id == record.backendId
+            ) {
+                backendManager.unloadActiveBackend()
+            }
         }
     }
 

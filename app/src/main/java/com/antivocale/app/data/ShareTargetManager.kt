@@ -89,7 +89,8 @@ class ShareTargetManager(
         // anymore (already deleted from the store; the provider snapshot lags), and the
         // early return below would otherwise skip the family resync entirely.
         if (backendId.startsWith("external:")) {
-            setClassNameEnabled(EXTERNAL_FAMILY_ALIAS, externalRecordsPresent())
+            val advancedEnabled = runBlocking { preferencesManager.advancedSharingEnabled.first() }
+            setClassNameEnabled(EXTERNAL_FAMILY_ALIAS, advancedEnabled && externalRecordsPresent())
         }
         val target = backendRegistry.backends.find { it.backendId == backendId } ?: return
         setComponentEnabled(target, false)

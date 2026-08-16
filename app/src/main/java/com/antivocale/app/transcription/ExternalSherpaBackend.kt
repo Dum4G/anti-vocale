@@ -34,12 +34,12 @@ class ExternalSherpaBackend @Inject constructor() : TranscriptionBackend {
         private const val TAG = "ExternalSherpaBackend"
         private const val PLACEHOLDER_ID = "external"
 
-        // Canonical role order pinned by SherpaOnnxBackend.REQUIRED_MODEL_FILES:
-        // encoder, decoder, joiner, tokens.
-        private val ENCODER_FILE get() = SherpaOnnxBackend.REQUIRED_MODEL_FILES[0]
-        private val DECODER_FILE get() = SherpaOnnxBackend.REQUIRED_MODEL_FILES[1]
-        private val JOINER_FILE get() = SherpaOnnxBackend.REQUIRED_MODEL_FILES[2]
-        private val TOKENS_FILE get() = SherpaOnnxBackend.REQUIRED_MODEL_FILES[3]
+        // Canonical names resolved BY PREFIX, not by list position: reordering
+        // REQUIRED_MODEL_FILES must never silently repoint a role.
+        private val ENCODER_FILE get() = SherpaOnnxBackend.REQUIRED_MODEL_FILES.first { it.startsWith("encoder") }
+        private val DECODER_FILE get() = SherpaOnnxBackend.REQUIRED_MODEL_FILES.first { it.startsWith("decoder") }
+        private val JOINER_FILE get() = SherpaOnnxBackend.REQUIRED_MODEL_FILES.first { it.startsWith("joiner") }
+        private val TOKENS_FILE get() = SherpaOnnxBackend.REQUIRED_MODEL_FILES.first { it.startsWith("tokens") }
     }
 
     @Volatile private var configuredId: String = PLACEHOLDER_ID
@@ -52,9 +52,12 @@ class ExternalSherpaBackend @Inject constructor() : TranscriptionBackend {
     // Single-pass like Parakeet/GigaAM: realistic v2a imports are offline transducers.
     override val maxChunkDurationSeconds: Int? = null
 
-    private var recognizer: OfflineRecognizer? = null
+    // @Volatile: a concurrent transcribeAudio on another thread must not read a stale
+    // null recognizer after initialize completes (the unload-during-transcription window
+    // is inherited from the sibling backends and unchanged).
+    @Volatile private var recognizer: OfflineRecognizer? = null
     private var modelDir: String? = null
-    private var isInitialized = false
+    @Volatile private var isInitialized = false
 
     override suspend fun initialize(context: Context, config: BackendConfig): Result<Unit> {
         val externalConfig = config as? BackendConfig.ExternalConfig

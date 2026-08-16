@@ -38,11 +38,12 @@ class ExternalModelImporter(
         private const val TAG = "ExternalModelImporter"
         private const val COPY_BUFFER = 64 * 1024
 
-        // Canonical role order pinned by SherpaOnnxBackend.REQUIRED_MODEL_FILES.
-        private val CANONICAL_ENCODER get() = SherpaOnnxBackend.REQUIRED_MODEL_FILES[0]
-        private val CANONICAL_DECODER get() = SherpaOnnxBackend.REQUIRED_MODEL_FILES[1]
-        private val CANONICAL_JOINER get() = SherpaOnnxBackend.REQUIRED_MODEL_FILES[2]
-        private val CANONICAL_TOKENS get() = SherpaOnnxBackend.REQUIRED_MODEL_FILES[3]
+        // Canonical names resolved BY PREFIX, not by list position: reordering
+        // REQUIRED_MODEL_FILES must never silently repoint a role.
+        private val CANONICAL_ENCODER get() = SherpaOnnxBackend.REQUIRED_MODEL_FILES.first { it.startsWith("encoder") }
+        private val CANONICAL_DECODER get() = SherpaOnnxBackend.REQUIRED_MODEL_FILES.first { it.startsWith("decoder") }
+        private val CANONICAL_JOINER get() = SherpaOnnxBackend.REQUIRED_MODEL_FILES.first { it.startsWith("joiner") }
+        private val CANONICAL_TOKENS get() = SherpaOnnxBackend.REQUIRED_MODEL_FILES.first { it.startsWith("tokens") }
     }
 
     /** One importable source file, from either the filesystem or SAF. */
@@ -230,8 +231,14 @@ class ExternalModelImporter(
         languages: List<String> = emptyList(),
     ): ExternalModelRecord {
         val root = filesRoot()
-        val knownTotal = triples.map { it.size }.filterNotNull().sum()
-        if (knownTotal > 0 && knownTotal > root.usableSpace) {
+        // Unconditional pre-flight (spec binding): callers must supply sizes (the HF
+        // listing always has them; entry JSON rejects sizeless files at parse time).
+        val unknownSizes = triples.filter { it.size == null || it.size!! <= 0L }
+        require(unknownSizes.isEmpty()) {
+            "cannot pre-flight disk space: no size for ${unknownSizes.joinToString { it.canonicalName }}"
+        }
+        val knownTotal = triples.sumOf { it.size!! }
+        if (knownTotal > root.usableSpace) {
             throw IllegalArgumentException(
                 "not enough disk space: need ${knownTotal / (1024 * 1024)}MB, available ${root.usableSpace / (1024 * 1024)}MB")
         }
@@ -252,6 +259,10 @@ class ExternalModelImporter(
                         estimatedSizeBytes = triple.size ?: 0L,
                     ),
                 )
+                // The resume machinery leaves a .size sidecar next to the target; model
+                // directories must stay clean (the engine walks them for size and users
+                // browse them), so drop it once the file is complete and verified.
+                ResumeDownloadHelper.sizeSidecar(target).delete()
                 val file = result.getOrThrow()
                 val actual = sha256OfFile(file)
                 val pin = when (triple.sha256) {
@@ -304,15 +315,23 @@ class ExternalModelImporter(
         // Same-hash dedupe BEFORE creating a new record. The fresh copy is removed
         // unless it landed on the existing record's own directory (same-path
         // re-import: the files are identical, deleting them would destroy the record).
+        // A dedupe-matched record whose directory is GONE is repointed at the fresh
+        // copy instead (otherwise the re-import would "succeed" while leaving the
+        // record pointing at nothing, and the fresh copy would be deleted).
         val sizeBytes = targetDir.walkBottomUp().filter { it.isFile }.sumOf { it.length() }
         val existing = store.records().firstOrNull { it.files == pins }
         if (existing != null) {
-            if (existing.dir != targetDir.absolutePath) {
+            val existingDirValid = File(existing.dir).exists()
+            if (existing.dir != targetDir.absolutePath && existingDirValid) {
                 targetDir.deleteRecursively()
             }
-            val updated = existing.copy(displayName = displayName.trim(), modelType = modelType)
+            val updated = existing.copy(
+                displayName = displayName.trim(),
+                modelType = modelType,
+                dir = if (existingDirValid) existing.dir else targetDir.absolutePath,
+            )
             store.update(updated)
-            Log.i(TAG, "Re-import deduped onto existing record ${existing.backendId}")
+            Log.i(TAG, "Re-import deduped onto existing record ${existing.backendId} (dirValid=$existingDirValid)")
             return updated
         }
 

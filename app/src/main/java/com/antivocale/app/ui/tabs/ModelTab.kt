@@ -103,6 +103,7 @@ fun ModelTab(
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
+    val activeBackendId by viewModel.activeBackendId.collectAsState()
     val downloadUiState by viewModel.downloadUiState.collectAsState()
     val parakeetState by viewModel.parakeetState.collectAsState()
     val whisperState by viewModel.whisperState.collectAsState()
@@ -562,8 +563,10 @@ fun ModelTab(
         // External models section (v2a): imported models as first-class cards.
         ExternalModelsSection(
             viewModel = viewModel,
-            activeModelName = uiState.modelName,
+            activeBackendId = activeBackendId,
             folderPicker = { externalFolderPicker.launch(null) },
+            selectedModelType = selectedExternalModelType,
+            onModelTypeChange = { selectedExternalModelType = it },
             onDeleteRequest = { externalToDelete = it }
         )
 
@@ -999,8 +1002,10 @@ private fun NemotronDownloadSection(
 @Composable
 private fun ExternalModelsSection(
     viewModel: ModelViewModel,
-    activeModelName: String,
+    activeBackendId: String,
     folderPicker: () -> Unit,
+    selectedModelType: String,
+    onModelTypeChange: (String) -> Unit,
     onDeleteRequest: (com.antivocale.app.data.ExternalModelRecord) -> Unit,
 ) {
     val records by viewModel.externalModels.collectAsState()
@@ -1008,7 +1013,6 @@ private fun ExternalModelsSection(
     var urlDialogOpen by remember { mutableStateOf(false) }
     var urlText by remember { mutableStateOf("") }
     var dropdownExpanded by remember { mutableStateOf(false) }
-    var selectedModelType by remember { mutableStateOf("nemo_transducer") }
 
     val typeOptions = remember {
         listOf(
@@ -1050,7 +1054,7 @@ private fun ExternalModelsSection(
                     DropdownMenuItem(
                         text = { Text(stringResource(labelRes)) },
                         onClick = {
-                            selectedModelType = value
+                            onModelTypeChange(value)
                             dropdownExpanded = false
                         }
                     )
@@ -1095,7 +1099,7 @@ private fun ExternalModelsSection(
         records.forEach { record ->
             ExternalModelCard(
                 record = record,
-                isActive = activeModelName == record.displayName,
+                isActive = activeBackendId == record.backendId,
                 onUse = { viewModel.useExternalModel(record) },
                 onCorrectFamily = { viewModel.correctExternalFamily(record, selectedModelType) },
                 onDelete = { onDeleteRequest(record) },

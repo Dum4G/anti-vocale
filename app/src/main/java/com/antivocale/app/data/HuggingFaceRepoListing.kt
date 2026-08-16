@@ -95,7 +95,7 @@ class HuggingFaceRepoListing(
  */
 object ExternalModelEntryJson {
 
-    data class EntryFile(val name: String, val url: String, val sha256: String, val size: Long?)
+    data class EntryFile(val name: String, val url: String, val sha256: String, val size: Long)
 
     data class Entry(
         val name: String,
@@ -115,7 +115,13 @@ object ExternalModelEntryJson {
                     throw IllegalArgumentException(
                         "entry file ${f.optString("name")} is missing its sha256 pin; hashless entries are rejected")
                 }
-                add(EntryFile(f.getString("name"), f.getString("url"), sha, if (f.has("size") && !f.isNull("size")) f.getLong("size") else null))
+                if (!f.has("size") || f.isNull("size")) {
+                    // The disk pre-flight is unconditional (spec binding): an entry
+                    // without a declared size cannot be pre-flighted, so it is rejected.
+                    throw IllegalArgumentException(
+                        "entry file ${f.optString("name")} is missing its size; entries must declare it")
+                }
+                add(EntryFile(f.getString("name"), f.getString("url"), sha, f.getLong("size")))
             }
         }
         if (files.isEmpty()) throw IllegalArgumentException("entry has no files")

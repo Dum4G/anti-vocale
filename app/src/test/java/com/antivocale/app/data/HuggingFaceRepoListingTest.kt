@@ -92,10 +92,10 @@ class HuggingFaceRepoListingTest {
     fun `entry json parses and demands hashes`() {
         val entry = ExternalModelEntryJson.parse("""
             {"name":"GigaAM v3","modelType":"nemo_transducer","languages":["ru"],
-             "files":[{"name":"some_encoder.onnx","url":"https://x/e.onnx","sha256":"${"b".repeat(64)}"},
-                      {"name":"decoder.onnx","url":"https://x/d.onnx","sha256":"${"c".repeat(64)}"},
-                      {"name":"joiner.onnx","url":"https://x/j.onnx","sha256":"${"d".repeat(64)}"},
-                      {"name":"tokens.txt","url":"https://x/t.txt","sha256":"${"e".repeat(64)}"}]}
+             "files":[{"name":"some_encoder.onnx","url":"https://x/e.onnx","sha256":"${"b".repeat(64)}","size":100},
+                      {"name":"decoder.onnx","url":"https://x/d.onnx","sha256":"${"c".repeat(64)}","size":50},
+                      {"name":"joiner.onnx","url":"https://x/j.onnx","sha256":"${"d".repeat(64)}","size":50},
+                      {"name":"tokens.txt","url":"https://x/t.txt","sha256":"${"e".repeat(64)}","size":10}]}
         """.trimIndent())
         assertEquals("GigaAM v3", entry.name)
         assertEquals("nemo_transducer", entry.modelType)
@@ -105,6 +105,13 @@ class HuggingFaceRepoListingTest {
             ExternalModelEntryJson.parse("""{"name":"x","files":[{"name":"a.onnx","url":"https://x/a"}]}""")
         }
         assertTrue(hashless.isFailure)
+
+        // Sizes are mandatory too: they feed the unconditional disk pre-flight.
+        val sizeless = runCatching {
+            ExternalModelEntryJson.parse(
+                """{"name":"x","files":[{"name":"a.onnx","url":"https://x/a","sha256":"${"f".repeat(64)}"}]}""")
+        }
+        assertTrue(sizeless.isFailure)
     }
 
     // ---- end-to-end against the mock server ----
@@ -147,10 +154,10 @@ class HuggingFaceRepoListingTest {
         val base = server.url("/").toString().trimEnd('/')
         server.enqueue(MockResponse().setBody("""
             {"name":"GigaAM v3","modelType":"nemo_transducer",
-             "files":[{"name":"my_encoder.onnx","url":"$base/e","sha256":"${sha256(encoderBytes)}"},
-                      {"name":"decoder.onnx","url":"$base/d","sha256":"${sha256(decoderBytes)}"},
-                      {"name":"joiner.onnx","url":"$base/j","sha256":"${sha256(joinerBytes)}"},
-                      {"name":"tokens.txt","url":"$base/t","sha256":"${sha256(tokensBytes)}"}]}
+             "files":[{"name":"my_encoder.onnx","url":"$base/e","sha256":"${sha256(encoderBytes)}","size":${encoderBytes.size}},
+                      {"name":"decoder.onnx","url":"$base/d","sha256":"${sha256(decoderBytes)}","size":${decoderBytes.size}},
+                      {"name":"joiner.onnx","url":"$base/j","sha256":"${sha256(joinerBytes)}","size":${joinerBytes.size}},
+                      {"name":"tokens.txt","url":"$base/t","sha256":"${sha256(tokensBytes)}","size":${tokensBytes.size}}]}
         """.trimIndent()))
         server.enqueue(MockResponse().setBody(okio.Buffer().write(encoderBytes)))
         server.enqueue(MockResponse().setBody(okio.Buffer().write(decoderBytes)))
