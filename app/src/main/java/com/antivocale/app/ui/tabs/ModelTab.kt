@@ -1141,7 +1141,11 @@ private fun ExternalModelsSection(
             else -> {}
         }
 
-        records.forEach { record ->
+        // Gap between the import buttons/state and the first card
+        if (records.isNotEmpty()) Spacer(modifier = Modifier.height(8.dp))
+
+        records.forEachIndexed { index, record ->
+            if (index > 0) Spacer(modifier = Modifier.height(8.dp))
             ExternalModelCard(
                 record = record,
                 isActive = activeBackendId == record.backendId,
