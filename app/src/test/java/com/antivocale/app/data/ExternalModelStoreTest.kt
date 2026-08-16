@@ -90,12 +90,14 @@ class ExternalModelStoreTest {
     }
 
     @Test
-    fun `corrupt entry in JSON causes whole list to decode as empty, no crash`() = runTest {
+    fun `corrupt entry is dropped, valid records survive`() = runTest {
         val rec = record()
         val validJson = rec.toJson().toString()
-        // Two entries: one valid, one garbage. decode must return emptyList (first bad entry stops).
+        // Two entries: one valid, one with an unknown family enum. Element-granularity:
+        // the corrupt entry is dropped, the valid one survives (whole-list rejection
+        // combined with the store's read-modify-write would destroy it on the next write).
         val raw = """[$validJson,{"id":"x","displayName":"bad","dir":"/tmp","family":"CTC"}]"""
         val decoded = ExternalModelListJson.decode(raw)
-        assertEquals(emptyList<ExternalModelRecord>(), decoded)
+        assertEquals(listOf(rec), decoded)
     }
 }

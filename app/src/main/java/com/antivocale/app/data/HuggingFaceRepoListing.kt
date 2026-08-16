@@ -81,7 +81,12 @@ class HuggingFaceRepoListing(
             if (parts.size < 2) return null
             val (owner, repo) = parts[0] to parts[1]
             if (owner.isBlank() || repo.isBlank()) return null
-            if (trimmed.startsWith("http") && !trimmed.contains("huggingface.co")) return null
+            if (trimmed.startsWith("http")) {
+                // Host equality, not substring: "https://evil.com/huggingface.co/x"
+                // would pass a contains() check.
+                val host = runCatching { java.net.URI(trimmed).host }.getOrNull() ?: return null
+                if (host != "huggingface.co" && host != "www.huggingface.co") return null
+            }
             return "$owner/$repo"
         }
     }
