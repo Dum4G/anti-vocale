@@ -647,14 +647,8 @@ fun ModelTab(
                     Text(stringResource(R.string.select_model_from_device))
                 }
 
-                // ONNX (sherpa): folder picker, URL import, model cards.
-                Text(
-                    "ONNX Sherpa",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 12.dp, bottom = 2.dp)
-                )
-
+                // ONNX (sherpa): the section Card carries the header; no
+                // separate label needed here.
                 ExternalModelsSection(
                     viewModel = viewModel,
                     activeBackendId = activeBackendId,
@@ -1071,10 +1065,37 @@ private fun ExternalModelsSection(
     val selectedLabel = typeOptions.firstOrNull { it.first == selectedModelType }?.second
         ?: R.string.external_model_type_nemo
 
-    Column(modifier = Modifier.fillMaxWidth()) {
-        // No section title here: the caller (Advanced section) already renders
-        // the "External models" header and the "ONNX Sherpa" sub-label.
-        Row(modifier = Modifier.fillMaxWidth()) {
+    // Outer section Card matching the curated sections (GigaAM, Nemotron):
+    // surfaceVariant background, header with icon + title + description, 16dp padding.
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            // Header (same shape as GigaAmDownloadSection's header)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    Icons.Default.GraphicEq,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Column {
+                    Text("ONNX Sherpa", style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        stringResource(R.string.external_section_title),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(modifier = Modifier.fillMaxWidth()) {
             Button(
                 onClick = folderPicker,
                 enabled = importState !is ModelViewModel.ExternalImportState.Importing,
@@ -1115,6 +1136,7 @@ private fun ExternalModelsSection(
                 onUse = { viewModel.useExternalModel(record) },
                 onDelete = { onDeleteRequest(record) },
             )
+        }
         }
     }
 
