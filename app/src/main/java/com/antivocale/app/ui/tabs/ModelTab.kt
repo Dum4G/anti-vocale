@@ -1175,20 +1175,30 @@ private fun ExternalModelCard(
             }
 
             Spacer(modifier = Modifier.height(8.dp))
-            // fillMaxWidth is load-bearing: inside a wrapping Row a weighted child
-            // collapses to its minimum width and the label stacks one character
-            // per line (the bug in the user's screenshot).
+            // Primary action full-width, secondary actions share the row below:
+            // a weighted button beside two intrinsic-width ones collapses to its
+            // minimum (the vertical-text bug in the user's screenshot), regardless
+            // of the Row being fillMaxWidth.
+            Button(
+                onClick = onUse,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(stringResource(R.string.use_model), maxLines = 1)
+            }
+            Spacer(modifier = Modifier.height(4.dp))
             Row(modifier = Modifier.fillMaxWidth()) {
-                Button(onClick = onUse, modifier = Modifier.weight(1f)) {
-                    Text(stringResource(R.string.use_model), maxLines = 1)
+                OutlinedButton(
+                    onClick = onCorrectFamily,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(stringResource(R.string.external_correct_family), maxLines = 1, style = MaterialTheme.typography.labelSmall)
                 }
                 Spacer(modifier = Modifier.width(8.dp))
-                OutlinedButton(onClick = onCorrectFamily) {
-                    Text(stringResource(R.string.external_correct_family), maxLines = 2)
-                }
-                Spacer(modifier = Modifier.width(8.dp))
-                OutlinedButton(onClick = onDelete) {
-                    Text(stringResource(R.string.delete))
+                OutlinedButton(
+                    onClick = onDelete,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(stringResource(R.string.delete), maxLines = 1)
                 }
             }
 
