@@ -51,9 +51,10 @@ object AppModule {
     fun provideShareTargetManager(
         @ApplicationContext context: Context,
         preferencesManager: PreferencesManager,
-        backendRegistry: BackendRegistry
+        backendRegistry: BackendRegistry,
+        externalModelStore: ExternalModelStore
     ): ShareTargetManager {
-        return ShareTargetManager(context, preferencesManager, backendRegistry)
+        return ShareTargetManager(context, preferencesManager, backendRegistry, externalModelStore)
     }
 
     @Provides

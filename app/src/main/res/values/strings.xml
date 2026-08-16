@@ -779,6 +779,8 @@
     <string name="share_target_gemma">Anti-Vocale (Gemma)</string>
     <string name="share_target_nemotron">Anti-Vocale (Nemotron)</string>
     <string name="share_target_gigaam">Anti-Vocale (GigaAM)</string>
+    <string name="share_target_external">Anti-Vocale (External)</string>
+    <string name="external_none_imported">No external models imported</string>
 
     <!-- Advanced sharing settings -->
     <string name="share_targets_title">Share Targets</string>

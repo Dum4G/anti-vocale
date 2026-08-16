@@ -57,4 +57,12 @@ class ShareReceiverActivityAliasTest {
     fun `empty string returns null (no static backend carries the blank alias)`() {
         assertNull(ShareReceiverActivity.backendIdForAlias("", registry))
     }
+
+    @Test
+    fun `share external family alias resolves to the sentinel`() {
+        assertEquals(
+            "external",
+            ShareReceiverActivity.backendIdForAlias("com.antivocale.app.ShareExternal", registry)
+        )
+    }
 }

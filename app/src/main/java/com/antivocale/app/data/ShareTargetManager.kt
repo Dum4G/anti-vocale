@@ -17,14 +17,23 @@ import kotlinx.coroutines.runBlocking
  * model-path flow supplies the has-model check. Targets iterate in the registry's
  * canonical backend order; each component is set independently, so the order is not
  * observable.
+ *
+ * The external-models family alias (ShareExternal) is synced as a FAMILY, not per
+ * descriptor: external records carry blank aliases by design, and the single manifest
+ * component is enabled iff advanced sharing is on AND at least one valid record exists.
+ * The store (not the records provider) backs that check: the provider's StateFlow starts
+ * empty and fills asynchronously, and this manager's syncs can run from
+ * BridgeApplication.onCreate before the first emission lands.
  */
 class ShareTargetManager(
     private val context: Context,
     private val preferencesManager: PreferencesManager,
-    private val backendRegistry: BackendRegistry
+    private val backendRegistry: BackendRegistry,
+    private val externalModelStore: ExternalModelStore,
 ) {
     companion object {
         private const val TAG = "ShareTargetManager"
+        private const val EXTERNAL_FAMILY_ALIAS = "com.antivocale.app.ShareExternal"
     }
 
     private fun hasModel(backendId: String): Boolean = runBlocking {
@@ -35,19 +44,27 @@ class ShareTargetManager(
     private fun setComponentEnabled(target: BackendDescriptor, enabled: Boolean) {
         // Sideload-only and external backends have no manifest activity-alias; skip them.
         if (target.shareAlias.isBlank()) return
+        setClassNameEnabled(target.shareAlias, enabled)
+    }
+
+    private fun setClassNameEnabled(className: String, enabled: Boolean) {
         val state = if (enabled)
             PackageManager.COMPONENT_ENABLED_STATE_ENABLED
         else
             PackageManager.COMPONENT_ENABLED_STATE_DISABLED
         try {
             context.packageManager.setComponentEnabledSetting(
-                ComponentName(context, target.shareAlias),
+                ComponentName(context, className),
                 state,
                 PackageManager.DONT_KILL_APP
             )
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to sync ${target.shareAlias}", e)
+            Log.e(TAG, "Failed to sync $className", e)
         }
+    }
+
+    private fun externalRecordsPresent(): Boolean = runBlocking {
+        externalModelStore.validRecords().isNotEmpty()
     }
 
     fun syncAll() {
@@ -61,9 +78,19 @@ class ShareTargetManager(
             if (target.shareAlias.isBlank()) return@forEach
             setComponentEnabled(target, advancedEnabled && hasModel(target.backendId))
         }
+
+        // Family-level sync for the external-models share target.
+        setClassNameEnabled(EXTERNAL_FAMILY_ALIAS, advancedEnabled && externalRecordsPresent())
     }
 
     fun onModelDeleted(backendId: String) {
+        // An external record deletion can remove the LAST valid record: resync the family.
+        // This runs BEFORE the descriptor lookup: an external id may not derive a descriptor
+        // anymore (already deleted from the store; the provider snapshot lags), and the
+        // early return below would otherwise skip the family resync entirely.
+        if (backendId.startsWith("external:")) {
+            setClassNameEnabled(EXTERNAL_FAMILY_ALIAS, externalRecordsPresent())
+        }
         val target = backendRegistry.backends.find { it.backendId == backendId } ?: return
         setComponentEnabled(target, false)
     }
@@ -77,6 +104,7 @@ class ShareTargetManager(
             syncAll()
         } else {
             backendRegistry.backends.forEach { setComponentEnabled(it, false) }
+            setClassNameEnabled(EXTERNAL_FAMILY_ALIAS, false)
         }
     }
 }
