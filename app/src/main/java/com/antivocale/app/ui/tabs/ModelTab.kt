@@ -1062,7 +1062,7 @@ private fun ExternalModelsSection(
             }
         }
 
-        Row {
+        Row(modifier = Modifier.fillMaxWidth()) {
             Button(
                 onClick = folderPicker,
                 enabled = importState !is ModelViewModel.ExternalImportState.Importing,
@@ -1175,13 +1175,16 @@ private fun ExternalModelCard(
             }
 
             Spacer(modifier = Modifier.height(8.dp))
-            Row {
+            // fillMaxWidth is load-bearing: inside a wrapping Row a weighted child
+            // collapses to its minimum width and the label stacks one character
+            // per line (the bug in the user's screenshot).
+            Row(modifier = Modifier.fillMaxWidth()) {
                 Button(onClick = onUse, modifier = Modifier.weight(1f)) {
-                    Text(stringResource(R.string.use_model))
+                    Text(stringResource(R.string.use_model), maxLines = 1)
                 }
                 Spacer(modifier = Modifier.width(8.dp))
                 OutlinedButton(onClick = onCorrectFamily) {
-                    Text(stringResource(R.string.external_correct_family))
+                    Text(stringResource(R.string.external_correct_family), maxLines = 2)
                 }
                 Spacer(modifier = Modifier.width(8.dp))
                 OutlinedButton(onClick = onDelete) {
