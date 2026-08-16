@@ -621,18 +621,40 @@ fun ModelTab(
             }
 
             if (advancedExpanded) {
-                // Manual LiteRT-LM (Gemma) model file: SAF (OpenDocument) grants its
-                // own URI access, no storage permission needed (TASK-301).
+                // Semantic grouping: LiteRT-LM (Gemma) and ONNX (sherpa) are
+                // distinct ecosystems, each with its own import flow.
+                Text(
+                    stringResource(R.string.external_section_title),
+                    style = MaterialTheme.typography.titleSmall,
+                    modifier = Modifier.padding(top = 12.dp, bottom = 4.dp)
+                )
+
+                // LiteRT-LM (Gemma): single-file picker.
+                // SAF (OpenDocument) grants its own URI access, no storage permission
+                // needed (TASK-301).
+                Text(
+                    "LiteRT-LM",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 4.dp, bottom = 2.dp)
+                )
                 OutlinedButton(
                     onClick = { viewModel.openFilePicker() },
-                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp)
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     Icon(Icons.Default.FolderOpen, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(stringResource(R.string.select_model_from_device))
                 }
 
-                // External models section (v2a): ONNX sherpa imports and cards.
+                // ONNX (sherpa): folder picker, URL import, model cards.
+                Text(
+                    "ONNX Sherpa",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 12.dp, bottom = 2.dp)
+                )
+
                 ExternalModelsSection(
                     viewModel = viewModel,
                     activeBackendId = activeBackendId,
@@ -1050,12 +1072,8 @@ private fun ExternalModelsSection(
         ?: R.string.external_model_type_nemo
 
     Column(modifier = Modifier.fillMaxWidth()) {
-        Text(
-            stringResource(R.string.external_section_title),
-            style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
-        )
-
+        // No section title here: the caller (Advanced section) already renders
+        // the "External models" header and the "ONNX Sherpa" sub-label.
         Row(modifier = Modifier.fillMaxWidth()) {
             Button(
                 onClick = folderPicker,
@@ -1095,7 +1113,6 @@ private fun ExternalModelsSection(
                 record = record,
                 isActive = activeBackendId == record.backendId,
                 onUse = { viewModel.useExternalModel(record) },
-                onCorrectFamily = { viewModel.correctExternalFamily(record, selectedModelType) },
                 onDelete = { onDeleteRequest(record) },
             )
         }
@@ -1172,7 +1189,6 @@ private fun ExternalModelCard(
     record: com.antivocale.app.data.ExternalModelRecord,
     isActive: Boolean,
     onUse: () -> Unit,
-    onCorrectFamily: () -> Unit,
     onDelete: () -> Unit,
 ) {
     Card(
@@ -1203,10 +1219,9 @@ private fun ExternalModelCard(
             }
 
             Spacer(modifier = Modifier.height(8.dp))
-            // Primary action full-width, secondary actions share the row below:
-            // a weighted button beside two intrinsic-width ones collapses to its
-            // minimum (the vertical-text bug in the user's screenshot), regardless
-            // of the Row being fillMaxWidth.
+            // One action per row: Use full-width, Delete below. The architecture
+            // recovery action is gone from the card (delete + re-import is the
+            // clearer path; the selector lives in the import dialog).
             Button(
                 onClick = onUse,
                 modifier = Modifier.fillMaxWidth()
@@ -1214,20 +1229,11 @@ private fun ExternalModelCard(
                 Text(stringResource(R.string.use_model), maxLines = 1)
             }
             Spacer(modifier = Modifier.height(4.dp))
-            Row(modifier = Modifier.fillMaxWidth()) {
-                OutlinedButton(
-                    onClick = onDelete,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(stringResource(R.string.delete), maxLines = 1)
-                }
-                Spacer(modifier = Modifier.width(8.dp))
-                OutlinedButton(
-                    onClick = onCorrectFamily,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(stringResource(R.string.external_correct_family), maxLines = 1)
-                }
+            OutlinedButton(
+                onClick = onDelete,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(stringResource(R.string.delete), maxLines = 1)
             }
 
             Spacer(modifier = Modifier.height(8.dp))
