@@ -67,6 +67,11 @@ class ShareTargetManager(
         externalModelStore.validRecords().isNotEmpty()
     }
 
+    /** Family-level sync for the external-models share target: enabled iff advanced sharing AND a valid record. */
+    private fun syncExternalFamily(advancedEnabled: Boolean) {
+        setClassNameEnabled(EXTERNAL_FAMILY_ALIAS, advancedEnabled && externalRecordsPresent())
+    }
+
     fun syncAll() {
         val advancedEnabled = runBlocking {
             preferencesManager.advancedSharingEnabled.first()
@@ -79,8 +84,7 @@ class ShareTargetManager(
             setComponentEnabled(target, advancedEnabled && hasModel(target.backendId))
         }
 
-        // Family-level sync for the external-models share target.
-        setClassNameEnabled(EXTERNAL_FAMILY_ALIAS, advancedEnabled && externalRecordsPresent())
+        syncExternalFamily(advancedEnabled)
     }
 
     fun onModelDeleted(backendId: String) {
@@ -88,9 +92,9 @@ class ShareTargetManager(
         // This runs BEFORE the descriptor lookup: an external id may not derive a descriptor
         // anymore (already deleted from the store; the provider snapshot lags), and the
         // early return below would otherwise skip the family resync entirely.
-        if (backendId.startsWith("external:")) {
+        if (backendId.startsWith(ExternalModelRecord.BACKEND_ID_PREFIX)) {
             val advancedEnabled = runBlocking { preferencesManager.advancedSharingEnabled.first() }
-            setClassNameEnabled(EXTERNAL_FAMILY_ALIAS, advancedEnabled && externalRecordsPresent())
+            syncExternalFamily(advancedEnabled)
         }
         val target = backendRegistry.backends.find { it.backendId == backendId } ?: return
         setComponentEnabled(target, false)

@@ -33,13 +33,6 @@ class ExternalSherpaBackend @Inject constructor() : TranscriptionBackend {
     companion object {
         private const val TAG = "ExternalSherpaBackend"
         private const val PLACEHOLDER_ID = "external"
-
-        // Canonical names resolved BY PREFIX, not by list position: reordering
-        // REQUIRED_MODEL_FILES must never silently repoint a role.
-        private val ENCODER_FILE get() = SherpaOnnxBackend.REQUIRED_MODEL_FILES.first { it.startsWith("encoder") }
-        private val DECODER_FILE get() = SherpaOnnxBackend.REQUIRED_MODEL_FILES.first { it.startsWith("decoder") }
-        private val JOINER_FILE get() = SherpaOnnxBackend.REQUIRED_MODEL_FILES.first { it.startsWith("joiner") }
-        private val TOKENS_FILE get() = SherpaOnnxBackend.REQUIRED_MODEL_FILES.first { it.startsWith("tokens") }
     }
 
     @Volatile private var configuredId: String = PLACEHOLDER_ID
@@ -84,16 +77,10 @@ class ExternalSherpaBackend @Inject constructor() : TranscriptionBackend {
                     "missing files in ${record.dir}: $missing"))
             }
 
-            // Metadata rule, deliberately different from both templates: vocab_size
-            // ALWAYS; subsampling_factor + model_type ONLY for the nemo family (those
-            // keys are what the nemo loader reads; a zipformer import with modelType ""
-            // does not carry them and must not be rejected for their absence).
-            val requiredKeys = mutableListOf("vocab_size")
-            if (record.modelType == "nemo_transducer") {
-                requiredKeys += "subsampling_factor"
-                requiredKeys += "model_type"
-            }
-            val missingMeta = SherpaOnnxBackend.missingOnnxMetadata(File(dir, ENCODER_FILE), requiredKeys)
+            // Metadata rule shared with the importer (single definition):
+            // [SherpaOnnxBackend.requiredTransducerMetadataKeys].
+            val requiredKeys = SherpaOnnxBackend.requiredTransducerMetadataKeys(record.modelType)
+            val missingMeta = SherpaOnnxBackend.missingOnnxMetadata(File(dir, SherpaOnnxBackend.CANONICAL_ENCODER), requiredKeys)
             if (missingMeta.isNotEmpty()) {
                 Log.e(TAG, "Encoder missing required ONNX metadata: $missingMeta")
                 return@withContext Result.failure(TranscriptionException.ModelLoadError(
@@ -105,11 +92,11 @@ class ExternalSherpaBackend @Inject constructor() : TranscriptionBackend {
             try {
                 val modelConfig = OfflineModelConfig(
                     transducer = OfflineTransducerModelConfig(
-                        encoder = "${record.dir}/$ENCODER_FILE",
-                        decoder = "${record.dir}/$DECODER_FILE",
-                        joiner = "${record.dir}/$JOINER_FILE"
+                        encoder = "${record.dir}/${SherpaOnnxBackend.CANONICAL_ENCODER}",
+                        decoder = "${record.dir}/${SherpaOnnxBackend.CANONICAL_DECODER}",
+                        joiner = "${record.dir}/${SherpaOnnxBackend.CANONICAL_JOINER}"
                     ),
-                    tokens = "${record.dir}/$TOKENS_FILE",
+                    tokens = "${record.dir}/${SherpaOnnxBackend.CANONICAL_TOKENS}",
                     modelType = record.modelType,
                     numThreads = externalConfig.numThreads,
                     debug = false,

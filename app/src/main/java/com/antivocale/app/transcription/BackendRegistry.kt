@@ -2,7 +2,6 @@ package com.antivocale.app.transcription
 
 import android.content.Context
 import com.antivocale.app.R
-import com.antivocale.app.data.ExternalModelListJson
 import com.antivocale.app.data.ExternalModelRecord
 import com.antivocale.app.data.ExternalModelRecordsProvider
 import com.antivocale.app.data.ExternalModelStore
@@ -255,8 +254,11 @@ class BackendRegistry @Inject constructor(
         modelType = ExtractionService.ModelType.EXTERNAL,
         shareAlias = "",  // spec: the ShareExternal family alias is synced separately
         deriveDisplayName = { _, _ -> record.displayName },
-        modelPathFlow = { prefs -> prefs.externalModelsJson.map { js ->
-            ExternalModelListJson.decode(js).firstOrNull { r -> r.id == record.id }?.dir } },
+        // The store (not the registry) owns the records JSON: the path flow derives
+        // from its decoded list instead of a second raw-preference decoder here.
+        modelPathFlow = { _ ->
+            externalModelStore.recordsFlow.map { records ->
+                records.firstOrNull { it.id == record.id }?.dir } },
         saveModelPath = { _, path ->
             // Identity is the uuid, not a path preference: a save redirects the record's
             // dir via a targeted update, so the captured snapshot reverts nothing else.

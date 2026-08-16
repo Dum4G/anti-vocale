@@ -21,7 +21,7 @@ class ExternalModelStore(
         preferencesManager.externalModelsJson.map(ExternalModelListJson::decode)
 
     val validRecordsFlow: Flow<List<ExternalModelRecord>> =
-        preferencesManager.externalModelsJson.map { js -> ExternalModelListJson.decode(js).filter { dirExists(it.dir) } }
+        recordsFlow.map { records -> records.filter { dirExists(it.dir) } }
 
     suspend fun records(): List<ExternalModelRecord> = recordsFlow.first()
 
@@ -48,8 +48,6 @@ class ExternalModelStore(
         mutate { list -> list.filterNot { it.id == id } }
         return removed
     }
-
-    suspend fun invalidRecordIds(): List<String> = records().filterNot { dirExists(it.dir) }.map { it.id }
 
     private suspend fun mutate(transform: (List<ExternalModelRecord>) -> List<ExternalModelRecord>) {
         val current = records()

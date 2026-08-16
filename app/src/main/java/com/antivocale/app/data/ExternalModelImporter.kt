@@ -5,6 +5,7 @@ import android.net.Uri
 import android.util.Log
 import androidx.documentfile.provider.DocumentFile
 import com.antivocale.app.data.download.DownloadConfig
+import com.antivocale.app.data.download.HashVerifier
 import com.antivocale.app.data.download.ResumeDownloadHelper
 import com.antivocale.app.transcription.SherpaOnnxBackend
 import java.io.File
@@ -37,13 +38,6 @@ class ExternalModelImporter(
     companion object {
         private const val TAG = "ExternalModelImporter"
         private const val COPY_BUFFER = 64 * 1024
-
-        // Canonical names resolved BY PREFIX, not by list position: reordering
-        // REQUIRED_MODEL_FILES must never silently repoint a role.
-        private val CANONICAL_ENCODER get() = SherpaOnnxBackend.REQUIRED_MODEL_FILES.first { it.startsWith("encoder") }
-        private val CANONICAL_DECODER get() = SherpaOnnxBackend.REQUIRED_MODEL_FILES.first { it.startsWith("decoder") }
-        private val CANONICAL_JOINER get() = SherpaOnnxBackend.REQUIRED_MODEL_FILES.first { it.startsWith("joiner") }
-        private val CANONICAL_TOKENS get() = SherpaOnnxBackend.REQUIRED_MODEL_FILES.first { it.startsWith("tokens") }
     }
 
     /** One importable source file, from either the filesystem or SAF. */
@@ -84,10 +78,10 @@ class ExternalModelImporter(
         val joiner = findByRole("joiner") ?: return null
         val tokens = files.firstOrNull { it.equals("tokens.txt", ignoreCase = true) } ?: return null
         return linkedMapOf(
-            CANONICAL_ENCODER to encoder,
-            CANONICAL_DECODER to decoder,
-            CANONICAL_JOINER to joiner,
-            CANONICAL_TOKENS to tokens,
+            SherpaOnnxBackend.CANONICAL_ENCODER to encoder,
+            SherpaOnnxBackend.CANONICAL_DECODER to decoder,
+            SherpaOnnxBackend.CANONICAL_JOINER to joiner,
+            SherpaOnnxBackend.CANONICAL_TOKENS to tokens,
         )
     }
 
@@ -159,6 +153,21 @@ class ExternalModelImporter(
         return downloadCore(triples, entry.modelType, entry.name, ExternalModelSource.URL, entryUrl, entry.languages)
     }
 
+    /**
+     * URL import: classifies the url (a HuggingFace repo URL, or a catalog-entry JSON
+     * url otherwise) and delegates to the matching entry. The classification lives
+     * here, next to the two entries it picks between, so callers pass the url through.
+     */
+    suspend fun importFromUrl(
+        url: String,
+        modelType: String = "nemo_transducer",
+    ): ExternalModelRecord =
+        if (url.trim().endsWith(".json") || HuggingFaceRepoListing.parseRepoId(url) == null) {
+            importFromEntryJson(url)
+        } else {
+            importFromHuggingFaceRepo(url, modelType)
+        }
+
     private suspend fun importCore(
         children: List<SourceFile>,
         modelType: String,
@@ -173,18 +182,12 @@ class ExternalModelImporter(
         // 2. Unconditional disk pre-flight (spec binding): the import doubles disk usage.
         val root = filesRoot()
         val totalBytes = plan.values.sumOf { sourceName -> children.first { it.name == sourceName }.size }
-        if (totalBytes > root.usableSpace) {
-            throw IllegalArgumentException(
-                "not enough disk space: need ${totalBytes / (1024 * 1024)}MB, available ${root.usableSpace / (1024 * 1024)}MB")
-        }
+        requireDiskSpace(root, totalBytes)
 
         // 3. Id-fragment target dir, clean-replace on collision (TASK-313 lesson).
-        root.mkdirs()
-        val targetDir = File(root, sanitizeDirName(displayName) + "-" + uuid().take(6))
-        if (targetDir.exists()) targetDir.deleteRecursively()
-        targetDir.mkdirs()
+        val targetDir = freshTargetDir(root, displayName)
 
-        try {
+        return importCleaningUpOnFailure(targetDir) {
             // 4. Copy with streaming SHA-256 pins.
             val pins = HashMap<String, FilePin>()
             for ((canonical, sourceName) in plan) {
@@ -204,16 +207,13 @@ class ExternalModelImporter(
                 pins[canonical] = FilePin(digest.digest().joinToString("") { "%02x".format(it) }, verified = true)
             }
 
-            return registerImported(targetDir, pins, ModelFamily.TRANSDUCER, modelType, emptyList(),
+            registerImported(targetDir, pins, ModelFamily.TRANSDUCER, modelType, emptyList(),
                 ExternalModelSource.LOCAL, null, displayName)
-        } catch (e: Exception) {
-            targetDir.deleteRecursively()
-            throw e
         }
     }
 
-    /** One downloadable file: source url, canonical destination, optional server-side pin, optional size. */
-    internal data class DownloadTriple(val url: String, val canonicalName: String, val sha256: String?, val size: Long?)
+    /** One downloadable file: source url, canonical destination, optional server-side pin, mandatory size (feeds the disk pre-flight). */
+    internal data class DownloadTriple(val url: String, val canonicalName: String, val sha256: String?, val size: Long)
 
     /**
      * Shared download core for the URL entries (plan Task 8): canonical-name landing,
@@ -233,21 +233,14 @@ class ExternalModelImporter(
         val root = filesRoot()
         // Unconditional pre-flight (spec binding): callers must supply sizes (the HF
         // listing always has them; entry JSON rejects sizeless files at parse time).
-        val unknownSizes = triples.filter { it.size == null || it.size!! <= 0L }
+        val unknownSizes = triples.filter { it.size <= 0L }
         require(unknownSizes.isEmpty()) {
             "cannot pre-flight disk space: no size for ${unknownSizes.joinToString { it.canonicalName }}"
         }
-        val knownTotal = triples.sumOf { it.size!! }
-        if (knownTotal > root.usableSpace) {
-            throw IllegalArgumentException(
-                "not enough disk space: need ${knownTotal / (1024 * 1024)}MB, available ${root.usableSpace / (1024 * 1024)}MB")
-        }
-        root.mkdirs()
-        val targetDir = File(root, sanitizeDirName(displayName) + "-" + uuid().take(6))
-        if (targetDir.exists()) targetDir.deleteRecursively()
-        targetDir.mkdirs()
+        requireDiskSpace(root, triples.sumOf { it.size })
+        val targetDir = freshTargetDir(root, displayName)
 
-        try {
+        return importCleaningUpOnFailure(targetDir) {
             val pins = HashMap<String, FilePin>()
             for (triple in triples) {
                 val target = File(targetDir, triple.canonicalName)
@@ -256,7 +249,7 @@ class ExternalModelImporter(
                         url = triple.url,
                         tempFile = target,
                         targetFile = target,
-                        estimatedSizeBytes = triple.size ?: 0L,
+                        estimatedSizeBytes = triple.size,
                     ),
                 )
                 // The resume machinery leaves a .size sidecar next to the target; model
@@ -264,7 +257,7 @@ class ExternalModelImporter(
                 // browse them), so drop it once the file is complete and verified.
                 ResumeDownloadHelper.sizeSidecar(target).delete()
                 val file = result.getOrThrow()
-                val actual = sha256OfFile(file)
+                val actual = HashVerifier.sha256(file)
                 val pin = when (triple.sha256) {
                     null -> FilePin(actual, verified = false)  // TOFU: computed on first download
                     else -> {
@@ -279,10 +272,7 @@ class ExternalModelImporter(
                 pins[triple.canonicalName] = pin
             }
 
-            return registerImported(targetDir, pins, ModelFamily.TRANSDUCER, modelType, languages, source, sourceUrl, displayName)
-        } catch (e: Exception) {
-            targetDir.deleteRecursively()
-            throw e
+            registerImported(targetDir, pins, ModelFamily.TRANSDUCER, modelType, languages, source, sourceUrl, displayName)
         }
     }
 
@@ -298,14 +288,10 @@ class ExternalModelImporter(
         displayName: String,
     ): ExternalModelRecord {
         // Pre-native metadata validation BEFORE persisting: a wrong family is an
-        // import-time error, never a transcription-time exit(255). Key rule mirrors
-        // the engine: vocab_size always; the nemo keys only for the nemo family.
-        val requiredKeys = mutableListOf("vocab_size")
-        if (modelType == "nemo_transducer") {
-            requiredKeys += "subsampling_factor"
-            requiredKeys += "model_type"
-        }
-        val missingMeta = SherpaOnnxBackend.missingOnnxMetadata(File(targetDir, CANONICAL_ENCODER), requiredKeys)
+        // import-time error, never a transcription-time exit(255). The key rule is
+        // the engine's own: [SherpaOnnxBackend.requiredTransducerMetadataKeys].
+        val requiredKeys = SherpaOnnxBackend.requiredTransducerMetadataKeys(modelType)
+        val missingMeta = SherpaOnnxBackend.missingOnnxMetadata(File(targetDir, SherpaOnnxBackend.CANONICAL_ENCODER), requiredKeys)
         if (missingMeta.isNotEmpty()) {
             throw IllegalArgumentException(
                 "the encoder is missing required ONNX metadata ($missingMeta): " +
@@ -353,18 +339,31 @@ class ExternalModelImporter(
         return record
     }
 
-    private fun sha256OfFile(file: File): String {
-        val digest = MessageDigest.getInstance("SHA-256")
-        file.inputStream().use { input ->
-            val buffer = ByteArray(COPY_BUFFER)
-            while (true) {
-                val read = input.read(buffer)
-                if (read < 0) break
-                digest.update(buffer, 0, read)
-            }
+    /** Unconditional disk pre-flight (spec binding): the import doubles disk usage. */
+    private fun requireDiskSpace(root: File, totalBytes: Long) {
+        if (totalBytes > root.usableSpace) {
+            throw IllegalArgumentException(
+                "not enough disk space: need ${totalBytes / (1024 * 1024)}MB, available ${root.usableSpace / (1024 * 1024)}MB")
         }
-        return digest.digest().joinToString("") { "%02x".format(it) }
     }
+
+    /** Id-fragment target dir under [root], clean-replaced on collision (TASK-313 lesson). */
+    private fun freshTargetDir(root: File, displayName: String): File {
+        root.mkdirs()
+        val targetDir = File(root, sanitizeDirName(displayName) + "-" + uuid().take(6))
+        if (targetDir.exists()) targetDir.deleteRecursively()
+        targetDir.mkdirs()
+        return targetDir
+    }
+
+    /** Runs [block]; on failure removes [targetDir] so no half-imported dir survives. */
+    private suspend fun <R> importCleaningUpOnFailure(targetDir: File, block: suspend () -> R): R =
+        try {
+            block()
+        } catch (e: Exception) {
+            targetDir.deleteRecursively()
+            throw e
+        }
 
     private fun sanitizeDirName(name: String): String =
         name.replace(Regex("[^A-Za-z0-9._-]"), "-")

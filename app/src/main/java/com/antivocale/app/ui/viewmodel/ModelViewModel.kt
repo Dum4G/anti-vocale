@@ -2169,41 +2169,27 @@ class ModelViewModel @Inject constructor(
                 PreferencesManager.DEFAULT_TRANSCRIPTION_BACKEND)
 
     /** Folder import (SAF): the primary v2a entry. */
-    fun importExternalFromFolder(context: Context, treeUri: Uri, modelType: String) {
+    fun importExternalFromFolder(context: Context, treeUri: Uri, modelType: String) =
+        runExternalImport("External folder") { externalModelImporter.importFromTreeUri(context, treeUri, modelType) }
+
+    /** URL import: a HuggingFace repo URL or a catalog-entry JSON URL. */
+    fun importExternalFromUrl(url: String, modelType: String) =
+        runExternalImport("External URL") { externalModelImporter.importFromUrl(url, modelType) }
+
+    /** Shared import scaffolding: progress state, IO dispatching, and the failure tail. */
+    private fun runExternalImport(label: String, block: suspend () -> com.antivocale.app.data.ExternalModelRecord) {
         _externalImportState.value = ExternalImportState.Importing
         viewModelScope.launch(Dispatchers.IO) {
-            runCatching { externalModelImporter.importFromTreeUri(context, treeUri, modelType) }
+            runCatching { block() }
                 .fold(
                     onSuccess = { record -> onExternalImported(record) },
                     onFailure = { e ->
-                        Log.e(TAG, "External folder import failed", e)
+                        Log.e(TAG, "$label import failed", e)
                         _externalImportState.value = ExternalImportState.Error(e.message ?: "unknown error")
                         _snackbarEvent.tryEmit(SnackbarEvent.Message(
                             ctx.getString(R.string.external_import_failed, e.message ?: "")))
                     },
                 )
-        }
-    }
-
-    /** URL import: a HuggingFace repo URL or a catalog-entry JSON URL. */
-    fun importExternalFromUrl(url: String, modelType: String) {
-        _externalImportState.value = ExternalImportState.Importing
-        viewModelScope.launch(Dispatchers.IO) {
-            val result = runCatching {
-                val isEntryJson = url.trim().endsWith(".json") ||
-                    com.antivocale.app.data.HuggingFaceRepoListing.parseRepoId(url) == null
-                if (isEntryJson) externalModelImporter.importFromEntryJson(url)
-                else externalModelImporter.importFromHuggingFaceRepo(url, modelType)
-            }
-            result.fold(
-                onSuccess = { record -> onExternalImported(record) },
-                onFailure = { e ->
-                    Log.e(TAG, "External URL import failed", e)
-                    _externalImportState.value = ExternalImportState.Error(e.message ?: "unknown error")
-                    _snackbarEvent.tryEmit(SnackbarEvent.Message(
-                        ctx.getString(R.string.external_import_failed, e.message ?: "")))
-                },
-            )
         }
     }
 

@@ -263,11 +263,11 @@ class ShareReceiverActivity : Activity() {
 
         // Resolve the backend override once (applies to both the ASR path and the subtitle
         // choice's "Transcribe audio" action). A share-target alias forces a specific backend.
+        // The entry point is resolved once here and handed to the external chooser, which
+        // needs the same store from the same app-wide singleton.
+        val entryPoint = EntryPointAccessors.fromApplication(applicationContext, BackendRegistryEntryPoint::class.java)
         val backendOverride: String? = intent?.component?.className?.let { alias ->
-            val registry = EntryPointAccessors.fromApplication(
-                applicationContext, BackendRegistryEntryPoint::class.java
-            ).backendRegistry()
-            backendIdForAlias(alias, registry)?.also { backendId ->
+            backendIdForAlias(alias, entryPoint.backendRegistry())?.also { backendId ->
                 Log.i(TAG, "Share target alias detected: $alias -> backend: $backendId")
             }
         }
@@ -275,7 +275,7 @@ class ShareReceiverActivity : Activity() {
         // External-family share target: the sentinel must become a concrete external:<id>
         // BEFORE any consumer (subtitle branch, timeout worker, service intent) sees it.
         if (backendOverride == EXTERNAL_FAMILY_BACKEND_ID) {
-            showExternalModelChooser(taskId, localPath)
+            showExternalModelChooser(taskId, localPath, entryPoint.externalModelStore())
             return
         }
 
@@ -287,9 +287,8 @@ class ShareReceiverActivity : Activity() {
      * deliberately not a ComponentActivity, so no Compose). Blocks until the user picks an
      * imported model, then continues the normal flow with the concrete external backend id.
      */
-    private fun showExternalModelChooser(taskId: String, localPath: String) {
-        val entryPoint = EntryPointAccessors.fromApplication(applicationContext, BackendRegistryEntryPoint::class.java)
-        val records = kotlinx.coroutines.runBlocking { entryPoint.externalModelStore().validRecords() }
+    private fun showExternalModelChooser(taskId: String, localPath: String, store: com.antivocale.app.data.ExternalModelStore) {
+        val records = kotlinx.coroutines.runBlocking { store.validRecords() }
 
         if (records.isEmpty()) {
             // Unreachable in production (the alias component is disabled with no records),

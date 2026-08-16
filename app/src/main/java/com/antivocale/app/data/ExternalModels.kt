@@ -23,7 +23,7 @@ data class ExternalModelRecord(
     val sizeBytes: Long,
     val importedAt: Long,
 ) {
-    val backendId: String get() = "external:$id"
+    val backendId: String get() = BACKEND_ID_PREFIX + id
 
     fun toJson(): JSONObject = JSONObject().apply {
         put("id", id); put("displayName", displayName); put("dir", dir)
@@ -36,6 +36,13 @@ data class ExternalModelRecord(
 
     companion object {
         private const val TAG = "ExternalModelRecord"
+
+        /**
+         * The routing prefix every external backend id carries. The single definition:
+         * dispatch sites (manager, orchestrator, share manager) match on it instead of
+         * retyping the literal, so an id-scheme change stays a one-file edit.
+         */
+        const val BACKEND_ID_PREFIX = "external:"
 
         fun fromJson(o: JSONObject): ExternalModelRecord? = try {
             val filesObj = o.getJSONObject("files")

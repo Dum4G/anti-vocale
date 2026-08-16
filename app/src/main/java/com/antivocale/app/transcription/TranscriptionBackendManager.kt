@@ -67,6 +67,11 @@ class TranscriptionBackendManager @Inject constructor(
      * @param config Configuration for the backend
      * @return Result indicating success or failure
      */
+    /** True when the id is external AND the provider snapshot holds its record ("known" = store resolution, not engine state). */
+    private fun isKnownExternal(backendId: String): Boolean =
+        backendId.startsWith(ExternalModelRecord.BACKEND_ID_PREFIX) &&
+            externalRecordsProvider.records.value.any { it.backendId == backendId }
+
     suspend fun setActiveBackend(
         backendId: String,
         context: Context,
@@ -74,8 +79,8 @@ class TranscriptionBackendManager @Inject constructor(
     ): Result<Unit> {
         val backend: TranscriptionBackend
         val effectiveConfig: BackendConfig
-        if (backendId.startsWith("external:")) {
-            if (externalRecordsProvider.records.value.none { it.backendId == backendId }) {
+        if (backendId.startsWith(ExternalModelRecord.BACKEND_ID_PREFIX)) {
+            if (!isKnownExternal(backendId)) {
                 return Result.failure(IllegalArgumentException("Unknown backend: $backendId"))
             }
             // Threads/provider are resolved by the orchestrator; inventing defaults here
@@ -135,9 +140,7 @@ class TranscriptionBackendManager @Inject constructor(
      * @return The backend, or null if not found
      */
     fun getBackend(backendId: String): TranscriptionBackend? =
-        if (backendId.startsWith("external:") &&
-            externalRecordsProvider.records.value.any { it.backendId == backendId }
-        ) externalEngine
+        if (isKnownExternal(backendId)) externalEngine
         else backends[backendId]
 
     /**

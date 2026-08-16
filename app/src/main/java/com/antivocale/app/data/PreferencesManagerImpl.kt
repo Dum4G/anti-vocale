@@ -192,6 +192,10 @@ class PreferencesManagerImpl(
 
     override val transcriptionBackend: Flow<String> = context.dataStore.data.map { it[TRANSCRIPTION_BACKEND] ?: PreferencesManager.DEFAULT_TRANSCRIPTION_BACKEND }
         .onStart { emit(cache.get().transcriptionBackend) }
+        // Same rationale as externalModelsJson: unrelated preference writes re-emit the
+        // identical value and every collector (ActiveModelRepository's flatMapLatest,
+        // ModelViewModel's activeBackendId) would restart on it for nothing.
+        .distinctUntilChanged()
 
     override suspend fun saveTranscriptionBackend(backendId: String) {
         context.dataStore.edit { preferences ->

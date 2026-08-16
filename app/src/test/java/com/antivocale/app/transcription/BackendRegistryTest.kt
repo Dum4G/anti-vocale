@@ -284,7 +284,7 @@ class BackendRegistryTest {
     }
 
     @Test
-    fun `static seven plus N external backends coexist and stay unique`() = runTest {
+    fun `static six plus N external backends coexist and stay unique`() = runTest {
         val fake = FakePreferencesManager()
         val store = com.antivocale.app.data.ExternalModelStore(fake, dirExists = { true })
         store.add(externalRecord("111111111111")); store.add(externalRecord("222222222222"))

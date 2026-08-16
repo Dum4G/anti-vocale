@@ -74,7 +74,9 @@ class ExternalModelStoreTest {
         val rec = record()
         store.add(rec)
         val validity = ExternalModelStore(fake) { false }
-        assertTrue(validity.invalidRecordIds().contains(rec.id))
+        // The record is still persisted; it is only filtered out of every valid view.
+        assertEquals(listOf(rec.id), validity.records().map { it.id })
+        assertEquals(emptyList<ExternalModelRecord>(), validity.validRecords())
         assertNull(validity.byId(rec.id))
     }
 

@@ -1,11 +1,13 @@
 package com.antivocale.app.data
 
 import android.util.Log
+import com.antivocale.app.data.download.HashVerifier
 import com.antivocale.app.transcription.SherpaOnnxBackend
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.withContext
 import java.io.File
-import java.security.MessageDigest
 
 /**
  * One-shot migration absorbing the custom-transducer backend into the external-model
@@ -31,7 +33,6 @@ class CustomTransducerMigrator(
     companion object {
         private const val TAG = "CustomTransducerMigrator"
         private const val CUSTOM_TRANSDUCER_BACKEND_ID = "custom-transducer"
-        private const val DEFAULT_CUSTOM_TRANSDUCER_MODEL_TYPE = "nemo_transducer"
     }
 
     suspend fun migrate() {
@@ -42,6 +43,16 @@ class CustomTransducerMigrator(
         // Marker FIRST: crash-safe idempotence (pinned by the ordering test).
         preferencesManager.saveExternalMigrationDone(true)
 
+        // The pin computation and the size walk read the whole legacy model dir
+        // (~hundreds of MB); BridgeApplication drives this with runBlocking on the
+        // main thread, so keep the file I/O off it. The outer runBlocking still
+        // awaits completion, preserving the syncAll ordering contract above.
+        withContext(Dispatchers.IO) {
+            migrateLegacyModel()
+        }
+    }
+
+    private suspend fun migrateLegacyModel() {
         val path = preferencesManager.customTransducerModelPath.firstOrNull() ?: run {
             Log.i(TAG, "No custom-transducer preference, migration complete")
             return
@@ -61,10 +72,10 @@ class CustomTransducerMigrator(
 
         // Hand-computed pins over the already-copied files.
         val pins = canonical.associateWith { file ->
-            FilePin(sha256OfFile(File(dir, file)), verified = true)
+            FilePin(HashVerifier.sha256(File(dir, file)), verified = true)
         }
         val modelType = preferencesManager.customTransducerModelType.firstOrNull()
-            ?: DEFAULT_CUSTOM_TRANSDUCER_MODEL_TYPE
+            ?: PreferencesManager.DEFAULT_CUSTOM_TRANSDUCER_MODEL_TYPE
 
         val record = ExternalModelRecord(
             id = java.util.UUID.randomUUID().toString().replace("-", ""),
@@ -86,18 +97,5 @@ class CustomTransducerMigrator(
             preferencesManager.saveTranscriptionBackend(record.backendId)
             Log.i(TAG, "Active backend pointer rewritten to ${record.backendId}")
         }
-    }
-
-    private fun sha256OfFile(file: File): String {
-        val digest = MessageDigest.getInstance("SHA-256")
-        file.inputStream().use { input ->
-            val buffer = ByteArray(64 * 1024)
-            while (true) {
-                val read = input.read(buffer)
-                if (read < 0) break
-                digest.update(buffer, 0, read)
-            }
-        }
-        return digest.digest().joinToString("") { "%02x".format(it) }
     }
 }

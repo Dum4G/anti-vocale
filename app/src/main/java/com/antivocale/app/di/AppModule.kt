@@ -67,8 +67,13 @@ object AppModule {
     fun provideExternalModelImporter(
         store: ExternalModelStore,
         @ApplicationContext context: Context,
+        okHttpClient: OkHttpClient,
     ): ExternalModelImporter =
-        ExternalModelImporter(store, filesRoot = { java.io.File(context.filesDir, "models/external") })
+        ExternalModelImporter(
+            store = store,
+            filesRoot = { java.io.File(context.filesDir, "models/external") },
+            repoListing = com.antivocale.app.data.HuggingFaceRepoListing(okHttpClient),
+        )
 
     @Provides
     @Singleton

@@ -322,10 +322,11 @@ class TranscriptionOrchestrator @Inject constructor(
             // changed). The disabled GGUF backend is unregistered, so its literal id is
             // matched before the lookup; unknown ids yield a null descriptor and fall
             // through to the LLM loader, exactly as the former string-keyed when did.
-            // External ids ("external:<uuid>") are resolved from the store, not the
-            // registry, so they are intercepted before the registry lookup (same tier
-            // as the GGUF special case).
-            val loadResult = if (preferredBackendId.startsWith("external:")) {
+            // External ids are intercepted BEFORE the registry lookup for a behavioral
+            // reason, not a registry gap: a prefix-matched id whose record is gone must
+            // fail fast with NotInitialized instead of falling through to the LLM
+            // loader (pinned by the unknown-external-id override test).
+            val loadResult = if (preferredBackendId.startsWith(ExternalModelRecord.BACKEND_ID_PREFIX)) {
                 loadExternalBackend(context, preferredBackendId)
             } else when (preferredBackendId) {
                 GGUF_BACKEND_ID -> loadGgufBackend(context)
@@ -475,10 +476,10 @@ class TranscriptionOrchestrator @Inject constructor(
 
     /**
      * Loads an external (user-imported) model by resolving the record from the store.
-     * The [backendId] must start with "external:" and contain the record UUID after the prefix.
+     * The [backendId] must carry [ExternalModelRecord.BACKEND_ID_PREFIX] with the record UUID after it.
      */
     private suspend fun loadExternalBackend(context: Context, backendId: String): Result<Unit> {
-        val record = externalModelStore.byId(backendId.removePrefix("external:"))
+        val record = externalModelStore.byId(backendId.removePrefix(ExternalModelRecord.BACKEND_ID_PREFIX))
             ?: run {
                 Log.w(TAG, "no external model record for $backendId")
                 return Result.failure(TranscriptionException.NotInitialized())

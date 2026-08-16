@@ -13,7 +13,7 @@ fun emptyRecordsProvider(): ExternalModelRecordsProvider =
     }
 
 /**
- * A [BackendRegistry] over an empty external-model provider: the static seven
+ * A [BackendRegistry] over an empty external-model provider: the static six
  * backends only. Fresh registry per call, and writes through one instance's
  * descriptors are NOT visible to another instance built over a different fake
  * store: tests needing shared store state must construct one registry and
