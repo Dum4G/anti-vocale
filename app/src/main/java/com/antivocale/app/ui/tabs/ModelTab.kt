@@ -1864,14 +1864,7 @@ private fun WhisperDownloadSection(
                             }
                             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
 
-                            // Whisper Small
-                            ComparisonRow(
-                                name = stringResource(R.string.speed_comparison_small_name),
-                                size = stringResource(R.string.speed_comparison_small_size),
-                                speed = stringResource(R.string.speed_comparison_small_speed),
-                                quality = stringResource(R.string.speed_comparison_small_quality)
-                            )
-                            // Whisper Turbo
+                            // Whisper Turbo (best Whisper speed/quality balance)
                             ComparisonRow(
                                 name = stringResource(R.string.speed_comparison_turbo_name),
                                 size = stringResource(R.string.speed_comparison_turbo_size),
@@ -1885,8 +1878,15 @@ private fun WhisperDownloadSection(
                                 speed = stringResource(R.string.speed_comparison_medium_speed),
                                 quality = stringResource(R.string.speed_comparison_medium_quality)
                             )
-                            // Distil Italian
+                            // Whisper Small
+                            ComparisonRow(
+                                name = stringResource(R.string.speed_comparison_small_name),
+                                size = stringResource(R.string.speed_comparison_small_size),
+                                speed = stringResource(R.string.speed_comparison_small_speed),
+                                quality = stringResource(R.string.speed_comparison_small_quality)
+                            )
                             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                            // Distil Italian (best Italian quality)
                             ComparisonRow(
                                 name = stringResource(R.string.speed_comparison_distil_it_name),
                                 size = stringResource(R.string.speed_comparison_distil_it_size),
@@ -1895,7 +1895,7 @@ private fun WhisperDownloadSection(
                                 badge = stringResource(R.string.speed_comparison_distil_it_note),
                                 muted = false
                             )
-                            // Parakeet TDT
+                            // Parakeet TDT (recommended)
                             ComparisonRow(
                                 name = stringResource(R.string.speed_comparison_parakeet_name),
                                 size = stringResource(R.string.speed_comparison_parakeet_size),
@@ -1903,6 +1903,28 @@ private fun WhisperDownloadSection(
                                 quality = stringResource(R.string.speed_comparison_parakeet_quality),
                                 badge = stringResource(R.string.speed_comparison_parakeet_note),
                                 muted = false
+                            )
+                            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                            // Qwen3-ASR (broadest language coverage)
+                            ComparisonRow(
+                                name = stringResource(R.string.speed_comparison_qwen3_name),
+                                size = stringResource(R.string.speed_comparison_qwen3_size),
+                                speed = stringResource(R.string.speed_comparison_qwen3_speed),
+                                quality = stringResource(R.string.speed_comparison_qwen3_quality)
+                            )
+                            // GigaAM v3 (Russian)
+                            ComparisonRow(
+                                name = stringResource(R.string.speed_comparison_gigaam_name),
+                                size = stringResource(R.string.speed_comparison_gigaam_size),
+                                speed = stringResource(R.string.speed_comparison_gigaam_speed),
+                                quality = stringResource(R.string.speed_comparison_gigaam_quality)
+                            )
+                            // Nemotron (streaming, experimental)
+                            ComparisonRow(
+                                name = stringResource(R.string.speed_comparison_nemotron_name),
+                                size = stringResource(R.string.speed_comparison_nemotron_size),
+                                speed = stringResource(R.string.speed_comparison_nemotron_speed),
+                                quality = stringResource(R.string.speed_comparison_nemotron_quality)
                             )
                         }
                     }
