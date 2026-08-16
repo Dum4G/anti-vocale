@@ -2,9 +2,13 @@ package com.antivocale.app.transcription
 
 import android.content.Context
 import com.antivocale.app.R
+import com.antivocale.app.data.ExternalModelRecord
+import com.antivocale.app.data.ExternalModelRecordsProvider
+import com.antivocale.app.data.ExternalModelStore
 import com.antivocale.app.data.PreferencesManager
 import com.antivocale.app.service.ExtractionService
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -54,8 +58,8 @@ data class BackendDescriptor(
      * ShareTargetManager resolve it here); the manifest android:name
      * attributes cannot reference runtime values and stay literal strings,
      * pinned by BackendRegistryTest. Blank is a valid sentinel: backends with
-     * no share target (e.g. the sideloaded custom-transducer) carry "", and
-     * ShareTargetManager skips them during component sync.
+     * no share target carry "", and ShareTargetManager skips them during
+     * component sync.
      */
     val shareAlias: String,
 
@@ -86,6 +90,17 @@ data class BackendDescriptor(
  * Single source of truth for transcription-backend metadata: the ordered list
  * of [BackendDescriptor]s plus lookups by backend-id, [ExtractionService.ModelType],
  * and share alias.
+ *
+ * The list is the static six plus dynamic descriptors derived from the
+ * external model store (spec: external models platform v2a): every valid
+ * [ExternalModelRecord] yields one descriptor appended after the static
+ * backends. The registry is therefore NO LONGER STATELESS, and the
+ * construction assumptions built on statelessness are retired: consumers
+ * must use the injected singleton (or resolve it via an entry point), never
+ * a privately constructed or companion-held instance. Only DI assembles the
+ * store+provider pair; extra instances would add duplicate records
+ * collectors and split store mutations across racing read-modify-write
+ * domains that can lose updates.
  *
  * TASK-254 introduced the abstraction; the migration is complete as of
  * TASK-324. Status of the dispatch sites from the CLAUDE.md "Architecture
@@ -151,10 +166,13 @@ data class BackendDescriptor(
  * BACKEND_ID and a descriptor if it is ever re-enabled.
  */
 @Singleton
-class BackendRegistry @Inject constructor() {
+class BackendRegistry @Inject constructor(
+    private val externalModelStore: ExternalModelStore,
+    private val recordsProvider: ExternalModelRecordsProvider,
+) {
 
-    /** The seven enabled backends in canonical order (default backend first). */
-    val backends: List<BackendDescriptor> = listOf(
+    /** The six enabled static backends in canonical order (default backend first). */
+    private val staticBackends: List<BackendDescriptor> = listOf(
         BackendDescriptor(
             backendId = SherpaOnnxBackend.BACKEND_ID,
             modelType = ExtractionService.ModelType.PARAKEET,
@@ -211,16 +229,6 @@ class BackendRegistry @Inject constructor() {
             clearModelPath = { it.clearGigaAmModelPath() },
         ),
         BackendDescriptor(
-            backendId = CustomTransducerBackend.BACKEND_ID,
-            modelType = ExtractionService.ModelType.CUSTOM_TRANSDUCER,
-            // Sideload models have no manifest activity-alias (no share target).
-            shareAlias = "",
-            // Display name derives from the imported model directory name.
-            modelPathFlow = { it.customTransducerModelPath },
-            saveModelPath = { prefs, path -> prefs.saveCustomTransducerModelPath(path) },
-            clearModelPath = { it.clearCustomTransducerModelPath() },
-        ),
-        BackendDescriptor(
             backendId = LlmTranscriptionBackend.BACKEND_ID,
             modelType = ExtractionService.ModelType.GEMMA,
             shareAlias = "com.antivocale.app.ShareGemma",
@@ -231,21 +239,52 @@ class BackendRegistry @Inject constructor() {
         ),
     )
 
-    private val byId: Map<String, BackendDescriptor> =
-        backends.associateBy(BackendDescriptor::backendId)
+    /** Static backends first (canonical order), then one descriptor per valid external record. */
+    val backends: List<BackendDescriptor>
+        get() = staticBackends + recordsProvider.records.value.map(::descriptorFor)
 
-    private val byType: Map<ExtractionService.ModelType, BackendDescriptor> =
-        backends.associateBy(BackendDescriptor::modelType)
+    /**
+     * Derives one dynamic descriptor per imported record. Identity is the
+     * record's uuid (backendId `external:<id>`), not a path preference:
+     * saving a model path redirects the record's dir, clearing it deletes
+     * the record.
+     */
+    private fun descriptorFor(record: ExternalModelRecord): BackendDescriptor = BackendDescriptor(
+        backendId = record.backendId,
+        modelType = ExtractionService.ModelType.EXTERNAL,
+        shareAlias = "",  // spec: the ShareExternal family alias is synced separately
+        deriveDisplayName = { _, _ -> record.displayName },
+        // The store (not the registry) owns the records JSON: the path flow derives
+        // from its decoded list instead of a second raw-preference decoder here.
+        modelPathFlow = { _ ->
+            externalModelStore.recordsFlow.map { records ->
+                records.firstOrNull { it.id == record.id }?.dir } },
+        saveModelPath = { _, path ->
+            // Identity is the uuid, not a path preference: a save redirects the record's
+            // dir via a targeted update, so the captured snapshot reverts nothing else.
+            externalModelStore.updateDir(record.id, path) },
+        clearModelPath = { externalModelStore.delete(record.id) },
+    )
 
-    private val byAlias: Map<String, BackendDescriptor> =
-        backends.associateBy(BackendDescriptor::shareAlias)
+    // The lookups recompute over backends per call: the lists are tiny and the
+    // dynamic set can change between calls, so caching a map would go stale.
 
     /** Returns the descriptor for [backendId], or null if unknown (including null/blank). */
-    fun byBackendId(backendId: String?): BackendDescriptor? = backendId?.let { byId[it] }
+    fun byBackendId(backendId: String?): BackendDescriptor? =
+        backendId?.let { id -> backends.firstOrNull { it.backendId == id } }
 
-    /** Returns the descriptor for [modelType], or null if none is registered (GEMMA4_GGUF). */
-    fun byModelType(modelType: ExtractionService.ModelType): BackendDescriptor? = byType[modelType]
+    /**
+     * Returns the descriptor for [modelType], or null if none is registered
+     * (GEMMA4_GGUF). The mapping is 1:N for [ExtractionService.ModelType.EXTERNAL]:
+     * several external records share it, and the first one wins.
+     */
+    fun byModelType(modelType: ExtractionService.ModelType): BackendDescriptor? =
+        backends.firstOrNull { it.modelType == modelType }
 
-    /** Returns the descriptor for a share-target [alias], or null if unknown (including null/blank). */
-    fun byShareAlias(alias: String?): BackendDescriptor? = alias?.let { byAlias[it] }
+    /**
+     * Returns the descriptor for a share-target [alias], or null if unknown
+     * (including null/blank).
+     */
+    fun byShareAlias(alias: String?): BackendDescriptor? =
+        alias?.let { a -> backends.firstOrNull { it.shareAlias == a } }
 }

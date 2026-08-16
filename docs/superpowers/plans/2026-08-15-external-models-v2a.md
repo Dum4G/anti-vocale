@@ -221,8 +221,10 @@ import javax.inject.Singleton
  * [PreferencesManager]; derives nothing else. Directory validity is injected
  * so the class stays JVM-testable.
  */
-@Singleton
-class ExternalModelStore @Inject constructor(
+// No @Inject here: Dagger cannot satisfy the defaulted dirExists lambda (Kotlin defaults
+// are invisible to it, MissingBinding on Function1). Constructed via an AppModule
+// @Provides @Singleton provider; tests use the defaulted constructor directly.
+class ExternalModelStore(
     private val preferencesManager: PreferencesManager,
     private val dirExists: (String) -> Boolean = { java.io.File(it).exists() },
 ) {

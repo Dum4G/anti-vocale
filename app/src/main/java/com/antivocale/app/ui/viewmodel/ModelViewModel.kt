@@ -15,7 +15,6 @@ import com.antivocale.app.data.ModelDownloader
 import com.antivocale.app.data.PreferencesManager
 import com.antivocale.app.data.ShareTargetManager
 import com.antivocale.app.transcription.BackendRegistry
-import com.antivocale.app.transcription.CustomTransducerBackend
 import com.antivocale.app.transcription.GigaAmBackend
 import com.antivocale.app.transcription.GigaAmDownloader
 import com.antivocale.app.transcription.GigaAmModelManager
@@ -55,6 +54,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.File
@@ -71,10 +71,9 @@ class ModelViewModel @Inject constructor(
     private val llmManager: LlmManager,
     private val shareTargetManager: ShareTargetManager,
     @ApplicationContext private val ctx: Context,
-    // Defaulted so direct construction without Hilt (unit tests) keeps the
-    // eight-argument shape; the registry is stateless so a fresh instance is
-    // equivalent to the injected singleton.
-    private val backendRegistry: BackendRegistry = BackendRegistry(),
+    private val backendRegistry: BackendRegistry,
+    private val externalModelStore: com.antivocale.app.data.ExternalModelStore,
+    private val externalModelImporter: com.antivocale.app.data.ExternalModelImporter,
 ) : ViewModel() {
 
     val tokenState = tokenManager.tokenState
@@ -251,12 +250,6 @@ class ModelViewModel @Inject constructor(
     // GigaAM state - must be declared before init block
     private val _gigaAmState = MutableStateFlow(GigaAmUiState())
     val gigaAmState: StateFlow<GigaAmUiState> = _gigaAmState.asStateFlow()
-    // Custom transducer (sideload) state: the imported model path (null = nothing imported) and
-    // the user-selected model architecture type (drives the OfflineRecognizer modelType).
-    private val _customTransducerModelPath = MutableStateFlow<String?>(null)
-    val customTransducerModelPath: StateFlow<String?> = _customTransducerModelPath.asStateFlow()
-    private val _customTransducerModelType = MutableStateFlow(PreferencesManager.DEFAULT_CUSTOM_TRANSDUCER_MODEL_TYPE)
-    val customTransducerModelType: StateFlow<String> = _customTransducerModelType.asStateFlow()
 
     // GGUF state - must be declared before init block
     private val _ggufState = MutableStateFlow(GgufUiState())
@@ -293,20 +286,14 @@ class ModelViewModel @Inject constructor(
                     ExtractionService.ModelType.GIGAAM -> handleServiceProgressGigaAm(progress)
                     // GGUF: disabled
                     ExtractionService.ModelType.GEMMA4_GGUF -> { /* no-op */ }
-                    // Custom transducer: sideload only, no service download progress.
-                    ExtractionService.ModelType.CUSTOM_TRANSDUCER -> { /* no-op */ }
+                    // External models: imported locally, no service download progress.
+                    ExtractionService.ModelType.EXTERNAL -> { /* no-op */ }
                     ExtractionService.ModelType.GEMMA -> handleServiceProgressGemma(progress)
                 }
             }
         }
         // Load saved model path on initialization
         loadSavedModelPath()
-        // Hydrate custom-transducer state (path + modelType) regardless of the active backend,
-        // so the import card reflects what the user previously selected.
-        viewModelScope.launch {
-            _customTransducerModelPath.value = preferencesManager.customTransducerModelPath.first()
-            _customTransducerModelType.value = preferencesManager.customTransducerModelType.first()
-        }
         // Check for downloaded models
         refreshDownloadedModels()
         // Check for HuggingFace token
@@ -952,7 +939,7 @@ class ModelViewModel @Inject constructor(
                             ExtractionService.ModelType.QWEN3_ASR,
                             ExtractionService.ModelType.NEMOTRON,
                             ExtractionService.ModelType.GIGAAM,
-                            ExtractionService.ModelType.CUSTOM_TRANSDUCER -> {
+                            ExtractionService.ModelType.EXTERNAL -> {
                                 val dir = File(path)
                                 dir.exists() && dir.isDirectory
                             }
@@ -1502,10 +1489,13 @@ class ModelViewModel @Inject constructor(
      * The active variant is auto-resolved via [ParakeetModelManager.resolveActiveModelPath]
      * (prefer SmoothQuant, else Stock int8). There is no user variant selector for Parakeet.
      */
-    fun useParakeetModel() {
+    fun useParakeetModel(variant: ParakeetModelManager.Variant? = null) {
         viewModelScope.launch {
             val context = ctx
-            val modelPath = ParakeetModelManager.resolveActiveModelPath(context)
+            // When the user picks a specific variant from its card, honor that
+            // choice; otherwise auto-resolve (prefer SmoothQuant, else Stock int8).
+            val modelPath = variant?.let { ParakeetDownloader.getModelPath(context, it) }
+                ?: ParakeetModelManager.resolveActiveModelPath(context)
                 ?: _parakeetState.value.modelPath
             if (modelPath != null) {
                 // Save resolved Parakeet path and switch backend preference
@@ -2158,142 +2148,81 @@ class ModelViewModel @Inject constructor(
         }
     }
 
-    // ==================== Custom transducer (sideload) ====================
+    // ==================== External models (v2a) ====================
 
-    /**
-     * Imports a user-selected sherpa-onnx transducer model directory via SAF (OpenDocumentTree).
-     * Copies the 4 canonical files into <filesDir>/models/custom-transducer/<sanitized>/,
-     * validates them (vocab_size metadata to prevent native exit(255)), persists the path, and
-     * activates the custom-transducer backend with the current modelType preference.
-     */
-    fun onCustomModelDirSelected(context: Context, treeUri: Uri) {
+    /** Import progress for the external-models section (one import at a time). */
+    sealed class ExternalImportState {
+        data object Idle : ExternalImportState()
+        data object Importing : ExternalImportState()
+        data class Error(val message: String) : ExternalImportState()
+    }
+
+    private val _externalImportState = MutableStateFlow<ExternalImportState>(ExternalImportState.Idle)
+    val externalImportState: StateFlow<ExternalImportState> = _externalImportState.asStateFlow()
+
+    /** Valid external records for the section cards (dir exists on disk). */
+    val externalModels: StateFlow<List<com.antivocale.app.data.ExternalModelRecord>> =
+        externalModelStore.validRecordsFlow
+            .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /** Persisted active backend id, for card active-state keyed on identity (not display name). */
+    val activeBackendId: StateFlow<String> =
+        preferencesManager.transcriptionBackend
+            .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5_000),
+                PreferencesManager.DEFAULT_TRANSCRIPTION_BACKEND)
+
+    /** Saved Parakeet model path (preference), for variant active-state that survives restarts. */
+    val savedParakeetPath: StateFlow<String?> =
+        preferencesManager.parakeetModelPath
+            .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5_000), null)
+
+    /** Folder import (SAF): the primary v2a entry. */
+    fun importExternalFromFolder(context: Context, treeUri: Uri, modelType: String) =
+        runExternalImport("External folder") { externalModelImporter.importFromTreeUri(context, treeUri, modelType) }
+
+    /** URL import: a HuggingFace repo URL or a catalog-entry JSON URL. */
+    fun importExternalFromUrl(url: String, modelType: String) =
+        runExternalImport("External URL") { externalModelImporter.importFromUrl(url, modelType) }
+
+    /** Shared import scaffolding: progress state, IO dispatching, and the failure tail. */
+    private fun runExternalImport(label: String, block: suspend () -> com.antivocale.app.data.ExternalModelRecord) {
+        _externalImportState.value = ExternalImportState.Importing
         viewModelScope.launch(Dispatchers.IO) {
-            val pickedDir = DocumentFile.fromTreeUri(context, treeUri)
-            if (pickedDir == null || !pickedDir.isDirectory) {
-                _uiState.update { it.copy(
-                    status = ModelStatus.ERROR,
-                    statusMessage = ctx.getString(R.string.custom_transducer_import_failed)
-                )}
-                _snackbarEvent.tryEmit(SnackbarEvent.Message(ctx.getString(R.string.custom_transducer_import_failed)))
-                return@launch
-            }
-
-            val destName = sanitizeDirName(pickedDir.name ?: "custom-model")
-            val destDir = java.io.File(context.filesDir, "models/custom-transducer/$destName")
-            // Clean any prior import at this name first, so a re-import is a full replace rather
-            // than a silent merge that could leave a corrupt mix of old + new files.
-            if (destDir.exists()) destDir.deleteRecursively()
-            destDir.mkdirs()
-
-            // Match source files by ROLE, not exact canonical name: sherpa-onnx exports use varied
-            // filenames (e.g. GigaAM ships gigaam_v3_e2e_rnnt_encoder_int8.onnx, not encoder.int8.onnx).
-            // We copy each matched file to its canonical destination name, which the backend requires.
-            val contentResolver = context.contentResolver
-            val children = pickedDir.listFiles().orEmpty().filter { it.isFile }
-            val copyPlan = buildCopyPlan(children)
-            val missingRoles = copyPlan.filterValues { it == null }.keys
-            if (missingRoles.isNotEmpty()) {
-                destDir.deleteRecursively()
-                val msg = ctx.getString(R.string.custom_transducer_missing_files, missingRoles.joinToString())
-                _uiState.update { it.copy(status = ModelStatus.ERROR, statusMessage = msg) }
-                _snackbarEvent.tryEmit(SnackbarEvent.Message(msg))
-                return@launch
-            }
-
-            val copyErrors = mutableListOf<String>()
-            for ((canonicalName, src) in copyPlan) {
-                val srcFile = src!! // guaranteed non-null by the missingRoles check above
-                val destFile = java.io.File(destDir, canonicalName)
-                try {
-                    contentResolver.openInputStream(srcFile.uri)?.use { input ->
-                        java.io.FileOutputStream(destFile).use { output -> input.copyTo(output) }
-                    } ?: copyErrors.add(canonicalName)
-                } catch (e: Exception) {
-                    Log.e("ModelViewModel", "Failed to copy $canonicalName", e)
-                    copyErrors.add(canonicalName)
-                }
-            }
-
-            if (copyErrors.isNotEmpty()) {
-                destDir.deleteRecursively()
-                val msg = ctx.getString(R.string.custom_transducer_missing_files, copyErrors.joinToString())
-                _uiState.update { it.copy(status = ModelStatus.ERROR, statusMessage = msg) }
-                _snackbarEvent.tryEmit(SnackbarEvent.Message(msg))
-                return@launch
-            }
-
-            // Validate encoder metadata to avoid a native exit(255) at transcription time. For the
-            // NeMo transducer family (Parakeet/GigaAM) sherpa also needs subsampling_factor + model_type;
-            // a wrong/empty modelType for a model that needs them still crashes, so validate accordingly.
-            val modelType = preferencesManager.customTransducerModelType.first()
-            val encoderFile = java.io.File(destDir, "encoder.int8.onnx")
-            // The NeMo transducer family (Parakeet/GigaAM) also needs subsampling_factor + model_type,
-            // or sherpa exit(255)s at init. Other architectures only require vocab_size.
-            val requiredMeta = if (modelType == PreferencesManager.DEFAULT_CUSTOM_TRANSDUCER_MODEL_TYPE) {
-                listOf("vocab_size", "subsampling_factor", "model_type")
-            } else {
-                listOf("vocab_size")
-            }
-            val missingMeta = SherpaOnnxBackend.missingOnnxMetadata(encoderFile, requiredMeta)
-            if (missingMeta.isNotEmpty()) {
-                destDir.deleteRecursively()
-                val msg = ctx.getString(R.string.custom_transducer_bad_metadata)
-                _uiState.update { it.copy(status = ModelStatus.ERROR, statusMessage = msg) }
-                _snackbarEvent.tryEmit(SnackbarEvent.Message(msg))
-                return@launch
-            }
-
-            preferencesManager.saveCustomTransducerModelPath(destDir.absolutePath)
-            _customTransducerModelPath.value = destDir.absolutePath
-            activateCustomTransducerModel(destDir.absolutePath)
+            runCatching { block() }
+                .fold(
+                    onSuccess = { record -> onExternalImported(record) },
+                    onFailure = { e ->
+                        Log.e(TAG, "$label import failed", e)
+                        _externalImportState.value = ExternalImportState.Error(e.message ?: "unknown error")
+                        _snackbarEvent.tryEmit(SnackbarEvent.Message(
+                            ctx.getString(R.string.external_import_failed, e.message ?: "")))
+                    },
+                )
         }
     }
 
-    /**
-     * Maps each canonical destination name to its source [DocumentFile] by role.
-     * Encoder/decoder/joiner match any .onnx whose name contains the role keyword; tokens matches
-     * a tokens.txt (universally named). Returns null for a role if no candidate matched.
-     */
-    private fun buildCopyPlan(
-        children: List<DocumentFile>
-    ): Map<String, DocumentFile?> {
-        fun findOnnxByRole(role: String) =
-            children.firstOrNull { it.name?.endsWith(".onnx") == true && it.name?.contains(role, ignoreCase = true) == true }
-
-        return linkedMapOf(
-            "encoder.int8.onnx" to findOnnxByRole("encoder"),
-            "decoder.int8.onnx" to findOnnxByRole("decoder"),
-            "joiner.int8.onnx" to findOnnxByRole("joiner"),
-            "tokens.txt" to children.firstOrNull { it.name?.equals("tokens.txt", ignoreCase = true) == true }
-        )
-    }
-
-    fun setCustomModelType(modelType: String) {
-        viewModelScope.launch {
-            preferencesManager.saveCustomTransducerModelType(modelType)
-            _customTransducerModelType.value = modelType
+    private fun onExternalImported(record: com.antivocale.app.data.ExternalModelRecord) {
+        _externalImportState.value = ExternalImportState.Idle
+        _snackbarEvent.tryEmit(SnackbarEvent.Message(ctx.getString(R.string.external_imported, record.displayName)))
+        shareTargetManager.onModelDownloaded()
+        // First-run behavior: auto-select when nothing is active.
+        if (_uiState.value.modelName.isBlank()) {
+            viewModelScope.launch { activateExternalModel(record) }
         }
     }
 
-    fun useCustomTransducerModel(modelPath: String) {
-        viewModelScope.launch {
-            activateCustomTransducerModel(modelPath)
-        }
+    /** Selects an imported model as the active transcription backend. */
+    fun useExternalModel(record: com.antivocale.app.data.ExternalModelRecord) {
+        viewModelScope.launch { activateExternalModel(record) }
     }
 
-    /**
-     * Synchronously activates the custom-transducer backend for [modelPath]. Safe to call from a
-     * coroutine that has already persisted the path, so the backend switch and the path write land
-     * in a deterministic order (no cross-dispatcher race between two independent launches).
-     */
-    private suspend fun activateCustomTransducerModel(modelPath: String) {
-        preferencesManager.saveTranscriptionBackend(CustomTransducerBackend.BACKEND_ID)
-        val displayName = java.io.File(modelPath).name
-        val message = ctx.getString(R.string.model_selected_message, displayName)
+    private suspend fun activateExternalModel(record: com.antivocale.app.data.ExternalModelRecord) {
+        preferencesManager.saveTranscriptionBackend(record.backendId)
+        val message = ctx.getString(R.string.model_selected_message, record.displayName)
         _uiState.update {
             it.copy(
-                modelPath = modelPath,
-                modelName = displayName,
+                modelPath = record.dir,
+                modelName = record.displayName,
                 status = ModelStatus.UNLOADED,
                 statusMessage = message
             )
@@ -2302,25 +2231,23 @@ class ModelViewModel @Inject constructor(
         llmManager.resetKeepAliveTimer()
     }
 
-    fun deleteCustomTransducerModel() {
+    /**
+     * Deletes a record: store first (so family sync sees the new world), then the files.
+     * When the deleted model is the persisted active backend, reset to the default backend
+     * (otherwise the orchestrator's registry lookup would fall through to the LLM loader).
+     */
+    fun deleteExternalModel(record: com.antivocale.app.data.ExternalModelRecord) {
         viewModelScope.launch(Dispatchers.IO) {
-            val savedPath = preferencesManager.customTransducerModelPath.first()
-            if (savedPath != null) {
-                java.io.File(savedPath).deleteRecursively()
-                preferencesManager.clearCustomTransducerModelPath()
-                _customTransducerModelPath.value = null
+            externalModelStore.delete(record.id)
+            java.io.File(record.dir).deleteRecursively()
+            if (preferencesManager.transcriptionBackend.first() == record.backendId) {
+                preferencesManager.saveTranscriptionBackend(PreferencesManager.DEFAULT_TRANSCRIPTION_BACKEND)
                 _uiState.update { it.copy(modelPath = "", modelName = "") }
-                // Uniform with the sibling delete paths; a no-op today
-                // (blank alias) but future-proof if custom ever gains a target.
-                shareTargetManager.onModelDeleted(CustomTransducerBackend.BACKEND_ID)
             }
-            _snackbarEvent.tryEmit(SnackbarEvent.Message(ctx.getString(R.string.custom_transducer_deleted)))
+            shareTargetManager.syncAll()
+            _snackbarEvent.tryEmit(SnackbarEvent.Message(
+                ctx.getString(R.string.external_deleted, record.displayName)))
         }
-    }
-
-    private fun sanitizeDirName(name: String): String {
-        // Keep it filesystem-safe without collapsing legitimate model names.
-        return name.trim().replace(Regex("[^A-Za-z0-9._-]"), "_").ifBlank { "custom-model" }
     }
 
     // ==================== GGUF: DISABLED ====================

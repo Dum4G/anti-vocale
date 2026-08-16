@@ -11,6 +11,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import java.util.concurrent.atomic.AtomicReference
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
@@ -37,6 +38,7 @@ class PreferencesManagerImpl(
         private val QWEN3_ASR_MODEL_PATH = stringPreferencesKey("qwen3_asr_model_path")
         private val NEMOTRON_MODEL_PATH = stringPreferencesKey("nemotron_model_path")
         private val GIGAAM_MODEL_PATH = stringPreferencesKey("gigaam_model_path")
+        private val EXTERNAL_MIGRATION_DONE = booleanPreferencesKey("external_migration_done")
         private val GGUF_MODEL_PATH = stringPreferencesKey("gguf_model_path")
         private val AUTO_COPY_ENABLED = booleanPreferencesKey("auto_copy_enabled")
         private val OUTPUT_FOLDER_URI = stringPreferencesKey("output_folder_uri")
@@ -55,6 +57,7 @@ class PreferencesManagerImpl(
         private val FORCE_MODEL_LOAD = booleanPreferencesKey("force_model_load")
         private val PARTIAL_TRANSCRIPTION_TEXT = stringPreferencesKey("partial_transcription_text")
         private val PARTIAL_TRANSCRIPTION_TIMESTAMP = longPreferencesKey("partial_transcription_timestamp")
+        private val EXTERNAL_MODELS_JSON = stringPreferencesKey("external_models_json")
     }
 
     private val cache = AtomicReference(CachedPreferences())
@@ -72,6 +75,7 @@ class PreferencesManagerImpl(
         val qwen3AsrModelPath: String? = null,
         val nemotronModelPath: String? = null,
         val gigaamModelPath: String? = null,
+        val externalMigrationDone: Boolean = false,
         val ggufModelPath: String? = null,
         val autoCopyEnabled: Boolean = PreferencesManager.DEFAULT_AUTO_COPY_ENABLED,
         val outputFolderUri: String? = null,
@@ -86,7 +90,8 @@ class PreferencesManagerImpl(
         val groupLogsByConversation: Boolean = PreferencesManager.DEFAULT_GROUP_LOGS_BY_CONVERSATION,
         val advancedSharingEnabled: Boolean = PreferencesManager.DEFAULT_ADVANCED_SHARING_ENABLED,
         val showRetranscribeButton: Boolean = PreferencesManager.DEFAULT_SHOW_RETRANSCRIBE_BUTTON,
-        val forceModelLoad: Boolean = PreferencesManager.DEFAULT_FORCE_MODEL_LOAD
+        val forceModelLoad: Boolean = PreferencesManager.DEFAULT_FORCE_MODEL_LOAD,
+        val externalModelsJson: String? = null
     )
 
     private fun Preferences.toCached() = CachedPreferences(
@@ -105,6 +110,7 @@ class PreferencesManagerImpl(
         qwen3AsrModelPath = this[QWEN3_ASR_MODEL_PATH],
         nemotronModelPath = this[NEMOTRON_MODEL_PATH],
         gigaamModelPath = this[GIGAAM_MODEL_PATH],
+        externalMigrationDone = this[EXTERNAL_MIGRATION_DONE] ?: false,
         ggufModelPath = this[GGUF_MODEL_PATH],
         autoCopyEnabled = this[AUTO_COPY_ENABLED] ?: PreferencesManager.DEFAULT_AUTO_COPY_ENABLED,
         outputFolderUri = this[OUTPUT_FOLDER_URI],
@@ -119,7 +125,8 @@ class PreferencesManagerImpl(
         groupLogsByConversation = this[GROUP_LOGS_BY_CONVERSATION] ?: PreferencesManager.DEFAULT_GROUP_LOGS_BY_CONVERSATION,
         advancedSharingEnabled = this[ADVANCED_SHARING_ENABLED] ?: PreferencesManager.DEFAULT_ADVANCED_SHARING_ENABLED,
         showRetranscribeButton = this[SHOW_RETRANSCRIBE_BUTTON] ?: PreferencesManager.DEFAULT_SHOW_RETRANSCRIBE_BUTTON,
-        forceModelLoad = this[FORCE_MODEL_LOAD] ?: PreferencesManager.DEFAULT_FORCE_MODEL_LOAD
+        forceModelLoad = this[FORCE_MODEL_LOAD] ?: PreferencesManager.DEFAULT_FORCE_MODEL_LOAD,
+        externalModelsJson = this[EXTERNAL_MODELS_JSON]
     )
 
     fun initialize() {
@@ -185,6 +192,10 @@ class PreferencesManagerImpl(
 
     override val transcriptionBackend: Flow<String> = context.dataStore.data.map { it[TRANSCRIPTION_BACKEND] ?: PreferencesManager.DEFAULT_TRANSCRIPTION_BACKEND }
         .onStart { emit(cache.get().transcriptionBackend) }
+        // Same rationale as externalModelsJson: unrelated preference writes re-emit the
+        // identical value and every collector (ActiveModelRepository's flatMapLatest,
+        // ModelViewModel's activeBackendId) would restart on it for nothing.
+        .distinctUntilChanged()
 
     override suspend fun saveTranscriptionBackend(backendId: String) {
         context.dataStore.edit { preferences ->
@@ -216,27 +227,6 @@ class PreferencesManagerImpl(
     override val customTransducerModelType: Flow<String> = context.dataStore.data
         .map { it[CUSTOM_TRANSDUCER_MODEL_TYPE] ?: PreferencesManager.DEFAULT_CUSTOM_TRANSDUCER_MODEL_TYPE }
         .onStart { emit(cache.get().customTransducerModelType) }
-
-    override suspend fun saveCustomTransducerModelPath(path: String) {
-        context.dataStore.edit { preferences ->
-            preferences[CUSTOM_TRANSDUCER_MODEL_PATH] = path
-        }
-        cache.updateAndGet { it.copy(customTransducerModelPath = path) }
-    }
-
-    override suspend fun clearCustomTransducerModelPath() {
-        context.dataStore.edit { preferences ->
-            preferences.remove(CUSTOM_TRANSDUCER_MODEL_PATH)
-        }
-        cache.updateAndGet { it.copy(customTransducerModelPath = null) }
-    }
-
-    override suspend fun saveCustomTransducerModelType(modelType: String) {
-        context.dataStore.edit { preferences ->
-            preferences[CUSTOM_TRANSDUCER_MODEL_TYPE] = modelType
-        }
-        cache.updateAndGet { it.copy(customTransducerModelType = modelType) }
-    }
 
     override val whisperModelPath: Flow<String?> = context.dataStore.data.map { it[WHISPER_MODEL_PATH] }
         .onStart { emit(cache.get().whisperModelPath) }
@@ -294,6 +284,16 @@ class PreferencesManagerImpl(
 
     override val gigaamModelPath: Flow<String?> = context.dataStore.data.map { it[GIGAAM_MODEL_PATH] }
         .onStart { emit(cache.get().gigaamModelPath) }
+
+    override val externalMigrationDone: Flow<Boolean> = context.dataStore.data.map { it[EXTERNAL_MIGRATION_DONE] ?: false }
+        .onStart { emit(cache.get().externalMigrationDone) }
+
+    override suspend fun saveExternalMigrationDone(done: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[EXTERNAL_MIGRATION_DONE] = done
+        }
+        cache.updateAndGet { it.copy(externalMigrationDone = done) }
+    }
 
     override suspend fun saveGigaAmModelPath(path: String) {
         context.dataStore.edit { preferences ->
@@ -528,5 +528,18 @@ class PreferencesManagerImpl(
             preferences[FORCE_MODEL_LOAD] = enabled
         }
         cache.updateAndGet { it.copy(forceModelLoad = enabled) }
+    }
+
+    override val externalModelsJson: Flow<String?> = context.dataStore.data.map { it[EXTERNAL_MODELS_JSON] }
+        .onStart { emit(cache.get().externalModelsJson) }
+        // The JSON string is the natural key: unrelated preference writes re-emit the
+        // same value, and every downstream consumer re-decodes it. Skip the duplicates.
+        .distinctUntilChanged()
+
+    override suspend fun saveExternalModelsJson(json: String) {
+        context.dataStore.edit { preferences ->
+            preferences[EXTERNAL_MODELS_JSON] = json
+        }
+        cache.updateAndGet { it.copy(externalModelsJson = json) }
     }
 }

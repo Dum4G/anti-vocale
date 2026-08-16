@@ -28,6 +28,7 @@ internal class FakePreferencesManager : PreferencesManager {
     val _qwen3AsrModelPath = MutableStateFlow<String?>(null)
     val _nemotronModelPath = MutableStateFlow<String?>(null)
     val _gigaamModelPath = MutableStateFlow<String?>(null)
+    val _externalMigrationDone = MutableStateFlow(false)
     val _customTransducerModelPath = MutableStateFlow<String?>(null)
     val _customTransducerModelType = MutableStateFlow(PreferencesManager.DEFAULT_CUSTOM_TRANSDUCER_MODEL_TYPE)
     val _ggufModelPath = MutableStateFlow<String?>(null)
@@ -45,6 +46,7 @@ internal class FakePreferencesManager : PreferencesManager {
     val _advancedSharingEnabled = MutableStateFlow(false)
     val _showRetranscribeButton = MutableStateFlow(true)
     val _forceModelLoad = MutableStateFlow(false)
+    val _externalModelsJson = MutableStateFlow<String?>(null)
     val _partialTranscriptionText = MutableStateFlow<String?>(null)
     val _partialTranscriptionTimestamp = MutableStateFlow<Long?>(null)
     val _benchmarkResults = MutableStateFlow<Map<String, String>>(emptyMap())
@@ -59,6 +61,7 @@ internal class FakePreferencesManager : PreferencesManager {
     override val qwen3AsrModelPath: Flow<String?> get() = _qwen3AsrModelPath
     override val nemotronModelPath: Flow<String?> get() = _nemotronModelPath
     override val gigaamModelPath: Flow<String?> get() = _gigaamModelPath
+    override val externalMigrationDone: Flow<Boolean> get() = _externalMigrationDone
     override val customTransducerModelPath: Flow<String?> get() = _customTransducerModelPath
     override val customTransducerModelType: Flow<String> get() = _customTransducerModelType
     override val ggufModelPath: Flow<String?> get() = _ggufModelPath
@@ -76,6 +79,7 @@ internal class FakePreferencesManager : PreferencesManager {
     override val advancedSharingEnabled: Flow<Boolean> get() = _advancedSharingEnabled
     override val showRetranscribeButton: Flow<Boolean> get() = _showRetranscribeButton
     override val forceModelLoad: Flow<Boolean> get() = _forceModelLoad
+    override val externalModelsJson: Flow<String?> get() = _externalModelsJson
     override val partialTranscriptionText: Flow<String?> get() = _partialTranscriptionText
     override val partialTranscriptionTimestamp: Flow<Long?> get() = _partialTranscriptionTimestamp
 
@@ -95,10 +99,8 @@ internal class FakePreferencesManager : PreferencesManager {
     override suspend fun saveNemotronModelPath(path: String) { _nemotronModelPath.value = path }
     override suspend fun clearNemotronModelPath() { _nemotronModelPath.value = null }
     override suspend fun saveGigaAmModelPath(path: String) { _gigaamModelPath.value = path }
+    override suspend fun saveExternalMigrationDone(done: Boolean) { _externalMigrationDone.value = done }
     override suspend fun clearGigaAmModelPath() { _gigaamModelPath.value = null }
-    override suspend fun saveCustomTransducerModelPath(path: String) { _customTransducerModelPath.value = path }
-    override suspend fun clearCustomTransducerModelPath() { _customTransducerModelPath.value = null }
-    override suspend fun saveCustomTransducerModelType(modelType: String) { _customTransducerModelType.value = modelType }
     override suspend fun saveGgufModelPath(path: String) { _ggufModelPath.value = path }
     override suspend fun clearGgufModelPath() { _ggufModelPath.value = null }
     override suspend fun saveAutoCopyEnabled(enabled: Boolean) { _autoCopyEnabled.value = enabled }
@@ -115,6 +117,7 @@ internal class FakePreferencesManager : PreferencesManager {
     override suspend fun saveAdvancedSharingEnabled(enabled: Boolean) { _advancedSharingEnabled.value = enabled }
     override suspend fun saveShowRetranscribeButton(enabled: Boolean) { _showRetranscribeButton.value = enabled }
     override suspend fun saveForceModelLoad(enabled: Boolean) { _forceModelLoad.value = enabled }
+    override suspend fun saveExternalModelsJson(json: String) { _externalModelsJson.value = json }
     override suspend fun savePartialTranscriptionState(text: String) { _partialTranscriptionText.value = text }
     override suspend fun clearPartialTranscriptionState() { _partialTranscriptionText.value = null }
     override suspend fun getLegacyLanguagePreference(): String = "en"

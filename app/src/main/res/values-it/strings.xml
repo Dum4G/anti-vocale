@@ -9,23 +9,9 @@
 
     <!-- Model selection -->
     <string name="select_model">Seleziona File Modello</string>
-    <string name="select_model_from_device">Seleziona Modello dal Dispositivo</string>
+    <string name="select_model_from_device">Seleziona file</string>
 
     <!-- Modello transducer personalizzato (sideload) -->
-    <string name="import_custom_model">Importa modello personalizzato</string>
-    <string name="custom_transducer_select_folder">Seleziona cartella modello</string>
-    <string name="custom_transducer_model_type">Architettura modello</string>
-    <string name="custom_transducer_model_type_nemo">NeMo transducer (Parakeet, GigaAM)</string>
-    <string name="custom_transducer_model_type_zipformer">Zipformer (auto)</string>
-    <string name="custom_transducer_model_type_conformer">Conformer transducer</string>
-    <string name="custom_transducer_model_type_warning">Un\'architettura sbagliata può far crashare l\'app senza messaggi di errore. Se la trascrizione va in crash, cambia questa opzione.</string>
-    <string name="custom_transducer_single_pass_notice">La trascrizione avviene in una sola passata sull\'intero audio. Un modello grande può fallire o crashare su audio molto lunghi. In tal caso, accorcia l\'audio o usa un modello più piccolo.</string>
-    <string name="custom_transducer_delete">Elimina modello personalizzato</string>
-    <string name="custom_transducer_import_failed">Impossibile importare la cartella selezionata.</string>
-    <string name="custom_transducer_missing_files">File del modello mancanti: %1$s. Un modello personalizzato richiede un file .onnx per encoder, decoder e joiner (qualsiasi nome) più un tokens.txt, tutti in un\'unica cartella.</string>
-    <string name="custom_transducer_bad_metadata">Il file del modello non contiene i metadati richiesti. Potrebbe essere corrotto o non un export transducer valido.</string>
-    <string name="custom_transducer_deleted">Modello personalizzato eliminato</string>
-    <string name="custom_transducer_active">Modello personalizzato attivo</string>
     <string name="load_model">Carica Modello</string>
     <string name="unload_model">Scarica Modello</string>
 
@@ -115,7 +101,7 @@
 
     <!-- Parakeet model -->
     <string name="parakeet_title">Parakeet TDT</string>
-    <string name="parakeet_description">~862MB • 25 lingue • Veloce • Consigliato</string>
+    <string name="parakeet_description">25 lingue • Veloce • Consigliato</string>
     <string name="parakeet_download">Scarica Parakeet TDT</string>
     <string name="parakeet_download_confirm_title">Scaricare Parakeet TDT?</string>
     <string name="parakeet_download_confirm_message">Verranno scaricati ~%1$dMB. Parakeet è più veloce ma meno preciso di Gemma per la trascrizione.</string>
@@ -132,7 +118,7 @@
     <string name="whisper_turbo_title">Whisper Turbo</string>
     <string name="whisper_turbo_description">~988MB • Qualità vicina a large-v3 • Multilingue bilanciato</string>
     <string name="whisper_medium_title">Whisper Medium</string>
-    <string name="whisper_medium_description">~903MB • Molto preciso • Multilingue</string>
+    <string name="whisper_medium_description">~903MB • Buona precisione • Multilingue</string>
     <string name="whisper_distil_large_v3_title">Distil Italian</string>
     <string name="whisper_distil_large_v3_description">~939MB • 2 livelli decoder • Il più veloce • Ottimizzato per l\'italiano</string>
     <string name="whisper_download">Scarica Whisper</string>
@@ -505,27 +491,39 @@
     <string name="speed_comparison_header_speed">Velocità</string>
     <string name="speed_comparison_header_quality">Qualità Italiano</string>
     <string name="speed_comparison_small_name">Whisper Small</string>
-    <string name="speed_comparison_small_size">~610MB</string>
+    <string name="speed_comparison_small_size">~358MB</string>
     <string name="speed_comparison_small_speed">1.0x</string>
-    <string name="speed_comparison_small_quality">Buona</string>
+    <string name="speed_comparison_small_quality">Discreta</string>
     <string name="speed_comparison_turbo_name">Whisper Turbo</string>
-    <string name="speed_comparison_turbo_size">~538MB</string>
+    <string name="speed_comparison_turbo_size">~988MB</string>
     <string name="speed_comparison_turbo_speed">1.3x</string>
-    <string name="speed_comparison_turbo_quality">Molto Buona</string>
+    <string name="speed_comparison_turbo_quality">Buona</string>
     <string name="speed_comparison_medium_name">Whisper Medium</string>
-    <string name="speed_comparison_medium_size">~1.8GB</string>
+    <string name="speed_comparison_medium_size">~903MB</string>
     <string name="speed_comparison_medium_speed">0.5x</string>
-    <string name="speed_comparison_medium_quality">Migliore</string>
+    <string name="speed_comparison_medium_quality">Buona</string>
     <string name="speed_comparison_distil_it_name">Distil Italian</string>
-    <string name="speed_comparison_distil_it_size">~1.0GB</string>
+    <string name="speed_comparison_distil_it_size">~939MB</string>
     <string name="speed_comparison_distil_it_speed">~1.8x</string>
-    <string name="speed_comparison_distil_it_quality">Migliore (Italiano)</string>
+    <string name="speed_comparison_distil_it_quality">Migliore Italiano</string>
     <string name="speed_comparison_distil_it_note">Miglior Italiano</string>
     <string name="speed_comparison_parakeet_name">Parakeet TDT</string>
-    <string name="speed_comparison_parakeet_size">~862MB</string>
+    <string name="speed_comparison_parakeet_size">~464MB</string>
     <string name="speed_comparison_parakeet_speed">~17x</string>
     <string name="speed_comparison_parakeet_quality">Molto Buona</string>
     <string name="speed_comparison_parakeet_note">Consigliato</string>
+    <string name="speed_comparison_qwen3_name">Qwen3-ASR</string>
+    <string name="speed_comparison_qwen3_size">~938MB</string>
+    <string name="speed_comparison_qwen3_speed">~2x</string>
+    <string name="speed_comparison_qwen3_quality">52 lingue, variabile</string>
+    <string name="speed_comparison_gigaam_name">GigaAM v3</string>
+    <string name="speed_comparison_gigaam_size">~326MB</string>
+    <string name="speed_comparison_gigaam_speed">Veloce</string>
+    <string name="speed_comparison_gigaam_quality">Solo russo</string>
+    <string name="speed_comparison_nemotron_name">Nemotron 3.5</string>
+    <string name="speed_comparison_nemotron_size">~600MB</string>
+    <string name="speed_comparison_nemotron_speed">Streaming</string>
+    <string name="speed_comparison_nemotron_quality">Sperimentale</string>
     <string name="fastest_badge">Più veloce</string>
     <string name="coming_soon_badge">Prossimamente</string>
     <string name="dialog_transcription_active_title">Trascrizione in corso</string>
@@ -719,6 +717,27 @@
     <string name="share_target_gemma">Anti-Vocale (Gemma)</string>
     <string name="share_target_nemotron">Anti-Vocale (Nemotron)</string>
     <string name="share_target_gigaam">Anti-Vocale (GigaAM)</string>
+    <string name="share_target_external">Anti-Vocale (Esterno)</string>
+    <string name="external_none_imported">Nessun modello esterno importato</string>
+    <string name="external_section_title">Modelli esterni</string>
+    <string name="external_import_folder">Seleziona cartella</string>
+    <string name="model_advanced_section">Avanzate</string>
+    <string name="model_advanced_description">Importa manualmente file di modello</string>
+    <string name="external_import_url">Importa da URL</string>
+    <string name="external_url_hint">URL repo HuggingFace o voce di catalogo JSON</string>
+    <string name="external_url_dialog_title">Importa modello esterno</string>
+    <string name="external_import">Importa</string>
+    <string name="external_importing">Importazione modello…</string>
+    <string name="external_import_failed">Importazione non riuscita: %1$s</string>
+    <string name="external_imported">Importato %1$s</string>
+    <string name="external_delete_confirm">Eliminare il modello esterno %1$s?</string>
+    <string name="external_deleted">%1$s eliminato</string>
+    <string name="external_model_type">Architettura (lascia il default se la trascrizione funziona)</string>
+    <string name="external_model_type_nemo">NeMo transducer (predefinito)</string>
+    <string name="external_model_type_zipformer">Zipformer transducer</string>
+    <string name="external_model_type_conformer">Conformer transducer</string>
+    <string name="external_notice_single_pass">Trascrizione in passaggio singolo: con modelli grandi l\'audio molto lungo può fallire. Accorcia l\'audio o usa un modello più piccolo.</string>
+    <string name="external_notice_family">Se la trascrizione si interrompe senza errori l\'architettura potrebbe essere sbagliata: elimina e reimporta il modello con un\'architettura diversa.</string>
     <string name="share_targets_title">Destinazioni di condivisione</string>
     <string name="share_targets_description">Mostra ogni modello scaricato come opzione separata nella scheda di condivisione di Android. Il modello viene usato temporaneamente per la singola trascrizione.</string>
     <string name="advanced_sharing_toggle">Mostra modelli nella scheda di condivisione</string>

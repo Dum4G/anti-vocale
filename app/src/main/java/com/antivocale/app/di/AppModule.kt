@@ -10,6 +10,8 @@ import com.antivocale.app.data.PreferencesManager
 import com.antivocale.app.data.PreferencesManagerImpl
 import com.antivocale.app.data.ShareTargetManager
 import com.antivocale.app.data.TranscriptionCalibrator
+import com.antivocale.app.data.ExternalModelImporter
+import com.antivocale.app.data.ExternalModelStore
 import java.util.concurrent.TimeUnit
 import com.antivocale.app.data.local.AppDatabase
 import com.antivocale.app.data.local.LogDao
@@ -49,10 +51,29 @@ object AppModule {
     fun provideShareTargetManager(
         @ApplicationContext context: Context,
         preferencesManager: PreferencesManager,
-        backendRegistry: BackendRegistry
+        backendRegistry: BackendRegistry,
+        externalModelStore: ExternalModelStore
     ): ShareTargetManager {
-        return ShareTargetManager(context, preferencesManager, backendRegistry)
+        return ShareTargetManager(context, preferencesManager, backendRegistry, externalModelStore)
     }
+
+    @Provides
+    @Singleton
+    fun provideExternalModelStore(preferencesManager: PreferencesManager): ExternalModelStore =
+        ExternalModelStore(preferencesManager)
+
+    @Provides
+    @Singleton
+    fun provideExternalModelImporter(
+        store: ExternalModelStore,
+        @ApplicationContext context: Context,
+        okHttpClient: OkHttpClient,
+    ): ExternalModelImporter =
+        ExternalModelImporter(
+            store = store,
+            filesRoot = { java.io.File(context.filesDir, "models/external") },
+            repoListing = com.antivocale.app.data.HuggingFaceRepoListing(okHttpClient),
+        )
 
     @Provides
     @Singleton

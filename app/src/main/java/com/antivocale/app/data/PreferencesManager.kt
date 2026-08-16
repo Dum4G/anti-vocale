@@ -10,12 +10,16 @@ interface PreferencesManager {
     val themeMode: Flow<String>
     val transcriptionBackend: Flow<String>
     val parakeetModelPath: Flow<String?>
+    // Migration-only readers (custom-transducer -> external-model, v2a Task 9): the backend
+    // and its mutators are gone; CustomTransducerMigrator is the last consumer of these.
     val customTransducerModelPath: Flow<String?>
     val customTransducerModelType: Flow<String>
     val whisperModelPath: Flow<String?>
     val qwen3AsrModelPath: Flow<String?>
     val nemotronModelPath: Flow<String?>
     val gigaamModelPath: Flow<String?>
+    /** One-shot custom-transducer -> external-model migration marker (v2a Task 9). */
+    val externalMigrationDone: Flow<Boolean>
     val ggufModelPath: Flow<String?>
     val autoCopyEnabled: Flow<Boolean>
     val outputFolderUri: Flow<String?>
@@ -32,6 +36,9 @@ interface PreferencesManager {
     val showRetranscribeButton: Flow<Boolean>
     val forceModelLoad: Flow<Boolean>
 
+    val externalModelsJson: Flow<String?>
+    suspend fun saveExternalModelsJson(json: String)
+
     suspend fun saveModelPath(path: String)
     suspend fun clearModelPath()
     suspend fun saveKeepAliveTimeout(minutes: Int)
@@ -40,9 +47,6 @@ interface PreferencesManager {
     suspend fun saveTranscriptionBackend(backendId: String)
     suspend fun saveParakeetModelPath(path: String)
     suspend fun clearParakeetModelPath()
-    suspend fun saveCustomTransducerModelPath(path: String)
-    suspend fun clearCustomTransducerModelPath()
-    suspend fun saveCustomTransducerModelType(modelType: String)
     suspend fun saveWhisperModelPath(path: String)
     suspend fun clearWhisperModelPath()
     suspend fun saveQwen3AsrModelPath(path: String)
@@ -53,6 +57,8 @@ interface PreferencesManager {
 
     suspend fun saveGigaAmModelPath(path: String)
     suspend fun clearGigaAmModelPath()
+
+    suspend fun saveExternalMigrationDone(done: Boolean)
 
     suspend fun saveGgufModelPath(path: String)
     suspend fun clearGgufModelPath()

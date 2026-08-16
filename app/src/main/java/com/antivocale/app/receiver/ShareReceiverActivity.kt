@@ -57,6 +57,20 @@ interface SubtitlePrefsEntryPoint {
 }
 
 /**
+ * Hilt entry point for fetching [BackendRegistry] in the same no-@AndroidEntryPoint
+ * situation as [SubtitlePrefsEntryPoint]: the registry derives dynamic external-model
+ * descriptors from the store, so callers must resolve the app-wide singleton rather
+ * than constructing their own instance.
+ */
+@EntryPoint
+@InstallIn(SingletonComponent::class)
+interface BackendRegistryEntryPoint {
+    fun backendRegistry(): BackendRegistry
+    /** The chooser reads valid external records; same no-@AndroidEntryPoint situation. */
+    fun externalModelStore(): com.antivocale.app.data.ExternalModelStore
+}
+
+/**
  * Transparent activity for receiving shared audio files.
  * Handles ACTION_SEND intents with audio MIME types from other apps.
  *
@@ -70,10 +84,6 @@ class ShareReceiverActivity : Activity() {
     companion object {
         const val TAG = "ShareReceiverActivity"
         const val EXTRA_SOURCE_PACKAGE = "source_package"
-        // This Activity is deliberately not @AndroidEntryPoint, so the registry cannot be
-        // constructor-injected; it is stateless, so a companion-held instance is equivalent
-        // to the injected singleton.
-        private val backendRegistry = BackendRegistry()
 
         // The choice prompt auto-resolves to ASR after this delay if the user does nothing.
         // Keeps a shared video from silently hanging when the notification is ignored.
@@ -83,9 +93,17 @@ class ShareReceiverActivity : Activity() {
         // tap receiver or replaced on a re-share of the same taskId.
         internal fun choiceNotificationId(taskId: String): Int = taskId.hashCode()
 
+        // The registry is NOT held here. Only DI assembles the store+provider pair this
+        // registry needs; a second hand-built instance would add a second records collector
+        // and split store mutations across racing read-modify-write domains. Callers resolve
+        // the app singleton via [BackendRegistryEntryPoint] and pass it in.
+        // The ShareExternal family alias (single source: ShareTargetManager) is resolved
+        // to a SENTINEL here; the instance flow replaces it with a concrete external:<id>.
+        internal const val EXTERNAL_FAMILY_BACKEND_ID = "external"
 
-        internal fun backendIdForAlias(aliasClassName: String): String? =
-            backendRegistry.byShareAlias(aliasClassName)?.backendId
+        internal fun backendIdForAlias(aliasClassName: String, registry: BackendRegistry): String? =
+            if (aliasClassName == com.antivocale.app.data.ShareTargetManager.EXTERNAL_FAMILY_ALIAS) EXTERNAL_FAMILY_BACKEND_ID
+            else registry.byShareAlias(aliasClassName)?.backendId
     }
 
     private var sourcePackage: String? = null
@@ -243,12 +261,62 @@ class ShareReceiverActivity : Activity() {
 
         // Resolve the backend override once (applies to both the ASR path and the subtitle
         // choice's "Transcribe audio" action). A share-target alias forces a specific backend.
+        // The entry point is resolved once here and handed to the external chooser, which
+        // needs the same store from the same app-wide singleton.
+        val entryPoint = EntryPointAccessors.fromApplication(applicationContext, BackendRegistryEntryPoint::class.java)
         val backendOverride: String? = intent?.component?.className?.let { alias ->
-            backendIdForAlias(alias)?.also { backendId ->
+            backendIdForAlias(alias, entryPoint.backendRegistry())?.also { backendId ->
                 Log.i(TAG, "Share target alias detected: $alias -> backend: $backendId")
             }
         }
 
+        // External-family share target: the sentinel must become a concrete external:<id>
+        // BEFORE any consumer (subtitle branch, timeout worker, service intent) sees it.
+        if (backendOverride == EXTERNAL_FAMILY_BACKEND_ID) {
+            showExternalModelChooser(taskId, localPath, entryPoint.externalModelStore())
+            return
+        }
+
+        dispatch(taskId, localPath, backendOverride)
+    }
+
+    /**
+     * Chooser for the ShareExternal family alias: a platform AlertDialog (this Activity is
+     * deliberately not a ComponentActivity, so no Compose). Blocks until the user picks an
+     * imported model, then continues the normal flow with the concrete external backend id.
+     */
+    private fun showExternalModelChooser(taskId: String, localPath: String, store: com.antivocale.app.data.ExternalModelStore) {
+        val records = kotlinx.coroutines.runBlocking { store.validRecords() }
+
+        if (records.isEmpty()) {
+            // Unreachable in production (the alias component is disabled with no records),
+            // guarded anyway so a stale component state degrades politely.
+            com.antivocale.app.util.ToastCompat.show(this, R.string.external_none_imported)
+            cleanup()
+            finish()
+            return
+        }
+
+        val labels = records.map { record ->
+            record.displayName + if (record.languages.isEmpty()) "" else " (" + record.languages.joinToString(", ") + ")"
+        }.toTypedArray()
+
+        android.app.AlertDialog.Builder(this)
+            .setTitle(R.string.share_target_external)
+            .setItems(labels) { _, which ->
+                val chosen = records[which]
+                Log.i(TAG, "External model chosen via share chooser: ${chosen.backendId}")
+                dispatch(taskId, localPath, chosen.backendId)
+            }
+            .setOnCancelListener {
+                cleanup()
+                finish()
+            }
+            .show()
+    }
+
+    /** The subtitle probe branch plus the default ASR path, shared by every entry. */
+    private fun dispatch(taskId: String, localPath: String, backendOverride: String?) {
         // ---- Subtitle probe branch ----
         // If the shared file is a video with readable text subtitle tracks, surface a choice
         // notification instead of starting ASR. The 5-min timeout worker falls back to ASR

@@ -1,11 +1,13 @@
 package com.antivocale.app.transcription
 
 import android.content.Context
+import com.antivocale.app.data.ExternalModelRecordsProvider
 import com.antivocale.app.manager.LlmManager
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.*
 import org.junit.Before
@@ -40,8 +42,13 @@ class TranscriptionBackendManagerTest {
         config = mockk(relaxed = true)
     }
 
-    private fun createManager(vararg backends: TranscriptionBackend): TranscriptionBackendManager =
-        TranscriptionBackendManager(llmManager, backends.toSet())
+    private fun createManager(vararg backends: TranscriptionBackend): TranscriptionBackendManager {
+        // Empty records provider + real engine: these tests exercise the static set only.
+        val provider = object : ExternalModelRecordsProvider {
+            override val records = MutableStateFlow(emptyList<com.antivocale.app.data.ExternalModelRecord>())
+        }
+        return TranscriptionBackendManager(llmManager, backends.toSet(), provider, ExternalSherpaBackend())
+    }
 
     // --- Initialization ---
 

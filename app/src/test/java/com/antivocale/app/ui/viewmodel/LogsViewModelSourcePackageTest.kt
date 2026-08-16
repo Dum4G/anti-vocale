@@ -2,6 +2,7 @@ package com.antivocale.app.ui.viewmodel
 
 import com.antivocale.app.data.local.LogDao
 import com.antivocale.app.transcription.TranscriptionBackendManager
+import com.antivocale.app.transcription.staticRegistry
 import io.mockk.coVerify
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
@@ -30,7 +31,7 @@ class LogsViewModelSourcePackageTest {
     fun setup() {
         Dispatchers.setMain(testDispatcher)
         logDao = mockk(relaxed = true)
-        viewModel = LogsViewModel(mockk(relaxed = true), logDao, stubPreferencesManager())
+        viewModel = LogsViewModel(mockk(relaxed = true), logDao, stubPreferencesManager(), staticRegistry())
     }
 
     @After

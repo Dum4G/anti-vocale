@@ -1,6 +1,12 @@
 package com.antivocale.app.transcription
 
 import com.antivocale.app.audio.AudioPreprocessor
+import com.antivocale.app.data.ExternalModelRecord
+import com.antivocale.app.data.ExternalModelSource
+import com.antivocale.app.data.ExternalModelStore
+import com.antivocale.app.data.FakePreferencesManager
+import com.antivocale.app.data.FilePin
+import com.antivocale.app.data.ModelFamily
 import com.antivocale.app.data.PreferencesManager
 import com.antivocale.app.data.TranscriptionCalibrator
 import com.antivocale.app.data.local.LogDao
@@ -19,6 +25,27 @@ abstract class TranscriptionOrchestratorTestBase {
     protected lateinit var listener: TranscriptionListener
     protected lateinit var orchestrator: TranscriptionOrchestrator
 
+    /** Fake store backed by FakePreferencesManager so add()/byId() work in tests. */
+    protected val fakeStore: ExternalModelStore = ExternalModelStore(
+        FakePreferencesManager(),
+        dirExists = { true },
+    )
+
+    /** Builds a minimal TRANSDUCER record with a nemo_transducer modelType. */
+    protected fun externalRecord(id: String, dir: String): ExternalModelRecord = ExternalModelRecord(
+        id = id,
+        displayName = "Test external $id",
+        dir = dir,
+        family = ModelFamily.TRANSDUCER,
+        modelType = "nemo_transducer",
+        languages = listOf("en"),
+        source = ExternalModelSource.LOCAL,
+        sourceUrl = null,
+        files = mapOf("encoder.onnx" to FilePin("a".repeat(64), verified = true)),
+        sizeBytes = 1L,
+        importedAt = System.currentTimeMillis(),
+    )
+
     @Before
     open fun baseSetUp() {
         preferencesManager = mockk(relaxed = true)
@@ -31,7 +58,9 @@ abstract class TranscriptionOrchestratorTestBase {
         listener = mockk(relaxed = true)
 
         orchestrator = TranscriptionOrchestrator(
-            preferencesManager, logDao, transcriptionCalibrator, backendManager, audioPreprocessor
+            preferencesManager, logDao, transcriptionCalibrator, backendManager, audioPreprocessor,
+            staticRegistry(),
+            fakeStore,
         )
 
         // Default the OOM pre-flight to off in tests so it does not interfere with orchestrator

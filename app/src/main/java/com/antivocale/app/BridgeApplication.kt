@@ -17,6 +17,7 @@ class BridgeApplication : Application(), Configuration.Provider {
     @Inject lateinit var preferencesManager: PreferencesManager
     @Inject lateinit var shareTargetManager: ShareTargetManager
     @Inject lateinit var workerFactory: HiltWorkerFactory
+    @Inject lateinit var externalModelStore: com.antivocale.app.data.ExternalModelStore
 
     /**
      * Provides the Hilt-aware [androidx.work.WorkManager] configuration so that
@@ -37,6 +38,22 @@ class BridgeApplication : Application(), Configuration.Provider {
     override fun onCreate() {
         super.onCreate()
         com.antivocale.app.util.SharedAudioHandler.cleanupOldFiles(this)
+        // BEFORE syncAll: a persisted "custom-transductor" id must already resolve to an
+        // external record, or the share sync (and any early transcription) would see a
+        // registry without it and silently fall through to the LLM loader.
+        // Contained: any IO failure must not crash Application.onCreate (which runs
+        // before the global exception handler is installed).
+        runCatching {
+            kotlinx.coroutines.runBlocking {
+                com.antivocale.app.data.CustomTransducerMigrator(preferencesManager, externalModelStore).migrate()
+            }
+        }.onFailure { e ->
+            android.util.Log.e("BridgeApplication", "External-model migration failed (will retry on next launch)", e)
+            // Clear the done-marker so the migration retries on the next launch.
+            kotlinx.coroutines.runBlocking {
+                preferencesManager.saveExternalMigrationDone(false)
+            }
+        }
         shareTargetManager.syncAll()
         migrateLanguagePreference()
         installGlobalExceptionHandler()

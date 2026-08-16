@@ -32,10 +32,7 @@ import javax.inject.Singleton
 class ActiveModelRepository @Inject constructor(
     private val preferencesManager: PreferencesManager,
     @ApplicationContext private val context: Context,
-    // Defaulted so direct construction without Hilt (unit tests) keeps the
-    // two-argument shape; the registry is stateless so a fresh instance is
-    // equivalent to the injected singleton.
-    private val backendRegistry: BackendRegistry = BackendRegistry(),
+    private val backendRegistry: BackendRegistry,
 ) {
     /**
      * The active backend plus its saved model path and display name, reactively

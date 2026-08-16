@@ -1,5 +1,7 @@
 package com.antivocale.app.transcription
 
+import com.antivocale.app.data.ExternalModelRecord
+
 import android.content.Context
 
 /**
@@ -126,6 +128,12 @@ sealed class BackendConfig {
         val modelPath: String,
         val contextSize: Int = 2048,
         val threadCount: Int = 4
+    ) : BackendConfig()
+
+    data class ExternalConfig(
+        val record: ExternalModelRecord,
+        val numThreads: Int,
+        val provider: String,
     ) : BackendConfig()
 }
 

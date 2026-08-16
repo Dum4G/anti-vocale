@@ -4,6 +4,7 @@ import com.antivocale.app.data.local.LogDao
 import com.antivocale.app.data.local.LogEntity
 import com.antivocale.app.data.local.toLogEntry
 import com.antivocale.app.transcription.TranscriptionBackendManager
+import com.antivocale.app.transcription.staticRegistry
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
@@ -38,7 +39,7 @@ class LogsViewModelActiveTranscriptionTest {
         Dispatchers.setMain(testDispatcher)
         logDao = mockk(relaxed = true)
         every { logDao.getAll() } returns logsFlow
-        viewModel = LogsViewModel(mockk(relaxed = true), logDao, stubPreferencesManager())
+        viewModel = LogsViewModel(mockk(relaxed = true), logDao, stubPreferencesManager(), staticRegistry())
     }
 
     @After

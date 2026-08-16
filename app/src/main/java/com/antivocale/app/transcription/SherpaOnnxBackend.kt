@@ -42,6 +42,30 @@ class SherpaOnnxBackend @Inject constructor() : TranscriptionBackend {
             "tokens.txt"
         )
 
+        // Canonical role names, resolved BY PREFIX, not by list position: reordering
+        // REQUIRED_MODEL_FILES must never silently repoint a role. The external-model
+        // importer copies/renames sources onto these names and the external engine
+        // loads them, so both resolve the roles here rather than in parallel copies.
+        val CANONICAL_ENCODER = REQUIRED_MODEL_FILES.first { it.startsWith("encoder") }
+        val CANONICAL_DECODER = REQUIRED_MODEL_FILES.first { it.startsWith("decoder") }
+        val CANONICAL_JOINER = REQUIRED_MODEL_FILES.first { it.startsWith("joiner") }
+        val CANONICAL_TOKENS = REQUIRED_MODEL_FILES.first { it.startsWith("tokens") }
+
+        /**
+         * Metadata keys a transducer encoder must carry for [modelType], shared by the
+         * external-model importer (import-time validation) and the external engine
+         * (load-time validation) so the two cannot drift: vocab_size always; the nemo
+         * loader's subsampling_factor + model_type only for the nemo family (a zipformer
+         * import with modelType "" does not carry them and must not be rejected for
+         * their absence).
+         */
+        fun requiredTransducerMetadataKeys(modelType: String): List<String> =
+            if (modelType == "nemo_transducer") {
+                listOf("vocab_size", "subsampling_factor", "model_type")
+            } else {
+                listOf("vocab_size")
+            }
+
         private const val ONNX_METADATA_SCAN_LIMIT: Long = 2L * 1024 * 1024
 
         /**

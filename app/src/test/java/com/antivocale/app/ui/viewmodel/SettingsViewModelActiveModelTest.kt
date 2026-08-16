@@ -4,6 +4,7 @@ import android.app.Application
 import android.content.Context
 import com.antivocale.app.data.ActiveModelRepository
 import com.antivocale.app.data.FakePreferencesManager
+import com.antivocale.app.transcription.staticRegistry
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -54,7 +55,7 @@ class SettingsViewModelActiveModelTest {
             backendManager = mockk(relaxed = true),
             llmManager = mockk(relaxed = true),
             shareTargetManager = mockk(relaxed = true),
-            activeModelRepository = ActiveModelRepository(fakePrefs, mockk<Context>(relaxed = true)),
+            activeModelRepository = ActiveModelRepository(fakePrefs, mockk<Context>(relaxed = true), staticRegistry()),
         )
     }
 

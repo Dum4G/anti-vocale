@@ -103,6 +103,7 @@ fun ModelTab(
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
+    val activeBackendId by viewModel.activeBackendId.collectAsState()
     val downloadUiState by viewModel.downloadUiState.collectAsState()
     val parakeetState by viewModel.parakeetState.collectAsState()
     val whisperState by viewModel.whisperState.collectAsState()
@@ -117,6 +118,22 @@ fun ModelTab(
     var showUnloadDialog by remember { mutableStateOf(false) }
 
     var modelInfoVariant by remember { mutableStateOf<ModelVariant?>(null) }
+    var externalToDelete by remember { mutableStateOf<com.antivocale.app.data.ExternalModelRecord?>(null) }
+    // Shared modelType selection for imports and family corrections (nemo default).
+    var selectedExternalModelType by remember { mutableStateOf("nemo_transducer") }
+
+    // Folder picker launcher for external-model imports (OpenDocumentTree; SAF copy in the VM).
+    val externalFolderPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocumentTree()
+    ) { uri ->
+        uri?.let {
+            context.contentResolver.takePersistableUriPermission(
+                it,
+                android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+            )
+            viewModel.importExternalFromFolder(context, it, selectedExternalModelType)
+        }
+    }
 
     // Snackbar host state for displaying errors
     val snackbarHostState = remember { SnackbarHostState() }
@@ -132,20 +149,6 @@ fun ModelTab(
         ActivityResultContracts.OpenDocument()
     ) { uri ->
         uri?.let { viewModel.onModelSelected(context, it) }
-    }
-
-    // Folder picker launcher for custom transducer model import (OpenDocumentTree).
-    val customModelFolderPicker = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenDocumentTree()
-    ) { uri ->
-        uri?.let {
-            // Persist permission so the URI stays valid for the copy; the copy itself runs in the VM.
-            context.contentResolver.takePersistableUriPermission(
-                it,
-                android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
-            )
-            viewModel.onCustomModelDirSelected(context, it)
-        }
     }
 
     // Handle file picker event
@@ -378,6 +381,25 @@ fun ModelTab(
         )
     }
 
+    // External-model delete confirmation dialog
+    externalToDelete?.let { record ->
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { externalToDelete = null },
+            title = { Text(stringResource(R.string.external_delete_confirm, record.displayName)) },
+            confirmButton = {
+                androidx.compose.material3.TextButton(onClick = {
+                    externalToDelete = null
+                    viewModel.deleteExternalModel(record)
+                }) { Text(stringResource(R.string.delete)) }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = { externalToDelete = null }) {
+                    Text(stringResource(android.R.string.cancel))
+                }
+            }
+        )
+    }
+
     // GGUF: disabled — download/delete dialogs commented out (GgufVariant type unavailable)
     // if (ggufState.showDownloadDialog) { ... viewModel.confirmGgufDownload() ... }
     // if (ggufState.showDeleteDialog) { ... viewModel.confirmGgufDelete() ... }
@@ -575,22 +597,87 @@ fun ModelTab(
 
         // Select Model Button - secondary option for local files.
         // SAF (OpenDocument) grants its own URI access, so no storage permission
-        // request is needed (TASK-301).
-        OutlinedButton(
-            onClick = {
-                viewModel.openFilePicker()
-            },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Icon(Icons.Default.FolderOpen, contentDescription = null)
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(stringResource(R.string.select_model_from_device))
-        }
+        // Advanced section: manual model imports, collapsed by default to hide
+        // complexity from users who just want the curated backends above.
+        var advancedExpanded by remember { mutableStateOf(false) }
+        Column(modifier = Modifier.fillMaxWidth()) {
+            OutlinedButton(
+                onClick = { advancedExpanded = !advancedExpanded },
+                modifier = Modifier.fillMaxWidth(),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(start = 16.dp, end = 16.dp)
+            ) {
+                Icon(
+                    if (advancedExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                    contentDescription = null
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Column {
+                    Text(stringResource(R.string.model_advanced_section))
+                    Text(
+                        stringResource(R.string.model_advanced_description),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Spacer(modifier = Modifier.weight(1f))
+            }
 
-        CustomTransducerImportCard(
-            viewModel = viewModel,
-            onPickFolder = { customModelFolderPicker.launch(null) }
-        )
+            if (advancedExpanded) {
+                // Semantic grouping: LiteRT-LM (Gemma) and ONNX (sherpa) are
+                // distinct ecosystems, each with its own import flow.
+                Text(
+                    stringResource(R.string.external_section_title),
+                    style = MaterialTheme.typography.titleSmall,
+                    modifier = Modifier.padding(top = 12.dp, bottom = 4.dp)
+                )
+
+                // LiteRT-LM (Gemma): same double-container structure as ONNX Sherpa.
+                // SAF (OpenDocument) grants its own URI access, no storage permission
+                // needed (TASK-301).
+                Card(
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                Icons.Default.Memory,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text("LiteRT-LM", style = MaterialTheme.typography.titleMedium)
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+                        OutlinedButton(
+                            onClick = { viewModel.openFilePicker() },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(Icons.Default.FolderOpen, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(stringResource(R.string.select_model_from_device))
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // ONNX (sherpa): the section Card carries the header; no
+                // separate label needed here.
+                ExternalModelsSection(
+                    viewModel = viewModel,
+                    activeBackendId = activeBackendId,
+                    folderPicker = { externalFolderPicker.launch(null) },
+                    selectedModelType = selectedExternalModelType,
+                    onModelTypeChange = { selectedExternalModelType = it },
+                    onDeleteRequest = { externalToDelete = it }
+                )
+            }
+        }
 
         // Extra spacer to ensure downloading card can be fully scrolled into view
         Spacer(modifier = Modifier.height(200.dp))
@@ -964,9 +1051,277 @@ private fun NemotronDownloadSection(
 
 // ==================== GigaAM Download Section ====================
 
+// ==================== External models section (v2a) ====================
+
+/**
+ * Imported external models: one card per record plus the two import actions and the
+ * shared architecture selector. The two standing notices (single-pass risk, wrong-family
+ * crash) ride along every card.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ExternalModelsSection(
+    viewModel: ModelViewModel,
+    activeBackendId: String,
+    folderPicker: () -> Unit,
+    selectedModelType: String,
+    onModelTypeChange: (String) -> Unit,
+    onDeleteRequest: (com.antivocale.app.data.ExternalModelRecord) -> Unit,
+) {
+    val records by viewModel.externalModels.collectAsState()
+    val importState by viewModel.externalImportState.collectAsState()
+    var urlDialogOpen by remember { mutableStateOf(false) }
+    var urlText by remember { mutableStateOf("") }
+    var dropdownExpanded by remember { mutableStateOf(false) }
+
+    val typeOptions = remember {
+        listOf(
+            "nemo_transducer" to R.string.external_model_type_nemo,
+            "" to R.string.external_model_type_zipformer,
+            "conformer_transducer" to R.string.external_model_type_conformer
+        )
+    }
+    val selectedLabel = typeOptions.firstOrNull { it.first == selectedModelType }?.second
+        ?: R.string.external_model_type_nemo
+
+    // Outer section Card matching the curated sections (GigaAM, Nemotron):
+    // surfaceVariant background, header with icon + title + description, 16dp padding.
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            // Header (same shape as GigaAmDownloadSection's header)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    Icons.Default.GraphicEq,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Column {
+                    Text("ONNX Sherpa", style = MaterialTheme.typography.titleMedium)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Architecture selector visible for BOTH import paths (folder and URL).
+            ExposedDropdownMenuBox(
+                expanded = dropdownExpanded,
+                onExpandedChange = { dropdownExpanded = it },
+                modifier = Modifier.padding(bottom = 8.dp)
+            ) {
+                OutlinedTextField(
+                    value = stringResource(selectedLabel),
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text(stringResource(R.string.external_model_type)) },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = dropdownExpanded) },
+                    modifier = Modifier.fillMaxWidth().menuAnchor()
+                )
+                ExposedDropdownMenu(expanded = dropdownExpanded, onDismissRequest = { dropdownExpanded = false }) {
+                    typeOptions.forEach { (value, labelRes) ->
+                        DropdownMenuItem(
+                            text = { Text(stringResource(labelRes)) },
+                            onClick = {
+                                onModelTypeChange(value)
+                                dropdownExpanded = false
+                            }
+                        )
+                    }
+                }
+            }
+
+            Row(modifier = Modifier.fillMaxWidth()) {
+            Button(
+                onClick = folderPicker,
+                enabled = importState !is ModelViewModel.ExternalImportState.Importing,
+                modifier = Modifier.weight(1f)
+            ) {
+                Icon(Icons.Default.FolderOpen, contentDescription = null)
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(stringResource(R.string.external_import_folder))
+            }
+            Spacer(modifier = Modifier.width(8.dp))
+            OutlinedButton(
+                onClick = { urlDialogOpen = true },
+                enabled = importState !is ModelViewModel.ExternalImportState.Importing,
+                modifier = Modifier.weight(1f)
+            ) { Text(stringResource(R.string.external_import_url)) }
+        }
+
+        when (val st = importState) {
+            is ModelViewModel.ExternalImportState.Importing -> Text(
+                stringResource(R.string.external_importing),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(vertical = 8.dp)
+            )
+            is ModelViewModel.ExternalImportState.Error -> Text(
+                stringResource(R.string.external_import_failed, st.message),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(vertical = 8.dp)
+            )
+            else -> {}
+        }
+
+        // Gap between the import buttons/state and the first card
+        if (records.isNotEmpty()) Spacer(modifier = Modifier.height(8.dp))
+
+        records.forEachIndexed { index, record ->
+            if (index > 0) Spacer(modifier = Modifier.height(8.dp))
+            ExternalModelCard(
+                record = record,
+                isActive = activeBackendId == record.backendId,
+                onUse = { viewModel.useExternalModel(record) },
+                onDelete = { onDeleteRequest(record) },
+            )
+        }
+
+        // Standing notices rendered once at the section level, not per card.
+        if (records.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(modifier = Modifier.fillMaxWidth()) {
+                Icon(Icons.Default.Info, contentDescription = null,
+                    modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(stringResource(R.string.external_notice_single_pass),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Row(modifier = Modifier.fillMaxWidth().padding(top = 2.dp)) {
+                Icon(Icons.Default.Warning, contentDescription = null,
+                    modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(stringResource(R.string.external_notice_family),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+        }
+    }
+
+    if (urlDialogOpen) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { urlDialogOpen = false },
+            title = { Text(stringResource(R.string.external_url_dialog_title)) },
+            text = {
+                Column {
+                    OutlinedTextField(
+                        value = urlText,
+                        onValueChange = { urlText = it },
+                        placeholder = { Text(stringResource(R.string.external_url_hint)) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    // Architecture selector is in the section above (visible for both
+                    // import paths), not duplicated here.
+                }
+            },
+            confirmButton = {
+                androidx.compose.material3.TextButton(
+                    onClick = {
+                        urlDialogOpen = false
+                        if (urlText.isNotBlank()) {
+                            viewModel.importExternalFromUrl(urlText.trim(), selectedModelType)
+                        }
+                    }
+                ) { Text(stringResource(R.string.external_import)) }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = { urlDialogOpen = false }) {
+                    Text(stringResource(android.R.string.cancel))
+                }
+            }
+        )
+    }
+}
+
+@Composable
+private fun ExternalModelCard(
+    record: com.antivocale.app.data.ExternalModelRecord,
+    isActive: Boolean,
+    onUse: () -> Unit,
+    onDelete: () -> Unit,
+) {
+    // Same container, padding, and button-row pattern as ModelVariantCard:
+    // surface color, 12dp inner padding, buttons aligned End with 8dp spacing.
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+            ) {
+                Row(
+                    modifier = Modifier.weight(1f),
+                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                ) {
+                    Icon(
+                        Icons.Default.Memory,
+                        contentDescription = null,
+                        tint = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Column {
+                        Text(record.displayName, style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            record.modelType.ifBlank { "zipformer" } +
+                                " · " + com.antivocale.app.util.formatFileSize(record.sizeBytes) +
+                                if (record.languages.isEmpty()) "" else " · " + record.languages.joinToString(", "),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+                if (isActive) {
+                    Icon(
+                        Icons.Default.CheckCircle,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+
+            // Action buttons: same arrangement as ModelVariantCard
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)
+            ) {
+                if (!isActive) {
+                    Button(onClick = onUse) {
+                        Icon(Icons.Default.Check, contentDescription = stringResource(R.string.use_model))
+                    }
+                }
+                OutlinedButton(
+                    onClick = onDelete,
+                    colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.delete))
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+    }
+}
+
 /**
  * Section for downloading the GigaAM v3 model (sherpa-onnx nemo_transducer backend).
- * Single-variant — renders one [ModelVariantCard] bound to [GigaAmModelVariant].
+ * Single-variant: renders one [ModelVariantCard] bound to [GigaAmModelVariant].
  */
 @Composable
 private fun GigaAmDownloadSection(
@@ -1208,7 +1563,11 @@ private fun ParakeetDownloadSection(
     val context = LocalContext.current
     val parakeetState by viewModel.parakeetState.collectAsState()
     val parakeetName = stringResource(R.string.parakeet_name)
+    val savedParakeetPath by viewModel.savedParakeetPath.collectAsState()
     val isParakeetBackendActive = activeModelName == parakeetName
+    // Use the SAVED path (preference), not parakeetState.modelPath (which can lag
+    // behind the actual active model on startup or after a preference change).
+    val activeParakeetPath = savedParakeetPath ?: parakeetState.modelPath
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -1268,7 +1627,7 @@ private fun ParakeetDownloadSection(
                         // The whole Parakeet backend resolves to one active model; mark the
                         // card active only if Parakeet is the active backend AND this variant's
                         // directory is the auto-resolved one.
-                        isActive = isParakeetBackendActive && parakeetState.modelPath?.endsWith(variant.dirName) == true,
+                        isActive = isParakeetBackendActive && activeParakeetPath?.endsWith(variant.dirName) == true,
                         downloadProgress = variantState?.downloadProgress ?: 0f,
                         downloadState = variantState?.downloadState ?: DownloadState.Idle,
                         errorMessage = variantState?.errorMessage,
@@ -1285,7 +1644,7 @@ private fun ParakeetDownloadSection(
                     onCancelClick = { viewModel.cancelParakeetDownload(variant) },
                     onResumeClick = { viewModel.resumeParakeetDownload(variant) },
                     onClearPartialClick = { viewModel.clearParakeetPartialDownload(variant) },
-                    onUseClick = { guardedModelSwitch { viewModel.useParakeetModel() } },
+                    onUseClick = { guardedModelSwitch { viewModel.useParakeetModel(variant) } },
                     onDeleteClick = { viewModel.showParakeetDeleteDialog(variant) },
                     onBenchmarkClick = {
                         val path = ParakeetDownloader.getModelPath(context, variant)
@@ -1502,14 +1861,7 @@ private fun WhisperDownloadSection(
                             }
                             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
 
-                            // Whisper Small
-                            ComparisonRow(
-                                name = stringResource(R.string.speed_comparison_small_name),
-                                size = stringResource(R.string.speed_comparison_small_size),
-                                speed = stringResource(R.string.speed_comparison_small_speed),
-                                quality = stringResource(R.string.speed_comparison_small_quality)
-                            )
-                            // Whisper Turbo
+                            // Whisper Turbo (best Whisper speed/quality balance)
                             ComparisonRow(
                                 name = stringResource(R.string.speed_comparison_turbo_name),
                                 size = stringResource(R.string.speed_comparison_turbo_size),
@@ -1523,8 +1875,15 @@ private fun WhisperDownloadSection(
                                 speed = stringResource(R.string.speed_comparison_medium_speed),
                                 quality = stringResource(R.string.speed_comparison_medium_quality)
                             )
-                            // Distil Italian
+                            // Whisper Small
+                            ComparisonRow(
+                                name = stringResource(R.string.speed_comparison_small_name),
+                                size = stringResource(R.string.speed_comparison_small_size),
+                                speed = stringResource(R.string.speed_comparison_small_speed),
+                                quality = stringResource(R.string.speed_comparison_small_quality)
+                            )
                             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                            // Distil Italian (best Italian quality)
                             ComparisonRow(
                                 name = stringResource(R.string.speed_comparison_distil_it_name),
                                 size = stringResource(R.string.speed_comparison_distil_it_size),
@@ -1533,7 +1892,7 @@ private fun WhisperDownloadSection(
                                 badge = stringResource(R.string.speed_comparison_distil_it_note),
                                 muted = false
                             )
-                            // Parakeet TDT
+                            // Parakeet TDT (recommended)
                             ComparisonRow(
                                 name = stringResource(R.string.speed_comparison_parakeet_name),
                                 size = stringResource(R.string.speed_comparison_parakeet_size),
@@ -1541,6 +1900,28 @@ private fun WhisperDownloadSection(
                                 quality = stringResource(R.string.speed_comparison_parakeet_quality),
                                 badge = stringResource(R.string.speed_comparison_parakeet_note),
                                 muted = false
+                            )
+                            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                            // Qwen3-ASR (broadest language coverage)
+                            ComparisonRow(
+                                name = stringResource(R.string.speed_comparison_qwen3_name),
+                                size = stringResource(R.string.speed_comparison_qwen3_size),
+                                speed = stringResource(R.string.speed_comparison_qwen3_speed),
+                                quality = stringResource(R.string.speed_comparison_qwen3_quality)
+                            )
+                            // GigaAM v3 (Russian)
+                            ComparisonRow(
+                                name = stringResource(R.string.speed_comparison_gigaam_name),
+                                size = stringResource(R.string.speed_comparison_gigaam_size),
+                                speed = stringResource(R.string.speed_comparison_gigaam_speed),
+                                quality = stringResource(R.string.speed_comparison_gigaam_quality)
+                            )
+                            // Nemotron (streaming, experimental)
+                            ComparisonRow(
+                                name = stringResource(R.string.speed_comparison_nemotron_name),
+                                size = stringResource(R.string.speed_comparison_nemotron_size),
+                                speed = stringResource(R.string.speed_comparison_nemotron_speed),
+                                quality = stringResource(R.string.speed_comparison_nemotron_quality)
                             )
                         }
                     }
@@ -1581,134 +1962,6 @@ private fun ComparisonRow(
             }
         } else {
             Text(quality, modifier = Modifier.weight(1.5f), style = MaterialTheme.typography.bodySmall)
-        }
-    }
-}
-
-/**
- * Import card for user-provided (sideloaded) sherpa-onnx transducer models.
- * Lets the user pick a model folder, choose the architecture (modelType), and activate/delete
- * the imported model. Surfaces the two non-blocking risk notices (modelType crash, single-pass
- * long-audio) so the user can act if something goes wrong.
- */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun CustomTransducerImportCard(
-    viewModel: ModelViewModel,
-    onPickFolder: () -> Unit
-) {
-    val modelType by viewModel.customTransducerModelType.collectAsState()
-    val importedPath by viewModel.customTransducerModelPath.collectAsState()
-    var dropdownExpanded by remember { mutableStateOf(false) }
-
-    // (value sent to the backend, label string res). The default (nemo_transducer) already lives
-    // in the ViewModel via PreferencesManager, so the UI never references preference constants.
-    val typeOptions = remember {
-        listOf(
-            "nemo_transducer" to R.string.custom_transducer_model_type_nemo,
-            "" to R.string.custom_transducer_model_type_zipformer,
-            "conformer_transducer" to R.string.custom_transducer_model_type_conformer
-        )
-    }
-    val selectedLabel = typeOptions.firstOrNull { it.first == modelType }?.second
-        ?: R.string.custom_transducer_model_type_nemo
-
-    Card(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                Icon(Icons.Default.Memory, contentDescription = null)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    stringResource(R.string.import_custom_model),
-                    style = MaterialTheme.typography.titleMedium
-                )
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Model architecture selector. A wrong modelType triggers an uncatchable native crash.
-            Text(
-                stringResource(R.string.custom_transducer_model_type),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            ExposedDropdownMenuBox(
-                expanded = dropdownExpanded,
-                onExpandedChange = { dropdownExpanded = it },
-                modifier = Modifier.padding(top = 4.dp)
-            ) {
-                OutlinedTextField(
-                    value = stringResource(selectedLabel),
-                    onValueChange = {},
-                    readOnly = true,
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = dropdownExpanded) },
-                    modifier = Modifier.fillMaxWidth().menuAnchor()
-                )
-                ExposedDropdownMenu(expanded = dropdownExpanded, onDismissRequest = { dropdownExpanded = false }) {
-                    typeOptions.forEach { (value, labelRes) ->
-                        DropdownMenuItem(
-                            text = { Text(stringResource(labelRes)) },
-                            onClick = {
-                                viewModel.setCustomModelType(value)
-                                dropdownExpanded = false
-                            }
-                        )
-                    }
-                }
-            }
-
-            Text(
-                stringResource(R.string.custom_transducer_model_type_warning),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 6.dp)
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Imported model state: show name + activate/delete, or the import button.
-            val activePath = importedPath
-            if (!activePath.isNullOrBlank()) {
-                val dirName = remember(activePath) { activePath.substringAfterLast("/") }
-                Text(
-                    stringResource(R.string.custom_transducer_active) + ": " + dirName,
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-                Row {
-                    Button(
-                        onClick = { viewModel.useCustomTransducerModel(activePath) },
-                        modifier = Modifier.weight(1f)
-                    ) { Text(stringResource(R.string.use_model)) }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    OutlinedButton(
-                        onClick = { viewModel.deleteCustomTransducerModel() }
-                    ) { Text(stringResource(R.string.custom_transducer_delete)) }
-                }
-            } else {
-                Button(onClick = onPickFolder, modifier = Modifier.fillMaxWidth()) {
-                    Icon(Icons.Default.FolderOpen, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(stringResource(R.string.custom_transducer_select_folder))
-                }
-            }
-
-            Spacer(modifier = Modifier.height(10.dp))
-            // Informational notice, not an action: a plain row, not an AssistChip (which implies a click).
-            Row(modifier = Modifier.fillMaxWidth()) {
-                Icon(
-                    Icons.Default.Info,
-                    contentDescription = null,
-                    modifier = Modifier.size(16.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                    stringResource(R.string.custom_transducer_single_pass_notice),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
         }
     }
 }

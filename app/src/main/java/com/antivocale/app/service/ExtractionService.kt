@@ -79,9 +79,9 @@ class ExtractionService : Service() {
         QWEN3_ASR("qwen3-asr"),
         NEMOTRON("nemotron"),
         GIGAAM("gigaam"),
-        CUSTOM_TRANSDUCER("custom-transducer"),
         GEMMA("gemma"),
-        GEMMA4_GGUF("gemma4-gguf");
+        GEMMA4_GGUF("gemma4-gguf"),
+        EXTERNAL("external");
 
         companion object {
             fun fromKey(key: String?): ModelType? = entries.find { it.key == key }
@@ -130,11 +130,12 @@ class ExtractionService : Service() {
             }
             ModelType.NEMOTRON -> getString(R.string.nemotron_name)
             ModelType.GIGAAM -> getString(R.string.gigaam_name)
-            ModelType.CUSTOM_TRANSDUCER -> variant ?: "Custom model"
             ModelType.GEMMA -> GemmaVariant.fromString(variant).displayName
             // GGUF: disabled
             // ModelType.GEMMA4_GGUF -> { val gv = GgufVariant.fromString(variant); gv?.let { getString(it.titleResId) } ?: "Gemma 4 GGUF" }
             ModelType.GEMMA4_GGUF -> "Gemma 4 GGUF"
+            // Bookkeeping fallback only: the registry descriptor carries the per-model name.
+            ModelType.EXTERNAL -> "External model"
         }
     }
 
@@ -310,10 +311,8 @@ class ExtractionService : Service() {
                 ModelType.GEMMA4_GGUF -> {
                     _progressState.tryEmit(ExtractionProgress(modelType, variant, DownloadState.Error("GGUF not available")))
                 }
-                // Custom transducer: sideload only, no server download.
-                ModelType.CUSTOM_TRANSDUCER -> {
-                    _progressState.tryEmit(ExtractionProgress(modelType, variant, DownloadState.Error("Custom transducer models are imported locally")))
-                }
+                // External models: imported through the importer in the Model tab, never this service.
+                ModelType.EXTERNAL -> { /* no service-driven download: imports run through the importer */ }
             }
         } catch (e: CancellationException) {
             Log.i(TAG, "Download cancelled: $key")
@@ -391,8 +390,8 @@ class ExtractionService : Service() {
             }
             // GGUF: disabled
             ModelType.GEMMA4_GGUF -> { /* no-op: GGUF downloader not available */ }
-            // Custom transducer: sideload only, no download to cancel.
-            ModelType.CUSTOM_TRANSDUCER -> { /* no-op: sideload models have no download job */ }
+            // External models: imported, never downloaded by the service.
+            ModelType.EXTERNAL -> { /* no-op: external models have no service-driven download */ }
         }
     }
 
