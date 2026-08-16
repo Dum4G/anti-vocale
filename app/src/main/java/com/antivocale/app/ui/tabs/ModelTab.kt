@@ -134,20 +134,6 @@ fun ModelTab(
         uri?.let { viewModel.onModelSelected(context, it) }
     }
 
-    // Folder picker launcher for custom transducer model import (OpenDocumentTree).
-    val customModelFolderPicker = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenDocumentTree()
-    ) { uri ->
-        uri?.let {
-            // Persist permission so the URI stays valid for the copy; the copy itself runs in the VM.
-            context.contentResolver.takePersistableUriPermission(
-                it,
-                android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
-            )
-            viewModel.onCustomModelDirSelected(context, it)
-        }
-    }
-
     // Handle file picker event
     LaunchedEffect(viewModel.filePickerEvent) {
         viewModel.filePickerEvent.collect {
@@ -586,11 +572,6 @@ fun ModelTab(
             Spacer(modifier = Modifier.width(8.dp))
             Text(stringResource(R.string.select_model_from_device))
         }
-
-        CustomTransducerImportCard(
-            viewModel = viewModel,
-            onPickFolder = { customModelFolderPicker.launch(null) }
-        )
 
         // Extra spacer to ensure downloading card can be fully scrolled into view
         Spacer(modifier = Modifier.height(200.dp))
@@ -1581,134 +1562,6 @@ private fun ComparisonRow(
             }
         } else {
             Text(quality, modifier = Modifier.weight(1.5f), style = MaterialTheme.typography.bodySmall)
-        }
-    }
-}
-
-/**
- * Import card for user-provided (sideloaded) sherpa-onnx transducer models.
- * Lets the user pick a model folder, choose the architecture (modelType), and activate/delete
- * the imported model. Surfaces the two non-blocking risk notices (modelType crash, single-pass
- * long-audio) so the user can act if something goes wrong.
- */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun CustomTransducerImportCard(
-    viewModel: ModelViewModel,
-    onPickFolder: () -> Unit
-) {
-    val modelType by viewModel.customTransducerModelType.collectAsState()
-    val importedPath by viewModel.customTransducerModelPath.collectAsState()
-    var dropdownExpanded by remember { mutableStateOf(false) }
-
-    // (value sent to the backend, label string res). The default (nemo_transducer) already lives
-    // in the ViewModel via PreferencesManager, so the UI never references preference constants.
-    val typeOptions = remember {
-        listOf(
-            "nemo_transducer" to R.string.custom_transducer_model_type_nemo,
-            "" to R.string.custom_transducer_model_type_zipformer,
-            "conformer_transducer" to R.string.custom_transducer_model_type_conformer
-        )
-    }
-    val selectedLabel = typeOptions.firstOrNull { it.first == modelType }?.second
-        ?: R.string.custom_transducer_model_type_nemo
-
-    Card(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                Icon(Icons.Default.Memory, contentDescription = null)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    stringResource(R.string.import_custom_model),
-                    style = MaterialTheme.typography.titleMedium
-                )
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Model architecture selector. A wrong modelType triggers an uncatchable native crash.
-            Text(
-                stringResource(R.string.custom_transducer_model_type),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            ExposedDropdownMenuBox(
-                expanded = dropdownExpanded,
-                onExpandedChange = { dropdownExpanded = it },
-                modifier = Modifier.padding(top = 4.dp)
-            ) {
-                OutlinedTextField(
-                    value = stringResource(selectedLabel),
-                    onValueChange = {},
-                    readOnly = true,
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = dropdownExpanded) },
-                    modifier = Modifier.fillMaxWidth().menuAnchor()
-                )
-                ExposedDropdownMenu(expanded = dropdownExpanded, onDismissRequest = { dropdownExpanded = false }) {
-                    typeOptions.forEach { (value, labelRes) ->
-                        DropdownMenuItem(
-                            text = { Text(stringResource(labelRes)) },
-                            onClick = {
-                                viewModel.setCustomModelType(value)
-                                dropdownExpanded = false
-                            }
-                        )
-                    }
-                }
-            }
-
-            Text(
-                stringResource(R.string.custom_transducer_model_type_warning),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 6.dp)
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Imported model state: show name + activate/delete, or the import button.
-            val activePath = importedPath
-            if (!activePath.isNullOrBlank()) {
-                val dirName = remember(activePath) { activePath.substringAfterLast("/") }
-                Text(
-                    stringResource(R.string.custom_transducer_active) + ": " + dirName,
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-                Row {
-                    Button(
-                        onClick = { viewModel.useCustomTransducerModel(activePath) },
-                        modifier = Modifier.weight(1f)
-                    ) { Text(stringResource(R.string.use_model)) }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    OutlinedButton(
-                        onClick = { viewModel.deleteCustomTransducerModel() }
-                    ) { Text(stringResource(R.string.custom_transducer_delete)) }
-                }
-            } else {
-                Button(onClick = onPickFolder, modifier = Modifier.fillMaxWidth()) {
-                    Icon(Icons.Default.FolderOpen, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(stringResource(R.string.custom_transducer_select_folder))
-                }
-            }
-
-            Spacer(modifier = Modifier.height(10.dp))
-            // Informational notice, not an action: a plain row, not an AssistChip (which implies a click).
-            Row(modifier = Modifier.fillMaxWidth()) {
-                Icon(
-                    Icons.Default.Info,
-                    contentDescription = null,
-                    modifier = Modifier.size(16.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                    stringResource(R.string.custom_transducer_single_pass_notice),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
         }
     }
 }

@@ -59,8 +59,8 @@ data class BackendDescriptor(
      * ShareTargetManager resolve it here); the manifest android:name
      * attributes cannot reference runtime values and stay literal strings,
      * pinned by BackendRegistryTest. Blank is a valid sentinel: backends with
-     * no share target (e.g. the sideloaded custom-transducer) carry "", and
-     * ShareTargetManager skips them during component sync.
+     * no share target carry "", and ShareTargetManager skips them during
+     * component sync.
      */
     val shareAlias: String,
 
@@ -92,7 +92,7 @@ data class BackendDescriptor(
  * of [BackendDescriptor]s plus lookups by backend-id, [ExtractionService.ModelType],
  * and share alias.
  *
- * The list is the static seven plus dynamic descriptors derived from the
+ * The list is the static six plus dynamic descriptors derived from the
  * external model store (spec: external models platform v2a): every valid
  * [ExternalModelRecord] yields one descriptor appended after the static
  * backends. The registry is therefore NO LONGER STATELESS, and the
@@ -172,7 +172,7 @@ class BackendRegistry @Inject constructor(
     private val recordsProvider: ExternalModelRecordsProvider,
 ) {
 
-    /** The seven enabled static backends in canonical order (default backend first). */
+    /** The six enabled static backends in canonical order (default backend first). */
     private val staticBackends: List<BackendDescriptor> = listOf(
         BackendDescriptor(
             backendId = SherpaOnnxBackend.BACKEND_ID,
@@ -230,16 +230,6 @@ class BackendRegistry @Inject constructor(
             clearModelPath = { it.clearGigaAmModelPath() },
         ),
         BackendDescriptor(
-            backendId = CustomTransducerBackend.BACKEND_ID,
-            modelType = ExtractionService.ModelType.CUSTOM_TRANSDUCER,
-            // Sideload models have no manifest activity-alias (no share target).
-            shareAlias = "",
-            // Display name derives from the imported model directory name.
-            modelPathFlow = { it.customTransducerModelPath },
-            saveModelPath = { prefs, path -> prefs.saveCustomTransducerModelPath(path) },
-            clearModelPath = { it.clearCustomTransducerModelPath() },
-        ),
-        BackendDescriptor(
             backendId = LlmTranscriptionBackend.BACKEND_ID,
             modelType = ExtractionService.ModelType.GEMMA,
             shareAlias = "com.antivocale.app.ShareGemma",
@@ -291,9 +281,7 @@ class BackendRegistry @Inject constructor(
 
     /**
      * Returns the descriptor for a share-target [alias], or null if unknown
-     * (including null/blank). The blank alias is order-dependent: statics
-     * precede externals, so "" resolves to the custom-transducer descriptor
-     * while any external record is present.
+     * (including null/blank).
      */
     fun byShareAlias(alias: String?): BackendDescriptor? =
         alias?.let { a -> backends.firstOrNull { it.shareAlias == a } }

@@ -335,7 +335,6 @@ class TranscriptionOrchestrator @Inject constructor(
                     ExtractionService.ModelType.QWEN3_ASR -> loadQwen3AsrBackend(context)
                     ExtractionService.ModelType.NEMOTRON -> loadNemotronBackend(context)
                     ExtractionService.ModelType.GIGAAM -> loadGigaAmBackend(context)
-                    ExtractionService.ModelType.CUSTOM_TRANSDUCER -> loadCustomTransducerBackend(context)
                     // The registered LLM backend ("llm" -> GEMMA) loads here, as before.
                     ExtractionService.ModelType.GEMMA -> loadLlmBackend(context)
                     else -> loadLlmBackend(context)
@@ -496,21 +495,6 @@ class TranscriptionOrchestrator @Inject constructor(
                 provider = provider,
             )
         }
-    }
-
-    private suspend fun loadCustomTransducerBackend(context: Context): Result<Unit> {
-        // User-imported (sideloaded) transducer model. modelType is user-selected because a wrong
-        // value triggers an uncatchable native exit(255); default nemo_transducer covers GigaAM/Parakeet.
-        val modelPath = preferencesManager.customTransducerModelPath.first()
-            ?: return Result.failure(TranscriptionException.NotInitialized())
-        val modelType = preferencesManager.customTransducerModelType.first()
-        return configureSherpaBackend(
-            backendId = CustomTransducerBackend.BACKEND_ID,
-            modelPath = modelPath,
-            label = "Custom transducer",
-            modelType = modelType,
-            context = context
-        )
     }
 
     private suspend fun loadSherpaOnnxBackend(context: Context): Result<Unit> {
@@ -1399,8 +1383,6 @@ class TranscriptionOrchestrator @Inject constructor(
                     .replace("-", " ")
                     .replaceFirstChar { it.uppercase() }
             }
-            // For sideloaded models the imported directory name is the user's own label.
-            CustomTransducerBackend.BACKEND_ID -> dirName.ifBlank { fallbackName ?: "Custom model" }
             else -> fallbackName ?: backendId
         }
     }

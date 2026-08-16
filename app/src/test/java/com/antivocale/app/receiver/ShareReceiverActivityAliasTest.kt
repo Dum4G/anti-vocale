@@ -3,7 +3,6 @@ package com.antivocale.app.receiver
 import com.antivocale.app.data.ExternalModelStore
 import com.antivocale.app.data.FakePreferencesManager
 import com.antivocale.app.transcription.BackendRegistry
-import com.antivocale.app.transcription.CustomTransducerBackend
 import com.antivocale.app.transcription.emptyRecordsProvider
 import org.junit.Assert.*
 import org.junit.Test
@@ -55,10 +54,7 @@ class ShareReceiverActivityAliasTest {
     }
 
     @Test
-    fun `empty string returns custom-transducer backend id`() {
-        assertEquals(
-            CustomTransducerBackend.BACKEND_ID,
-            ShareReceiverActivity.backendIdForAlias("", registry)
-        )
+    fun `empty string returns null (no static backend carries the blank alias)`() {
+        assertNull(ShareReceiverActivity.backendIdForAlias("", registry))
     }
 }
