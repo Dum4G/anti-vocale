@@ -720,8 +720,8 @@
     <string name="external_imported">Importato %1$s</string>
     <string name="external_delete_confirm">Eliminare il modello esterno %1$s?</string>
     <string name="external_deleted">%1$s eliminato</string>
-    <string name="external_correct_family">Correggi architettura</string>
-    <string name="external_model_type">Architettura modello (una scelta sbagliata può causare crash)</string>
+    <string name="external_correct_family">Cambia architettura</string>
+    <string name="external_model_type">Architettura (lascia il default se la trascrizione funziona)</string>
     <string name="external_model_type_nemo">NeMo transducer (predefinito)</string>
     <string name="external_model_type_zipformer">Zipformer transducer</string>
     <string name="external_model_type_conformer">Conformer transducer</string>

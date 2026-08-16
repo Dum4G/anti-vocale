@@ -1056,37 +1056,6 @@ private fun ExternalModelsSection(
             modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
         )
 
-        // Architecture selector: a wrong modelType triggers an uncatchable native crash.
-        Text(
-            stringResource(R.string.external_model_type),
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        ExposedDropdownMenuBox(
-            expanded = dropdownExpanded,
-            onExpandedChange = { dropdownExpanded = it },
-            modifier = Modifier.padding(top = 4.dp, bottom = 8.dp)
-        ) {
-            OutlinedTextField(
-                value = stringResource(selectedLabel),
-                onValueChange = {},
-                readOnly = true,
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = dropdownExpanded) },
-                modifier = Modifier.fillMaxWidth().menuAnchor()
-            )
-            ExposedDropdownMenu(expanded = dropdownExpanded, onDismissRequest = { dropdownExpanded = false }) {
-                typeOptions.forEach { (value, labelRes) ->
-                    DropdownMenuItem(
-                        text = { Text(stringResource(labelRes)) },
-                        onClick = {
-                            onModelTypeChange(value)
-                            dropdownExpanded = false
-                        }
-                    )
-                }
-            }
-        }
-
         Row(modifier = Modifier.fillMaxWidth()) {
             Button(
                 onClick = folderPicker,
@@ -1137,13 +1106,47 @@ private fun ExternalModelsSection(
             onDismissRequest = { urlDialogOpen = false },
             title = { Text(stringResource(R.string.external_url_dialog_title)) },
             text = {
-                OutlinedTextField(
-                    value = urlText,
-                    onValueChange = { urlText = it },
-                    placeholder = { Text(stringResource(R.string.external_url_hint)) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                Column {
+                    OutlinedTextField(
+                        value = urlText,
+                        onValueChange = { urlText = it },
+                        placeholder = { Text(stringResource(R.string.external_url_hint)) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    // Architecture selector inside the import dialog, not permanently
+                    // visible: most users never need to change it from the default.
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        stringResource(R.string.external_model_type),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    ExposedDropdownMenuBox(
+                        expanded = dropdownExpanded,
+                        onExpandedChange = { dropdownExpanded = it },
+                        modifier = Modifier.padding(top = 4.dp)
+                    ) {
+                        OutlinedTextField(
+                            value = stringResource(selectedLabel),
+                            onValueChange = {},
+                            readOnly = true,
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = dropdownExpanded) },
+                            modifier = Modifier.fillMaxWidth().menuAnchor()
+                        )
+                        ExposedDropdownMenu(expanded = dropdownExpanded, onDismissRequest = { dropdownExpanded = false }) {
+                            typeOptions.forEach { (value, labelRes) ->
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(labelRes)) },
+                                    onClick = {
+                                        onModelTypeChange(value)
+                                        dropdownExpanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
             },
             confirmButton = {
                 androidx.compose.material3.TextButton(
@@ -1213,17 +1216,17 @@ private fun ExternalModelCard(
             Spacer(modifier = Modifier.height(4.dp))
             Row(modifier = Modifier.fillMaxWidth()) {
                 OutlinedButton(
-                    onClick = onCorrectFamily,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(stringResource(R.string.external_correct_family), maxLines = 1, style = MaterialTheme.typography.labelSmall)
-                }
-                Spacer(modifier = Modifier.width(8.dp))
-                OutlinedButton(
                     onClick = onDelete,
                     modifier = Modifier.weight(1f)
                 ) {
                     Text(stringResource(R.string.delete), maxLines = 1)
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                OutlinedButton(
+                    onClick = onCorrectFamily,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(stringResource(R.string.external_correct_family), maxLines = 1)
                 }
             }
 

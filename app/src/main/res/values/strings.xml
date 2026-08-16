@@ -794,8 +794,8 @@
     <string name="external_imported">Imported %1$s</string>
     <string name="external_delete_confirm">Delete external model %1$s?</string>
     <string name="external_deleted">%1$s deleted</string>
-    <string name="external_correct_family">Correct family</string>
-    <string name="external_model_type">Model architecture (wrong choice can crash transcription)</string>
+    <string name="external_correct_family">Change architecture</string>
+    <string name="external_model_type">Architecture (leave default unless transcription crashes)</string>
     <string name="external_model_type_nemo">NeMo transducer (default)</string>
     <string name="external_model_type_zipformer">Zipformer transducer</string>
     <string name="external_model_type_conformer">Conformer transducer</string>
