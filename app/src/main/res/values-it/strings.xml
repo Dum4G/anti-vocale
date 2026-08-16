@@ -9,7 +9,7 @@
 
     <!-- Model selection -->
     <string name="select_model">Seleziona File Modello</string>
-    <string name="select_model_from_device">Seleziona dal dispositivo</string>
+    <string name="select_model_from_device">Seleziona file</string>
 
     <!-- Modello transducer personalizzato (sideload) -->
     <string name="load_model">Carica Modello</string>
@@ -101,7 +101,7 @@
 
     <!-- Parakeet model -->
     <string name="parakeet_title">Parakeet TDT</string>
-    <string name="parakeet_description">~862MB • 25 lingue • Veloce • Consigliato</string>
+    <string name="parakeet_description">25 lingue • Veloce • Consigliato</string>
     <string name="parakeet_download">Scarica Parakeet TDT</string>
     <string name="parakeet_download_confirm_title">Scaricare Parakeet TDT?</string>
     <string name="parakeet_download_confirm_message">Verranno scaricati ~%1$dMB. Parakeet è più veloce ma meno preciso di Gemma per la trascrizione.</string>

@@ -603,7 +603,8 @@ fun ModelTab(
         Column(modifier = Modifier.fillMaxWidth()) {
             OutlinedButton(
                 onClick = { advancedExpanded = !advancedExpanded },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(start = 16.dp, end = 16.dp)
             ) {
                 Icon(
                     if (advancedExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
@@ -618,6 +619,7 @@ fun ModelTab(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+                Spacer(modifier = Modifier.weight(1f))
             }
 
             if (advancedExpanded) {
@@ -1564,7 +1566,11 @@ private fun ParakeetDownloadSection(
     val context = LocalContext.current
     val parakeetState by viewModel.parakeetState.collectAsState()
     val parakeetName = stringResource(R.string.parakeet_name)
+    val savedParakeetPath by viewModel.savedParakeetPath.collectAsState()
     val isParakeetBackendActive = activeModelName == parakeetName
+    // Use the SAVED path (preference), not parakeetState.modelPath (which can lag
+    // behind the actual active model on startup or after a preference change).
+    val activeParakeetPath = savedParakeetPath ?: parakeetState.modelPath
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -1624,7 +1630,7 @@ private fun ParakeetDownloadSection(
                         // The whole Parakeet backend resolves to one active model; mark the
                         // card active only if Parakeet is the active backend AND this variant's
                         // directory is the auto-resolved one.
-                        isActive = isParakeetBackendActive && parakeetState.modelPath?.endsWith(variant.dirName) == true,
+                        isActive = isParakeetBackendActive && activeParakeetPath?.endsWith(variant.dirName) == true,
                         downloadProgress = variantState?.downloadProgress ?: 0f,
                         downloadState = variantState?.downloadState ?: DownloadState.Idle,
                         errorMessage = variantState?.errorMessage,

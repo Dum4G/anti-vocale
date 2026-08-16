@@ -2168,6 +2168,11 @@ class ModelViewModel @Inject constructor(
             .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5_000),
                 PreferencesManager.DEFAULT_TRANSCRIPTION_BACKEND)
 
+    /** Saved Parakeet model path (preference), for variant active-state that survives restarts. */
+    val savedParakeetPath: StateFlow<String?> =
+        preferencesManager.parakeetModelPath
+            .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5_000), null)
+
     /** Folder import (SAF): the primary v2a entry. */
     fun importExternalFromFolder(context: Context, treeUri: Uri, modelType: String) =
         runExternalImport("External folder") { externalModelImporter.importFromTreeUri(context, treeUri, modelType) }
