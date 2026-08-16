@@ -346,6 +346,9 @@ class ExternalModelImporter(
 
     /** Unconditional disk pre-flight (spec binding): the import doubles disk usage. */
     private fun requireDiskSpace(root: File, totalBytes: Long) {
+        // A non-existent directory reports usableSpace == 0 on Android: create the
+        // root first so the pre-flight measures the real volume (device-test catch).
+        root.mkdirs()
         if (totalBytes > root.usableSpace) {
             throw IllegalArgumentException(
                 "not enough disk space: need ${totalBytes / (1024 * 1024)}MB, available ${root.usableSpace / (1024 * 1024)}MB")

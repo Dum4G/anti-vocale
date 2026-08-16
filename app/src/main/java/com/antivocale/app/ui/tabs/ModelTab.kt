@@ -597,29 +597,52 @@ fun ModelTab(
 
         // Select Model Button - secondary option for local files.
         // SAF (OpenDocument) grants its own URI access, so no storage permission
-        // request is needed (TASK-301).
-        OutlinedButton(
-            onClick = {
-                viewModel.openFilePicker()
-            },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Icon(Icons.Default.FolderOpen, contentDescription = null)
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(stringResource(R.string.select_model_from_device))
-        }
+        // Advanced section: manual model imports, collapsed by default to hide
+        // complexity from users who just want the curated backends above.
+        var advancedExpanded by remember { mutableStateOf(false) }
+        Column(modifier = Modifier.fillMaxWidth()) {
+            OutlinedButton(
+                onClick = { advancedExpanded = !advancedExpanded },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(
+                    if (advancedExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                    contentDescription = null
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Column {
+                    Text(stringResource(R.string.model_advanced_section))
+                    Text(
+                        stringResource(R.string.model_advanced_description),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
 
-        // External models section (v2a): imported models as first-class cards.
-        // At the END of the list: these are user-added models, secondary to the
-        // curated static backends above.
-        ExternalModelsSection(
-            viewModel = viewModel,
-            activeBackendId = activeBackendId,
-            folderPicker = { externalFolderPicker.launch(null) },
-            selectedModelType = selectedExternalModelType,
-            onModelTypeChange = { selectedExternalModelType = it },
-            onDeleteRequest = { externalToDelete = it }
-        )
+            if (advancedExpanded) {
+                // Manual LiteRT-LM (Gemma) model file: SAF (OpenDocument) grants its
+                // own URI access, no storage permission needed (TASK-301).
+                OutlinedButton(
+                    onClick = { viewModel.openFilePicker() },
+                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp)
+                ) {
+                    Icon(Icons.Default.FolderOpen, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(stringResource(R.string.select_model_from_device))
+                }
+
+                // External models section (v2a): ONNX sherpa imports and cards.
+                ExternalModelsSection(
+                    viewModel = viewModel,
+                    activeBackendId = activeBackendId,
+                    folderPicker = { externalFolderPicker.launch(null) },
+                    selectedModelType = selectedExternalModelType,
+                    onModelTypeChange = { selectedExternalModelType = it },
+                    onDeleteRequest = { externalToDelete = it }
+                )
+            }
+        }
 
         // Extra spacer to ensure downloading card can be fully scrolled into view
         Spacer(modifier = Modifier.height(200.dp))
