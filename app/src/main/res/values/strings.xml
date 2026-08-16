@@ -781,6 +781,24 @@
     <string name="share_target_gigaam">Anti-Vocale (GigaAM)</string>
     <string name="share_target_external">Anti-Vocale (External)</string>
     <string name="external_none_imported">No external models imported</string>
+    <string name="external_section_title">External models</string>
+    <string name="external_import_folder">Import from folder</string>
+    <string name="external_import_url">Import from URL</string>
+    <string name="external_url_hint">HuggingFace repo or catalog-entry JSON URL</string>
+    <string name="external_url_dialog_title">Import external model</string>
+    <string name="external_import">Import</string>
+    <string name="external_importing">Importing model…</string>
+    <string name="external_import_failed">Import failed: %1$s</string>
+    <string name="external_imported">Imported %1$s</string>
+    <string name="external_delete_confirm">Delete external model %1$s?</string>
+    <string name="external_deleted">%1$s deleted</string>
+    <string name="external_correct_family">Correct family</string>
+    <string name="external_model_type">Model architecture (wrong choice can crash transcription)</string>
+    <string name="external_model_type_nemo">NeMo transducer (default)</string>
+    <string name="external_model_type_zipformer">Zipformer transducer</string>
+    <string name="external_model_type_conformer">Conformer transducer</string>
+    <string name="external_notice_single_pass">Single-pass transcription: very long audio may fail with large models. Trim the audio or use a smaller model.</string>
+    <string name="external_notice_family">If transcription crashes with no error, the architecture may be wrong for this model: correct it with the button above.</string>
 
     <!-- Advanced sharing settings -->
     <string name="share_targets_title">Share Targets</string>

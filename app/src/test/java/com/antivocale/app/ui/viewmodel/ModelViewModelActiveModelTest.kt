@@ -75,6 +75,11 @@ class ModelViewModelActiveModelTest {
             shareTargetManager = mockk(relaxed = true),
             ctx = mockContext,
             backendRegistry = staticRegistry(),
+            externalModelStore = com.antivocale.app.data.ExternalModelStore(fakePrefs),
+            externalModelImporter = com.antivocale.app.data.ExternalModelImporter(
+                store = com.antivocale.app.data.ExternalModelStore(fakePrefs),
+                filesRoot = { filesRoot },
+            ),
         )
     }
 

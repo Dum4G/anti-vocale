@@ -54,6 +54,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.File
@@ -71,6 +72,8 @@ class ModelViewModel @Inject constructor(
     private val shareTargetManager: ShareTargetManager,
     @ApplicationContext private val ctx: Context,
     private val backendRegistry: BackendRegistry,
+    private val externalModelStore: com.antivocale.app.data.ExternalModelStore,
+    private val externalModelImporter: com.antivocale.app.data.ExternalModelImporter,
 ) : ViewModel() {
 
     val tokenState = tokenManager.tokenState
@@ -2139,6 +2142,118 @@ class ModelViewModel @Inject constructor(
                 _gigaAmState.update { it.copy(modelPath = null) }
                 _snackbarEvent.tryEmit(SnackbarEvent.Message(context.getString(R.string.gigaam_deleted, context.getString(R.string.gigaam_name))))
             }
+        }
+    }
+
+    // ==================== External models (v2a) ====================
+
+    /** Import progress for the external-models section (one import at a time). */
+    sealed class ExternalImportState {
+        data object Idle : ExternalImportState()
+        data object Importing : ExternalImportState()
+        data class Error(val message: String) : ExternalImportState()
+    }
+
+    private val _externalImportState = MutableStateFlow<ExternalImportState>(ExternalImportState.Idle)
+    val externalImportState: StateFlow<ExternalImportState> = _externalImportState.asStateFlow()
+
+    /** Valid external records for the section cards (dir exists on disk). */
+    val externalModels: StateFlow<List<com.antivocale.app.data.ExternalModelRecord>> =
+        externalModelStore.validRecordsFlow
+            .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /** Folder import (SAF): the primary v2a entry. */
+    fun importExternalFromFolder(context: Context, treeUri: Uri, modelType: String) {
+        _externalImportState.value = ExternalImportState.Importing
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching { externalModelImporter.importFromTreeUri(context, treeUri, modelType) }
+                .fold(
+                    onSuccess = { record -> onExternalImported(record) },
+                    onFailure = { e ->
+                        Log.e(TAG, "External folder import failed", e)
+                        _externalImportState.value = ExternalImportState.Error(e.message ?: "unknown error")
+                        _snackbarEvent.tryEmit(SnackbarEvent.Message(
+                            ctx.getString(R.string.external_import_failed, e.message ?: "")))
+                    },
+                )
+        }
+    }
+
+    /** URL import: a HuggingFace repo URL or a catalog-entry JSON URL. */
+    fun importExternalFromUrl(url: String, modelType: String) {
+        _externalImportState.value = ExternalImportState.Importing
+        viewModelScope.launch(Dispatchers.IO) {
+            val result = runCatching {
+                val isEntryJson = url.trim().endsWith(".json") ||
+                    com.antivocale.app.data.HuggingFaceRepoListing.parseRepoId(url) == null
+                if (isEntryJson) externalModelImporter.importFromEntryJson(url)
+                else externalModelImporter.importFromHuggingFaceRepo(url, modelType)
+            }
+            result.fold(
+                onSuccess = { record -> onExternalImported(record) },
+                onFailure = { e ->
+                    Log.e(TAG, "External URL import failed", e)
+                    _externalImportState.value = ExternalImportState.Error(e.message ?: "unknown error")
+                    _snackbarEvent.tryEmit(SnackbarEvent.Message(
+                        ctx.getString(R.string.external_import_failed, e.message ?: "")))
+                },
+            )
+        }
+    }
+
+    private fun onExternalImported(record: com.antivocale.app.data.ExternalModelRecord) {
+        _externalImportState.value = ExternalImportState.Idle
+        _snackbarEvent.tryEmit(SnackbarEvent.Message(ctx.getString(R.string.external_imported, record.displayName)))
+        shareTargetManager.onModelDownloaded()
+        // First-run behavior: auto-select when nothing is active.
+        if (_uiState.value.modelName.isBlank()) {
+            viewModelScope.launch { activateExternalModel(record) }
+        }
+    }
+
+    /** Selects an imported model as the active transcription backend. */
+    fun useExternalModel(record: com.antivocale.app.data.ExternalModelRecord) {
+        viewModelScope.launch { activateExternalModel(record) }
+    }
+
+    private suspend fun activateExternalModel(record: com.antivocale.app.data.ExternalModelRecord) {
+        preferencesManager.saveTranscriptionBackend(record.backendId)
+        val message = ctx.getString(R.string.model_selected_message, record.displayName)
+        _uiState.update {
+            it.copy(
+                modelPath = record.dir,
+                modelName = record.displayName,
+                status = ModelStatus.UNLOADED,
+                statusMessage = message
+            )
+        }
+        _snackbarEvent.tryEmit(SnackbarEvent.Message(message))
+        llmManager.resetKeepAliveTimer()
+    }
+
+    /**
+     * Deletes a record: store first (so family sync sees the new world), then the files.
+     * When the deleted model is the persisted active backend, reset to the default backend
+     * (otherwise the orchestrator's registry lookup would fall through to the LLM loader).
+     */
+    fun deleteExternalModel(record: com.antivocale.app.data.ExternalModelRecord) {
+        viewModelScope.launch(Dispatchers.IO) {
+            externalModelStore.delete(record.id)
+            java.io.File(record.dir).deleteRecursively()
+            if (preferencesManager.transcriptionBackend.first() == record.backendId) {
+                preferencesManager.saveTranscriptionBackend(PreferencesManager.DEFAULT_TRANSCRIPTION_BACKEND)
+                _uiState.update { it.copy(modelPath = "", modelName = "") }
+            }
+            shareTargetManager.syncAll()
+            _snackbarEvent.tryEmit(SnackbarEvent.Message(
+                ctx.getString(R.string.external_deleted, record.displayName)))
+        }
+    }
+
+    /** Corrects a record's architecture (wrong modelType can exit(255) natively). */
+    fun correctExternalFamily(record: com.antivocale.app.data.ExternalModelRecord, modelType: String) {
+        viewModelScope.launch {
+            externalModelStore.update(record.copy(modelType = modelType))
         }
     }
 

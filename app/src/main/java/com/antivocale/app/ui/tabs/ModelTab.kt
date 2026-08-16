@@ -117,6 +117,22 @@ fun ModelTab(
     var showUnloadDialog by remember { mutableStateOf(false) }
 
     var modelInfoVariant by remember { mutableStateOf<ModelVariant?>(null) }
+    var externalToDelete by remember { mutableStateOf<com.antivocale.app.data.ExternalModelRecord?>(null) }
+    // Shared modelType selection for imports and family corrections (nemo default).
+    var selectedExternalModelType by remember { mutableStateOf("nemo_transducer") }
+
+    // Folder picker launcher for external-model imports (OpenDocumentTree; SAF copy in the VM).
+    val externalFolderPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocumentTree()
+    ) { uri ->
+        uri?.let {
+            context.contentResolver.takePersistableUriPermission(
+                it,
+                android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+            )
+            viewModel.importExternalFromFolder(context, it, selectedExternalModelType)
+        }
+    }
 
     // Snackbar host state for displaying errors
     val snackbarHostState = remember { SnackbarHostState() }
@@ -364,6 +380,25 @@ fun ModelTab(
         )
     }
 
+    // External-model delete confirmation dialog
+    externalToDelete?.let { record ->
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { externalToDelete = null },
+            title = { Text(stringResource(R.string.external_delete_confirm, record.displayName)) },
+            confirmButton = {
+                androidx.compose.material3.TextButton(onClick = {
+                    externalToDelete = null
+                    viewModel.deleteExternalModel(record)
+                }) { Text(stringResource(R.string.delete)) }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = { externalToDelete = null }) {
+                    Text(stringResource(android.R.string.cancel))
+                }
+            }
+        )
+    }
+
     // GGUF: disabled — download/delete dialogs commented out (GgufVariant type unavailable)
     // if (ggufState.showDownloadDialog) { ... viewModel.confirmGgufDownload() ... }
     // if (ggufState.showDeleteDialog) { ... viewModel.confirmGgufDelete() ... }
@@ -523,6 +558,14 @@ fun ModelTab(
                 onInfoClick = { modelInfoVariant = GigaAmModelVariant }
             )
         }
+
+        // External models section (v2a): imported models as first-class cards.
+        ExternalModelsSection(
+            viewModel = viewModel,
+            activeModelName = uiState.modelName,
+            folderPicker = { externalFolderPicker.launch(null) },
+            onDeleteRequest = { externalToDelete = it }
+        )
 
         // GGUF section - on-device LLM text generation via llama.cpp
         // Hidden: llama-bro 1.2.3 does not yet support the Gemma 4 GGUF architecture.
@@ -945,9 +988,228 @@ private fun NemotronDownloadSection(
 
 // ==================== GigaAM Download Section ====================
 
+// ==================== External models section (v2a) ====================
+
+/**
+ * Imported external models: one card per record plus the two import actions and the
+ * shared architecture selector. The two standing notices (single-pass risk, wrong-family
+ * crash) ride along every card.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ExternalModelsSection(
+    viewModel: ModelViewModel,
+    activeModelName: String,
+    folderPicker: () -> Unit,
+    onDeleteRequest: (com.antivocale.app.data.ExternalModelRecord) -> Unit,
+) {
+    val records by viewModel.externalModels.collectAsState()
+    val importState by viewModel.externalImportState.collectAsState()
+    var urlDialogOpen by remember { mutableStateOf(false) }
+    var urlText by remember { mutableStateOf("") }
+    var dropdownExpanded by remember { mutableStateOf(false) }
+    var selectedModelType by remember { mutableStateOf("nemo_transducer") }
+
+    val typeOptions = remember {
+        listOf(
+            "nemo_transducer" to R.string.external_model_type_nemo,
+            "" to R.string.external_model_type_zipformer,
+            "conformer_transducer" to R.string.external_model_type_conformer
+        )
+    }
+    val selectedLabel = typeOptions.firstOrNull { it.first == selectedModelType }?.second
+        ?: R.string.external_model_type_nemo
+
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            stringResource(R.string.external_section_title),
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
+        )
+
+        // Architecture selector: a wrong modelType triggers an uncatchable native crash.
+        Text(
+            stringResource(R.string.external_model_type),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        ExposedDropdownMenuBox(
+            expanded = dropdownExpanded,
+            onExpandedChange = { dropdownExpanded = it },
+            modifier = Modifier.padding(top = 4.dp, bottom = 8.dp)
+        ) {
+            OutlinedTextField(
+                value = stringResource(selectedLabel),
+                onValueChange = {},
+                readOnly = true,
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = dropdownExpanded) },
+                modifier = Modifier.fillMaxWidth().menuAnchor()
+            )
+            ExposedDropdownMenu(expanded = dropdownExpanded, onDismissRequest = { dropdownExpanded = false }) {
+                typeOptions.forEach { (value, labelRes) ->
+                    DropdownMenuItem(
+                        text = { Text(stringResource(labelRes)) },
+                        onClick = {
+                            selectedModelType = value
+                            dropdownExpanded = false
+                        }
+                    )
+                }
+            }
+        }
+
+        Row {
+            Button(
+                onClick = folderPicker,
+                enabled = importState !is ModelViewModel.ExternalImportState.Importing,
+                modifier = Modifier.weight(1f)
+            ) {
+                Icon(Icons.Default.FolderOpen, contentDescription = null)
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(stringResource(R.string.external_import_folder))
+            }
+            Spacer(modifier = Modifier.width(8.dp))
+            OutlinedButton(
+                onClick = { urlDialogOpen = true },
+                enabled = importState !is ModelViewModel.ExternalImportState.Importing,
+                modifier = Modifier.weight(1f)
+            ) { Text(stringResource(R.string.external_import_url)) }
+        }
+
+        when (val st = importState) {
+            is ModelViewModel.ExternalImportState.Importing -> Text(
+                stringResource(R.string.external_importing),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(vertical = 8.dp)
+            )
+            is ModelViewModel.ExternalImportState.Error -> Text(
+                stringResource(R.string.external_import_failed, st.message),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(vertical = 8.dp)
+            )
+            else -> {}
+        }
+
+        records.forEach { record ->
+            ExternalModelCard(
+                record = record,
+                isActive = activeModelName == record.displayName,
+                onUse = { viewModel.useExternalModel(record) },
+                onCorrectFamily = { viewModel.correctExternalFamily(record, selectedModelType) },
+                onDelete = { onDeleteRequest(record) },
+            )
+        }
+    }
+
+    if (urlDialogOpen) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { urlDialogOpen = false },
+            title = { Text(stringResource(R.string.external_url_dialog_title)) },
+            text = {
+                OutlinedTextField(
+                    value = urlText,
+                    onValueChange = { urlText = it },
+                    placeholder = { Text(stringResource(R.string.external_url_hint)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                androidx.compose.material3.TextButton(
+                    onClick = {
+                        urlDialogOpen = false
+                        if (urlText.isNotBlank()) {
+                            viewModel.importExternalFromUrl(urlText.trim(), selectedModelType)
+                        }
+                    }
+                ) { Text(stringResource(R.string.external_import)) }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = { urlDialogOpen = false }) {
+                    Text(stringResource(android.R.string.cancel))
+                }
+            }
+        )
+    }
+}
+
+@Composable
+private fun ExternalModelCard(
+    record: com.antivocale.app.data.ExternalModelRecord,
+    isActive: Boolean,
+    onUse: () -> Unit,
+    onCorrectFamily: () -> Unit,
+    onDelete: () -> Unit,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isActive) MaterialTheme.colorScheme.secondaryContainer
+            else MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                Icon(
+                    Icons.Default.Memory,
+                    contentDescription = null,
+                    tint = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Column {
+                    Text(record.displayName, style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        record.family.name + " · " + record.modelType.ifBlank { "zipformer" } +
+                            " · " + com.antivocale.app.util.formatFileSize(record.sizeBytes) +
+                            if (record.languages.isEmpty()) "" else " · " + record.languages.joinToString(", "),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+            Row {
+                Button(onClick = onUse, modifier = Modifier.weight(1f)) {
+                    Text(stringResource(R.string.use_model))
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                OutlinedButton(onClick = onCorrectFamily) {
+                    Text(stringResource(R.string.external_correct_family))
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                OutlinedButton(onClick = onDelete) {
+                    Text(stringResource(R.string.delete))
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+            // Two standing notices, informational rows (not actions).
+            Row(modifier = Modifier.fillMaxWidth()) {
+                Icon(Icons.Default.Info, contentDescription = null,
+                    modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(stringResource(R.string.external_notice_single_pass),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Row(modifier = Modifier.fillMaxWidth().padding(top = 2.dp)) {
+                Icon(Icons.Default.Warning, contentDescription = null,
+                    modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(stringResource(R.string.external_notice_family),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+    }
+}
+
 /**
  * Section for downloading the GigaAM v3 model (sherpa-onnx nemo_transducer backend).
- * Single-variant — renders one [ModelVariantCard] bound to [GigaAmModelVariant].
+ * Single-variant: renders one [ModelVariantCard] bound to [GigaAmModelVariant].
  */
 @Composable
 private fun GigaAmDownloadSection(
