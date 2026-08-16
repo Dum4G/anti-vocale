@@ -560,16 +560,6 @@ fun ModelTab(
             )
         }
 
-        // External models section (v2a): imported models as first-class cards.
-        ExternalModelsSection(
-            viewModel = viewModel,
-            activeBackendId = activeBackendId,
-            folderPicker = { externalFolderPicker.launch(null) },
-            selectedModelType = selectedExternalModelType,
-            onModelTypeChange = { selectedExternalModelType = it },
-            onDeleteRequest = { externalToDelete = it }
-        )
-
         // GGUF section - on-device LLM text generation via llama.cpp
         // Hidden: llama-bro 1.2.3 does not yet support the Gemma 4 GGUF architecture.
         // Re-enable when llama-bro ships LLM_ARCH_GEMMA4 or we convert to .litertlm.
@@ -618,6 +608,18 @@ fun ModelTab(
             Spacer(modifier = Modifier.width(8.dp))
             Text(stringResource(R.string.select_model_from_device))
         }
+
+        // External models section (v2a): imported models as first-class cards.
+        // At the END of the list: these are user-added models, secondary to the
+        // curated static backends above.
+        ExternalModelsSection(
+            viewModel = viewModel,
+            activeBackendId = activeBackendId,
+            folderPicker = { externalFolderPicker.launch(null) },
+            selectedModelType = selectedExternalModelType,
+            onModelTypeChange = { selectedExternalModelType = it },
+            onDeleteRequest = { externalToDelete = it }
+        )
 
         // Extra spacer to ensure downloading card can be fully scrolled into view
         Spacer(modifier = Modifier.height(200.dp))
