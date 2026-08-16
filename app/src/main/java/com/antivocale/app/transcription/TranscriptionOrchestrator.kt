@@ -499,10 +499,14 @@ class TranscriptionOrchestrator @Inject constructor(
     }
 
     private suspend fun loadSherpaOnnxBackend(context: Context): Result<Unit> {
-        // Parakeet uses auto-fallback: prefer SmoothQuant, else Stock int8, else saved pref.
+        // The saved path is the user's explicit variant choice (useParakeetModel(variant)):
+        // honor it when it still exists. Only fall back to auto-resolution when the saved
+        // path is blank or its directory is gone (deleted, cleaner).
         val savedPath = preferencesManager.parakeetModelPath.first()
-        val resolvedPath = ParakeetModelManager.resolveActiveModelPath(context, fallbackPath = savedPath)
-            ?: return Result.failure(TranscriptionException.NotInitialized())
+        val resolvedPath = when {
+            !savedPath.isNullOrBlank() && java.io.File(savedPath).isDirectory -> savedPath
+            else -> ParakeetModelManager.resolveActiveModelPath(context, fallbackPath = savedPath)
+        } ?: return Result.failure(TranscriptionException.NotInitialized())
         // Persist the resolved path so the rest of the app (UI, benchmark) sees a valid path.
         if (resolvedPath != savedPath) {
             preferencesManager.saveParakeetModelPath(resolvedPath)

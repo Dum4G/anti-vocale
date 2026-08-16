@@ -79,9 +79,17 @@ class ExternalModelImporter(
         val encoder = findByRole("encoder") ?: return null
         val decoder = findByRole("decoder") ?: return null
         val joiner = findByRole("joiner", "joint") ?: return null
-        val tokens = files.firstOrNull {
-            it.contains("tokens", ignoreCase = true) || it.contains("vocab", ignoreCase = true)
-        } ?: return null
+        // Tokens: prefer exact names, then family-aware matching. Repos that ship
+        // both CTC and RNNT variants (istupakov) have multiple vocab files; a bare
+        // contains("vocab") over an alphabetical listing picks the CTC one for an
+        // RNNT import. The matcher prefers rnnt-hinted and ctc-free candidates.
+        fun isTokensLike(name: String) = name.contains("tokens", ignoreCase = true) || name.contains("vocab", ignoreCase = true)
+        val tokens = files.firstOrNull { it.equals("tokens.txt", ignoreCase = true) }
+            ?: files.firstOrNull { it.equals("vocab.txt", ignoreCase = true) }
+            ?: files.firstOrNull { it.endsWith(".txt") && isTokensLike(it) && it.contains("rnnt", ignoreCase = true) }
+            ?: files.firstOrNull { it.endsWith(".txt") && isTokensLike(it) && !it.contains("ctc", ignoreCase = true) }
+            ?: files.firstOrNull { it.endsWith(".txt") && isTokensLike(it) }
+            ?: return null
         return linkedMapOf(
             SherpaOnnxBackend.CANONICAL_ENCODER to encoder,
             SherpaOnnxBackend.CANONICAL_DECODER to decoder,
@@ -144,6 +152,7 @@ class ExternalModelImporter(
     /** Catalog-entry JSON import: every file must carry a sha256 pin (hashless entries rejected). */
     suspend fun importFromEntryJson(
         entryUrl: String,
+        modelType: String = "nemo_transducer",
     ): ExternalModelRecord {
         val text = repoListing.fetchText(entryUrl)
         val entry = ExternalModelEntryJson.parse(text)
@@ -168,7 +177,7 @@ class ExternalModelImporter(
         modelType: String = "nemo_transducer",
     ): ExternalModelRecord =
         if (url.trim().endsWith(".json") || HuggingFaceRepoListing.parseRepoId(url) == null) {
-            importFromEntryJson(url)
+            importFromEntryJson(url, modelType)
         } else {
             importFromHuggingFaceRepo(url, modelType)
         }

@@ -59,7 +59,12 @@ class CustomTransducerMigrator(
         }
         val dir = File(path)
         if (!dir.exists() || !dir.isDirectory) {
-            Log.w(TAG, "Custom-transducer directory gone ($path), marking migration done without a record")
+            Log.w(TAG, "Custom-transducer directory gone ($path), clearing the dangling backend id")
+            // Rewrite the backend id so the orchestrator doesn't silently fall through
+            // to the LLM loader on a "custom-transductor" id no descriptor resolves.
+            if (preferencesManager.transcriptionBackend.first() == CUSTOM_TRANSDUCER_BACKEND_ID) {
+                preferencesManager.saveTranscriptionBackend(PreferencesManager.DEFAULT_TRANSCRIPTION_BACKEND)
+            }
             return
         }
 
