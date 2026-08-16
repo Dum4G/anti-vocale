@@ -6,6 +6,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import android.util.Rational
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -21,6 +22,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import com.antivocale.app.data.PreferencesManager
+import com.antivocale.app.transcription.InferenceProvider
 import com.antivocale.app.service.InferenceService
 import com.antivocale.app.ui.MainScreen
 import com.antivocale.app.ui.theme.AntiVocaleTheme
@@ -32,6 +34,7 @@ import com.antivocale.app.util.NativeCrashDetector
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import androidx.activity.viewModels
 import javax.inject.Inject
 
@@ -75,6 +78,12 @@ class MainActivity : AppCompatActivity() {
         // exit(255) from a corrupt model) or a low-memory kill, explain what happened.
         when (val crash = NativeCrashDetector.checkForRecentCrash(this)) {
             is NativeCrashDetector.CrashCheckResult.NativeCrash -> {
+                // If the user had NNAPI selected, the crash was likely the NNAPI driver:
+                // auto-fallback to CPU so the app is usable on the next launch (issue #26).
+                if (kotlinx.coroutines.runBlocking { preferencesManager.inferenceProvider.first() } == InferenceProvider.NNAPI) {
+                    Log.w("MainActivity", "Native crash with NNAPI active, resetting to CPU")
+                    kotlinx.coroutines.runBlocking { preferencesManager.saveInferenceProvider(InferenceProvider.CPU) }
+                }
                 AlertDialog.Builder(this)
                     .setTitle(R.string.native_crash_title)
                     .setMessage(R.string.native_crash_model_warning)

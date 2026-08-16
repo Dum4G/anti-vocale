@@ -55,11 +55,9 @@ object InferenceProvider {
      * - "cpu" -> "cpu" (user explicitly wants CPU)
      */
     fun resolve(preference: String): String {
-        // MediaTek guard: force CPU regardless of user preference. The NNAPI driver
-        // crashes are uncatchable native SIGABRTs that kill the process.
-        if (isMediaTek() && preference == NNAPI) {
-            return CPU
-        }
+        // No blanket MediaTek guard: some MediaTek devices (Dimensity 9300, issue #26)
+        // have working NNAPI with 3x speedup. Crash recovery is handled at startup
+        // (if NNAPI caused a native crash, the preference is reset to CPU there).
         return when (preference) {
             NNAPI -> NNAPI
             CPU -> CPU
@@ -70,12 +68,12 @@ object InferenceProvider {
     /**
      * Checks whether NNAPI is available on this device.
      *
-     * NNAPI was introduced in API 27 (Android 8.1). Disabled on MediaTek due to
-     * driver crashes (see isMediaTek). We don't probe specific driver capabilities
-     * here; if NNAPI is present and not MediaTek, we let the user opt in.
+     * NNAPI was introduced in API 27 (Android 8.1). Available on all devices
+     * including MediaTek (issue #26: Dimensity 9300 works fine, 3x speedup).
+     * Crash-prone devices are handled by the startup recovery: if NNAPI caused
+     * a native crash, the preference is reset to CPU on the next launch.
      */
     fun isNnapiAvailable(): Boolean {
-        if (isMediaTek()) return false
         return Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1
     }
 
