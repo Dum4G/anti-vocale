@@ -9,7 +9,7 @@
 
     <!-- Model selection -->
     <string name="select_model">Seleziona File Modello</string>
-    <string name="select_model_from_device">Seleziona modello LiteRT-LM (Gemma)</string>
+    <string name="select_model_from_device">Seleziona dal dispositivo</string>
 
     <!-- Modello transducer personalizzato (sideload) -->
     <string name="load_model">Carica Modello</string>
@@ -708,7 +708,7 @@
     <string name="share_target_external">Anti-Vocale (Esterno)</string>
     <string name="external_none_imported">Nessun modello esterno importato</string>
     <string name="external_section_title">Modelli esterni</string>
-    <string name="external_import_folder">Importa modello ONNX (sherpa)</string>
+    <string name="external_import_folder">Importa da cartella</string>
     <string name="model_advanced_section">Avanzate</string>
     <string name="model_advanced_description">Importa manualmente file di modello</string>
     <string name="external_import_url">Importa da URL</string>

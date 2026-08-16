@@ -1219,21 +1219,25 @@ private fun ExternalModelCard(
             }
 
             Spacer(modifier = Modifier.height(8.dp))
-            // One action per row: Use full-width, Delete below. The architecture
-            // recovery action is gone from the card (delete + re-import is the
-            // clearer path; the selector lives in the import dialog).
-            Button(
-                onClick = onUse,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(stringResource(R.string.use_model), maxLines = 1)
-            }
-            Spacer(modifier = Modifier.height(4.dp))
-            OutlinedButton(
-                onClick = onDelete,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(stringResource(R.string.delete), maxLines = 1)
+            // Same icon-button pattern as ModelVariantCard: Check to use,
+            // Delete trash, side by side on one row.
+            Row {
+                Button(
+                    onClick = onUse,
+                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary
+                    )
+                ) {
+                    Icon(Icons.Default.Check, contentDescription = stringResource(R.string.use_model))
+                }
+                OutlinedButton(
+                    onClick = onDelete,
+                    colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.delete))
+                }
             }
 
             Spacer(modifier = Modifier.height(8.dp))
