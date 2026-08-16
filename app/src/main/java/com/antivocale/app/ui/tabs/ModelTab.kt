@@ -1153,6 +1153,27 @@ private fun ExternalModelsSection(
                 onDelete = { onDeleteRequest(record) },
             )
         }
+
+        // Standing notices rendered once at the section level, not per card.
+        if (records.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(modifier = Modifier.fillMaxWidth()) {
+                Icon(Icons.Default.Info, contentDescription = null,
+                    modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(stringResource(R.string.external_notice_single_pass),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Row(modifier = Modifier.fillMaxWidth().padding(top = 2.dp)) {
+                Icon(Icons.Default.Warning, contentDescription = null,
+                    modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(stringResource(R.string.external_notice_family),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
         }
     }
 
@@ -1256,7 +1277,7 @@ private fun ExternalModelCard(
                     Column {
                         Text(record.displayName, style = MaterialTheme.typography.titleMedium)
                         Text(
-                            record.family.name + " · " + record.modelType.ifBlank { "zipformer" } +
+                            record.modelType.ifBlank { "zipformer" } +
                                 " · " + com.antivocale.app.util.formatFileSize(record.sizeBytes) +
                                 if (record.languages.isEmpty()) "" else " · " + record.languages.joinToString(", "),
                             style = MaterialTheme.typography.bodySmall,
@@ -1280,12 +1301,7 @@ private fun ExternalModelCard(
                 horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)
             ) {
                 if (!isActive) {
-                    Button(
-                        onClick = onUse,
-                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary
-                        )
-                    ) {
+                    Button(onClick = onUse) {
                         Icon(Icons.Default.Check, contentDescription = stringResource(R.string.use_model))
                     }
                 }
@@ -1300,23 +1316,6 @@ private fun ExternalModelCard(
             }
 
             Spacer(modifier = Modifier.height(8.dp))
-            // Two standing notices, informational rows (not actions).
-            Row(modifier = Modifier.fillMaxWidth()) {
-                Icon(Icons.Default.Info, contentDescription = null,
-                    modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(stringResource(R.string.external_notice_single_pass),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            Row(modifier = Modifier.fillMaxWidth().padding(top = 2.dp)) {
-                Icon(Icons.Default.Warning, contentDescription = null,
-                    modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(stringResource(R.string.external_notice_family),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
         }
     }
 }

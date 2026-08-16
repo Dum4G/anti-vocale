@@ -97,14 +97,12 @@ class ShareReceiverActivity : Activity() {
         // registry needs; a second hand-built instance would add a second records collector
         // and split store mutations across racing read-modify-write domains. Callers resolve
         // the app singleton via [BackendRegistryEntryPoint] and pass it in.
-        // The ShareExternal family alias is a manifest literal resolved to a SENTINEL here
-        // (external records carry blank aliases by design); the instance flow replaces the
-        // sentinel with a concrete external:<id> before any consumer sees it.
-        internal const val EXTERNAL_FAMILY_ALIAS = "com.antivocale.app.ShareExternal"
+        // The ShareExternal family alias (single source: ShareTargetManager) is resolved
+        // to a SENTINEL here; the instance flow replaces it with a concrete external:<id>.
         internal const val EXTERNAL_FAMILY_BACKEND_ID = "external"
 
         internal fun backendIdForAlias(aliasClassName: String, registry: BackendRegistry): String? =
-            if (aliasClassName == EXTERNAL_FAMILY_ALIAS) EXTERNAL_FAMILY_BACKEND_ID
+            if (aliasClassName == com.antivocale.app.data.ShareTargetManager.EXTERNAL_FAMILY_ALIAS) EXTERNAL_FAMILY_BACKEND_ID
             else registry.byShareAlias(aliasClassName)?.backendId
     }
 

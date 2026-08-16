@@ -2242,21 +2242,6 @@ class ModelViewModel @Inject constructor(
         }
     }
 
-    /** Corrects a record's architecture (wrong modelType can exit(255) natively). */
-    fun correctExternalFamily(record: com.antivocale.app.data.ExternalModelRecord, modelType: String) {
-        viewModelScope.launch {
-            externalModelStore.update(record.copy(modelType = modelType))
-            // Unload hint (plan binding): while the corrected model is the loaded active
-            // backend, ensureBackendLoaded sees same-id-and-ready and the engine's
-            // already-initialized short-circuit would keep the OLD recognizer running.
-            if (preferencesManager.transcriptionBackend.first() == record.backendId &&
-                backendManager.getActiveBackend()?.id == record.backendId
-            ) {
-                backendManager.unloadActiveBackend()
-            }
-        }
-    }
-
     // ==================== GGUF: DISABLED ====================
     // Move files from app/src/gguf-disabled/ back to main and uncomment to re-enable
     /* GGUF disabled

@@ -720,13 +720,12 @@
     <string name="external_imported">Importato %1$s</string>
     <string name="external_delete_confirm">Eliminare il modello esterno %1$s?</string>
     <string name="external_deleted">%1$s eliminato</string>
-    <string name="external_correct_family">Cambia architettura</string>
     <string name="external_model_type">Architettura (lascia il default se la trascrizione funziona)</string>
     <string name="external_model_type_nemo">NeMo transducer (predefinito)</string>
     <string name="external_model_type_zipformer">Zipformer transducer</string>
     <string name="external_model_type_conformer">Conformer transducer</string>
     <string name="external_notice_single_pass">Trascrizione in passaggio singolo: con modelli grandi l\'audio molto lungo può fallire. Accorcia l\'audio o usa un modello più piccolo.</string>
-    <string name="external_notice_family">Se la trascrizione si interrompe senza errori l\'architettura potrebbe essere sbagliata: correggila col pulsante sopra.</string>
+    <string name="external_notice_family">Se la trascrizione si interrompe senza errori l\'architettura potrebbe essere sbagliata: elimina e reimporta il modello con un\'architettura diversa.</string>
     <string name="share_targets_title">Destinazioni di condivisione</string>
     <string name="share_targets_description">Mostra ogni modello scaricato come opzione separata nella scheda di condivisione di Android. Il modello viene usato temporaneamente per la singola trascrizione.</string>
     <string name="advanced_sharing_toggle">Mostra modelli nella scheda di condivisione</string>

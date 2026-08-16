@@ -33,7 +33,9 @@ class ShareTargetManager(
 ) {
     companion object {
         private const val TAG = "ShareTargetManager"
-        private const val EXTERNAL_FAMILY_ALIAS = "com.antivocale.app.ShareExternal"
+        // Single source (also used by ShareReceiverActivity): renaming must find
+        // the manifest literal too, pinned by BackendRegistryTest.
+        internal const val EXTERNAL_FAMILY_ALIAS = "com.antivocale.app.ShareExternal"
     }
 
     private fun hasModel(backendId: String): Boolean = runBlocking {
