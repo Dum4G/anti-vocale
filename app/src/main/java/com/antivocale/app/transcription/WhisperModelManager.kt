@@ -13,10 +13,11 @@ import java.io.File
  * - encoder-decoder.int8.onnx (or similar naming)
  * - tokens.txt
  *
- * Supported variants:
- * - Small: ~610MB, good accuracy, recommended starting point
- * - Turbo: ~538MB, near large-v3 quality, best value
- * - Medium: ~1.8GB, very accurate, multilingual
+ * Supported variants (in UI order):
+ * - Turbo: ~988MB, near large-v3 quality, best multilingual balance
+ * - Distil Italian: ~939MB, best Italian quality, 2 decoder layers
+ * - Medium: ~903MB, good accuracy, multilingual
+ * - Small: ~358MB, lower accuracy, only for low-spec devices
  */
 object WhisperModelManager {
 

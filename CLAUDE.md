@@ -29,7 +29,7 @@ Android application written in Kotlin for transcribing voice messages locally on
     - `Qwen3AsrBackend` (Qwen3-ASR 0.6B, via OfflineRecognizer)
     - `NemotronStreamingBackend` (Nemotron 3.5 multilingual, via OnlineRecognizer — the only streaming backend)
     - `GigaAmBackend` (GigaAM v3 Russian, via OfflineRecognizer; HF mirror `pantinor/gigaam-v3`, SHA-256 pinned)
-    - `CustomTransducerBackend` (sideloaded user-imported transducer dirs; no manifest share target, blank alias in the registry)
+    - `ExternalSherpaBackend` (user-imported external models, via OfflineRecognizer; dynamic BackendRegistry descriptors, `external:` prefix routing; ShareExternal family alias with chooser)
     - `LlmTranscriptionBackend` (Gemma via LiteRT-LM)
     - Each backend has a `*ModelManager` (discovery/validation) + `*Downloader` (HF download). `OrphanedModelDirCleaner` reclaims stranded old-version dirs at startup.
   - `ui/` — Compose UI screens and view models

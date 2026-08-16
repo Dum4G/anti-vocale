@@ -1109,6 +1109,33 @@ private fun ExternalModelsSection(
 
             Spacer(modifier = Modifier.height(8.dp))
 
+            // Architecture selector visible for BOTH import paths (folder and URL).
+            ExposedDropdownMenuBox(
+                expanded = dropdownExpanded,
+                onExpandedChange = { dropdownExpanded = it },
+                modifier = Modifier.padding(bottom = 8.dp)
+            ) {
+                OutlinedTextField(
+                    value = stringResource(selectedLabel),
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text(stringResource(R.string.external_model_type)) },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = dropdownExpanded) },
+                    modifier = Modifier.fillMaxWidth().menuAnchor()
+                )
+                ExposedDropdownMenu(expanded = dropdownExpanded, onDismissRequest = { dropdownExpanded = false }) {
+                    typeOptions.forEach { (value, labelRes) ->
+                        DropdownMenuItem(
+                            text = { Text(stringResource(labelRes)) },
+                            onClick = {
+                                onModelTypeChange(value)
+                                dropdownExpanded = false
+                            }
+                        )
+                    }
+                }
+            }
+
             Row(modifier = Modifier.fillMaxWidth()) {
             Button(
                 onClick = folderPicker,
@@ -1192,38 +1219,8 @@ private fun ExternalModelsSection(
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
-                    // Architecture selector inside the import dialog, not permanently
-                    // visible: most users never need to change it from the default.
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text(
-                        stringResource(R.string.external_model_type),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    ExposedDropdownMenuBox(
-                        expanded = dropdownExpanded,
-                        onExpandedChange = { dropdownExpanded = it },
-                        modifier = Modifier.padding(top = 4.dp)
-                    ) {
-                        OutlinedTextField(
-                            value = stringResource(selectedLabel),
-                            onValueChange = {},
-                            readOnly = true,
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = dropdownExpanded) },
-                            modifier = Modifier.fillMaxWidth().menuAnchor()
-                        )
-                        ExposedDropdownMenu(expanded = dropdownExpanded, onDismissRequest = { dropdownExpanded = false }) {
-                            typeOptions.forEach { (value, labelRes) ->
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(labelRes)) },
-                                    onClick = {
-                                        onModelTypeChange(value)
-                                        dropdownExpanded = false
-                                    }
-                                )
-                            }
-                        }
-                    }
+                    // Architecture selector is in the section above (visible for both
+                    // import paths), not duplicated here.
                 }
             },
             confirmButton = {

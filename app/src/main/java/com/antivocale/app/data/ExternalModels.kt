@@ -11,9 +11,9 @@ enum class ExternalModelSource { LOCAL, URL, CATALOG }
 data class FilePin(val sha256: String, val verified: Boolean)
 
 data class ExternalModelRecord(
-    val id: String,                 // uuid; also the dir-fragment source
+    val id: String,                 // uuid (independent of the dir fragment; both draw separate uuids)
     val displayName: String,
-    val dir: String,                // models/external/<sanitized-name>-<id-fragment>/
+    val dir: String,                // models/external/<sanitized-name>-<random-fragment>/
     val family: ModelFamily,
     val modelType: String,          // sherpa modelType: nemo_transducer, "", conformer_transducer
     val languages: List<String>,
