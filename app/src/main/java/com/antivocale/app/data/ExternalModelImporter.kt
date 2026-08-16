@@ -67,16 +67,21 @@ class ExternalModelImporter(
     /**
      * Maps source file names to canonical role names by keyword: encoder/decoder/joiner
      * match any .onnx containing the role keyword (so non-canonical exports like GigaAM's
-     * gigaam_v3_e2e_rnnt_encoder_int8.onnx match); tokens matches tokens.txt. Returns
-     * null when any role has no candidate.
+     * gigaam_v3_e2e_rnnt_encoder_int8.onnx match). The joiner also answers to "joint"
+     * (GigaAM v3 ships gigaam_v3_e2e_rnnt_joint.onnx: the RNNT file name, unlike
+     * sherpa's config key; Dum4G's 2026-08-13 report on the prototype was exactly this).
+     * Tokens answers to tokens.txt or any *vocab* file (istupakov's export uses
+     * v3_e2e_rnnt_vocab.txt). Returns null when any role has no candidate.
      */
     internal fun buildCopyPlan(files: List<String>): Map<String, String>? {
-        fun findByRole(role: String) =
-            files.firstOrNull { it.endsWith(".onnx") && it.contains(role, ignoreCase = true) }
+        fun findByRole(vararg keywords: String) =
+            files.firstOrNull { f -> f.endsWith(".onnx") && keywords.any { f.contains(it, ignoreCase = true) } }
         val encoder = findByRole("encoder") ?: return null
         val decoder = findByRole("decoder") ?: return null
-        val joiner = findByRole("joiner") ?: return null
-        val tokens = files.firstOrNull { it.equals("tokens.txt", ignoreCase = true) } ?: return null
+        val joiner = findByRole("joiner", "joint") ?: return null
+        val tokens = files.firstOrNull {
+            it.contains("tokens", ignoreCase = true) || it.contains("vocab", ignoreCase = true)
+        } ?: return null
         return linkedMapOf(
             SherpaOnnxBackend.CANONICAL_ENCODER to encoder,
             SherpaOnnxBackend.CANONICAL_DECODER to decoder,

@@ -77,6 +77,27 @@ class ExternalModelImporterTest {
     }
 
     @Test
+    fun `buildCopyPlan accepts gigaam joint naming and vocab tokens`() {
+        // The real GigaAM v3 mirror: joint.onnx (not joiner) and tokens.txt.
+        val gigaam = importer.buildCopyPlan(listOf(
+            "gigaam_v3_e2e_rnnt_encoder_int8.onnx",
+            "gigaam_v3_e2e_rnnt_decoder.onnx",
+            "gigaam_v3_e2e_rnnt_joint.onnx",
+            "gigaam_v3_e2e_rnnt_tokens.txt",
+        ))
+        assertEquals("gigaam_v3_e2e_rnnt_joint.onnx", gigaam!!["joiner.int8.onnx"])
+
+        // istupakov's export naming: vocab.txt as the tokens file.
+        val istupakov = importer.buildCopyPlan(listOf(
+            "v3_e2e_rnnt_encoder.int8.onnx",
+            "v3_e2e_rnnt_decoder.int8.onnx",
+            "v3_e2e_rnnt_joint.int8.onnx",
+            "v3_e2e_rnnt_vocab.txt",
+        ))
+        assertEquals("v3_e2e_rnnt_vocab.txt", istupakov!!["tokens.txt"])
+    }
+
+    @Test
     fun `missing role fails with a clean error and registers nothing`() = runTest {
         val src = tmp.newFolder("incomplete")
         File(src, "tokens.txt").writeText("x")
