@@ -175,11 +175,9 @@ class ExternalModelImporter(
             ExternalModelSource.URL, repoUrl, family, options, languages)
     }
 
-    /** Catalog-entry JSON import: every file must carry a sha256 pin (hashless entries rejected). */
-    suspend fun importFromEntryJson(
-        entryUrl: String,
-        modelType: String? = null,
-    ): ExternalModelRecord {
+    /** Catalog-entry JSON import: every file must carry a sha256 pin (hashless entries rejected).
+     *  The record is driven entirely by the entry (family, modelType, languages, options). */
+    suspend fun importFromEntryJson(entryUrl: String): ExternalModelRecord {
         val text = repoListing.fetchText(entryUrl)
         val entry = ExternalModelEntryJson.parse(text)
         val plan = buildCopyPlan(entry.files.map { it.name }, entry.family)
@@ -210,7 +208,7 @@ class ExternalModelImporter(
         languages: List<String> = emptyList(),
     ): ExternalModelRecord =
         if (url.trim().endsWith(".json") || HuggingFaceRepoListing.parseRepoId(url) == null) {
-            importFromEntryJson(url, modelType)
+            importFromEntryJson(url)
         } else {
             importFromHuggingFaceRepo(url, modelType, family, options, languages)
         }
