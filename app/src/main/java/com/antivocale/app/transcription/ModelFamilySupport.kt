@@ -100,6 +100,12 @@ sealed interface ModelFamilySupport {
         const val CTC_MODEL_TYPE_REQUIRED =
             "CTC family requires an explicit modelType: nemo_ctc or zipformer_ctc"
 
+        /** Record option keys, single definition for the supports and the import UI. */
+        const val OPTION_WHISPER_LANGUAGE = "whisper.language"
+        const val OPTION_WHISPER_TASK = "whisper.task"
+        const val OPTION_SENSEVOICE_LANGUAGE = "sensevoice.language"
+        const val OPTION_SENSEVOICE_ITN = "sensevoice.itn"
+
         /**
          * The family's default record modelType when the caller passes none: null means
          * "must be explicit" (CTC, where the value selects the sherpa config subtype).
@@ -277,10 +283,10 @@ object WhisperSupport : ModelFamilySupport {
     }
 
     override fun buildModelConfig(record: ExternalModelRecord, numThreads: Int, provider: String): OfflineModelConfig {
-        val language = record.options["whisper.language"]
+        val language = record.options[ModelFamilySupport.OPTION_WHISPER_LANGUAGE]
             ?: record.languages.firstOrNull()
             ?: ""
-        val task = record.options["whisper.task"] ?: "transcribe"
+        val task = record.options[ModelFamilySupport.OPTION_WHISPER_TASK] ?: "transcribe"
         return OfflineModelConfig(
             whisper = OfflineWhisperModelConfig(
                 encoder = "${record.dir}/${SherpaOnnxBackend.CANONICAL_ENCODER}",
@@ -452,8 +458,9 @@ object SenseVoiceSupport : ModelFamilySupport {
     override fun metadataKeys(modelType: String): List<String> = emptyList()
 
     override fun buildModelConfig(record: ExternalModelRecord, numThreads: Int, provider: String): OfflineModelConfig {
-        val language = record.options["sensevoice.language"] ?: ""
-        val itn = record.options["sensevoice.itn"]?.let { it == "true" || it == "1" } ?: false
+        val language = record.options[ModelFamilySupport.OPTION_SENSEVOICE_LANGUAGE] ?: ""
+        // "true"/"1" enable ITN; anything else (including absent) leaves it off.
+        val itn = record.options[ModelFamilySupport.OPTION_SENSEVOICE_ITN]?.let { it == "true" || it == "1" } ?: false
         return OfflineModelConfig(
             senseVoice = OfflineSenseVoiceModelConfig(
                 model = "${record.dir}/$CANONICAL_MODEL",

@@ -33,7 +33,10 @@ import com.antivocale.app.R
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.antivocale.app.data.ExternalCatalog
+import com.antivocale.app.data.ExternalModelRecord
 import com.antivocale.app.data.ModelDownloader
+import com.antivocale.app.data.ModelFamily
 import com.antivocale.app.data.download.DownloadState
 import com.antivocale.app.service.InferenceService
 import com.antivocale.app.util.formatFileSize
@@ -55,6 +58,7 @@ import com.antivocale.app.transcription.ParakeetModelManager
 import com.antivocale.app.transcription.Language
 // GGUF: import com.antivocale.app.transcription.Gemma4GgufBackend
 // GGUF: import com.antivocale.app.transcription.Gemma4GgufModelManager
+import com.antivocale.app.transcription.ModelFamilySupport
 import com.antivocale.app.transcription.ModelInfoProvider
 import com.antivocale.app.transcription.ModelVariant
 import com.antivocale.app.ui.components.DownloadButtonState
@@ -119,7 +123,7 @@ fun ModelTab(
     var showUnloadDialog by remember { mutableStateOf(false) }
 
     var modelInfoVariant by remember { mutableStateOf<ModelVariant?>(null) }
-    var externalToDelete by remember { mutableStateOf<com.antivocale.app.data.ExternalModelRecord?>(null) }
+    var externalToDelete by remember { mutableStateOf<ExternalModelRecord?>(null) }
     // Shared family selection + import options for both import paths (folder and URL).
     var externalImport by remember { mutableStateOf(ExternalImportUiState()) }
 
@@ -1064,7 +1068,7 @@ private fun NemotronDownloadSection(
  * holder so both import paths (folder and URL) share a single selection state.
  */
 internal data class ExternalImportUiState(
-    val family: com.antivocale.app.data.ModelFamily = com.antivocale.app.data.ModelFamily.TRANSDUCER,
+    val family: ModelFamily = ModelFamily.TRANSDUCER,
     val ctcModelType: String = "nemo_ctc",
     val languages: String = "",
     val whisperLanguage: String = "",
@@ -1073,12 +1077,14 @@ internal data class ExternalImportUiState(
 ) {
     /** Family-specific importer options; blank optional fields are omitted. */
     fun options(): Map<String, String> = when (family) {
-        com.antivocale.app.data.ModelFamily.WHISPER ->
+        ModelFamily.WHISPER ->
             if (whisperLanguage.isBlank()) emptyMap()
-            else mapOf("whisper.language" to whisperLanguage.trim())
-        com.antivocale.app.data.ModelFamily.SENSE_VOICE -> buildMap {
-            if (sensevoiceLanguage.isNotBlank()) put("sensevoice.language", sensevoiceLanguage.trim())
-            put("sensevoice.itn", sensevoiceItn.toString())
+            else mapOf(ModelFamilySupport.OPTION_WHISPER_LANGUAGE to whisperLanguage.trim())
+        ModelFamily.SENSE_VOICE -> buildMap {
+            if (sensevoiceLanguage.isNotBlank()) {
+                put(ModelFamilySupport.OPTION_SENSEVOICE_LANGUAGE, sensevoiceLanguage.trim())
+            }
+            put(ModelFamilySupport.OPTION_SENSEVOICE_ITN, sensevoiceItn.toString())
         }
         else -> emptyMap()
     }
@@ -1101,7 +1107,7 @@ private fun ExternalModelsSection(
     folderPicker: () -> Unit,
     selection: ExternalImportUiState,
     onSelectionChange: (ExternalImportUiState) -> Unit,
-    onDeleteRequest: (com.antivocale.app.data.ExternalModelRecord) -> Unit,
+    onDeleteRequest: (ExternalModelRecord) -> Unit,
 ) {
     val records by viewModel.externalModels.collectAsState()
     val importState by viewModel.externalImportState.collectAsState()
@@ -1117,16 +1123,16 @@ private fun ExternalModelsSection(
         runCatching {
             context.assets.open("external-catalog/index.json").use {
                 it.readBytes().decodeToString()
-            }.let(com.antivocale.app.data.ExternalCatalog::parseIndex)
+            }.let(ExternalCatalog::parseIndex)
         }.getOrDefault(emptyList())
     }
 
     val familyOptions = remember {
         listOf(
-            com.antivocale.app.data.ModelFamily.TRANSDUCER to R.string.external_family_transducer,
-            com.antivocale.app.data.ModelFamily.WHISPER to R.string.external_family_whisper,
-            com.antivocale.app.data.ModelFamily.CTC to R.string.external_family_ctc,
-            com.antivocale.app.data.ModelFamily.SENSE_VOICE to R.string.external_family_sense_voice,
+            Triple(ModelFamily.TRANSDUCER, R.string.external_family_transducer, R.string.external_family_transducer_help),
+            Triple(ModelFamily.WHISPER, R.string.external_family_whisper, R.string.external_family_whisper_help),
+            Triple(ModelFamily.CTC, R.string.external_family_ctc, R.string.external_family_ctc_help),
+            Triple(ModelFamily.SENSE_VOICE, R.string.external_family_sense_voice, R.string.external_family_sense_voice_help),
         )
     }
 
@@ -1172,20 +1178,13 @@ private fun ExternalModelsSection(
                     modifier = Modifier.fillMaxWidth().menuAnchor()
                 )
                 ExposedDropdownMenu(expanded = dropdownExpanded, onDismissRequest = { dropdownExpanded = false }) {
-                    familyOptions.forEach { (value, labelRes) ->
+                    familyOptions.forEach { (value, labelRes, helpRes) ->
                         DropdownMenuItem(
                             text = {
                                 Column {
                                     Text(stringResource(labelRes))
                                     Text(
-                                        stringResource(
-                                            when (value) {
-                                                com.antivocale.app.data.ModelFamily.TRANSDUCER -> R.string.external_family_transducer_help
-                                                com.antivocale.app.data.ModelFamily.WHISPER -> R.string.external_family_whisper_help
-                                                com.antivocale.app.data.ModelFamily.CTC -> R.string.external_family_ctc_help
-                                                com.antivocale.app.data.ModelFamily.SENSE_VOICE -> R.string.external_family_sense_voice_help
-                                            }
-                                        ),
+                                        stringResource(helpRes),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -1202,7 +1201,7 @@ private fun ExternalModelsSection(
 
             // Conditional options panel below the selector.
             when (selection.family) {
-                com.antivocale.app.data.ModelFamily.WHISPER -> OutlinedTextField(
+                ModelFamily.WHISPER -> OutlinedTextField(
                     value = selection.whisperLanguage,
                     onValueChange = { onSelectionChange(selection.copy(whisperLanguage = it)) },
                     label = { Text(stringResource(R.string.external_option_language)) },
@@ -1210,7 +1209,7 @@ private fun ExternalModelsSection(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
                 )
-                com.antivocale.app.data.ModelFamily.SENSE_VOICE -> {
+                ModelFamily.SENSE_VOICE -> {
                     OutlinedTextField(
                         value = selection.sensevoiceLanguage,
                         onValueChange = { onSelectionChange(selection.copy(sensevoiceLanguage = it)) },
@@ -1234,7 +1233,7 @@ private fun ExternalModelsSection(
                         )
                     }
                 }
-                com.antivocale.app.data.ModelFamily.CTC -> ExposedDropdownMenuBox(
+                ModelFamily.CTC -> ExposedDropdownMenuBox(
                     expanded = ctcExpanded,
                     onExpandedChange = { ctcExpanded = it },
                     modifier = Modifier.padding(bottom = 8.dp)
@@ -1367,7 +1366,7 @@ private fun ExternalModelsSection(
                     // over name + languages, filling URL and family on tap. Hidden
                     // once the text looks like a URL being typed or pasted.
                     if (!urlText.startsWith("http")) {
-                        com.antivocale.app.data.ExternalCatalog
+                        ExternalCatalog
                             .filter(catalogEntries, urlText)
                             .forEach { entry ->
                                 Column(
@@ -1418,7 +1417,7 @@ private fun ExternalModelsSection(
 
 @Composable
 private fun ExternalModelCard(
-    record: com.antivocale.app.data.ExternalModelRecord,
+    record: ExternalModelRecord,
     isActive: Boolean,
     onUse: () -> Unit,
     onDelete: () -> Unit,
@@ -1451,7 +1450,7 @@ private fun ExternalModelCard(
                         Text(record.displayName, style = MaterialTheme.typography.titleMedium)
                         Text(
                             record.typeLabel +
-                                " · " + com.antivocale.app.util.formatFileSize(record.sizeBytes) +
+                                " · " + formatFileSize(record.sizeBytes) +
                                 if (record.languages.isEmpty()) "" else " · " + record.languages.joinToString(", "),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
