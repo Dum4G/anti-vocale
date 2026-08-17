@@ -119,6 +119,15 @@ class ExternalModelStoreTest {
     }
 
     @Test
+    fun `record with explicit null options decodes with emptyMap`() = runTest {
+        // Test null-tolerance: "options":null should decode to emptyMap, not throw
+        val raw = """[{"id":"bbb","displayName":"Null Options","dir":"/null","family":"TRANSDUCER","modelType":"nemo_transducer","languages":["en"],"source":"LOCAL","sourceUrl":null,"options":null,"files":{"encoder.onnx":{"sha256":"def4567890123456789012345678901234567890123456789012345678901234","verified":true}},"sizeBytes":100,"importedAt":2000}]"""
+        val decoded = ExternalModelListJson.decode(raw)
+        assertEquals(1, decoded.size)
+        assertEquals(emptyMap<String, String>(), decoded.single().options)
+    }
+
+    @Test
     fun `record with options round-trips encode and decode`() = runTest {
         val rec = record().copy(options = mapOf("whisper.language" to "ar"))
         val json = rec.toJson().toString()

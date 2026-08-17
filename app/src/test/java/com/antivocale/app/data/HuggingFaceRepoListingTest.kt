@@ -241,6 +241,15 @@ class HuggingFaceRepoListingTest {
         assertTrue(error.exceptionOrNull()?.message?.contains("modelType") == true)
     }
 
+    @Test
+    fun `legacy entry without family or languages defaults correctly`() {
+        val entry = ExternalModelEntryJson.parse("""
+            {"name":"legacy","files":[{"name":"a.onnx","url":"https://x/a","sha256":"${"a".repeat(64)}","size":1}]}
+        """.trimIndent())
+        assertEquals(ModelFamily.TRANSDUCER, entry.family)
+        assertEquals(emptyList<String>(), entry.languages)
+    }
+
     // ---- end-to-end against the mock server ----
 
     private val encoderBytes = ByteArray(64) { 1 } + "vocab_size=1024 subsampling_factor=8 model_type=nemo_transducer".toByteArray()
