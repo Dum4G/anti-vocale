@@ -131,6 +131,30 @@ class ModelFamilySupportTest {
         support.buildCopyPlan(listOf("encoder_joint.onnx", "decoder.onnx", "tokens.txt"))
     }
 
+    @Test(expected = IllegalArgumentException::class)
+    fun `whisper plan rejects a pure transducer set`() {
+        // The model_type metadata check cannot catch this (NeMo transducer
+        // encoders also carry model_type; the check is key-presence, not value),
+        // so the copy plan itself must reject the mismatch.
+        ModelFamilySupport.forFamily(ModelFamily.WHISPER).buildCopyPlan(listOf(
+            "rnnt_encoder.onnx", "rnnt_decoder.onnx", "rnnt_joint.onnx", "rnnt_tokens.txt"))
+    }
+
+    @Test
+    fun `whisper plan prefers non-rnnt candidates regardless of listing order`() {
+        val support = ModelFamilySupport.forFamily(ModelFamily.WHISPER)
+        val whisperFirst = listOf(
+            "whisper-encoder.onnx", "whisper-decoder.onnx", "whisper-tokens.txt",
+            "rnnt_encoder.int8.onnx", "rnnt_decoder.int8.onnx", "rnnt_joint.int8.onnx", "rnnt_tokens.txt")
+        val rnntFirst = whisperFirst.reversed()
+        for (listing in listOf(whisperFirst, rnntFirst)) {
+            val plan = support.buildCopyPlan(listing)!!
+            assertEquals("whisper-encoder.onnx", plan["encoder.int8.onnx"])
+            assertEquals("whisper-decoder.onnx", plan["decoder.int8.onnx"])
+            assertEquals("whisper-tokens.txt", plan["tokens.txt"])
+        }
+    }
+
     @Test
     fun `whisper requiredRoles lists encoder decoder and tokens`() {
         assertEquals(
@@ -228,6 +252,15 @@ class ModelFamilySupportTest {
         // No encoder-keyword file exists, so the fallback tier considers every
         // .onnx: the joiner entered encoder role matching and must be rejected.
         support.buildCopyPlan(listOf("joiner.onnx", "tokens.txt"))
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun `ctc plan rejects a pure transducer set`() {
+        // Only rnnt-hinted candidates exist: the rnnt encoder would win the
+        // keyword fallback and the import-time metadata check is a no-op for CTC
+        // (metadataKeys is empty), so the copy plan itself must reject it.
+        ModelFamilySupport.forFamily(ModelFamily.CTC).buildCopyPlan(listOf(
+            "rnnt_encoder.onnx", "rnnt_decoder.onnx", "rnnt_joint.onnx", "rnnt_tokens.txt"))
     }
 
     @Test

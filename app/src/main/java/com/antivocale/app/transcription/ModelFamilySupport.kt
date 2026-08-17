@@ -23,6 +23,14 @@ import com.k2fsa.sherpa.onnx.OfflineZipformerCtcModelConfig
 private fun isJoinerLike(name: String) =
     name.contains("joiner", ignoreCase = true) || name.contains("joint", ignoreCase = true)
 
+/** True for files whose names mark them as transducer exports (rnnt/joiner/joint). */
+private fun isTransducerHinted(name: String) =
+    name.contains("rnnt", ignoreCase = true) || isJoinerLike(name)
+
+/** Family-mismatch discriminator message shared by the non-transducer families. */
+private const val TRANSDUCER_MISMATCH =
+    "candidate set looks like a transducer; pick the TRANSDUCER family"
+
 sealed interface ModelFamilySupport {
     val family: ModelFamily
 
@@ -130,6 +138,11 @@ object TransducerSupport : ModelFamilySupport {
  * discriminator preventing a family mismatch from passing import and surfacing
  * as a runtime exit(255)); a joiner elsewhere in the folder is ignored, since a
  * parent directory legitimately holding several models must still import.
+ * Role selection prefers non-rnnt/non-joiner-hinted candidates (deterministic in
+ * mixed folders), and a role whose only keyword matches are transducer-hinted
+ * files is rejected outright: the model_type metadata check cannot catch a
+ * transducer encoder, because NeMo transducer encoders also carry model_type as
+ * a key (key-presence, not value).
  *
  * Language: [options]["whisper.language"], falling back to [languages][0], then
  * "" (auto; sherpa-onnx performs no language validation per desktop spike).
@@ -149,19 +162,28 @@ object WhisperSupport : ModelFamilySupport {
 
     override fun buildCopyPlan(files: List<String>): Map<String, String>? {
         val onnxCandidates = files.filter { it.endsWith(".onnx") }
-        fun findByRole(vararg keywords: String) =
+        // Role selection prefers non-transducer-hinted candidates, so a mixed
+        // folder deterministically picks the whisper files regardless of listing
+        // order. When only hinted candidates match a keyword, the folder holds a
+        // bare transducer set: the model_type metadata check cannot catch that
+        // (NeMo transducer encoders also carry model_type; the check is
+        // key-presence, not value), so the copy plan itself must reject it.
+        fun findByRole(vararg keywords: String): String? =
+            onnxCandidates.firstOrNull { f -> !isTransducerHinted(f) && keywords.any { f.contains(it, ignoreCase = true) } }
+        fun findTransducerHinted(vararg keywords: String): String? =
             onnxCandidates.firstOrNull { f -> keywords.any { f.contains(it, ignoreCase = true) } }
-        val encoder = findByRole("encoder") ?: return null
-        val decoder = findByRole("decoder") ?: return null
-        // Structural discriminator over the role-matched files only: a joiner/joint
-        // file that won the encoder or decoder role means this is a transducer. A
-        // joiner elsewhere in the folder never entered whisper role matching (a
-        // parent directory holding several models is legitimate).
-        if (isJoinerLike(encoder) || isJoinerLike(decoder)) throw IllegalArgumentException(
-            "candidate set contains a joiner/joint file: looks like a transducer; pick the TRANSDUCER family")
-        // Tokens: exact names first, then keyword match.
+        val encoder = findByRole("encoder")
+            ?: findTransducerHinted("encoder")?.let { throw IllegalArgumentException(TRANSDUCER_MISMATCH) }
+            ?: return null
+        val decoder = findByRole("decoder")
+            ?: findTransducerHinted("decoder")?.let { throw IllegalArgumentException(TRANSDUCER_MISMATCH) }
+            ?: return null
+        // Tokens: exact names first, then keyword match preferring non-hinted
+        // candidates so listing order cannot hand the role to the transducer vocab.
+        fun isTokensLike(name: String) = name.contains("tokens", ignoreCase = true) || name.contains("vocab", ignoreCase = true)
         val tokens = files.firstOrNull { it.equals("tokens.txt", ignoreCase = true) }
-            ?: files.firstOrNull { it.endsWith(".txt") && (it.contains("tokens", ignoreCase = true) || it.contains("vocab", ignoreCase = true)) }
+            ?: files.firstOrNull { it.endsWith(".txt") && !isTransducerHinted(it) && isTokensLike(it) }
+            ?: files.firstOrNull { it.endsWith(".txt") && isTokensLike(it) }
             ?: return null
         return linkedMapOf(
             SherpaOnnxBackend.CANONICAL_ENCODER to encoder,
@@ -201,9 +223,10 @@ object WhisperSupport : ModelFamilySupport {
  * but CTC exports like GigaAM's v3_ctc.int8.onnx omit the keyword) and one .txt
  * tokens/vocab file. A joiner/joint .onnx is rejected as "looks like a
  * transducer; pick the TRANSDUCER family" only when it entered encoder role
- * matching (the fallback tier, i.e. the folder holds a bare transducer set); a
- * joiner elsewhere in the folder is ignored, since a parent directory
- * legitimately holding several models must still import.
+ * matching (the fallback tier, i.e. the folder holds a bare transducer set), and
+ * a selected rnnt-hinted encoder is rejected the same way (reachable only from a
+ * pure transducer pool); a joiner elsewhere in the folder is ignored, since a
+ * parent directory legitimately holding several models must still import.
  *
  * Token and encoder selection mirror the transducer matcher but with CTC
  * preference: repos that ship both CTC and RNNT variants (istupakov) have
@@ -244,10 +267,14 @@ object CtcSupport : ModelFamilySupport {
             // role matching (a parent directory holding several models is
             // legitimate).
             ?: onnxCandidates.firstOrNull(::isJoinerLike)?.let {
-                throw IllegalArgumentException(
-                    "candidate set contains a joiner/joint file: looks like a transducer; pick the TRANSDUCER family")
+                throw IllegalArgumentException(TRANSDUCER_MISMATCH)
             }
             ?: return null
+        // A selected rnnt-hinted encoder is only reachable when the pool holds
+        // nothing but a transducer set (the tiers above prefer every
+        // non-rnnt candidate first), and the CTC metadata check is a no-op
+        // (metadataKeys is empty), so reject it here instead of at exit(255).
+        if (encoder.contains("rnnt", ignoreCase = true)) throw IllegalArgumentException(TRANSDUCER_MISMATCH)
         // Tokens: prefer exact names, then ctc-hinted (mirror of transducer's rnnt-first).
         fun isTokensLike(name: String) = name.contains("tokens", ignoreCase = true) || name.contains("vocab", ignoreCase = true)
         val tokens = files.firstOrNull { it.equals("tokens.txt", ignoreCase = true) }
