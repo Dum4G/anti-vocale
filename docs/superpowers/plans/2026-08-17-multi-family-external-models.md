@@ -65,6 +65,8 @@ Expected: compile error on `ModelFamily.WHISPER` / missing `options`.
 
 - [ ] **Step 3: Implement**
 
+`ModelFamily` already exists with only `TRANSDUCER` (ExternalModels.kt:7, stale "arrive in v2b" comment): EXTEND it, do not redeclare it, and update the comment to drop the stale note.
+
 ```kotlin
 enum class ModelFamily { TRANSDUCER, WHISPER, CTC, SENSE_VOICE }
 ```
@@ -79,11 +81,11 @@ enum class ModelFamily { TRANSDUCER, WHISPER, CTC, SENSE_VOICE }
 - Modify: `app/src/main/java/com/antivocale/app/data/HuggingFaceRepoListing.kt` (`ExternalModelEntryJson`)
 - Test: `app/src/test/java/com/antivocale/app/data/HuggingFaceRepoListingTest.kt`
 
-- [ ] **Step 1: Failing tests:** entry without `family` parses as TRANSDUCER; entry with `"family":"WHISPER"` parses as WHISPER; entry with unknown family string throws `IllegalArgumentException`; entry with `"options":{"whisper.task":"transcribe"}` parses into the map.
+- [ ] **Step 1: Failing tests:** entry without `family` parses as TRANSDUCER; entry with `"family":"WHISPER"` parses as WHISPER; entry with unknown family string throws `IllegalArgumentException`; entry with `"options":{"whisper.task":"transcribe"}` parses into the map; modelType default is family-aware: a WHISPER entry without `modelType` parses with `modelType == ""` (NOT the legacy `"nemo_transducer"` default, which today would leak into non-transducer records), a TRANSDUCER entry without it keeps `"nemo_transducer"`; entries with a `family` present but no `languages` array are rejected with `IllegalArgumentException("entries must declare languages")` (spec: mandatory for new entries; entries without `family` keep the legacy optional behavior for backward compat).
 
 - [ ] **Step 2: Verify FAIL.**
 
-- [ ] **Step 3: Implement:** `Entry` gains `family: ModelFamily` (default TRANSDUCER via `optString("family", "TRANSDUCER")` + `runCatching { ModelFamily.valueOf(...) }.getOrElse { throw IllegalArgumentException("unknown family: ...") }`) and `options: Map<String, String>` (null-tolerant `optJSONObject`).
+- [ ] **Step 3: Implement:** `Entry` gains `family: ModelFamily` (default TRANSDUCER via `optString("family", "TRANSDUCER")` + `runCatching { ModelFamily.valueOf(...) }.getOrElse { throw IllegalArgumentException("unknown family: ...") }`) and `options: Map<String, String>` (null-tolerant `optJSONObject`). The `modelType` default becomes family-resolved: absent field → `"nemo_transducer"` only for TRANSDUCER, `""` otherwise; an explicitly inconsistent pair (non-empty modelType against a non-matching family) is rejected naming the conflict.
 
 - [ ] **Step 4: Verify PASS. Commit** `feat: entry-JSON family and options fields (TASK-331)`
 
@@ -156,7 +158,7 @@ enum class ModelFamily { TRANSDUCER, WHISPER, CTC, SENSE_VOICE }
 
 - [ ] **Step 2: Verify FAIL.**
 
-- [ ] **Step 3: Implement:** add `family: ModelFamily = ModelFamily.TRANSDUCER` to `importFromTreeUri`/`importFromDirectory`/`importFromHuggingFaceRepo`/`importFromUrl`; the entry-JSON variant reads the family from the parsed entry (no parameter there; the entry drives). `importCore`/`downloadCore` call `ModelFamilySupport.forFamily(family)` for planning, error messages ("missing required files for WHISPER (encoder/decoder/tokens); found: …"), and `registerImported`; `registerImported` validates on `support.metadataFileRole()` with `support.metadataKeys(modelType)`; the existing `modelType: String = "nemo_transducer"` parameters keep their defaults (callers in `ModelViewModel` pass through unchanged for now).
+- [ ] **Step 3: Implement:** add `family: ModelFamily = ModelFamily.TRANSDUCER`, `options: Map<String, String> = emptyMap()`, and `languages: List<String> = emptyList()` to `importFromTreeUri`/`importFromDirectory`/`importFromHuggingFaceRepo`/`importFromUrl` (the languages parameter feeds the record's `languages` field, today hardcoded `emptyList()` at importCore for local imports); the entry-JSON variant reads family/options/languages from the parsed entry (no parameters there; the entry drives). Thread all three through `importCore`/`downloadCore` into `registerImported` (this is the whole UI → VM → importer → record plumbing for options; Task 10's dedupe refresh binds to the same parameters). `importCore`/`downloadCore` call `ModelFamilySupport.forFamily(family)` for planning, error messages ("missing required files for WHISPER (encoder/decoder/tokens); found: …"), and `registerImported`; `registerImported` validates on `support.metadataFileRole()` with `support.metadataKeys(modelType)`; the existing `modelType: String = "nemo_transducer"` parameters keep their defaults (callers in `ModelViewModel` pass through unchanged for now).
 
 - [ ] **Step 4: Run the FULL data test package** `--tests "com.antivocale.app.data.*"`, verify PASS.
 
@@ -182,7 +184,7 @@ enum class ModelFamily { TRANSDUCER, WHISPER, CTC, SENSE_VOICE }
 
 - [ ] **Step 2: Verify FAIL.**
 
-- [ ] **Step 3: Implement:** extend the `existing.copy(...)` in the dedupe path with `family = family, options = options, languages = languages`.
+- [ ] **Step 3: Implement:** extend the `existing.copy(...)` in the dedupe path with `family = family, options = options, languages = languages` (all three are the parameters threaded in Task 8).
 
 - [ ] **Step 4: Verify PASS. Commit** `fix: dedupe re-import refreshes family/options/languages (TASK-331)`
 
@@ -216,13 +218,13 @@ enum class ModelFamily { TRANSDUCER, WHISPER, CTC, SENSE_VOICE }
 - Modify: `app/src/main/java/com/antivocale/app/ui/tabs/ModelTab.kt` (lines ~122-134: `selectedExternalModelType`; ~1079: modelType label map; ~1231: URL import)
 - Modify: `app/src/main/java/com/antivocale/app/ui/viewmodel/ModelViewModel.kt:2180-2185` (import wrappers gain family + options params)
 - Modify: `app/src/main/res/values/strings.xml` + `values-it/strings.xml`
-- Test: extend the existing external-import VM tests under `app/src/test/java/com/antivocale/app/ui/viewmodel/`
+- Test: create `app/src/test/java/com/antivocale/app/ui/viewmodel/ModelViewModelExternalImportTest.kt` (new file; there is NO existing external-import VM test suite or fake importer seam. The only VM test constructing ModelViewModel, `ModelViewModelActiveModelTest.kt`, injects a real `ExternalModelImporter` over a temp filesRoot; follow that pattern)
 
-- [ ] **Step 1: Failing tests:** `importExternalFromFolder(context, uri, family = WHISPER, options)` forwards family and options to the importer (verify via the existing fake-importer seam in the VM tests).
+- [ ] **Step 1: Failing tests:** `importExternalFromFolder(context, uri, family = WHISPER, options, languages)` forwards family, options, and languages to the importer. Two viable seams, pick one: (a) drive the real importer with on-disk whisper fixture files in a temp dir and assert the resulting record's fields (follows the `ModelViewModelActiveModelTest` precedent, no mocking), or (b) relax `ExternalModelImporter` to an injectable interface the VM takes (only if (a) proves unwieldy; keep the change minimal and document it in the commit).
 
 - [ ] **Step 2: Verify FAIL.**
 
-- [ ] **Step 3: Implement:** replace `selectedExternalModelType: String` with `selectedFamily: ModelFamily` + a CTC-only `ctcModelType: String` field (default `nemo_ctc`); the existing modelType label row becomes a family dropdown (4 entries: Transducer (NeMo/Zipformer), Whisper, CTC, SenseVoice) with a help line listing expected files (`R.string.external_family_*_help`); below it, a conditional options panel: WHISPER gets an optional language field (task fixed to transcribe), SENSE_VOICE an optional language + ITN switch, CTC a subtype selector (nemo/zipformer). VM wrappers pass family+options through to the importer. All strings en+it (DoD #8).
+- [ ] **Step 3: Implement:** replace `selectedExternalModelType: String` with `selectedFamily: ModelFamily` + a CTC-only `ctcModelType: String` field (default `nemo_ctc`); the existing modelType label row becomes a family dropdown (4 entries: Transducer (NeMo/Zipformer), Whisper, CTC, SenseVoice) with a help line listing expected files (`R.string.external_family_*_help`); below it, a conditional options panel: WHISPER gets an optional language field (task fixed to transcribe), SENSE_VOICE an optional language + ITN switch, CTC a subtype selector (nemo/zipformer). Additionally the import section gains an optional languages text field (comma/space separated codes) that flows into the importer's new `languages` parameter for ALL families (spec: SAF-folder import gains a languages field stored on the record; it is also the Whisper default-language source). VM wrappers pass family+options+languages through to the importer. All strings en+it (DoD #8).
 
 - [ ] **Step 4: Run full unit suite** `./gradlew :app:testPlayStoreDebugUnitTest`, verify PASS.
 
@@ -233,12 +235,12 @@ enum class ModelFamily { TRANSDUCER, WHISPER, CTC, SENSE_VOICE }
 ### Task 13: catalog search by language + arabic.json + docs
 
 **Files:**
-- Modify: `app/src/main/java/com/antivocale/app/ui/tabs/ModelTab.kt` (URL/catalog import section)
-- Create: catalog entry `arabic.json` (locate the existing catalog dir with `git grep -l "sha256" -- "*.json"`; follow the existing entry format exactly)
-- Modify: `docs/external-models.md`
+- Modify: `app/src/main/java/com/antivocale/app/ui/tabs/ModelTab.kt` (URL import dialog)
+- Create: `app/src/main/assets/external-catalog/arabic.json` plus a small index `app/src/main/assets/external-catalog/index.json` (NOTE: no catalog consumer exists in app code today; `ExternalModelSource.CATALOG` is declared but unused, and the JSONs under `docs/test-catalog/` are test fixtures with no runtime consumer. This task creates the minimal runtime surface rather than pointing at the docs fixtures.)
+- Test: unit tests for the pure matcher + index parsing under `app/src/test/java/com/antivocale/app/data/`
 
-- [ ] **Step 1:** catalog search: a free-text filter over entry `displayName` + `languages` ("ar" and "arabic" both surface the Arabic entry). Keep the matcher pure and testable, e.g. `fun matchesQuery(name: String, languages: List<String>, query: String): Boolean`, with unit tests.
-- [ ] **Step 2:** `arabic.json`: `family: "WHISPER"`, `languages: ["ar"]`, `modelType: ""`, files = encoder int8 + decoder int8 + their `.onnx.data` sidecars, each with sha256 + size (source: OpenVoiceOS/whisper-large-v3-turbo-arabic-dialectal-v2-onnx; fetch hashes with `curl -s https://huggingface.co/api/models/<repo>/tree/main` and verify the oids are the LFS sha256, not the git blob ids).
+- [ ] **Step 1:** catalog surface + search: bundle a tiny catalog index (name, languages, entry-JSON URL per model; initially just the Arabic entry) as assets; the URL import dialog offers autocomplete suggestions filtered by a free-text query over `displayName` + `languages` ("ar" and "arabic" both surface the Arabic entry); tapping a suggestion fills the URL field with the entry URL and the family from the entry. Keep the matcher pure and testable, e.g. `fun matchesQuery(name: String, languages: List<String>, query: String): Boolean`, with unit tests; index parsing gets its own test. Scope note: this is an autocomplete assist on the existing URL dialog, NOT a full catalog browser screen (YAGNI; a real catalog listing can grow later).
+- [ ] **Step 2:** `arabic.json`: `family: "WHISPER"`, `languages: ["ar"]`, `modelType: ""`, files = encoder int8 + decoder int8 + their `.onnx.data` sidecars, each with sha256 + size (source: OpenVoiceOS/whisper-large-v3-turbo-arabic-dialectal-v2-onnx; fetch hashes with `curl -s https://huggingface.co/api/models/<repo>/tree/main` and verify the oids are the LFS sha256, not the git blob ids). Ship it both in assets and as a shareable URL the docs point at.
 - [ ] **Step 3:** `docs/external-models.md`: add the family table (family → expected files → record modelType → options) and the split-file note; update the entry-JSON schema section with `family`/`options`/`languages`.
 - [ ] **Step 4: Run full unit suite, verify PASS. Commit** `feat: language search, arabic catalog entry, family docs (TASK-331)`
 
