@@ -1063,13 +1063,13 @@ private fun NemotronDownloadSection(
  * Family selection + conditional options for external-model imports. One immutable
  * holder so both import paths (folder and URL) share a single selection state.
  */
-private data class ExternalImportUiState(
+internal data class ExternalImportUiState(
     val family: com.antivocale.app.data.ModelFamily = com.antivocale.app.data.ModelFamily.TRANSDUCER,
     val ctcModelType: String = "nemo_ctc",
     val languages: String = "",
     val whisperLanguage: String = "",
     val sensevoiceLanguage: String = "",
-    val sensevoiceItn: Boolean = true,
+    val sensevoiceItn: Boolean = false,
 ) {
     /** Family-specific importer options; blank optional fields are omitted. */
     fun options(): Map<String, String> = when (family) {
