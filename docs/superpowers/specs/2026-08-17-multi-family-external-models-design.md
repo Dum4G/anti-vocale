@@ -62,6 +62,7 @@ sealed interface ModelFamilySupport {
     fun buildCopyPlan(files: List<String>): Map<String, String>?       // canonical -> source
     fun metadataFileRole(): String                                     // canonical file the metadata check reads
     fun metadataKeys(modelType: String): List<String>                  // pre-native validation
+    fun validateImportedModel(file: File)                              // value-aware check, default no-op
     fun buildModelConfig(record: ExternalModelRecord, numThreads: Int,
                          provider: String): OfflineModelConfig
 
