@@ -7,6 +7,7 @@ import androidx.documentfile.provider.DocumentFile
 import com.antivocale.app.data.download.DownloadConfig
 import com.antivocale.app.data.download.HashVerifier
 import com.antivocale.app.data.download.ResumeDownloadHelper
+import com.antivocale.app.transcription.ModelFamilySupport
 import com.antivocale.app.transcription.SherpaOnnxBackend
 import java.io.File
 import java.io.InputStream
@@ -65,38 +66,12 @@ class ExternalModelImporter(
     }
 
     /**
-     * Maps source file names to canonical role names by keyword: encoder/decoder/joiner
-     * match any .onnx containing the role keyword (so non-canonical exports like GigaAM's
-     * gigaam_v3_e2e_rnnt_encoder_int8.onnx match). The joiner also answers to "joint"
-     * (GigaAM v3 ships gigaam_v3_e2e_rnnt_joint.onnx: the RNNT file name, unlike
-     * sherpa's config key; Dum4G's 2026-08-13 report on the prototype was exactly this).
-     * Tokens answers to tokens.txt or any *vocab* file (istupakov's export uses
-     * v3_e2e_rnnt_vocab.txt). Returns null when any role has no candidate.
+     * Maps source file names to canonical role names. The keyword logic lives in the
+     * family support table ([ModelFamilySupport.TransducerSupport], single definition
+     * shared with the engine); this delegate keeps the import call sites unchanged.
      */
-    internal fun buildCopyPlan(files: List<String>): Map<String, String>? {
-        fun findByRole(vararg keywords: String) =
-            files.firstOrNull { f -> f.endsWith(".onnx") && keywords.any { f.contains(it, ignoreCase = true) } }
-        val encoder = findByRole("encoder") ?: return null
-        val decoder = findByRole("decoder") ?: return null
-        val joiner = findByRole("joiner", "joint") ?: return null
-        // Tokens: prefer exact names, then family-aware matching. Repos that ship
-        // both CTC and RNNT variants (istupakov) have multiple vocab files; a bare
-        // contains("vocab") over an alphabetical listing picks the CTC one for an
-        // RNNT import. The matcher prefers rnnt-hinted and ctc-free candidates.
-        fun isTokensLike(name: String) = name.contains("tokens", ignoreCase = true) || name.contains("vocab", ignoreCase = true)
-        val tokens = files.firstOrNull { it.equals("tokens.txt", ignoreCase = true) }
-            ?: files.firstOrNull { it.equals("vocab.txt", ignoreCase = true) }
-            ?: files.firstOrNull { it.endsWith(".txt") && isTokensLike(it) && it.contains("rnnt", ignoreCase = true) }
-            ?: files.firstOrNull { it.endsWith(".txt") && isTokensLike(it) && !it.contains("ctc", ignoreCase = true) }
-            ?: files.firstOrNull { it.endsWith(".txt") && isTokensLike(it) }
-            ?: return null
-        return linkedMapOf(
-            SherpaOnnxBackend.CANONICAL_ENCODER to encoder,
-            SherpaOnnxBackend.CANONICAL_DECODER to decoder,
-            SherpaOnnxBackend.CANONICAL_JOINER to joiner,
-            SherpaOnnxBackend.CANONICAL_TOKENS to tokens,
-        )
-    }
+    internal fun buildCopyPlan(files: List<String>): Map<String, String>? =
+        ModelFamilySupport.forFamily(ModelFamily.TRANSDUCER).buildCopyPlan(files)
 
     /** SAF folder import: the primary v2a entry point. */
     suspend fun importFromTreeUri(
