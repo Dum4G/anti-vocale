@@ -26,8 +26,10 @@ existing transducer import unchanged.
    the real models during implementation (desktop inspection script). If a family's
    exports carry no metadata at all, that support degrades to a documented structural
    check, never a silent skip.
-3. **Scope v1**: 4 families with real-model tests. The other 13 sherpa families stay
-   out until a use case exists; the dispatch table is the extension point.
+3. **Scope v1**: 4 families with real-model tests. FIRERED_ASR (named in AC #1) is
+   deferred under the AC's own escape hatch ("and any other families validated during
+   implementation") until a use case with a real model exists; the other sherpa
+   families likewise stay out. The dispatch table is the extension point.
 4. **Family-specific parameters**: a flat `options: Map<String, String>` on the record
    (JSON object, keys prefixed per family: `whisper.language`, `whisper.task`,
    `sensevoice.language`, `sensevoice.itn`). Extensible without schema migrations.
@@ -58,6 +60,7 @@ sealed interface ModelFamilySupport {
     val family: ModelFamily
     fun requiredRoles(): List<String>                                  // canonical file names
     fun buildCopyPlan(files: List<String>): Map<String, String>?       // canonical -> source
+    fun metadataFileRole(): String                                     // canonical file the metadata check reads
     fun metadataKeys(modelType: String): List<String>                  // pre-native validation
     fun buildModelConfig(record: ExternalModelRecord, numThreads: Int,
                          provider: String): OfflineModelConfig
@@ -68,16 +71,35 @@ sealed interface ModelFamilySupport {
 
 - `TransducerSupport`: extracts today's `buildCopyPlan` keyword logic (including the
   joiner/"joint" and rnnt-hinted-tokens matching) and
-  `SherpaOnnxBackend.requiredTransducerMetadataKeys`.
-- `WhisperSupport`: roles encoder + decoder (+ tokens); no joiner. Builds
-  `OfflineWhisperModelConfig(encoder, decoder, language, task)` with
+  `SherpaOnnxBackend.requiredTransducerMetadataKeys`. Record `modelType` values:
+  `nemo_transducer`, `conformer_transducer`, or empty, passed straight through to
+  `OfflineModelConfig.modelType` as today.
+- `WhisperSupport`: roles encoder + decoder (+ tokens); no joiner. Structural
+  discriminator: a joiner/joint file among the role-matched candidate pool is
+  rejected as "looks like a transducer" even on the degraded-validation path, so a
+  family mismatch can never pass import and surface as a runtime exit(255). The
+  check inspects only the files that entered role matching, not every file in the
+  picked SAF folder (a parent directory holding several models is legitimate).
+  Builds `OfflineWhisperModelConfig(encoder, decoder, language, task)` with
   `language = options["whisper.language"] ?: record.languages.firstOrNull() ?: "multi"`
-  and `task = options["whisper.task"] ?: "transcribe"`.
-- `CtcSupport`: roles encoder + tokens. `modelType` selects the sherpa subtype:
-  `nemo_ctc` → `OfflineNemoEncDecCtcModelConfig`, zipformer-style →
-  `OfflineZipformerCtcModelConfig`, unknown → import-time error naming valid values.
-- `SenseVoiceSupport`: roles model + tokens; builds `OfflineSenseVoiceModelConfig`
-  with optional language and ITN from options.
+  (the "multi" sentinel and the UI "auto" mapping are confirmed by the desktop
+  validation, not asserted) and `task = options["whisper.task"] ?: "transcribe"`.
+  `tailPaddings` stays at its sherpa default; the engine's 1s silence pad remains
+  the single tuning point, so the two mechanisms are never independently adjusted.
+  Record `modelType`: empty; `OfflineModelConfig.modelType` = `"whisper"`.
+- `CtcSupport`: roles encoder + tokens. Token selection is the mirror of the
+  transducer matcher: ctc-hinted candidates first, rnnt-free fallback (the existing
+  rnnt-first bias would pick the RNNT vocab for a GigaAM CTC import, since that repo
+  ships both variants). Same structural discriminator as Whisper: joiner/joint files
+  or rnnt-hinted encoders/vocabs in the candidate pool are rejected as transducer
+  files. `modelType` selects the sherpa subtype: `nemo_ctc` →
+  `OfflineNemoEncDecCtcModelConfig`, zipformer-style →
+  `OfflineZipformerCtcModelConfig` (fed by `OfflineModelConfig.modelType`), unknown
+  → import-time error naming valid values.
+- `SenseVoiceSupport`: roles model + tokens; metadata validation reads the model
+  file (`metadataFileRole()` = model.onnx, since this family has no encoder). Builds
+  `OfflineSenseVoiceModelConfig` with optional language and ITN from options.
+  Record `modelType`: empty; `OfflineModelConfig.modelType` = `"sense_voice"`.
 
 Metadata keys per family are derived by inspecting the real ONNX files (script under
 `eval/`, sherpa-onnx Python environment already present) and documented in the file.
@@ -89,8 +111,12 @@ Metadata keys per family are derived by inspecting the real ONNX files (script u
 - `importFromTreeUri`/`importFromDirectory`/`importFromHuggingFaceRepo` gain a
   `family: ModelFamily = ModelFamily.TRANSDUCER` parameter; copy planning and error
   messages ("missing encoder/tokens for CTC family; found: …") come from the support.
-- `registerImported` validates metadata via `support.metadataKeys(modelType)` instead
-  of the transducer-only helper.
+- `registerImported` validates metadata via `support.metadataKeys(modelType)` on
+  `support.metadataFileRole()` instead of the transducer-only helper. The dedupe
+  update path extends to the new fields: a same-hash re-import refreshes `family`,
+  `options`, and `languages` on the existing record (otherwise changing
+  `whisper.language` via re-import would log "deduped" while silently keeping the
+  old value).
 - **ONNX split files (AC #9)**: a sibling `*.onnx.data` (and similar external-data
   sidecars) of any planned `.onnx` file is added to the copy plan as an extra
   non-role entry, copied next to the canonical destination keeping its source base
@@ -137,8 +163,10 @@ family-agnostic. The existing 1s silence padding stays for all families.
   unknown CTC modelType rejection, metadata keys per family.
 - Desktop validation (`eval/`, sherpa-onnx 1.13.3+ Python): load GigaAM v3 CTC and
   the Arabic Whisper encoder/decoder with the intended configs BEFORE app-side
-  implementation; these runs also produce the per-family metadata keys and confirm
-  `.onnx.data` resolution under renamed canonical files.
+  implementation; these runs also produce the per-family metadata keys, confirm
+  `.onnx.data` resolution under renamed canonical files, and verify the Whisper
+  language-default behavior (which sentinel `language` value the loader accepts,
+  and what the UI's "auto" maps to).
 - Device: SAF import of the Arabic Whisper model (~1.3GB, existing disk pre-flight)
   and transcription of an Arabic voice message; GigaAM CTC as the small case.
 - MMS 1B-all: evaluation documented in the task; if the sherpa CTC config cannot load
@@ -147,7 +175,8 @@ family-agnostic. The existing 1s silence padding stays for all families.
 ## Risks and mitigations
 
 1. OpenVoiceOS exports may lack sherpa-standard ONNX metadata → degrade to a
-   documented structural check for that family (explicit, not silent).
+   documented structural check for that family (explicit, not silent), which must
+   still include a family discriminator (see the WhisperSupport joiner rule).
 2. Renaming split-file ONNX may break external-data references → verified on desktop
    before app implementation; fallback is keeping the source base name for the whole
    family's files.
