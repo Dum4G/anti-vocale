@@ -155,6 +155,26 @@ family-agnostic. The existing 1s silence padding stays for all families.
   sidecars listed as separate files.
 - `docs/external-models.md`: table of family → expected files → options → examples.
 
+## UI style conformance (binding, not best-effort)
+
+Every new or modified UI section (family dropdown, options panel, catalog search,
+language field) must match the visual style of the pre-existing import/model screens
+exactly: same nesting of containers (no extra nested Boxes/Columns that existing rows
+don't have), same spacing values and paddings (reuse the screen's existing spacing
+tokens, not new literals), same alignment patterns, and the same icon usage rules
+(icons only where sibling rows use them, same icon size/tint). This is enforced, not
+remembered:
+
+1. The implementation plan carries an explicit task step "UI conformance pass" that
+   diffs each new Composable against its closest existing sibling (by reading the
+   sibling's source), before any device test.
+2. The code-review checklist for this feature includes a UI-conformance item
+   (nested containers, spacing literals, alignment, icons) and the reviewer must
+   cite the sibling screen each new element was compared against.
+3. Device verification uses screenshots compared against the existing screens (the
+   project rule: certify with pixels, never by eye); the family dropdown and options
+   panel must be visually indistinguishable in style from the current import UI.
+
 ## Testing
 
 - JVM unit tests: per-family copy plans (Whisper set without joiner accepted,
