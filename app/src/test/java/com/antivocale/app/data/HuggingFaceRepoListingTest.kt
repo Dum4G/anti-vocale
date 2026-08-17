@@ -209,6 +209,18 @@ class HuggingFaceRepoListingTest {
     }
 
     @Test
+    fun `CTC entry without modelType is rejected with clear error`() {
+        val error = runCatching {
+            ExternalModelEntryJson.parse("""
+                {"name":"CTC No Type","family":"CTC","languages":["en"],
+                 "files":[{"name":"encoder.onnx","url":"https://x/e.onnx","sha256":"${"a".repeat(64)}","size":100}]}
+            """.trimIndent())
+        }
+        assertTrue(error.isFailure)
+        assertTrue(error.exceptionOrNull()?.message?.contains("CTC family requires an explicit modelType") == true)
+    }
+
+    @Test
     fun `CTC entry with invalid modelType is rejected`() {
         val error = runCatching {
             ExternalModelEntryJson.parse("""

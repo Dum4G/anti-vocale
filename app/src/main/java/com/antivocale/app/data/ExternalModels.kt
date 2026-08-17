@@ -8,6 +8,19 @@ enum class ModelFamily { TRANSDUCER, WHISPER, CTC, SENSE_VOICE }
 
 enum class ExternalModelSource { LOCAL, URL, CATALOG }
 
+/**
+ * Internal helper: parse a JSONObject from a JSON object, returning emptyMap if absent or null.
+ * Used by both ExternalModelRecord.fromJson and ExternalModelEntryJson.parse.
+ */
+internal fun JSONObject.optStringMap(key: String): Map<String, String> {
+    val obj = optJSONObject(key) ?: return emptyMap()
+    return buildMap {
+        for (k in obj.keys()) {
+            put(k, obj.getString(k))
+        }
+    }
+}
+
 data class FilePin(val sha256: String, val verified: Boolean)
 
 data class ExternalModelRecord(
@@ -56,14 +69,6 @@ data class ExternalModelRecord(
                     put(name, FilePin(p.getString("sha256"), p.getBoolean("verified")))
                 }
             }
-            val optionsObj = o.optJSONObject("options")
-            val options = if (optionsObj != null) {
-                buildMap {
-                    for (key in optionsObj.keys()) {
-                        put(key, optionsObj.getString(key))
-                    }
-                }
-            } else emptyMap()
             ExternalModelRecord(
                 id = o.getString("id"), displayName = o.getString("displayName"), dir = o.getString("dir"),
                 family = ModelFamily.valueOf(o.getString("family")), modelType = o.getString("modelType"),
@@ -71,7 +76,7 @@ data class ExternalModelRecord(
                 source = ExternalModelSource.valueOf(o.getString("source")),
                 sourceUrl = if (o.isNull("sourceUrl")) null else o.getString("sourceUrl"),
                 files = files, sizeBytes = o.getLong("sizeBytes"), importedAt = o.getLong("importedAt"),
-                options = options,
+                options = o.optStringMap("options"),
             )
         } catch (e: Exception) {
             Log.w(TAG, "Malformed ExternalModelRecord; whole list will be rejected", e)

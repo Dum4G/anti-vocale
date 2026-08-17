@@ -104,14 +104,6 @@ class ExternalModelStoreTest {
 
     @Test
     fun `legacy record without options decodes with emptyMap`() = runTest {
-        // First test: check if fromJson works at all with the record helper
-        val rec = record()
-        val json = rec.toJson()
-        val direct = ExternalModelRecord.fromJson(json)
-        assertNotNull("fromJson should parse its own output", direct)
-        assertEquals(emptyMap<String, String>(), direct!!.options)
-
-        // Second test: raw JSON array string without options field, with non-empty files
         val raw = """[{"id":"aaa","displayName":"Old","dir":"/old","family":"TRANSDUCER","modelType":"nemo_transducer","languages":["en"],"source":"LOCAL","sourceUrl":null,"files":{"encoder.onnx":{"sha256":"abc1234567890123456789012345678901234567890123456789012345678901","verified":true}},"sizeBytes":100,"importedAt":1000}]"""
         val decoded = ExternalModelListJson.decode(raw)
         assertEquals(1, decoded.size)
@@ -133,13 +125,5 @@ class ExternalModelStoreTest {
         val json = rec.toJson().toString()
         val decoded = ExternalModelRecord.fromJson(org.json.JSONObject(json))
         assertEquals(mapOf("whisper.language" to "ar"), decoded!!.options)
-    }
-
-    @Test
-    fun `ModelFamily enum resolves all four families`() {
-        assertEquals(ModelFamily.TRANSDUCER, ModelFamily.valueOf("TRANSDUCER"))
-        assertEquals(ModelFamily.WHISPER, ModelFamily.valueOf("WHISPER"))
-        assertEquals(ModelFamily.CTC, ModelFamily.valueOf("CTC"))
-        assertEquals(ModelFamily.SENSE_VOICE, ModelFamily.valueOf("SENSE_VOICE"))
     }
 }

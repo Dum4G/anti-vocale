@@ -135,19 +135,10 @@ object ExternalModelEntryJson {
 
         // Parse family with default to TRANSDUCER for legacy entries
         val familyStr = o.optString("family", "TRANSDUCER")
-        val family = runCatching { ModelFamily.valueOf(familyStr) }.getOrElse {
-            throw IllegalArgumentException("entry has unknown family: $familyStr")
-        }
+        val family = ModelFamily.valueOf(familyStr)
 
         // Parse options (null-tolerant, absent → empty map)
-        val optionsObj = o.optJSONObject("options")
-        val options = if (optionsObj != null) {
-            buildMap {
-                for (key in optionsObj.keys()) {
-                    put(key, optionsObj.getString(key))
-                }
-            }
-        } else emptyMap()
+        val options = o.optStringMap("options")
 
         // Languages are mandatory for entries with explicit family, optional for legacy
         val languagesArray = o.optJSONArray("languages")
@@ -156,7 +147,7 @@ object ExternalModelEntryJson {
         } else {
             // Legacy entries without family: languages optional
             if (o.has("family")) {
-                throw IllegalArgumentException("entries must declare languages")
+                throw IllegalArgumentException("entry '${o.optString("name")}' must declare languages")
             } else emptyList()
         }
 
@@ -166,7 +157,9 @@ object ExternalModelEntryJson {
         } else {
             when (family) {
                 ModelFamily.TRANSDUCER -> "nemo_transducer"
-                ModelFamily.WHISPER, ModelFamily.SENSE_VOICE, ModelFamily.CTC -> ""
+                ModelFamily.CTC -> throw IllegalArgumentException(
+                    "CTC family requires an explicit modelType: nemo_ctc or zipformer_ctc")
+                ModelFamily.WHISPER, ModelFamily.SENSE_VOICE -> ""
             }
         }
 
