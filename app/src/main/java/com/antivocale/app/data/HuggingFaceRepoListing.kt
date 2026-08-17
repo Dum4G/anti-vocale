@@ -133,9 +133,15 @@ object ExternalModelEntryJson {
         }
         if (files.isEmpty()) throw IllegalArgumentException("entry has no files")
 
-        // Parse family with default to TRANSDUCER for legacy entries
+        // Parse family with default to TRANSDUCER for legacy entries. A bare
+        // valueOf would throw an enum-internal message, so wrap it with the same
+        // named unknown-family error shape ExternalCatalog.parseIndex documents.
         val familyStr = o.optString("family", "TRANSDUCER")
-        val family = ModelFamily.valueOf(familyStr)
+        val family = try {
+            ModelFamily.valueOf(familyStr)
+        } catch (_: IllegalArgumentException) {
+            throw IllegalArgumentException("entry '${o.optString("name")}' has unknown family: $familyStr")
+        }
 
         // Parse options (null-tolerant, absent → empty map)
         val options = o.optStringMap("options")

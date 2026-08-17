@@ -331,4 +331,41 @@ class ExternalModelImporterTest {
         val result = runCatching { tightImporter.importFromDirectory(src) }
         assertTrue(result.isFailure)
     }
+
+    @Test
+    fun `local import missing the onnx sidecar its encoder references fails loudly`() = runTest {
+        // Split encoder whose protobuf references an external-data sidecar that is
+        // NOT in the folder: the import must fail here naming the sidecar, not at
+        // engine load time.
+        val dir = tmp.newFolder("split-missing-sidecar")
+        File(dir, "some_encoder_int8.onnx").writeBytes(
+            ByteArray(64) { 1 } + "vocab_size=1024 subsampling_factor=8 ".toByteArray() +
+                metadataProp("model_type", "nemo_transducer") +
+                "some_encoder_int8.onnx.data".toByteArray())
+        File(dir, "some_decoder.onnx").writeBytes(ByteArray(16) { 2 })
+        File(dir, "some_joiner.onnx").writeBytes(ByteArray(16) { 3 })
+        File(dir, "tokens.txt").writeText("<unk> 0\n. 1\n")
+
+        val result = runCatching { importer.importFromDirectory(dir) }
+
+        assertTrue(result.isFailure)
+        assertTrue(
+            "error must name the missing sidecar: ${result.exceptionOrNull()?.message}",
+            result.exceptionOrNull()?.message?.contains("some_encoder_int8.onnx.data") == true)
+        assertEquals(0, store.records().size)
+    }
+
+    @Test
+    fun `url import of a stray non-HF non-json url fails naming the accepted forms`() = runTest {
+        val result = runCatching {
+            importer.importFromUrl("https://example.com/downloads/model.zip")
+        }
+
+        assertTrue(result.isFailure)
+        val message = result.exceptionOrNull()?.message
+        assertTrue("error must name the url: $message", message?.contains("https://example.com/downloads/model.zip") == true)
+        assertTrue("error must name the HF repo form: $message", message?.contains("HuggingFace repository") == true)
+        assertTrue("error must name the entry JSON form: $message", message?.contains(".json") == true)
+        assertEquals(0, store.records().size)
+    }
 }

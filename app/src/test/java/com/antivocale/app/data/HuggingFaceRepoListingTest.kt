@@ -143,6 +143,9 @@ class HuggingFaceRepoListingTest {
         }
         assertTrue(error.isFailure)
         assertTrue(error.exceptionOrNull()?.message?.contains("UNKNOWN_FAMILY") == true)
+        assertTrue(
+            "error must be the named unknown-family message, not a bare enum error: ${error.exceptionOrNull()?.message}",
+            error.exceptionOrNull()?.message?.contains("unknown family") == true)
     }
 
     @Test

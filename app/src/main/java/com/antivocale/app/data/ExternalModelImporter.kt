@@ -190,6 +190,24 @@ class ExternalModelImporter(
         return found
     }
 
+    /**
+     * Split-ONNX completeness, shared by the local and download cores: an
+     * external-data reference inside a copied `.onnx` whose sidecar is not part
+     * of the planned file set would only surface as an engine-load failure, so
+     * reject it at import time, loud and named. [declaredNames] are the
+     * canonical names the import actually produced in [targetDir].
+     */
+    private fun assertSidecarsDeclared(displayName: String, onnxFiles: List<File>, declaredNames: Set<String>) {
+        for (file in onnxFiles) {
+            val missing = referencedSidecarNames(file).filterNot { it in declaredNames }
+            if (missing.isNotEmpty()) {
+                throw IllegalArgumentException(
+                    "$displayName references split-ONNX sidecar(s) ${missing.joinToString()} " +
+                        "that the import set does not include; declare them in the file list")
+            }
+        }
+    }
+
     private fun indexOfBytes(haystack: ByteArray, needle: ByteArray, from: Int): Int? {
         var i = maxOf(from, 0)
         outer@ while (i <= haystack.size - needle.size) {
@@ -304,10 +322,16 @@ class ExternalModelImporter(
         options: Map<String, String>,
         languages: List<String>,
     ): ExternalModelRecord =
-        if (url.trim().endsWith(".json") || HuggingFaceRepoListing.parseRepoId(url) == null) {
+        if (url.trim().endsWith(".json")) {
             importFromEntryJson(url)
-        } else {
+        } else if (HuggingFaceRepoListing.parseRepoId(url) != null) {
             importFromHuggingFaceRepo(url, modelType, family, options, languages)
+        } else {
+            // A stray URL must fail classification loudly here; falling through to
+            // the entry-JSON parse would surface as a raw JSON error instead.
+            throw IllegalArgumentException(
+                "unsupported URL: $url (expected a HuggingFace repository URL " +
+                    "such as https://huggingface.co/<owner>/<repo>, or a catalog-entry .json URL)")
         }
 
     private suspend fun importCore(
@@ -352,6 +376,12 @@ class ExternalModelImporter(
                 }
                 pins[canonical] = FilePin(digest.digest().joinToString("") { "%02x".format(it) }, verified = true)
             }
+
+            // Split-ONNX completeness over the copied canonical files, exactly like
+            // the download core: a sidecar absent from the source folder must fail
+            // here, not at engine load.
+            val copiedOnnx = targetDir.listFiles { f -> f.isFile && f.name.endsWith(".onnx") }.orEmpty().toList()
+            assertSidecarsDeclared(displayName, copiedOnnx, plan.keys)
 
             registerImported(targetDir, pins, family, resolvedModelType, options, languages,
                 ExternalModelSource.LOCAL, null, displayName)
@@ -424,12 +454,7 @@ class ExternalModelImporter(
                 // would only surface as an engine-load failure, so reject it here,
                 // loud and named.
                 if (triple.canonicalName.endsWith(".onnx")) {
-                    val missing = referencedSidecarNames(file).filterNot { it in declaredNames }
-                    if (missing.isNotEmpty()) {
-                        throw IllegalArgumentException(
-                            "$displayName references split-ONNX sidecar(s) ${missing.joinToString()} " +
-                                "that the download set does not include; declare them in the file list")
-                    }
+                    assertSidecarsDeclared(displayName, listOf(file), declaredNames)
                 }
             }
 
