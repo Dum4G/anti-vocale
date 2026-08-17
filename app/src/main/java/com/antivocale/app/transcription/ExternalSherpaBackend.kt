@@ -91,7 +91,8 @@ class ExternalSherpaBackend @Inject constructor() : TranscriptionBackend {
                 support.validateImportedModel(metadataFile)
             } catch (e: IllegalArgumentException) {
                 Log.e(TAG, "Family validation failed for ${record.backendId}: ${e.message}")
-                return@withContext Result.failure(TranscriptionException.ModelLoadError(e.message ?: "unknown", e))
+                return@withContext Result.failure(TranscriptionException.ModelLoadError(
+                    "family validation failed for ${record.backendId}: ${e.message ?: "no detail provided"}", e))
             }
 
             try {

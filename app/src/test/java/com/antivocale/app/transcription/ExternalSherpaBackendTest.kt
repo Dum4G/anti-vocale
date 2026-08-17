@@ -2,7 +2,6 @@ package com.antivocale.app.transcription
 
 import com.antivocale.app.data.ExternalModelRecord
 import com.antivocale.app.data.ExternalModelSource
-import com.antivocale.app.data.FilePin
 import com.antivocale.app.data.ModelFamily
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
@@ -64,6 +63,7 @@ class ExternalSherpaBackendTest {
         // the OfflineRecognizer constructor, so the failure is a ModelLoadError
         // naming the model role (not a native/linkage error from config construction).
         assertTrue(result.exceptionOrNull() is TranscriptionException.ModelLoadError)
+        assertFalse(result.exceptionOrNull() is TranscriptionException.NativeError)
         assertTrue(result.exceptionOrNull()!!.message!!.contains("model.int8.onnx"))
     }
 
