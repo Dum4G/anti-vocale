@@ -174,3 +174,39 @@ Desktop validation successfully established:
 - Synthetic external data test only (ONNX 1.22 single-tensor blob)
 - Desktop sherpa-onnx 1.13.4 Python runtime (not Android AAR)
 - Real OpenVoiceOS production model layout deferred to Task 15 device validation
+
+## MMS 1B (OpenVoiceOS/mms-1b-all-onnx) — TASK-331 Task 16
+
+**Date:** 2026-08-17
+**Verdict: NOT loadable via sherpa-onnx 1.13.4. Architecturally incompatible, not a config bug.**
+
+### Repository layout (HF API)
+
+- `model.onnx` + `model.onnx_data` (fp32 shared base): 3.85 GB
+- `model.int8.onnx` + `model.int8.onnx_data` (int8 shared base): 1.00 GB
+- `adapters/<iso>.npz` + `vocabs/<iso>.txt`: ~8.4 MB per language, 1198 languages (~15 GB total repo)
+- Designed for the `onnx-asr` loader (TigreGotico fork), NOT sherpa-onnx
+
+### Graph inspection (onnx 1.22, load_external_data=False)
+
+`model.int8.onnx` has **292 graph inputs**. Only `input_values [batch, time]` and `input_lengths [batch]` are audio; the other **290 are adapter weight tensors** (`wav2vec2.encoder.layers.N.adapter_layer.linear_1.weight`, `.norm.*`, plus the CTC head). The adapters are graph INPUTS, not baked-in constants: a session with unfed adapter inputs cannot produce meaningful output regardless of the CTC decoder family chosen. sherpa-onnx has no API to supply per-language adapter tensors (the `adapters/<iso>.npz` format is onnx-asr-specific).
+
+### Load attempts (3/3 failed)
+
+Downloaded to /tmp/task331-mms: `model.int8.onnx` (2.0 MB) + `model.int8.onnx_data` (1,004,264,448 B) + `vocabs/ita.txt` + `config.json`.
+
+1. `OfflineRecognizer.from_nemo_ctc(model=..., tokens=vocabs/ita.txt)`:
+   C++ fatal, exit 255: `offline-nemo-enc-dec-ctc-model.cc:Init:123 'vocab_size' does not exist in the metadata`
+2. `OfflineRecognizer.from_zipformer_ctc(...)`:
+   Construction "succeeds" (no metadata validation) but `decode_stream` raises:
+   `RuntimeError: Invalid rank for input: input_values Got: 3 Expected: 2 Please fix either the inputs/outputs or the model.` — structural input mismatch, and the 290 adapter inputs remain unfed, so even a rank fix would yield garbage.
+3. Direct `OfflineRecognizerConfig(model_config=OfflineModelConfig(tdnn=..., model_type='tdnn'))`:
+   no `from_tdnn` factory; the raw-config route is superseded by the factory API in 1.13.4 (constructor kwarg shapes differ), abandoned as moot given finding 1/2 plus the graph-input evidence.
+
+### Adapter conclusion
+
+Plain load+transcribe is impossible for ANY single language (ita or eng): sherpa-onnx cannot feed the per-language adapter/CTC-head tensors that the graph requires as inputs. Using MMS would require either (a) a merged per-language ONNX export with adapters baked in (3.6 GB per language per the model card, and no such files exist in the repo), or (b) onnx-asr-style adapter injection that sherpa does not support. Do not wire this family into the app's CtcSupport (nemo_ctc/zipformer_ctc) engine.
+
+### Disk footprint (what a "load attempt" costs)
+
+int8 base: ~982 MiB (2.0 MB graph + 1004 MB external data) once, plus ~8.4 MB per language. fp32 base: 3.6 GiB. Whole repo: ~15 GB.
