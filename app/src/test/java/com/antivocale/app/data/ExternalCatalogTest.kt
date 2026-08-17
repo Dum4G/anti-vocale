@@ -113,8 +113,13 @@ class ExternalCatalogTest {
         assertEquals(listOf("ar"), entry.languages)
         assertEquals(
             setOf("encoder_model_int8.onnx", "encoder_model_int8.onnx.data",
-                "decoder_model_merged_int8.onnx", "decoder_model_merged_int8.onnx.data"),
+                "decoder_model_merged_int8.onnx", "decoder_model_merged_int8.onnx.data",
+                "tokens.txt"),
             entry.files.map { it.name }.toSet())
+        // The tokens file comes from the conversion mirror (the source repo ships
+        // vocab.json only); pin the host so a silent swap is caught in review.
+        assertTrue(entry.files.first { it.name == "tokens.txt" }
+            .url.startsWith("https://huggingface.co/pantinor/whisper-arabic-dialectal-tokens/"))
         assertTrue(entry.files.all { it.sha256.length == 64 && it.size > 0 })
     }
 }
