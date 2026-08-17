@@ -90,4 +90,72 @@ class ModelFamilySupportTest {
         assertEquals(4, config.numThreads)
         assertEquals("cpu", config.provider)
     }
+
+    // ---- Task 5: WhisperSupport ----
+
+    @Test
+    fun `whisper plan maps encoder decoder tokens and rejects joiner files`() {
+        val support = ModelFamilySupport.forFamily(ModelFamily.WHISPER)
+        val plan = support.buildCopyPlan(listOf("base-encoder.int8.onnx", "base-decoder.int8.onnx", "base-tokens.txt"))
+        assertEquals("base-encoder.int8.onnx", plan!!["encoder.int8.onnx"])
+        assertEquals("base-decoder.int8.onnx", plan["decoder.int8.onnx"])
+        assertEquals("base-tokens.txt", plan["tokens.txt"])
+        assertNull(support.buildCopyPlan(listOf("encoder.onnx", "decoder.onnx")))
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun `whisper plan rejects files containing joiner or joint keywords`() {
+        val support = ModelFamilySupport.forFamily(ModelFamily.WHISPER)
+        support.buildCopyPlan(listOf("encoder.onnx", "decoder.onnx", "joiner.onnx", "tokens.txt"))
+    }
+
+    @Test
+    fun `whisper requiredRoles lists encoder decoder and tokens`() {
+        assertEquals(
+            listOf("encoder.int8.onnx", "decoder.int8.onnx", "tokens.txt"),
+            ModelFamilySupport.forFamily(ModelFamily.WHISPER).requiredRoles(),
+        )
+    }
+
+    @Test
+    fun `whisper metadata routing points at encoder and checks model_type`() {
+        val support = ModelFamilySupport.forFamily(ModelFamily.WHISPER)
+        assertEquals("encoder.int8.onnx", support.metadataFileRole())
+        assertEquals(listOf("model_type"), support.metadataKeys(""))
+    }
+
+    @Test
+    fun `whisper model config builds OfflineWhisperModelConfig with language and task`() {
+        val config = ModelFamilySupport.forFamily(ModelFamily.WHISPER)
+            .buildModelConfig(
+                record(ModelFamily.WHISPER, options = mapOf("whisper.language" to "it")),
+                numThreads = 4, provider = "cpu",
+            )
+        assertEquals("/models/external/test-abc123/encoder.int8.onnx", config.whisper.encoder)
+        assertEquals("/models/external/test-abc123/decoder.int8.onnx", config.whisper.decoder)
+        assertEquals("it", config.whisper.language)
+        assertEquals("transcribe", config.whisper.task)
+        assertEquals("whisper", config.modelType)
+        assertEquals(4, config.numThreads)
+        assertEquals("cpu", config.provider)
+    }
+
+    @Test
+    fun `whisper language defaults to record first language then empty string`() {
+        val support = ModelFamilySupport.forFamily(ModelFamily.WHISPER)
+        // No option, no record language -> empty (auto)
+        val autoConfig = support.buildModelConfig(record(ModelFamily.WHISPER), numThreads = 1, provider = "cpu")
+        assertEquals("", autoConfig.whisper.language)
+
+        // No option, record has language -> first language
+        val langConfig = support.buildModelConfig(
+            record(ModelFamily.WHISPER, languages = listOf("ar", "en")), numThreads = 1, provider = "cpu")
+        assertEquals("ar", langConfig.whisper.language)
+
+        // Option overrides record language
+        val optConfig = support.buildModelConfig(
+            record(ModelFamily.WHISPER, languages = listOf("ar"), options = mapOf("whisper.language" to "en")),
+            numThreads = 1, provider = "cpu")
+        assertEquals("en", optConfig.whisper.language)
+    }
 }

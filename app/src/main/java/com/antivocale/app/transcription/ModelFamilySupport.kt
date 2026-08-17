@@ -4,6 +4,7 @@ import com.antivocale.app.data.ExternalModelRecord
 import com.antivocale.app.data.ModelFamily
 import com.k2fsa.sherpa.onnx.OfflineModelConfig
 import com.k2fsa.sherpa.onnx.OfflineTransducerModelConfig
+import com.k2fsa.sherpa.onnx.OfflineWhisperModelConfig
 
 /**
  * The family support table (spec: multi-family external models): per-family copy
@@ -36,9 +37,9 @@ sealed interface ModelFamilySupport {
     companion object {
         fun forFamily(family: ModelFamily): ModelFamilySupport = when (family) {
             ModelFamily.TRANSDUCER -> TransducerSupport
-            // Later plan tasks add the remaining supports; until then there is
-            // exactly one importable family and anything else is a data error.
-            ModelFamily.WHISPER, ModelFamily.CTC, ModelFamily.SENSE_VOICE ->
+            ModelFamily.WHISPER -> WhisperSupport
+            // Later plan tasks add the remaining supports.
+            ModelFamily.CTC, ModelFamily.SENSE_VOICE ->
                 throw IllegalArgumentException("no support implemented yet for family $family")
         }
     }
@@ -109,4 +110,75 @@ object TransducerSupport : ModelFamilySupport {
             debug = false,
             provider = provider
         )
+}
+
+/**
+ * Whisper family: encoder + decoder + tokens; no joiner.
+ *
+ * Expected file set: one .onnx containing "encoder", one containing "decoder",
+ * and one .txt tokens/vocab file. A joiner/joint .onnx among the candidates is
+ * rejected as "looks like a transducer; pick the TRANSDUCER family" (structural
+ * discriminator preventing a family mismatch from passing import and surfacing
+ * as a runtime exit(255)).
+ *
+ * Language: [options]["whisper.language"], falling back to [languages][0], then
+ * "" (auto; sherpa-onnx performs no language validation per desktop spike).
+ * Task: [options]["whisper.task"] defaulting to "transcribe".
+ * tailPaddings stays at the sherpa default (-1).
+ *
+ * Record modelType: ignored; OfflineModelConfig.modelType = "whisper".
+ */
+object WhisperSupport : ModelFamilySupport {
+    override val family: ModelFamily = ModelFamily.WHISPER
+
+    override fun requiredRoles(): List<String> = listOf(
+        SherpaOnnxBackend.CANONICAL_ENCODER,
+        SherpaOnnxBackend.CANONICAL_DECODER,
+        SherpaOnnxBackend.CANONICAL_TOKENS,
+    )
+
+    override fun buildCopyPlan(files: List<String>): Map<String, String>? {
+        fun findByRole(vararg keywords: String) =
+            files.firstOrNull { f -> f.endsWith(".onnx") && keywords.any { f.contains(it, ignoreCase = true) } }
+        val encoder = findByRole("encoder") ?: return null
+        val decoder = findByRole("decoder") ?: return null
+        // Structural discriminator: a joiner/joint file means this is a transducer.
+        val hasJoiner = files.any { f ->
+            f.endsWith(".onnx") && (f.contains("joiner", ignoreCase = true) || f.contains("joint", ignoreCase = true))
+        }
+        if (hasJoiner) throw IllegalArgumentException(
+            "candidate set contains a joiner/joint file: looks like a transducer; pick the TRANSDUCER family")
+        // Tokens: exact names first, then keyword match.
+        val tokens = files.firstOrNull { it.equals("tokens.txt", ignoreCase = true) }
+            ?: files.firstOrNull { it.endsWith(".txt") && (it.contains("tokens", ignoreCase = true) || it.contains("vocab", ignoreCase = true)) }
+            ?: return null
+        return linkedMapOf(
+            SherpaOnnxBackend.CANONICAL_ENCODER to encoder,
+            SherpaOnnxBackend.CANONICAL_DECODER to decoder,
+            SherpaOnnxBackend.CANONICAL_TOKENS to tokens,
+        )
+    }
+
+    override fun metadataFileRole(): String = SherpaOnnxBackend.CANONICAL_ENCODER
+
+    override fun metadataKeys(modelType: String): List<String> = listOf("model_type")
+
+    override fun buildModelConfig(record: ExternalModelRecord, numThreads: Int, provider: String): OfflineModelConfig {
+        val language = record.options["whisper.language"]
+            ?: record.languages.firstOrNull()
+            ?: ""
+        val task = record.options["whisper.task"] ?: "transcribe"
+        return OfflineModelConfig(
+            whisper = OfflineWhisperModelConfig(
+                encoder = "${record.dir}/${SherpaOnnxBackend.CANONICAL_ENCODER}",
+                decoder = "${record.dir}/${SherpaOnnxBackend.CANONICAL_DECODER}",
+                language = language,
+                task = task,
+            ),
+            modelType = "whisper",
+            numThreads = numThreads,
+            debug = false,
+            provider = provider,
+        )
+    }
 }
