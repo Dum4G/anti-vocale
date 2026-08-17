@@ -17,7 +17,8 @@ Anti-Vocale intercepts shared audio files (from WhatsApp, Telegram, etc.), trans
 ## Features
 
 - **Fully offline** - All processing happens on-device, no data leaves your phone
-- **Multiple ASR engines** - Choose between Gemma (LLM), Whisper, Parakeet TDT, Qwen3-ASR, or Nemotron 3.5 (streaming) models
+- **Multiple ASR engines** - Choose between Gemma (LLM), Whisper, Parakeet TDT, Qwen3-ASR, GigaAM v3, Nemotron 3.5 (streaming), or import your own
+- **Custom model import** - Bring any sherpa-onnx transducer model from a folder or HuggingFace URL, no app update needed ([docs](docs/external-models.md))
 - **Share integration** - Share audio from any messaging app to transcribe
 - **Model-specific share targets** - Pick a specific model directly from the Android share sheet
 - **Re-transcribe** - Retry any transcription with a different model from the log
@@ -108,7 +109,12 @@ Long transcripts are split into pages you can read without leaving the notificat
 |-------|------|-----------|-------|
 | **Parakeet TDT SmoothQuant** | ~862MB | 25 European | Best quality on long audio, recommended default |
 | **Parakeet TDT Stock int8** | ~464MB | 25 European | Lighter fallback, best speed/size ratio |
+| **GigaAM v3** | ~326MB | Russian | Best Russian accuracy, native punctuation |
 | **Qwen3-ASR 0.6B** | ~938MB | 52 | 52 languages, poor Italian accuracy |
+
+### Custom Models (ONNX Sherpa)
+
+Import any sherpa-onnx transducer model from a local folder or HuggingFace URL. The app handles role-based file matching (encoder/decoder/joiner/tokens), SHA-256 verification, and architecture selection. See the [import reference](docs/external-models.md) for supported formats and the catalog-entry JSON schema.
 
 ### Italian ASR Benchmark
 
@@ -188,7 +194,9 @@ TranscriptionOrchestrator
     |--- SherpaOnnxBackend (Parakeet TDT)
     |--- WhisperBackend (Whisper models)
     |--- Qwen3AsrBackend (Qwen3-ASR)
+    |--- GigaAmBackend (GigaAM v3, Russian)
     |--- NemotronStreamingBackend (Nemotron 3.5, OnlineRecognizer)
+    |--- ExternalSherpaBackend (user-imported models)
     |--- LlmTranscriptionBackend (Gemma via LiteRT-LM)
     |
     v
