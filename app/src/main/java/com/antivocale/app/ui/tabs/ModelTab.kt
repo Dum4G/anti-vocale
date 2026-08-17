@@ -1450,7 +1450,7 @@ private fun ExternalModelCard(
                     Column {
                         Text(record.displayName, style = MaterialTheme.typography.titleMedium)
                         Text(
-                            record.modelType.ifBlank { "zipformer" } +
+                            record.typeLabel +
                                 " · " + com.antivocale.app.util.formatFileSize(record.sizeBytes) +
                                 if (record.languages.isEmpty()) "" else " · " + record.languages.joinToString(", "),
                             style = MaterialTheme.typography.bodySmall,

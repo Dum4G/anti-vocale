@@ -39,6 +39,13 @@ data class ExternalModelRecord(
 ) {
     val backendId: String get() = BACKEND_ID_PREFIX + id
 
+    /**
+     * Human-facing type label for cards. WHISPER and SENSE_VOICE records carry a
+     * blank modelType by design; the label falls back to the family name so a
+     * whisper import is never shown as "zipformer".
+     */
+    val typeLabel: String get() = modelType.ifBlank { family.name.lowercase() }
+
     fun toJson(): JSONObject = JSONObject().apply {
         put("id", id); put("displayName", displayName); put("dir", dir)
         put("family", family.name); put("modelType", modelType)
