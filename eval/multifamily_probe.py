@@ -14,13 +14,12 @@ Models tested:
 Output: Findings printed to stdout for documentation.
 """
 
-import os
 import sys
 import tempfile
 import shutil
 from pathlib import Path
 import urllib.request
-import hashlib
+from typing import Optional, Dict
 
 # Try importing sherpa-onnx and onnx
 try:
@@ -37,6 +36,7 @@ try:
 except ImportError:
     print("[WARN] onnx package not available, will parse metadata from protobuf tail")
     ONNX_AVAILABLE = False
+    onnx = None  # type: ignore[assignment]
 
 
 # ============================================================================
@@ -74,11 +74,13 @@ def download_file(url: str, dest_path: Path, desc: str = "file") -> bool:
 # ONNX Metadata Extraction
 # ============================================================================
 
-def extract_metadata_onnx(model_path: Path) -> dict:
+def extract_metadata_onnx(model_path: Path) -> Dict[str, str]:
     """Extract ONNX metadata_props using onnx package."""
+    if onnx is None:
+        return {}
     try:
         model = onnx.load(str(model_path))
-        metadata = {}
+        metadata: Dict[str, str] = {}
         for prop in model.metadata_props:
             metadata[prop.key] = prop.value
         return metadata
@@ -92,7 +94,7 @@ def extract_metadata_raw(model_path: Path) -> dict:
     Fallback: parse metadata from ONNX protobuf tail.
     Based on SherpaOnnxBackend.missingOnnxMetadata app implementation.
     """
-    metadata = {}
+    metadata: Dict[str, str] = {}
     try:
         with open(model_path, 'rb') as f:
             # Read file to find metadata section
@@ -130,7 +132,7 @@ def extract_metadata_raw(model_path: Path) -> dict:
         return {}
 
 
-def get_model_metadata(model_path: Path) -> dict:
+def get_model_metadata(model_path: Path) -> Dict[str, str]:
     """Extract ONNX metadata from model file."""
     print(f"\n[METADATA] Probing: {model_path.name}")
 
@@ -206,36 +208,77 @@ def test_whisper_language_sentinels(model_dir: Path, encoder_path: Path, decoder
 # Split-File Rename Test
 # ============================================================================
 
-def test_split_file_rename(encoder_path: Path, data_path: Path):
+def test_split_file_rename_synthetic(encoder_path: Path, decoder_path: Path, tokens_path: Path):
     """
-    Test whether renamed encoder.onnx + un-renamed encoder.onnx.data loads.
-    This simulates what happens when users rename model files manually.
+    Test whether renamed encoder.onnx + un-renamed external data loads.
+    Synthesizes external data from single-file model using onnx.save_model().
+    This reproduces the app's situation: main file renamed to encoder.onnx,
+    sidecar keeping its original base name, both co-located in one directory.
     """
-    print("\n[SPLIT-FILE] Testing renamed encoder + mismatched data file...")
+    print("\n[SPLIT-FILE] Testing renamed encoder.onnx + un-renamed .data file...")
+
+    if not ONNX_AVAILABLE:
+        print("  [SKIP] Cannot test without onnx package")
+        return None
 
     with tempfile.TemporaryDirectory() as tmpdir:
         tmpdir = Path(tmpdir)
 
-        # Copy encoder to encoder.onnx
-        renamed_encoder = tmpdir / "encoder.onnx"
-        shutil.copy(encoder_path, renamed_encoder)
-        print(f"  Copied encoder -> {renamed_encoder.name}")
-
-        # Copy data file WITHOUT renaming (keeps original basename)
-        original_data_name = data_path.name
-        mismatched_data = tmpdir / original_data_name
-        shutil.copy(data_path, mismatched_data)
-        print(f"  Copied data file as {mismatched_data.name} (un-renamed)")
-
-        # Try to load
+        # Load the single-file encoder model
+        print(f"  Loading encoder model: {encoder_path.name}")
         try:
-            if ONNX_AVAILABLE:
-                model = onnx.load(str(renamed_encoder))
-                print(f"  ✓ SUCCESS: Renamed encoder loaded with un-renamed data file")
-                return True
-            else:
-                print(f"  [SKIP] Cannot test without onnx package")
-                return None
+            model = onnx.load(str(encoder_path))
+        except Exception as e:
+            print(f"  ✗ FAILED to load encoder: {e}")
+            return False
+
+        # Save as external data format with original basename as sidecar
+        canonical_name = "encoder.onnx"
+        data_filename = "original-encoder.onnx.data"
+        canonical_path = tmpdir / canonical_name
+        data_path = tmpdir / data_filename
+
+        print(f"  Saving as canonical.onnx with external data...")
+        try:
+            # ONNX 1.22+ API - use save_as_external_data
+            onnx.save_model(
+                model,
+                str(canonical_path),
+                save_as_external_data=True,
+                all_tensors_to_one_file=True,
+                location=data_filename
+            )
+            print(f"    Created: {canonical_name}")
+            print(f"    Created: {data_filename}")
+        except Exception as e:
+            print(f"  ✗ FAILED to save with external data: {e}")
+            return False
+
+        # Verify files exist
+        if not canonical_path.exists():
+            print(f"  ✗ FAILED: {canonical_name} not created")
+            return False
+        if not data_path.exists():
+            print(f"  ✗ FAILED: {data_filename} not created")
+            return False
+
+        # Try to load with sherpa-onnx (positive test)
+        print(f"\n  [POSITIVE TEST] Loading {canonical_name} with {data_filename}...")
+        try:
+            # Use factory method for Whisper models
+            recognizer = sherpa_onnx.OfflineRecognizer.from_whisper(
+                encoder=str(canonical_path),
+                decoder=str(decoder_path),
+                tokens=str(tokens_path),
+                language="en",
+                task="transcribe",
+            )
+            print(f"  ✓ SUCCESS: Renamed encoder.onnx loads with un-renamed .data file")
+
+            # Clean up
+            del recognizer
+            return True
+
         except Exception as e:
             print(f"  ✗ FAILED: {e}")
             return False
@@ -245,7 +288,7 @@ def test_split_file_rename(encoder_path: Path, data_path: Path):
 # Model Download Orchestration
 # ============================================================================
 
-def download_gigaam_v3_ctc() -> Path:
+def download_gigaam_v3_ctc() -> Optional[Path]:
     """Download GigaAM v3 CTC int8 model (Russian)."""
     print("\n[DOWNLOAD] GigaAM v3 CTC int8...")
 
@@ -275,7 +318,7 @@ def download_gigaam_v3_ctc() -> Path:
         return None
 
 
-def download_whisper_base_int8() -> Path:
+def download_whisper_base_int8() -> Optional[Path]:
     """Download Whisper base int8 model (multilingual) - tests split-file loading."""
     print("\n[DOWNLOAD] Whisper base int8 (for split-file test)...")
 
@@ -408,18 +451,17 @@ def main():
         print("[SKIP] Whisper language testing: model files missing")
         accepted, rejected = [], []
 
-    # Test split-file rename scenario
+    # Test split-file rename scenario (synthetic external data)
     print("\n" + "=" * 70)
-    print("PHASE 4: Split-File Rename Test")
+    print("PHASE 4: Split-File Rename Test (Synthetic)")
     print("=" * 70)
 
-    encoder_data = whisper_dir / "base-encoder.int8.onnx.data"
-    if encoder_path.exists() and encoder_data.exists():
-        split_result = test_split_file_rename(encoder_path, encoder_data)
+    if all(p.exists() for p in [encoder_path, decoder_path, tokens_path]):
+        split_result = test_split_file_rename_synthetic(
+            encoder_path, decoder_path, tokens_path
+        )
     else:
-        print("[SKIP] Split-file test: external data file not found")
-        print(f"  Encoder exists: {encoder_path.exists()}")
-        print(f"  Data exists: {encoder_data.exists()}")
+        print("[SKIP] Split-file test: model files incomplete")
         split_result = None
 
     # Print summary
@@ -451,11 +493,12 @@ def main():
 
     print("\n(c) Split-file rename verdict:")
     if split_result is True:
-        print("    ✓ PASSES: Renamed encoder.onnx loads with un-renamed .data file")
+        print("    ✓ VERIFIED-SYNTHETIC: Renamed encoder.onnx loads with un-renamed .data file")
+        print("    (Synthesized external data from single-file model using onnx.save_model)")
     elif split_result is False:
         print("    ✗ FAILS: Mismatched basename breaks external data reference")
     else:
-        print("    ⊝ UNTESTED: External data file not available")
+        print("    ⊝ UNTESTED: Test skipped due to missing model files")
 
     print("\n" + "=" * 70)
     print(f"Models cached at: {MODEL_CACHE}")
