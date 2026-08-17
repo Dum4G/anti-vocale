@@ -90,6 +90,25 @@ class SherpaOnnxBackend @Inject constructor() : TranscriptionBackend {
         }
 
         /**
+         * Key-presence check plus one value lookup in a SINGLE tail read: returns the
+         * missing required keys together with the value of [valueKey] (null when
+         * [valueKey] is null, or when the key/file is absent or unreadable). Serves
+         * callers that run both [missingOnnxMetadata] and [onnxMetadataValue] on the
+         * same file (importer registration, external engine init) without reading the
+         * 2MB tail twice.
+         */
+        fun missingOnnxMetadataAndValue(
+            file: File,
+            requiredKeys: List<String>,
+            valueKey: String?,
+            maxScanBytes: Long = ONNX_METADATA_SCAN_LIMIT
+        ): Pair<List<String>, String?> {
+            val data = readTail(file, maxScanBytes) ?: return requiredKeys to null
+            val value = valueKey?.let { onnxMetadataValueBytes(data, it) }
+            return missingOnnxMetadataKeys(data, requiredKeys) to value
+        }
+
+        /**
          * Reads the last [maxScanBytes] of [file]. Null when the file is empty/missing
          * or unreadable (the sentinel each caller picks for its own error handling).
          */
@@ -146,17 +165,11 @@ class SherpaOnnxBackend @Inject constructor() : TranscriptionBackend {
         internal fun onnxMetadataValueBytes(data: ByteArray, key: String): String? {
             val needle = key.toByteArray(Charsets.UTF_8)
             if (needle.isEmpty()) return null
-            val lastStart = data.size - needle.size
-            var i = 0
-            while (i <= lastStart) {
-                // Find the next occurrence of the key.
-                var j = 0
-                while (j < needle.size && data[i + j] == needle[j]) j++
-                if (j == needle.size) {
-                    val p = parseLengthPrefixedValue(data, i + needle.size)
-                    if (p != null) return p
-                }
-                i++
+            var i = indexOfSubsequence(data, needle)
+            while (i >= 0) {
+                val p = parseLengthPrefixedValue(data, i + needle.size)
+                if (p != null) return p
+                i = indexOfSubsequence(data, needle, fromIndex = i + 1)
             }
             return null
         }
@@ -182,18 +195,36 @@ class SherpaOnnxBackend @Inject constructor() : TranscriptionBackend {
             return String(data, p, len.toInt(), Charsets.UTF_8)
         }
 
-        /** Returns true if [haystack] contains [needle] as a contiguous byte subsequence. */
+        /**
+         * Index of the first occurrence of [needle] as a contiguous byte subsequence of
+         * [haystack][0..[length]) at or after [fromIndex], -1 when absent. The single
+         * byte-scanner definition: the metadata checks here and the importer's
+         * split-ONNX sidecar scan both express their loops through it. [length] allows
+         * scanning a prefix of a larger reused buffer.
+         */
+        @JvmStatic
         @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
-        internal fun containsSubsequence(haystack: ByteArray, needle: ByteArray): Boolean {
-            val lastStart = haystack.size - needle.size
-            if (lastStart < 0) return false
-            for (i in 0..lastStart) {
+        internal fun indexOfSubsequence(
+            haystack: ByteArray,
+            needle: ByteArray,
+            fromIndex: Int = 0,
+            length: Int = haystack.size,
+        ): Int {
+            val lastStart = length - needle.size
+            var i = maxOf(fromIndex, 0)
+            while (i <= lastStart) {
                 var j = 0
                 while (j < needle.size && haystack[i + j] == needle[j]) j++
-                if (j == needle.size) return true
+                if (j == needle.size) return i
+                i++
             }
-            return false
+            return -1
         }
+
+        /** Returns true if [haystack] contains [needle] as a contiguous byte subsequence. */
+        @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+        internal fun containsSubsequence(haystack: ByteArray, needle: ByteArray): Boolean =
+            indexOfSubsequence(haystack, needle) >= 0
     }
 
     override val id: String = BACKEND_ID

@@ -21,6 +21,14 @@ internal fun JSONObject.optStringMap(key: String): Map<String, String> {
     }
 }
 
+/**
+ * String elements of a JSONArray as a List (empty-mapping tolerant, like
+ * [optStringMap]). Single definition for the catalog index and entry-JSON
+ * language arrays.
+ */
+internal fun JSONArray.optStringList(): List<String> =
+    buildList { for (i in 0 until length()) add(optString(i)) }
+
 data class FilePin(val sha256: String, val verified: Boolean)
 
 data class ExternalModelRecord(

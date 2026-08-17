@@ -1,5 +1,6 @@
 package com.antivocale.app.data
 
+import com.antivocale.app.transcription.ModelFamilySupport
 import okhttp3.OkHttpClient
 import org.json.JSONArray
 import org.json.JSONObject
@@ -146,54 +147,30 @@ object ExternalModelEntryJson {
         // Parse options (null-tolerant, absent → empty map)
         val options = o.optStringMap("options")
 
-        // Languages are mandatory for entries with explicit family, optional for legacy
+        // Languages are a mandatory field of every explicit-family entry; only
+        // legacy entries (no "family" key, parsed as TRANSDUCER above) may omit
+        // them, so the rule reads as a languages requirement, not a family one.
         val languagesArray = o.optJSONArray("languages")
-        val languages: List<String> = if (languagesArray != null) {
-            buildList { for (i in 0 until languagesArray.length()) add(languagesArray.getString(i)) }
-        } else {
-            // Legacy entries without family: languages optional
-            if (o.has("family")) {
-                throw IllegalArgumentException("entry '${o.optString("name")}' must declare languages")
-            } else emptyList()
+        val languages: List<String> = when {
+            languagesArray != null -> languagesArray.optStringList()
+            o.has("family") -> throw IllegalArgumentException(
+                "entry '${o.optString("name")}' must declare languages")
+            else -> emptyList() // legacy entry without family: languages optional
         }
 
-        // modelType defaults to family-specific values
+        // modelType defaulting and family validation live in the shared table
+        // ([ModelFamilySupport]), single definition with the importer entries.
         val modelType = if (o.has("modelType")) {
             o.getString("modelType")
         } else {
-            when (family) {
-                ModelFamily.TRANSDUCER -> "nemo_transducer"
-                ModelFamily.CTC -> throw IllegalArgumentException(
-                    "CTC family requires an explicit modelType: nemo_ctc or zipformer_ctc")
-                ModelFamily.WHISPER, ModelFamily.SENSE_VOICE -> ""
-            }
+            ModelFamilySupport.defaultModelType(family)
+                ?: throw IllegalArgumentException(ModelFamilySupport.CTC_MODEL_TYPE_REQUIRED)
         }
-
-        // Validate modelType matches family expectations
-        when (family) {
-            ModelFamily.TRANSDUCER -> {
-                // Valid: nemo_transducer, conformer_transducer, or empty
-                if (modelType.isNotEmpty() &&
-                    modelType != "nemo_transducer" &&
-                    modelType != "conformer_transducer") {
-                    throw IllegalArgumentException(
-                        "TRANSDUCER family has invalid modelType: $modelType (valid: nemo_transducer, conformer_transducer, or empty)")
-                }
-            }
-            ModelFamily.CTC -> {
-                // Valid: nemo_ctc, zipformer_ctc
-                if (modelType != "nemo_ctc" && modelType != "zipformer_ctc") {
-                    throw IllegalArgumentException(
-                        "CTC family has invalid modelType: $modelType (valid: nemo_ctc, zipformer_ctc)")
-                }
-            }
-            ModelFamily.WHISPER, ModelFamily.SENSE_VOICE -> {
-                // Must be empty
-                if (modelType.isNotEmpty()) {
-                    throw IllegalArgumentException(
-                        "${family.name} family requires empty modelType, got: $modelType")
-                }
-            }
+        if (!ModelFamilySupport.isValidModelType(family, modelType)) {
+            throw IllegalArgumentException(
+                "$family family has invalid modelType: $modelType (valid values depend on the family; " +
+                    "CTC takes nemo_ctc or zipformer_ctc, TRANSDUCER takes nemo_transducer, " +
+                    "conformer_transducer, or empty, WHISPER/SENSE_VOICE take empty)")
         }
 
         return Entry(

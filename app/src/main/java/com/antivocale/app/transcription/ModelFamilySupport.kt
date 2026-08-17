@@ -21,6 +21,28 @@ private fun isTokensLike(name: String) =
 private fun isTransducerHinted(name: String) =
     name.contains("rnnt", ignoreCase = true) || isJoinerLike(name)
 
+/**
+ * Shared tokens-role selection ladder, single definition for all four supports:
+ * exact "tokens.txt" (and exact "vocab.txt" when [exactVocab]), then the first
+ * .txt tokens-like file satisfying [prefer], then the first avoiding [avoid],
+ * then any tokens-like .txt. Null when no candidate exists. [prefer] and [avoid]
+ * carry each family's hint predicates (rnnt-first, ctc-first, transducer-free).
+ */
+private fun pickTokens(
+    files: List<String>,
+    exactVocab: Boolean = true,
+    prefer: ((String) -> Boolean)? = null,
+    avoid: ((String) -> Boolean)? = null,
+): String? {
+    fun byPredicate(p: (String) -> Boolean) =
+        files.firstOrNull { it.endsWith(".txt") && isTokensLike(it) && p(it) }
+    return files.firstOrNull { it.equals("tokens.txt", ignoreCase = true) }
+        ?: (if (exactVocab) files.firstOrNull { it.equals("vocab.txt", ignoreCase = true) } else null)
+        ?: prefer?.let { byPredicate(it) }
+        ?: avoid?.let { byPredicate { f -> !avoid(f) } }
+        ?: byPredicate { true }
+}
+
 /** Family-mismatch discriminator message shared by the non-transducer families. */
 private const val TRANSDUCER_MISMATCH =
     "candidate set looks like a transducer; pick the TRANSDUCER family"
@@ -47,21 +69,56 @@ sealed interface ModelFamilySupport {
     /** The canonical file the pre-native metadata check reads. */
     fun metadataFileRole(): String
 
-    /** Metadata keys required for [modelType], for pre-native validation (exit(255) guard). */
+    /** Metadata keys required for [modelType], for pre-native validation (exit(255) guard).
+     *  The [modelType] parameter is consumed by the transducer support only; the other
+     *  families ignore it (leaky but defensible: the alternative is a second dispatch
+     *  layer for one consumer). */
     fun metadataKeys(modelType: String): List<String>
 
     /** Builds the sherpa [OfflineModelConfig] for [record] (engine-side). */
     fun buildModelConfig(record: ExternalModelRecord, numThreads: Int, provider: String): OfflineModelConfig
 
     /**
-     * Family-specific value-aware validation on the file named by [metadataFileRole],
+     * Optional metadata key (on the file named by [metadataFileRole]) whose VALUE
+     * discriminates the family. Null (default) means the key-presence check plus
+     * the copy-plan discriminators are enough; the value, when requested, is read
+     * in the same tail pass as the key check and handed to
+     * [validateImportedModel].
+     */
+    fun valueMetadataKey(): String? = null
+
+    /**
+     * Family-specific value-aware validation of the [valueMetadataKey] value,
      * fired after import (registerImported) and before the first native load.
      * Default no-op: most families are covered by the key-presence metadata check
      * plus the copy-plan structural discriminators.
      */
-    fun validateImportedModel(file: java.io.File) {}
+    fun validateImportedModel(metadataValue: String?) {}
 
     companion object {
+        /** Error raised when CTC is imported without an explicit modelType (single definition). */
+        const val CTC_MODEL_TYPE_REQUIRED =
+            "CTC family requires an explicit modelType: nemo_ctc or zipformer_ctc"
+
+        /**
+         * The family's default record modelType when the caller passes none: null means
+         * "must be explicit" (CTC, where the value selects the sherpa config subtype).
+         * Single definition shared by the importer entries and the entry-JSON parser.
+         */
+        fun defaultModelType(family: ModelFamily): String? = when (family) {
+            ModelFamily.TRANSDUCER -> "nemo_transducer"
+            ModelFamily.WHISPER, ModelFamily.SENSE_VOICE -> ""
+            ModelFamily.CTC -> null
+        }
+
+        /** True when [modelType] is a valid record modelType for [family] (single definition). */
+        fun isValidModelType(family: ModelFamily, modelType: String): Boolean = when (family) {
+            ModelFamily.TRANSDUCER ->
+                modelType.isEmpty() || modelType == "nemo_transducer" || modelType == "conformer_transducer"
+            ModelFamily.CTC -> modelType == "nemo_ctc" || modelType == "zipformer_ctc"
+            ModelFamily.WHISPER, ModelFamily.SENSE_VOICE -> modelType.isEmpty()
+        }
+
         fun forFamily(family: ModelFamily): ModelFamilySupport = when (family) {
             ModelFamily.TRANSDUCER -> TransducerSupport
             ModelFamily.WHISPER -> WhisperSupport
@@ -103,12 +160,11 @@ object TransducerSupport : ModelFamilySupport {
         // both CTC and RNNT variants (istupakov) have multiple vocab files; a bare
         // contains("vocab") over an alphabetical listing picks the CTC one for an
         // RNNT import. The matcher prefers rnnt-hinted and ctc-free candidates.
-        val tokens = files.firstOrNull { it.equals("tokens.txt", ignoreCase = true) }
-            ?: files.firstOrNull { it.equals("vocab.txt", ignoreCase = true) }
-            ?: files.firstOrNull { it.endsWith(".txt") && isTokensLike(it) && it.contains("rnnt", ignoreCase = true) }
-            ?: files.firstOrNull { it.endsWith(".txt") && isTokensLike(it) && !it.contains("ctc", ignoreCase = true) }
-            ?: files.firstOrNull { it.endsWith(".txt") && isTokensLike(it) }
-            ?: return null
+        val tokens = pickTokens(
+            files,
+            prefer = { it.contains("rnnt", ignoreCase = true) },
+            avoid = { it.contains("ctc", ignoreCase = true) },
+        ) ?: return null
         return linkedMapOf(
             SherpaOnnxBackend.CANONICAL_ENCODER to encoder,
             SherpaOnnxBackend.CANONICAL_DECODER to decoder,
@@ -189,12 +245,13 @@ object WhisperSupport : ModelFamilySupport {
         val decoder = findByRole("decoder")
             ?: findTransducerHinted("decoder")?.let { throw IllegalArgumentException(TRANSDUCER_MISMATCH) }
             ?: return null
-        // Tokens: exact names first, then keyword match preferring non-hinted
+        // Tokens: exact name first, then keyword match preferring non-hinted
         // candidates so listing order cannot hand the role to the transducer vocab.
-        val tokens = files.firstOrNull { it.equals("tokens.txt", ignoreCase = true) }
-            ?: files.firstOrNull { it.endsWith(".txt") && !isTransducerHinted(it) && isTokensLike(it) }
-            ?: files.firstOrNull { it.endsWith(".txt") && isTokensLike(it) }
-            ?: return null
+        val tokens = pickTokens(
+            files,
+            exactVocab = false,
+            avoid = ::isTransducerHinted,
+        ) ?: return null
         return linkedMapOf(
             SherpaOnnxBackend.CANONICAL_ENCODER to encoder,
             SherpaOnnxBackend.CANONICAL_DECODER to decoder,
@@ -206,15 +263,16 @@ object WhisperSupport : ModelFamilySupport {
 
     override fun metadataKeys(modelType: String): List<String> = listOf("model_type")
 
-    override fun validateImportedModel(file: java.io.File) {
+    override fun valueMetadataKey(): String = "model_type"
+
+    override fun validateImportedModel(metadataValue: String?) {
         // Value-aware discriminator: key presence cannot tell a whisper encoder
         // from a NeMo transducer encoder (both carry a model_type KEY), but the
-        // values differ (whisper encoders are "whisper-*"). A missing key stays
-        // with the key-presence chain (metadataKeys above).
-        val value = SherpaOnnxBackend.onnxMetadataValue(file, "model_type")
-        if (value != null && !value.startsWith("whisper", ignoreCase = true)) {
+        // values differ (whisper encoders are "whisper-*"). A missing key (null
+        // value) stays with the key-presence chain (metadataKeys above).
+        if (metadataValue != null && !metadataValue.startsWith("whisper", ignoreCase = true)) {
             throw IllegalArgumentException(
-                "model_type metadata is \"$value\": not a whisper encoder; pick the TRANSDUCER family for transducer exports")
+                "model_type metadata is \"$metadataValue\": not a whisper encoder; pick the TRANSDUCER family for transducer exports")
         }
     }
 
@@ -306,12 +364,11 @@ object CtcSupport : ModelFamilySupport {
             throw IllegalArgumentException(TRANSDUCER_MISMATCH)
         }
         // Tokens: prefer exact names, then ctc-hinted (mirror of transducer's rnnt-first).
-        val tokens = files.firstOrNull { it.equals("tokens.txt", ignoreCase = true) }
-            ?: files.firstOrNull { it.equals("vocab.txt", ignoreCase = true) }
-            ?: files.firstOrNull { it.endsWith(".txt") && isTokensLike(it) && it.contains("ctc", ignoreCase = true) }
-            ?: files.firstOrNull { it.endsWith(".txt") && isTokensLike(it) && !it.contains("rnnt", ignoreCase = true) }
-            ?: files.firstOrNull { it.endsWith(".txt") && isTokensLike(it) }
-            ?: return null
+        val tokens = pickTokens(
+            files,
+            prefer = { it.contains("ctc", ignoreCase = true) },
+            avoid = { it.contains("rnnt", ignoreCase = true) },
+        ) ?: return null
         return linkedMapOf(
             SherpaOnnxBackend.CANONICAL_ENCODER to encoder,
             SherpaOnnxBackend.CANONICAL_TOKENS to tokens,
@@ -383,10 +440,7 @@ object SenseVoiceSupport : ModelFamilySupport {
                     f.substringBeforeLast('.').startsWith("model", ignoreCase = true)
                 )
         } ?: return null
-        val tokens = files.firstOrNull { it.equals("tokens.txt", ignoreCase = true) }
-            ?: files.firstOrNull { it.equals("vocab.txt", ignoreCase = true) }
-            ?: files.firstOrNull { it.endsWith(".txt") && isTokensLike(it) }
-            ?: return null
+        val tokens = pickTokens(files) ?: return null
         return linkedMapOf(
             CANONICAL_MODEL to model,
             SherpaOnnxBackend.CANONICAL_TOKENS to tokens,

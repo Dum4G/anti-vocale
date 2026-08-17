@@ -1,6 +1,5 @@
 package com.antivocale.app.data
 
-import org.json.JSONArray
 import org.json.JSONObject
 
 /**
@@ -57,10 +56,10 @@ object ExternalCatalog {
                 val family = runCatching {
                     ModelFamily.valueOf(e.optString("family", ModelFamily.TRANSDUCER.name))
                 }.getOrNull() ?: continue
-                val langs = e.optJSONArray("languages") ?: JSONArray()
+                val langs = e.optJSONArray("languages")?.optStringList() ?: emptyList()
                 add(CatalogEntry(
                     name = name,
-                    languages = buildList { for (j in 0 until langs.length()) add(langs.optString(j)) },
+                    languages = langs,
                     entryUrl = url,
                     family = family,
                 ))

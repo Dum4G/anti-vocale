@@ -108,19 +108,14 @@ class ExternalModelImporter(
             "missing required files for $family (${ModelFamilySupport.forFamily(family).requiredRoles().joinToString("/")}); found: $names")
 
     /**
-     * Family-aware modelType resolution, mirroring the entry-JSON defaults so the
-     * importer entries can never persist a transducer modelType on a non-transducer
-     * record: TRANSDUCER defaults to "nemo_transducer", WHISPER/SENSE_VOICE to "",
-     * and CTC has no safe default (it selects the sherpa config subtype) so it must
-     * be passed explicitly.
+     * Family-aware modelType resolution via the shared table
+     * ([ModelFamilySupport.defaultModelType]): TRANSDUCER defaults to
+     * "nemo_transducer", WHISPER/SENSE_VOICE to "", and CTC has no safe default
+     * (it selects the sherpa config subtype) so it must be passed explicitly.
      */
-    private fun resolveModelType(modelType: String?, family: ModelFamily): String = when {
-        modelType != null -> modelType
-        family == ModelFamily.TRANSDUCER -> "nemo_transducer"
-        family == ModelFamily.CTC -> throw IllegalArgumentException(
-            "CTC family requires an explicit modelType: nemo_ctc or zipformer_ctc")
-        else -> ""
-    }
+    private fun resolveModelType(modelType: String?, family: ModelFamily): String =
+        modelType ?: ModelFamilySupport.defaultModelType(family)
+            ?: throw IllegalArgumentException(ModelFamilySupport.CTC_MODEL_TYPE_REQUIRED)
 
     /**
      * ONNX split-file sidecars (AC #9): a sibling `<source>.data` (or `.weights`)
@@ -134,7 +129,7 @@ class ExternalModelImporter(
         val result = LinkedHashMap(plan)
         for (sourceName in plan.values) {
             if (!sourceName.endsWith(".onnx")) continue
-            for (suffix in listOf("data", "weights")) {
+            for (suffix in SIDECAR_SUFFIXES) {
                 val sidecar = "$sourceName.$suffix"
                 if (names.contains(sidecar) && !result.containsKey(sidecar)) result[sidecar] = sidecar
             }
@@ -173,7 +168,8 @@ class ExternalModelImporter(
                 for (marker in SIDECAR_MARKERS) {
                     var from = 0
                     while (true) {
-                        val at = indexOfBytes(combined, marker, from) ?: break
+                        val at = SherpaOnnxBackend.indexOfSubsequence(combined, marker, from)
+                        if (at < 0) break
                         var start = at
                         while (start > 0 && isFileNameByte(combined[start - 1])) start--
                         if (start < at) {
@@ -206,20 +202,6 @@ class ExternalModelImporter(
                         "that the import set does not include; declare them in the file list")
             }
         }
-    }
-
-    private fun indexOfBytes(haystack: ByteArray, needle: ByteArray, from: Int): Int? {
-        var i = maxOf(from, 0)
-        outer@ while (i <= haystack.size - needle.size) {
-            for (j in needle.indices) {
-                if (haystack[i + j] != needle[j]) {
-                    i++
-                    continue@outer
-                }
-            }
-            return i
-        }
-        return null
     }
 
     /** SAF folder import: the primary v2a entry point. */
@@ -483,13 +465,14 @@ class ExternalModelImporter(
         // model_type key; only the VALUE discriminates them).
         val support = ModelFamilySupport.forFamily(family)
         val metadataFile = File(targetDir, support.metadataFileRole())
-        val missingMeta = SherpaOnnxBackend.missingOnnxMetadata(metadataFile, support.metadataKeys(modelType))
+        val (missingMeta, metadataValue) = SherpaOnnxBackend.missingOnnxMetadataAndValue(
+            metadataFile, support.metadataKeys(modelType), support.valueMetadataKey())
         if (missingMeta.isNotEmpty()) {
             throw IllegalArgumentException(
                 "the ${support.metadataFileRole()} is missing required ONNX metadata ($missingMeta): " +
                     "the files may be corrupt, an incompatible export, or the wrong family")
         }
-        support.validateImportedModel(metadataFile)
+        support.validateImportedModel(metadataValue)
 
         // Same-hash dedupe BEFORE creating a new record. The fresh copy is removed
         // unless it landed on the existing record's own directory (same-path

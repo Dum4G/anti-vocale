@@ -79,7 +79,8 @@ class ExternalSherpaBackend @Inject constructor() : TranscriptionBackend {
             // Family validation shared with the importer (single definition):
             // [ModelFamilySupport.metadataKeys] plus value-aware discriminators.
             val metadataFile = File(dir, support.metadataFileRole())
-            val missingMeta = SherpaOnnxBackend.missingOnnxMetadata(metadataFile, support.metadataKeys(record.modelType))
+            val (missingMeta, metadataValue) = SherpaOnnxBackend.missingOnnxMetadataAndValue(
+                metadataFile, support.metadataKeys(record.modelType), support.valueMetadataKey())
             if (missingMeta.isNotEmpty()) {
                 Log.e(TAG, "${support.metadataFileRole()} missing required ONNX metadata: $missingMeta")
                 return@withContext Result.failure(TranscriptionException.ModelLoadError(
@@ -88,7 +89,7 @@ class ExternalSherpaBackend @Inject constructor() : TranscriptionBackend {
                         "Try re-importing it or correcting its family."))
             }
             try {
-                support.validateImportedModel(metadataFile)
+                support.validateImportedModel(metadataValue)
             } catch (e: IllegalArgumentException) {
                 Log.e(TAG, "Family validation failed for ${record.backendId}: ${e.message}")
                 return@withContext Result.failure(TranscriptionException.ModelLoadError(

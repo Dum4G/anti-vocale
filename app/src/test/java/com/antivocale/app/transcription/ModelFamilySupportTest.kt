@@ -5,7 +5,9 @@ import com.antivocale.app.data.ExternalModelSource
 import com.antivocale.app.data.FilePin
 import com.antivocale.app.data.ModelFamily
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
@@ -26,6 +28,34 @@ class ModelFamilySupportTest {
         source = ExternalModelSource.LOCAL, sourceUrl = null,
         files = emptyMap(), sizeBytes = 0L, importedAt = 0L, options = options,
     )
+
+    // ---- Shared family/modelType rules (single definition: defaultModelType/isValidModelType) ----
+
+    @Test
+    fun `defaultModelType maps every family, CTC to null`() {
+        assertEquals("nemo_transducer", ModelFamilySupport.defaultModelType(ModelFamily.TRANSDUCER))
+        assertEquals("", ModelFamilySupport.defaultModelType(ModelFamily.WHISPER))
+        assertEquals("", ModelFamilySupport.defaultModelType(ModelFamily.SENSE_VOICE))
+        assertNull(ModelFamilySupport.defaultModelType(ModelFamily.CTC))
+    }
+
+    @Test
+    fun `isValidModelType accepts family-valid values and rejects the rest`() {
+        assertTrue(ModelFamilySupport.isValidModelType(ModelFamily.TRANSDUCER, "nemo_transducer"))
+        assertTrue(ModelFamilySupport.isValidModelType(ModelFamily.TRANSDUCER, "conformer_transducer"))
+        assertTrue(ModelFamilySupport.isValidModelType(ModelFamily.TRANSDUCER, ""))
+        assertFalse(ModelFamilySupport.isValidModelType(ModelFamily.TRANSDUCER, "nemo_ctc"))
+
+        assertTrue(ModelFamilySupport.isValidModelType(ModelFamily.CTC, "nemo_ctc"))
+        assertTrue(ModelFamilySupport.isValidModelType(ModelFamily.CTC, "zipformer_ctc"))
+        assertFalse(ModelFamilySupport.isValidModelType(ModelFamily.CTC, ""))
+        assertFalse(ModelFamilySupport.isValidModelType(ModelFamily.CTC, "nemo_transducer"))
+
+        assertTrue(ModelFamilySupport.isValidModelType(ModelFamily.WHISPER, ""))
+        assertFalse(ModelFamilySupport.isValidModelType(ModelFamily.WHISPER, "whisper"))
+        assertTrue(ModelFamilySupport.isValidModelType(ModelFamily.SENSE_VOICE, ""))
+        assertFalse(ModelFamilySupport.isValidModelType(ModelFamily.SENSE_VOICE, "sense_voice"))
+    }
 
     // ---- Task 4: TransducerSupport (behavior moved verbatim from the importer) ----
 
@@ -155,7 +185,7 @@ class ModelFamilySupportTest {
         nemoEncoder.writeBytes("model_type".toByteArray() +
             byteArrayOf(0x12, 0x12) + "EncDecRNNTBPEModel".toByteArray())
         try {
-            support.validateImportedModel(nemoEncoder)
+            support.validateImportedModel(SherpaOnnxBackend.onnxMetadataValue(nemoEncoder, "model_type"))
             throw AssertionError("expected IllegalArgumentException for a non-whisper model_type value")
         } catch (e: IllegalArgumentException) {
             // expected
@@ -165,13 +195,13 @@ class ModelFamilySupportTest {
         whisperEncoder.deleteOnExit()
         whisperEncoder.writeBytes("model_type".toByteArray() +
             byteArrayOf(0x12, 0x0c) + "whisper-base".toByteArray())
-        support.validateImportedModel(whisperEncoder)
+        support.validateImportedModel(SherpaOnnxBackend.onnxMetadataValue(whisperEncoder, "model_type"))
 
         // Missing key stays with the key-presence chain: no value, no verdict.
         val bare = java.io.File.createTempFile("bare", ".onnx")
         bare.deleteOnExit()
         bare.writeBytes("vocab_size".toByteArray() + byteArrayOf(0x12, 0x02) + "42".toByteArray())
-        support.validateImportedModel(bare)
+        support.validateImportedModel(SherpaOnnxBackend.onnxMetadataValue(bare, "model_type"))
     }
 
     @Test
