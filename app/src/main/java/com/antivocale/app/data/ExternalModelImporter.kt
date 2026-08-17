@@ -79,6 +79,21 @@ class ExternalModelImporter(
             "missing required files for $family (${ModelFamilySupport.forFamily(family).requiredRoles().joinToString("/")}); found: $names")
 
     /**
+     * Family-aware modelType resolution, mirroring the entry-JSON defaults so the
+     * importer entries can never persist a transducer modelType on a non-transducer
+     * record: TRANSDUCER defaults to "nemo_transducer", WHISPER/SENSE_VOICE to "",
+     * and CTC has no safe default (it selects the sherpa config subtype) so it must
+     * be passed explicitly.
+     */
+    private fun resolveModelType(modelType: String?, family: ModelFamily): String = when {
+        modelType != null -> modelType
+        family == ModelFamily.TRANSDUCER -> "nemo_transducer"
+        family == ModelFamily.CTC -> throw IllegalArgumentException(
+            "CTC family requires an explicit modelType: nemo_ctc or zipformer_ctc")
+        else -> ""
+    }
+
+    /**
      * ONNX split-file sidecars (AC #9): a sibling `<source>.data` (or `.weights`)
      * external-data file of any planned `.onnx` source joins the plan as an extra
      * entry. It is copied and pinned like a role but is NOT a role (the family
@@ -102,7 +117,7 @@ class ExternalModelImporter(
     suspend fun importFromTreeUri(
         context: Context,
         treeUri: Uri,
-        modelType: String = "nemo_transducer",
+        modelType: String? = null,
         family: ModelFamily = ModelFamily.TRANSDUCER,
         options: Map<String, String> = emptyMap(),
         languages: List<String> = emptyList(),
@@ -120,7 +135,7 @@ class ExternalModelImporter(
      *  (it hand-computes pins over the already-copied TASK-313 directory). */
     suspend fun importFromDirectory(
         src: File,
-        modelType: String = "nemo_transducer",
+        modelType: String? = null,
         family: ModelFamily = ModelFamily.TRANSDUCER,
         options: Map<String, String> = emptyMap(),
         languages: List<String> = emptyList(),
@@ -136,7 +151,7 @@ class ExternalModelImporter(
      */
     suspend fun importFromHuggingFaceRepo(
         repoUrl: String,
-        modelType: String = "nemo_transducer",
+        modelType: String? = null,
         family: ModelFamily = ModelFamily.TRANSDUCER,
         options: Map<String, String> = emptyMap(),
         languages: List<String> = emptyList(),
@@ -155,13 +170,15 @@ class ExternalModelImporter(
                 is HuggingFaceRepoListing.HfFile.Plain -> DownloadTriple(url, canonical, null, source.size)
             }
         }
-        return downloadCore(triples, modelType, repoId.substringAfter('/'), ExternalModelSource.URL, repoUrl, family, options, languages)
+        return downloadCore(
+            triples, resolveModelType(modelType, family), repoId.substringAfter('/'),
+            ExternalModelSource.URL, repoUrl, family, options, languages)
     }
 
     /** Catalog-entry JSON import: every file must carry a sha256 pin (hashless entries rejected). */
     suspend fun importFromEntryJson(
         entryUrl: String,
-        modelType: String = "nemo_transducer",
+        modelType: String? = null,
     ): ExternalModelRecord {
         val text = repoListing.fetchText(entryUrl)
         val entry = ExternalModelEntryJson.parse(text)
@@ -187,7 +204,7 @@ class ExternalModelImporter(
      */
     suspend fun importFromUrl(
         url: String,
-        modelType: String = "nemo_transducer",
+        modelType: String? = null,
         family: ModelFamily = ModelFamily.TRANSDUCER,
         options: Map<String, String> = emptyMap(),
         languages: List<String> = emptyList(),
@@ -200,12 +217,13 @@ class ExternalModelImporter(
 
     private suspend fun importCore(
         children: List<SourceFile>,
-        modelType: String,
+        modelType: String?,
         displayName: String,
         family: ModelFamily = ModelFamily.TRANSDUCER,
         options: Map<String, String> = emptyMap(),
         languages: List<String> = emptyList(),
     ): ExternalModelRecord {
+        val resolvedModelType = resolveModelType(modelType, family)
         // 1. Copy plan by role, plus any ONNX split-file sidecars.
         val names = children.map { it.name }
         val plan = withSidecars(
@@ -240,7 +258,7 @@ class ExternalModelImporter(
                 pins[canonical] = FilePin(digest.digest().joinToString("") { "%02x".format(it) }, verified = true)
             }
 
-            registerImported(targetDir, pins, family, modelType, options, languages,
+            registerImported(targetDir, pins, family, resolvedModelType, options, languages,
                 ExternalModelSource.LOCAL, null, displayName)
         }
     }

@@ -283,6 +283,38 @@ class ExternalModelImporterTest {
     }
 
     @Test
+    fun `modelType default is family-aware`() = runTest {
+        // No explicit modelType: WHISPER/SENSE_VOICE persist "" (never a transducer
+        // modelType on a non-transducer record), TRANSDUCER keeps "nemo_transducer".
+        val whisper = importer.importFromDirectory(whisperSourceDir(), family = ModelFamily.WHISPER)
+        assertEquals("", whisper.modelType)
+        assertEquals(ModelFamily.WHISPER, whisper.family)
+
+        val senseVoice = importer.importFromDirectory(senseVoiceSourceDir(), family = ModelFamily.SENSE_VOICE)
+        assertEquals("", senseVoice.modelType)
+
+        val transducer = importer.importFromDirectory(sourceDir())
+        assertEquals("nemo_transducer", transducer.modelType)
+    }
+
+    @Test
+    fun `family CTC without an explicit modelType is rejected`() = runTest {
+        val dir = tmp.newFolder("ctc")
+        File(dir, "v3_ctc.int8.onnx").writeBytes(ByteArray(16) { 4 })
+        File(dir, "tokens.txt").writeText("<unk> 0\n")
+
+        val result = runCatching {
+            importer.importFromDirectory(dir, family = ModelFamily.CTC)
+        }
+
+        assertTrue(result.isFailure)
+        assertTrue(
+            "error must mirror the entry-JSON rule: ${result.exceptionOrNull()?.message}",
+            result.exceptionOrNull()?.message?.contains("CTC family requires an explicit modelType") == true)
+        assertEquals(0, store.records().size)
+    }
+
+    @Test
     fun `disk pre-flight blocks imports larger than available space`() = runTest {
         val smallRoot = tmp.newFolder("tiny-root")
         val tightImporter = ExternalModelImporter(store, filesRoot = { smallRoot }, uuid = { "0123456789abcdef" })
