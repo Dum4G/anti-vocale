@@ -226,4 +226,76 @@ class ModelFamilySupportTest {
         ModelFamilySupport.forFamily(ModelFamily.CTC)
             .buildModelConfig(record(ModelFamily.CTC, modelType = "bad_type"), numThreads = 1, provider = "cpu")
     }
+
+    // ---- Task 7: SenseVoiceSupport ----
+
+    @Test
+    fun `sensevoice plan maps model and tokens`() {
+        val support = ModelFamilySupport.forFamily(ModelFamily.SENSE_VOICE)
+        val plan = support.buildCopyPlan(listOf("sense_voice.onnx", "tokens.txt"))
+        assertEquals("sense_voice.onnx", plan!!["model.int8.onnx"])
+        assertEquals("tokens.txt", plan["tokens.txt"])
+        assertNull(support.buildCopyPlan(listOf("tokens.txt")))
+    }
+
+    @Test
+    fun `sensevoice model keyword does not match encoder files`() {
+        val support = ModelFamilySupport.forFamily(ModelFamily.SENSE_VOICE)
+        // If only an encoder .onnx is present (no sense_voice/model keyword), plan is null.
+        assertNull(support.buildCopyPlan(listOf("encoder.int8.onnx", "tokens.txt")))
+    }
+
+    @Test
+    fun `sensevoice requiredRoles lists model and tokens`() {
+        assertEquals(
+            listOf("model.int8.onnx", "tokens.txt"),
+            ModelFamilySupport.forFamily(ModelFamily.SENSE_VOICE).requiredRoles(),
+        )
+    }
+
+    @Test
+    fun `sensevoice metadata routing points at model file`() {
+        val support = ModelFamilySupport.forFamily(ModelFamily.SENSE_VOICE)
+        assertEquals("model.int8.onnx", support.metadataFileRole())
+        assertEquals(emptyList<String>(), support.metadataKeys(""))
+    }
+
+    @Test
+    fun `sensevoice model config builds OfflineSenseVoiceModelConfig`() {
+        val config = ModelFamilySupport.forFamily(ModelFamily.SENSE_VOICE)
+            .buildModelConfig(
+                record(ModelFamily.SENSE_VOICE, options = mapOf("sensevoice.language" to "zh", "sensevoice.itn" to "true")),
+                numThreads = 4, provider = "cpu",
+            )
+        assertEquals("/models/external/test-abc123/model.int8.onnx", config.senseVoice.model)
+        assertEquals("zh", config.senseVoice.language)
+        assertEquals(true, config.senseVoice.useInverseTextNormalization)
+        assertEquals("sense_voice", config.modelType)
+        assertEquals(4, config.numThreads)
+        assertEquals("cpu", config.provider)
+    }
+
+    @Test
+    fun `sensevoice language defaults to empty and itn defaults to false`() {
+        val support = ModelFamilySupport.forFamily(ModelFamily.SENSE_VOICE)
+        val config = support.buildModelConfig(record(ModelFamily.SENSE_VOICE), numThreads = 1, provider = "cpu")
+        assertEquals("", config.senseVoice.language)
+        assertEquals(false, config.senseVoice.useInverseTextNormalization)
+    }
+
+    @Test
+    fun `sensevoice itn parses true and 1 as enabled`() {
+        val support = ModelFamilySupport.forFamily(ModelFamily.SENSE_VOICE)
+        val trueConfig = support.buildModelConfig(
+            record(ModelFamily.SENSE_VOICE, options = mapOf("sensevoice.itn" to "true")), numThreads = 1, provider = "cpu")
+        assertEquals(true, trueConfig.senseVoice.useInverseTextNormalization)
+
+        val oneConfig = support.buildModelConfig(
+            record(ModelFamily.SENSE_VOICE, options = mapOf("sensevoice.itn" to "1")), numThreads = 1, provider = "cpu")
+        assertEquals(true, oneConfig.senseVoice.useInverseTextNormalization)
+
+        val falseConfig = support.buildModelConfig(
+            record(ModelFamily.SENSE_VOICE, options = mapOf("sensevoice.itn" to "0")), numThreads = 1, provider = "cpu")
+        assertEquals(false, falseConfig.senseVoice.useInverseTextNormalization)
+    }
 }

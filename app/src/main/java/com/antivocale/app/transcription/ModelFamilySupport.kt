@@ -4,6 +4,7 @@ import com.antivocale.app.data.ExternalModelRecord
 import com.antivocale.app.data.ModelFamily
 import com.k2fsa.sherpa.onnx.OfflineModelConfig
 import com.k2fsa.sherpa.onnx.OfflineNemoEncDecCtcModelConfig
+import com.k2fsa.sherpa.onnx.OfflineSenseVoiceModelConfig
 import com.k2fsa.sherpa.onnx.OfflineTransducerModelConfig
 import com.k2fsa.sherpa.onnx.OfflineWhisperModelConfig
 import com.k2fsa.sherpa.onnx.OfflineZipformerCtcModelConfig
@@ -41,9 +42,7 @@ sealed interface ModelFamilySupport {
             ModelFamily.TRANSDUCER -> TransducerSupport
             ModelFamily.WHISPER -> WhisperSupport
             ModelFamily.CTC -> CtcSupport
-            // Later plan tasks add the remaining supports.
-            ModelFamily.SENSE_VOICE ->
-                throw IllegalArgumentException("no support implemented yet for family $family")
+            ModelFamily.SENSE_VOICE -> SenseVoiceSupport
         }
     }
 }
@@ -268,5 +267,66 @@ object CtcSupport : ModelFamilySupport {
             else -> throw IllegalArgumentException(
                 "unknown CTC modelType \"${record.modelType}\"; valid values: nemo_ctc, zipformer_ctc")
         }
+    }
+}
+
+/**
+ * SenseVoice family: a single model .onnx plus a tokens file; no encoder/decoder
+ * split and no joiner.
+ *
+ * Expected file set: one .onnx whose name contains "sense_voice" (or the bare
+ * "model.onnx" sherpa ships) and one .txt tokens/vocab file. The model keyword
+ * match deliberately does NOT answer to "encoder": an encoder-only candidate
+ * pool means the wrong family was picked, and returning null surfaces that at
+ * import time instead of as a runtime exit(255).
+ *
+ * Language: [options]["sensevoice.language"], defaulting to "" (sherpa performs
+ * no language validation per desktop spike; "" is the auto-detect sentinel).
+ * ITN: [options]["sensevoice.itn"] where "true"/"1" enable inverse text
+ * normalization and anything else (including absent) leaves it off.
+ *
+ * Record modelType: ignored; OfflineModelConfig.modelType = "sense_voice".
+ */
+object SenseVoiceSupport : ModelFamilySupport {
+    /** Canonical single-model file name (the .int8.onnx convention of the table). */
+    const val CANONICAL_MODEL = "model.int8.onnx"
+
+    override val family: ModelFamily = ModelFamily.SENSE_VOICE
+
+    override fun requiredRoles(): List<String> = listOf(CANONICAL_MODEL, SherpaOnnxBackend.CANONICAL_TOKENS)
+
+    override fun buildCopyPlan(files: List<String>): Map<String, String>? {
+        val model = files.firstOrNull { f ->
+            f.endsWith(".onnx") && (f.contains("sense_voice", ignoreCase = true) || f.equals("model.onnx", ignoreCase = true))
+        } ?: return null
+        val tokens = files.firstOrNull { it.equals("tokens.txt", ignoreCase = true) }
+            ?: files.firstOrNull { it.equals("vocab.txt", ignoreCase = true) }
+            ?: files.firstOrNull { it.endsWith(".txt") && (it.contains("tokens", ignoreCase = true) || it.contains("vocab", ignoreCase = true)) }
+            ?: return null
+        return linkedMapOf(
+            CANONICAL_MODEL to model,
+            SherpaOnnxBackend.CANONICAL_TOKENS to tokens,
+        )
+    }
+
+    override fun metadataFileRole(): String = CANONICAL_MODEL
+
+    override fun metadataKeys(modelType: String): List<String> = emptyList()
+
+    override fun buildModelConfig(record: ExternalModelRecord, numThreads: Int, provider: String): OfflineModelConfig {
+        val language = record.options["sensevoice.language"] ?: ""
+        val itn = record.options["sensevoice.itn"]?.let { it == "true" || it == "1" } ?: false
+        return OfflineModelConfig(
+            senseVoice = OfflineSenseVoiceModelConfig(
+                model = "${record.dir}/$CANONICAL_MODEL",
+                language = language,
+                useInverseTextNormalization = itn,
+            ),
+            tokens = "${record.dir}/${SherpaOnnxBackend.CANONICAL_TOKENS}",
+            modelType = "sense_voice",
+            numThreads = numThreads,
+            debug = false,
+            provider = provider,
+        )
     }
 }
