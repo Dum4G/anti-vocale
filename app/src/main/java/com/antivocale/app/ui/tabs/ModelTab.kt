@@ -3,6 +3,7 @@ package com.antivocale.app.ui.tabs
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -1104,10 +1105,21 @@ private fun ExternalModelsSection(
 ) {
     val records by viewModel.externalModels.collectAsState()
     val importState by viewModel.externalImportState.collectAsState()
+    val context = LocalContext.current
     var urlDialogOpen by remember { mutableStateOf(false) }
     var urlText by remember { mutableStateOf("") }
     var dropdownExpanded by remember { mutableStateOf(false) }
     var ctcExpanded by remember { mutableStateOf(false) }
+
+    // Bundled catalog index for the URL-dialog autocomplete (search by name or
+    // language). A read failure degrades to no suggestions, never a crash.
+    val catalogEntries = remember {
+        runCatching {
+            context.assets.open("external-catalog/index.json").use {
+                it.readBytes().decodeToString()
+            }.let(com.antivocale.app.data.ExternalCatalog::parseIndex)
+        }.getOrDefault(emptyList())
+    }
 
     val familyOptions = remember {
         listOf(
@@ -1351,6 +1363,31 @@ private fun ExternalModelsSection(
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
+                    // Catalog autocomplete: suggestions filtered by the typed text
+                    // over name + languages, filling URL and family on tap. Hidden
+                    // once the text looks like a URL being typed or pasted.
+                    if (!urlText.startsWith("http")) {
+                        com.antivocale.app.data.ExternalCatalog
+                            .filter(catalogEntries, urlText)
+                            .forEach { entry ->
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            urlText = entry.entryUrl
+                                            onSelectionChange(selection.copy(family = entry.family))
+                                        }
+                                        .padding(vertical = 8.dp)
+                                ) {
+                                    Text(entry.name, style = MaterialTheme.typography.bodyMedium)
+                                    Text(
+                                        entry.languages.joinToString(", "),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                    }
                     // Architecture selector is in the section above (visible for both
                     // import paths), not duplicated here.
                 }

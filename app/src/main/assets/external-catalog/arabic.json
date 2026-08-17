@@ -1,0 +1,33 @@
+{
+  "name": "Whisper Large v3 Turbo Arabic Dialectal (OpenVoiceOS, int8)",
+  "family": "WHISPER",
+  "modelType": "",
+  "languages": ["ar"],
+  "options": {},
+  "files": [
+    {
+      "name": "encoder_model_int8.onnx",
+      "url": "https://huggingface.co/OpenVoiceOS/whisper-large-v3-turbo-arabic-dialectal-v2-onnx/resolve/main/int8/encoder_model_int8.onnx",
+      "sha256": "1f77c3e6dcf6d49efdf7c54db6db8591ffb88d3f3b3798b53afd8d06e17ee22c",
+      "size": 773361
+    },
+    {
+      "name": "encoder_model_int8.onnx.data",
+      "url": "https://huggingface.co/OpenVoiceOS/whisper-large-v3-turbo-arabic-dialectal-v2-onnx/resolve/main/int8/encoder_model_int8.onnx.data",
+      "sha256": "abe459e6f7d3f0691617424cbbcb2dc56d7a9fa3c83c17e2e0f035e6b784e86a",
+      "size": 644218880
+    },
+    {
+      "name": "decoder_model_merged_int8.onnx",
+      "url": "https://huggingface.co/OpenVoiceOS/whisper-large-v3-turbo-arabic-dialectal-v2-onnx/resolve/main/int8/decoder_model_merged_int8.onnx",
+      "sha256": "4431bcb3dfc1fdb943aa719441f5e651789ac3bdc46586d23ca344aa29337163",
+      "size": 336856
+    },
+    {
+      "name": "decoder_model_merged_int8.onnx.data",
+      "url": "https://huggingface.co/OpenVoiceOS/whisper-large-v3-turbo-arabic-dialectal-v2-onnx/resolve/main/int8/decoder_model_merged_int8.onnx.data",
+      "sha256": "369b3b61a7d34a6c90eff7088123ff480c7ab4388d5ed9bcb2f817b4b16f9e8a",
+      "size": 687636480
+    }
+  ]
+}
