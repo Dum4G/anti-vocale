@@ -104,8 +104,10 @@ object ExternalModelEntryJson {
 
     data class Entry(
         val name: String,
+        val family: ModelFamily,
         val modelType: String,
         val languages: List<String>,
+        val options: Map<String, String>,
         val files: List<EntryFile>,
     )
 
@@ -130,10 +132,77 @@ object ExternalModelEntryJson {
             }
         }
         if (files.isEmpty()) throw IllegalArgumentException("entry has no files")
+
+        // Parse family with default to TRANSDUCER for legacy entries
+        val familyStr = o.optString("family", "TRANSDUCER")
+        val family = runCatching { ModelFamily.valueOf(familyStr) }.getOrElse {
+            throw IllegalArgumentException("entry has unknown family: $familyStr")
+        }
+
+        // Parse options (null-tolerant, absent → empty map)
+        val optionsObj = o.optJSONObject("options")
+        val options = if (optionsObj != null) {
+            buildMap {
+                for (key in optionsObj.keys()) {
+                    put(key, optionsObj.getString(key))
+                }
+            }
+        } else emptyMap()
+
+        // Languages are mandatory for entries with explicit family, optional for legacy
+        val languagesArray = o.optJSONArray("languages")
+        val languages: List<String> = if (languagesArray != null) {
+            buildList { for (i in 0 until languagesArray.length()) add(languagesArray.getString(i)) }
+        } else {
+            // Legacy entries without family: languages optional
+            if (o.has("family")) {
+                throw IllegalArgumentException("entries must declare languages")
+            } else emptyList()
+        }
+
+        // modelType defaults to family-specific values
+        val modelType = if (o.has("modelType")) {
+            o.getString("modelType")
+        } else {
+            when (family) {
+                ModelFamily.TRANSDUCER -> "nemo_transducer"
+                ModelFamily.WHISPER, ModelFamily.SENSE_VOICE, ModelFamily.CTC -> ""
+            }
+        }
+
+        // Validate modelType matches family expectations
+        when (family) {
+            ModelFamily.TRANSDUCER -> {
+                // Valid: nemo_transducer, conformer_transducer, or empty
+                if (modelType.isNotEmpty() &&
+                    modelType != "nemo_transducer" &&
+                    modelType != "conformer_transducer") {
+                    throw IllegalArgumentException(
+                        "TRANSDUCER family has invalid modelType: $modelType (valid: nemo_transducer, conformer_transducer, or empty)")
+                }
+            }
+            ModelFamily.CTC -> {
+                // Valid: nemo_ctc, zipformer_ctc
+                if (modelType != "nemo_ctc" && modelType != "zipformer_ctc") {
+                    throw IllegalArgumentException(
+                        "CTC family has invalid modelType: $modelType (valid: nemo_ctc, zipformer_ctc)")
+                }
+            }
+            ModelFamily.WHISPER, ModelFamily.SENSE_VOICE -> {
+                // Must be empty
+                if (modelType.isNotEmpty()) {
+                    throw IllegalArgumentException(
+                        "${family.name} family requires empty modelType, got: $modelType")
+                }
+            }
+        }
+
         return Entry(
             name = o.getString("name"),
-            modelType = o.optString("modelType", "nemo_transducer"),
-            languages = buildList { val a = o.optJSONArray("languages") ?: return@buildList; for (i in 0 until a.length()) add(a.getString(i)) },
+            family = family,
+            modelType = modelType,
+            languages = languages,
+            options = options,
             files = files,
         )
     }

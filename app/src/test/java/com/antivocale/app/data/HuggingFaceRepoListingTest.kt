@@ -114,6 +114,133 @@ class HuggingFaceRepoListingTest {
         assertTrue(sizeless.isFailure)
     }
 
+    @Test
+    fun `entry without family parses as TRANSDUCER`() {
+        val entry = ExternalModelEntryJson.parse("""
+            {"name":"Old Model","languages":["en"],"modelType":"nemo_transducer",
+             "files":[{"name":"encoder.onnx","url":"https://x/e.onnx","sha256":"${"a".repeat(64)}","size":100}]}
+        """.trimIndent())
+        assertEquals(ModelFamily.TRANSDUCER, entry.family)
+    }
+
+    @Test
+    fun `entry with WHISPER family parses correctly`() {
+        val entry = ExternalModelEntryJson.parse("""
+            {"name":"Arabic Whisper","family":"WHISPER","languages":["ar"],
+             "files":[{"name":"encoder.onnx","url":"https://x/e.onnx","sha256":"${"a".repeat(64)}","size":100}]}
+        """.trimIndent())
+        assertEquals(ModelFamily.WHISPER, entry.family)
+        assertEquals("", entry.modelType)
+    }
+
+    @Test
+    fun `entry with unknown family throws IllegalArgumentException`() {
+        val error = runCatching {
+            ExternalModelEntryJson.parse("""
+                {"name":"Bad","family":"UNKNOWN_FAMILY","languages":["en"],
+                 "files":[{"name":"encoder.onnx","url":"https://x/e.onnx","sha256":"${"a".repeat(64)}","size":100}]}
+            """.trimIndent())
+        }
+        assertTrue(error.isFailure)
+        assertTrue(error.exceptionOrNull()?.message?.contains("UNKNOWN_FAMILY") == true)
+    }
+
+    @Test
+    fun `entry with options parses correctly`() {
+        val entry = ExternalModelEntryJson.parse("""
+            {"name":"Whisper Arabic","family":"WHISPER","languages":["ar"],
+             "options":{"whisper.language":"ar","whisper.task":"transcribe"},
+             "files":[{"name":"encoder.onnx","url":"https://x/e.onnx","sha256":"${"a".repeat(64)}","size":100}]}
+        """.trimIndent())
+        assertEquals(2, entry.options.size)
+        assertEquals("ar", entry.options["whisper.language"])
+        assertEquals("transcribe", entry.options["whisper.task"])
+    }
+
+    @Test
+    fun `WHISPER entry without modelType defaults to empty`() {
+        val entry = ExternalModelEntryJson.parse("""
+            {"name":"Whisper","family":"WHISPER","languages":["en"],
+             "files":[{"name":"encoder.onnx","url":"https://x/e.onnx","sha256":"${"a".repeat(64)}","size":100}]}
+        """.trimIndent())
+        assertEquals("", entry.modelType)
+    }
+
+    @Test
+    fun `TRANSDUCER entry without modelType defaults to nemo_transducer`() {
+        val entry = ExternalModelEntryJson.parse("""
+            {"name":"Transducer","family":"TRANSDUCER","languages":["en"],
+             "files":[{"name":"encoder.onnx","url":"https://x/e.onnx","sha256":"${"a".repeat(64)}","size":100}]}
+        """.trimIndent())
+        assertEquals("nemo_transducer", entry.modelType)
+    }
+
+    @Test
+    fun `entry with family but no languages is rejected`() {
+        val error = runCatching {
+            ExternalModelEntryJson.parse("""
+                {"name":"Bad","family":"WHISPER",
+                 "files":[{"name":"encoder.onnx","url":"https://x/e.onnx","sha256":"${"a".repeat(64)}","size":100}]}
+            """.trimIndent())
+        }
+        assertTrue(error.isFailure)
+        assertTrue(error.exceptionOrNull()?.message?.contains("languages") == true)
+    }
+
+    @Test
+    fun `WHISPER entry with non-empty transducer modelType is rejected`() {
+        val error = runCatching {
+            ExternalModelEntryJson.parse("""
+                {"name":"Bad","family":"WHISPER","modelType":"nemo_transducer","languages":["en"],
+                 "files":[{"name":"encoder.onnx","url":"https://x/e.onnx","sha256":"${"a".repeat(64)}","size":100}]}
+            """.trimIndent())
+        }
+        assertTrue(error.isFailure)
+        assertTrue(error.exceptionOrNull()?.message?.contains("modelType") == true)
+    }
+
+    @Test
+    fun `CTC entry with valid modelType parses correctly`() {
+        val entry = ExternalModelEntryJson.parse("""
+            {"name":"CTC Model","family":"CTC","modelType":"nemo_ctc","languages":["en"],
+             "files":[{"name":"encoder.onnx","url":"https://x/e.onnx","sha256":"${"a".repeat(64)}","size":100}]}
+        """.trimIndent())
+        assertEquals("nemo_ctc", entry.modelType)
+    }
+
+    @Test
+    fun `CTC entry with invalid modelType is rejected`() {
+        val error = runCatching {
+            ExternalModelEntryJson.parse("""
+                {"name":"Bad","family":"CTC","modelType":"bad_type","languages":["en"],
+                 "files":[{"name":"encoder.onnx","url":"https://x/e.onnx","sha256":"${"a".repeat(64)}","size":100}]}
+            """.trimIndent())
+        }
+        assertTrue(error.isFailure)
+        assertTrue(error.exceptionOrNull()?.message?.contains("modelType") == true)
+    }
+
+    @Test
+    fun `TRANSDUCER entry with conformer_transducer parses correctly`() {
+        val entry = ExternalModelEntryJson.parse("""
+            {"name":"Conformer","family":"TRANSDUCER","modelType":"conformer_transducer","languages":["en"],
+             "files":[{"name":"encoder.onnx","url":"https://x/e.onnx","sha256":"${"a".repeat(64)}","size":100}]}
+        """.trimIndent())
+        assertEquals("conformer_transducer", entry.modelType)
+    }
+
+    @Test
+    fun `TRANSDUCER entry with invalid modelType is rejected`() {
+        val error = runCatching {
+            ExternalModelEntryJson.parse("""
+                {"name":"Bad","family":"TRANSDUCER","modelType":"whisper","languages":["en"],
+                 "files":[{"name":"encoder.onnx","url":"https://x/e.onnx","sha256":"${"a".repeat(64)}","size":100}]}
+            """.trimIndent())
+        }
+        assertTrue(error.isFailure)
+        assertTrue(error.exceptionOrNull()?.message?.contains("modelType") == true)
+    }
+
     // ---- end-to-end against the mock server ----
 
     private val encoderBytes = ByteArray(64) { 1 } + "vocab_size=1024 subsampling_factor=8 model_type=nemo_transducer".toByteArray()
