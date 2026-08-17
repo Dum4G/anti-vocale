@@ -24,8 +24,8 @@ android {
         applicationId = "com.antivocale.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 35
-        versionName = "1.10.0-beta.1"
+        versionCode = 36
+        versionName = "1.10.0-beta.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
