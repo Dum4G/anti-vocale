@@ -4,7 +4,7 @@ import android.util.Log
 import org.json.JSONArray
 import org.json.JSONObject
 
-enum class ModelFamily { TRANSDUCER }  // CTC, PARAFORMER, SENSE_VOICE, WHISPER arrive in v2b
+enum class ModelFamily { TRANSDUCER, WHISPER, CTC, SENSE_VOICE }
 
 enum class ExternalModelSource { LOCAL, URL, CATALOG }
 
@@ -22,6 +22,7 @@ data class ExternalModelRecord(
     val files: Map<String, FilePin>,
     val sizeBytes: Long,
     val importedAt: Long,
+    val options: Map<String, String> = emptyMap(),
 ) {
     val backendId: String get() = BACKEND_ID_PREFIX + id
 
@@ -32,6 +33,9 @@ data class ExternalModelRecord(
         put("sourceUrl", sourceUrl ?: JSONObject.NULL)
         put("files", JSONObject().apply { files.forEach { (n, p) -> put(n, JSONObject().put("sha256", p.sha256).put("verified", p.verified)) } })
         put("sizeBytes", sizeBytes); put("importedAt", importedAt)
+        val optsJson = JSONObject()
+        options.forEach { (k, v) -> optsJson.put(k, v) }
+        put("options", optsJson)
     }
 
     companion object {
@@ -52,6 +56,14 @@ data class ExternalModelRecord(
                     put(name, FilePin(p.getString("sha256"), p.getBoolean("verified")))
                 }
             }
+            val optionsObj = o.optJSONObject("options")
+            val options = if (optionsObj != null) {
+                buildMap {
+                    for (key in optionsObj.keys()) {
+                        put(key, optionsObj.getString(key))
+                    }
+                }
+            } else emptyMap()
             ExternalModelRecord(
                 id = o.getString("id"), displayName = o.getString("displayName"), dir = o.getString("dir"),
                 family = ModelFamily.valueOf(o.getString("family")), modelType = o.getString("modelType"),
@@ -59,6 +71,7 @@ data class ExternalModelRecord(
                 source = ExternalModelSource.valueOf(o.getString("source")),
                 sourceUrl = if (o.isNull("sourceUrl")) null else o.getString("sourceUrl"),
                 files = files, sizeBytes = o.getLong("sizeBytes"), importedAt = o.getLong("importedAt"),
+                options = options,
             )
         } catch (e: Exception) {
             Log.w(TAG, "Malformed ExternalModelRecord; whole list will be rejected", e)
