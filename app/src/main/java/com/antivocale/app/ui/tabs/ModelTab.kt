@@ -1118,13 +1118,18 @@ private fun ExternalModelsSection(
     var ctcExpanded by remember { mutableStateOf(false) }
 
     // Bundled catalog index for the URL-dialog autocomplete (search by name or
-    // language). A read failure degrades to no suggestions, never a crash.
-    val catalogEntries = remember {
-        runCatching {
-            context.assets.open("external-catalog/index.json").use {
-                it.readBytes().decodeToString()
-            }.let(ExternalCatalog::parseIndex)
-        }.getOrDefault(emptyList())
+    // language), parsed lazily on the first dialog open instead of on every
+    // Models-tab composition. A read failure degrades to no suggestions, never
+    // a crash.
+    var catalogEntries by remember { mutableStateOf<List<ExternalCatalog.CatalogEntry>>(emptyList()) }
+    LaunchedEffect(urlDialogOpen) {
+        if (urlDialogOpen && catalogEntries.isEmpty()) {
+            catalogEntries = runCatching {
+                context.assets.open("external-catalog/index.json").use {
+                    it.readBytes().decodeToString()
+                }.let(ExternalCatalog::parseIndex)
+            }.getOrDefault(emptyList())
+        }
     }
 
     val familyOptions = remember {

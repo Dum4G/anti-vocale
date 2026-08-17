@@ -13,6 +13,8 @@ import org.json.JSONObject
  */
 object ExternalCatalog {
 
+    private val WHITESPACE = Regex("\\s+")
+
     data class CatalogEntry(
         val name: String,
         val languages: List<String>,
@@ -27,7 +29,7 @@ object ExternalCatalog {
      * named "... Arabic ..." with language "ar"). A blank query matches everything.
      */
     fun matchesQuery(name: String, languages: List<String>, query: String): Boolean {
-        val tokens = query.trim().split(Regex("\\s+")).filter { it.isNotEmpty() }
+        val tokens = query.trim().split(WHITESPACE).filter { it.isNotEmpty() }
         if (tokens.isEmpty()) return true
         return tokens.all { token ->
             languages.any { it.equals(token, ignoreCase = true) || it.startsWith(token, ignoreCase = true) } ||

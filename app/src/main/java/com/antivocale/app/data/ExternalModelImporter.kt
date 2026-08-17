@@ -62,7 +62,7 @@ class ExternalModelImporter(
 
     companion object {
         private const val TAG = "ExternalModelImporter"
-        private const val COPY_BUFFER = 64 * 1024
+        internal const val COPY_BUFFER = 64 * 1024
 
         /** External-data suffixes a split ONNX references inside its protobuf. */
         val SIDECAR_SUFFIXES = listOf("data", "weights")
@@ -137,70 +137,19 @@ class ExternalModelImporter(
         return result
     }
 
-    /** True for filename-safe bytes ([A-Za-z0-9._-]), the name characters a sidecar
-     *  reference can be walked back over. */
-    private fun isFileNameByte(b: Byte): Boolean {
-        val c = b.toInt() and 0xFF
-        return c in 'a'.code..'z'.code || c in 'A'.code..'Z'.code || c in '0'.code..'9'.code ||
-            c == '.'.code || c == '_'.code || c == '-'.code
-    }
-
-    /**
-     * Streams [file] once and collects the split-ONNX sidecar names its protobuf
-     * references (an external-data location string such as
-     * "whisper_encoder.int8.onnx.data", preserved verbatim because sidecars keep
-     * their source base name). Empty when the model is not split. The rolling
-     * carry keeps chunk-straddling matches findable.
-     */
-    private fun referencedSidecarNames(file: File): Set<String> {
-        val window = SIDECAR_MAX_NAME + ".onnx.weights".length
-        val buf = ByteArray(COPY_BUFFER)
-        val carry = ByteArray(window)
-        var carryLen = 0
-        val found = LinkedHashSet<String>()
-        file.inputStream().use { input ->
-            while (true) {
-                val read = input.read(buf)
-                if (read < 0) break
-                val combined = ByteArray(carryLen + read)
-                System.arraycopy(carry, 0, combined, 0, carryLen)
-                System.arraycopy(buf, 0, combined, carryLen, read)
-                for (marker in SIDECAR_MARKERS) {
-                    var from = 0
-                    while (true) {
-                        val at = SherpaOnnxBackend.indexOfSubsequence(combined, marker, from)
-                        if (at < 0) break
-                        var start = at
-                        while (start > 0 && isFileNameByte(combined[start - 1])) start--
-                        if (start < at) {
-                            found.add(String(combined, start, at + marker.size - start, Charsets.US_ASCII))
-                        }
-                        from = at + 1
-                    }
-                }
-                val keep = minOf(combined.size, window)
-                System.arraycopy(combined, combined.size - keep, carry, 0, keep)
-                carryLen = keep
-            }
-        }
-        return found
-    }
-
     /**
      * Split-ONNX completeness, shared by the local and download cores: an
      * external-data reference inside a copied `.onnx` whose sidecar is not part
      * of the planned file set would only surface as an engine-load failure, so
      * reject it at import time, loud and named. [declaredNames] are the
-     * canonical names the import actually produced in [targetDir].
+     * canonical names the import actually produced.
      */
-    private fun assertSidecarsDeclared(displayName: String, onnxFiles: List<File>, declaredNames: Set<String>) {
-        for (file in onnxFiles) {
-            val missing = referencedSidecarNames(file).filterNot { it in declaredNames }
-            if (missing.isNotEmpty()) {
-                throw IllegalArgumentException(
-                    "$displayName references split-ONNX sidecar(s) ${missing.joinToString()} " +
-                        "that the import set does not include; declare them in the file list")
-            }
+    private fun checkSidecars(displayName: String, referenced: Set<String>, declaredNames: Set<String>) {
+        val missing = referenced.filterNot { it in declaredNames }
+        if (missing.isNotEmpty()) {
+            throw IllegalArgumentException(
+                "$displayName references split-ONNX sidecar(s) ${missing.joinToString()} " +
+                    "that the import set does not include; declare them in the file list")
         }
     }
 
@@ -340,11 +289,15 @@ class ExternalModelImporter(
         val targetDir = freshTargetDir(root, displayName)
 
         return importCleaningUpOnFailure(targetDir) {
-            // 4. Copy with streaming SHA-256 pins.
+            // 4. Copy with streaming SHA-256 pins; the split-ONNX sidecar scan
+            // rides the SAME streamed chunks (no second full read of the big
+            // file). A sidecar absent from the plan fails here, not at engine
+            // load.
             val pins = HashMap<String, FilePin>()
             for ((canonical, sourceName) in plan) {
                 val source = children.first { it.name == sourceName }
                 val digest = MessageDigest.getInstance("SHA-256")
+                val scanner = if (canonical.endsWith(".onnx")) SidecarReferenceScanner() else null
                 File(targetDir, canonical).outputStream().use { out ->
                     source.open().use { input ->
                         val buffer = ByteArray(COPY_BUFFER)
@@ -352,18 +305,14 @@ class ExternalModelImporter(
                             val read = input.read(buffer)
                             if (read < 0) break
                             digest.update(buffer, 0, read)
+                            scanner?.feed(buffer, read)
                             out.write(buffer, 0, read)
                         }
                     }
                 }
                 pins[canonical] = FilePin(digest.digest().joinToString("") { "%02x".format(it) }, verified = true)
+                scanner?.let { checkSidecars(displayName, it.names(), plan.keys) }
             }
-
-            // Split-ONNX completeness over the copied canonical files, exactly like
-            // the download core: a sidecar absent from the source folder must fail
-            // here, not at engine load.
-            val copiedOnnx = targetDir.listFiles { f -> f.isFile && f.name.endsWith(".onnx") }.orEmpty().toList()
-            assertSidecarsDeclared(displayName, copiedOnnx, plan.keys)
 
             registerImported(targetDir, pins, family, resolvedModelType, options, languages,
                 ExternalModelSource.LOCAL, null, displayName)
@@ -418,7 +367,13 @@ class ExternalModelImporter(
                 // browse them), so drop it once the file is complete and verified.
                 ResumeDownloadHelper.sizeSidecar(target).delete()
                 val file = result.getOrThrow()
-                val actual = HashVerifier.sha256(file)
+                // Split-ONNX completeness rides the hash-verification pass (the
+                // same streamed chunks feed the sidecar scanner): an
+                // external-data reference inside a downloaded .onnx whose sidecar
+                // is not part of the download set would only surface as an
+                // engine-load failure, so reject it here, loud and named.
+                val scanner = if (triple.canonicalName.endsWith(".onnx")) SidecarReferenceScanner() else null
+                val actual = HashVerifier.sha256(file) { chunk, len -> scanner?.feed(chunk, len) }
                 val pin = when (triple.sha256) {
                     null -> FilePin(actual, verified = false)  // TOFU: computed on first download
                     else -> {
@@ -431,13 +386,7 @@ class ExternalModelImporter(
                     }
                 }
                 pins[triple.canonicalName] = pin
-                // Split-ONNX completeness: an external-data reference inside a
-                // downloaded .onnx whose sidecar is not part of the download set
-                // would only surface as an engine-load failure, so reject it here,
-                // loud and named.
-                if (triple.canonicalName.endsWith(".onnx")) {
-                    assertSidecarsDeclared(displayName, listOf(file), declaredNames)
-                }
+                scanner?.let { checkSidecars(displayName, it.names(), declaredNames) }
             }
 
             registerImported(targetDir, pins, family, modelType, options, languages, source, sourceUrl, displayName)
@@ -553,4 +502,55 @@ class ExternalModelImporter(
             .replace(Regex("-+"), "-")
             .trim('-', '.')
             .takeIf { it.isNotBlank() } ?: "model"
+}
+
+/** True for filename-safe bytes ([A-Za-z0-9._-]), the name characters a sidecar
+ *  reference can be walked back over. */
+private fun isFileNameByte(b: Byte): Boolean {
+    val c = b.toInt() and 0xFF
+    return c in 'a'.code..'z'.code || c in 'A'.code..'Z'.code || c in '0'.code..'9'.code ||
+        c == '.'.code || c == '_'.code || c == '-'.code
+}
+
+/**
+ * Streaming scanner for split-ONNX external-data references: feed it the same
+ * chunks another pass already streams (the import copy loop or the download
+ * hash verification), and it collects the sidecar names (e.g.
+ * "whisper_encoder.int8.onnx.data") the protobuf references, without a second
+ * full read of the big file. One reused scratch buffer per file; the rolling
+ * carry keeps chunk-straddling matches findable. Chunks must not exceed
+ * [ExternalModelImporter.COPY_BUFFER].
+ */
+internal class SidecarReferenceScanner {
+    private val window = ExternalModelImporter.SIDECAR_MAX_NAME + ".onnx.weights".length
+    private val buf = ByteArray(window + ExternalModelImporter.COPY_BUFFER)
+    private var carryLen = 0
+    private val found = LinkedHashSet<String>()
+
+    /** Feeds the next [len] bytes of [chunk]; scans carry+chunk in the reused buffer. */
+    fun feed(chunk: ByteArray, len: Int) {
+        if (len <= 0) return
+        check(carryLen + len <= buf.size) { "sidecar scan chunk exceeds buffer" }
+        System.arraycopy(chunk, 0, buf, carryLen, len)
+        val total = carryLen + len
+        for (marker in ExternalModelImporter.SIDECAR_MARKERS) {
+            var from = 0
+            while (true) {
+                val at = SherpaOnnxBackend.indexOfSubsequence(buf, marker, from, total)
+                if (at < 0) break
+                var start = at
+                while (start > 0 && isFileNameByte(buf[start - 1])) start--
+                if (start < at) {
+                    found.add(String(buf, start, at + marker.size - start, Charsets.US_ASCII))
+                }
+                from = at + 1
+            }
+        }
+        val keep = minOf(total, window)
+        System.arraycopy(buf, total - keep, buf, 0, keep)
+        carryLen = keep
+    }
+
+    /** All referenced sidecar names seen so far, in first-seen order. */
+    fun names(): Set<String> = found
 }

@@ -18,17 +18,20 @@ object HashVerifier {
     private const val BUFFER_SIZE = 8192
 
     /**
-     * Computes the SHA256 hex digest of a file.
+     * Computes the SHA256 hex digest of a file. [onChunk], when given, observes the
+     * same streamed chunks (the importer feeds its split-ONNX sidecar scanner this
+     * way, so the scan costs no second full read of the file).
      *
      * @return lowercase hex string, e.g. "a1b2c3..."
      */
-    fun sha256(file: File): String {
+    fun sha256(file: File, onChunk: ((ByteArray, Int) -> Unit)? = null): String {
         val digest = MessageDigest.getInstance("SHA-256")
         file.inputStream().buffered(BUFFER_SIZE).use { input ->
             val buffer = ByteArray(BUFFER_SIZE)
             var read: Int
             while (input.read(buffer).also { read = it } != -1) {
                 digest.update(buffer, 0, read)
+                onChunk?.invoke(buffer, read)
             }
         }
         return digest.digest().joinToString("") { "%02x".format(it) }
