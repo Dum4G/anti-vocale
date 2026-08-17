@@ -92,34 +92,14 @@ class ExternalCatalogTest {
     }
 
     @Test
-    fun `bundled asset index parses and contains the arabic entry`() {
-        // Unit-test classpath does not carry merged assets; read the source file
-        // (tests run with the module directory as working dir).
+    fun `bundled asset index parses and is empty pending a sherpa-compatible entry`() {
+        // The OpenVoiceOS arabic export is NOT sherpa-onnx loadable (optimum decoder
+        // signature, no k2-fsa metadata; device-verified 2026-08-17, TASK-331 Task 15),
+        // so its entry was removed until a converted mirror ships (follow-up task).
+        // The index must still parse; the empty list must not crash the autocomplete.
         val text = java.io.File("src/main/assets/external-catalog/index.json").readText()
         val entries = ExternalCatalog.parseIndex(text)
-        assertTrue(entries.isNotEmpty())
-        val arabic = ExternalCatalog.filter(entries, "arabic").also { assertEquals(1, it.size) }[0]
-        assertEquals(ModelFamily.WHISPER, arabic.family)
-        assertTrue(arabic.entryUrl.endsWith("arabic.json"))
-    }
-
-    @Test
-    fun `bundled arabic entry json parses with family languages and pinned sidecars`() {
-        val text = java.io.File("src/main/assets/external-catalog/arabic.json").readText()
-        val entry = ExternalModelEntryJson.parse(text)
-        assertEquals("Whisper Large v3 Turbo Arabic Dialectal (OpenVoiceOS, int8)", entry.name)
-        assertEquals(ModelFamily.WHISPER, entry.family)
-        assertEquals("", entry.modelType)
-        assertEquals(listOf("ar"), entry.languages)
-        assertEquals(
-            setOf("encoder_model_int8.onnx", "encoder_model_int8.onnx.data",
-                "decoder_model_merged_int8.onnx", "decoder_model_merged_int8.onnx.data",
-                "tokens.txt"),
-            entry.files.map { it.name }.toSet())
-        // The tokens file comes from the conversion mirror (the source repo ships
-        // vocab.json only); pin the host so a silent swap is caught in review.
-        assertTrue(entry.files.first { it.name == "tokens.txt" }
-            .url.startsWith("https://huggingface.co/pantinor/whisper-arabic-dialectal-tokens/"))
-        assertTrue(entry.files.all { it.sha256.length == 64 && it.size > 0 })
+        assertEquals(emptyList<ExternalCatalog.CatalogEntry>(), entries)
+        assertEquals(emptyList<ExternalCatalog.CatalogEntry>(), ExternalCatalog.filter(entries, "arabic"))
     }
 }
