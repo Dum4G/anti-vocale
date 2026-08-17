@@ -3,8 +3,10 @@ package com.antivocale.app.transcription
 import com.antivocale.app.data.ExternalModelRecord
 import com.antivocale.app.data.ModelFamily
 import com.k2fsa.sherpa.onnx.OfflineModelConfig
+import com.k2fsa.sherpa.onnx.OfflineNemoEncDecCtcModelConfig
 import com.k2fsa.sherpa.onnx.OfflineTransducerModelConfig
 import com.k2fsa.sherpa.onnx.OfflineWhisperModelConfig
+import com.k2fsa.sherpa.onnx.OfflineZipformerCtcModelConfig
 
 /**
  * The family support table (spec: multi-family external models): per-family copy
@@ -38,8 +40,9 @@ sealed interface ModelFamilySupport {
         fun forFamily(family: ModelFamily): ModelFamilySupport = when (family) {
             ModelFamily.TRANSDUCER -> TransducerSupport
             ModelFamily.WHISPER -> WhisperSupport
+            ModelFamily.CTC -> CtcSupport
             // Later plan tasks add the remaining supports.
-            ModelFamily.CTC, ModelFamily.SENSE_VOICE ->
+            ModelFamily.SENSE_VOICE ->
                 throw IllegalArgumentException("no support implemented yet for family $family")
         }
     }
@@ -180,5 +183,90 @@ object WhisperSupport : ModelFamilySupport {
             debug = false,
             provider = provider,
         )
+    }
+}
+
+/**
+ * CTC family: encoder + tokens; no decoder or joiner.
+ *
+ * Expected file set: one .onnx acoustic model (preferably named with "encoder",
+ * but CTC exports like GigaAM's v3_ctc.int8.onnx omit the keyword) and one .txt
+ * tokens/vocab file. A joiner/joint .onnx among the candidates is rejected as
+ * "looks like a transducer; pick the TRANSDUCER family".
+ *
+ * Token selection mirrors the transducer matcher but with CTC preference: repos
+ * that ship both CTC and RNNT variants (istupakov) have multiple vocab files;
+ * ctc-hinted candidates are picked first, rnnt-free as fallback, so a GigaAM CTC
+ * import never accidentally picks the RNNT vocab.
+ *
+ * Record modelType selects the sherpa config subtype:
+ * - "nemo_ctc" -> [OfflineNemoEncDecCtcModelConfig] (NeMo encoder-decoder CTC)
+ * - "zipformer_ctc" -> [OfflineZipformerCtcModelConfig] (Zipformer CTC)
+ * - any other value -> [IllegalArgumentException] naming valid values.
+ *
+ * Metadata: empty (GigaAM CTC exports carry only "onnx.infer" per desktop
+ * validation; no family-identifying metadata to check).
+ */
+object CtcSupport : ModelFamilySupport {
+    override val family: ModelFamily = ModelFamily.CTC
+
+    override fun requiredRoles(): List<String> = listOf(
+        SherpaOnnxBackend.CANONICAL_ENCODER,
+        SherpaOnnxBackend.CANONICAL_TOKENS,
+    )
+
+    override fun buildCopyPlan(files: List<String>): Map<String, String>? {
+        // Structural discriminator: a joiner/joint file means this is a transducer.
+        val hasJoiner = files.any { f ->
+            f.endsWith(".onnx") && (f.contains("joiner", ignoreCase = true) || f.contains("joint", ignoreCase = true))
+        }
+        if (hasJoiner) throw IllegalArgumentException(
+            "candidate set contains a joiner/joint file: looks like a transducer; pick the TRANSDUCER family")
+        // Encoder: CTC exports may not contain "encoder" in the filename (e.g.
+        // GigaAM's v3_ctc.int8.onnx). Prefer keyword match, then any non-joiner .onnx.
+        fun isJoinerLike(name: String) = name.contains("joiner", ignoreCase = true) || name.contains("joint", ignoreCase = true)
+        val encoder = files.firstOrNull { f -> f.endsWith(".onnx") && f.contains("encoder", ignoreCase = true) && !isJoinerLike(f) }
+            ?: files.firstOrNull { f -> f.endsWith(".onnx") && !isJoinerLike(f) }
+            ?: return null
+        // Tokens: prefer exact names, then ctc-hinted (mirror of transducer's rnnt-first).
+        fun isTokensLike(name: String) = name.contains("tokens", ignoreCase = true) || name.contains("vocab", ignoreCase = true)
+        val tokens = files.firstOrNull { it.equals("tokens.txt", ignoreCase = true) }
+            ?: files.firstOrNull { it.equals("vocab.txt", ignoreCase = true) }
+            ?: files.firstOrNull { it.endsWith(".txt") && isTokensLike(it) && it.contains("ctc", ignoreCase = true) }
+            ?: files.firstOrNull { it.endsWith(".txt") && isTokensLike(it) && !it.contains("rnnt", ignoreCase = true) }
+            ?: files.firstOrNull { it.endsWith(".txt") && isTokensLike(it) }
+            ?: return null
+        return linkedMapOf(
+            SherpaOnnxBackend.CANONICAL_ENCODER to encoder,
+            SherpaOnnxBackend.CANONICAL_TOKENS to tokens,
+        )
+    }
+
+    override fun metadataFileRole(): String = SherpaOnnxBackend.CANONICAL_ENCODER
+
+    override fun metadataKeys(modelType: String): List<String> = emptyList()
+
+    override fun buildModelConfig(record: ExternalModelRecord, numThreads: Int, provider: String): OfflineModelConfig {
+        val encoderPath = "${record.dir}/${SherpaOnnxBackend.CANONICAL_ENCODER}"
+        return when (record.modelType) {
+            "nemo_ctc" -> OfflineModelConfig(
+                nemo = OfflineNemoEncDecCtcModelConfig(model = encoderPath),
+                tokens = "${record.dir}/${SherpaOnnxBackend.CANONICAL_TOKENS}",
+                modelType = "nemo_ctc",
+                numThreads = numThreads,
+                debug = false,
+                provider = provider,
+            )
+            "zipformer_ctc" -> OfflineModelConfig(
+                zipformerCtc = OfflineZipformerCtcModelConfig(model = encoderPath),
+                tokens = "${record.dir}/${SherpaOnnxBackend.CANONICAL_TOKENS}",
+                modelType = "zipformer_ctc",
+                numThreads = numThreads,
+                debug = false,
+                provider = provider,
+            )
+            else -> throw IllegalArgumentException(
+                "unknown CTC modelType \"${record.modelType}\"; valid values: nemo_ctc, zipformer_ctc")
+        }
     }
 }

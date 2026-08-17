@@ -158,4 +158,72 @@ class ModelFamilySupportTest {
             numThreads = 1, provider = "cpu")
         assertEquals("en", optConfig.whisper.language)
     }
+
+    // ---- Task 6: CtcSupport ----
+
+    @Test
+    fun `ctc plan maps encoder and tokens`() {
+        val support = ModelFamilySupport.forFamily(ModelFamily.CTC)
+        val plan = support.buildCopyPlan(listOf("v3_ctc.int8.onnx", "v3_e2e_ctc_vocab.txt"))
+        assertEquals("v3_ctc.int8.onnx", plan!!["encoder.int8.onnx"])
+        assertEquals("v3_e2e_ctc_vocab.txt", plan["tokens.txt"])
+        assertNull(support.buildCopyPlan(listOf("encoder.onnx")))
+    }
+
+    @Test
+    fun `ctc plan picks ctc-hinted vocab over rnnt-hinted in mixed pool`() {
+        val support = ModelFamilySupport.forFamily(ModelFamily.CTC)
+        // istupakov repo ships both v3_e2e_rnnt_vocab.txt and v3_e2e_ctc_vocab.txt
+        val plan = support.buildCopyPlan(listOf(
+            "v3_ctc.int8.onnx",
+            "v3_e2e_ctc_vocab.txt",
+            "v3_e2e_rnnt_vocab.txt",
+        ))
+        assertEquals("v3_e2e_ctc_vocab.txt", plan!!["tokens.txt"])
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun `ctc plan rejects files containing joiner or joint keywords`() {
+        val support = ModelFamilySupport.forFamily(ModelFamily.CTC)
+        support.buildCopyPlan(listOf("encoder.onnx", "joiner.onnx", "tokens.txt"))
+    }
+
+    @Test
+    fun `ctc requiredRoles lists encoder and tokens`() {
+        assertEquals(
+            listOf("encoder.int8.onnx", "tokens.txt"),
+            ModelFamilySupport.forFamily(ModelFamily.CTC).requiredRoles(),
+        )
+    }
+
+    @Test
+    fun `ctc metadata routing returns empty keys`() {
+        val support = ModelFamilySupport.forFamily(ModelFamily.CTC)
+        assertEquals("encoder.int8.onnx", support.metadataFileRole())
+        assertEquals(emptyList<String>(), support.metadataKeys(""))
+    }
+
+    @Test
+    fun `ctc nemo model config builds OfflineNemoEncDecCtcModelConfig`() {
+        val config = ModelFamilySupport.forFamily(ModelFamily.CTC)
+            .buildModelConfig(record(ModelFamily.CTC, modelType = "nemo_ctc"), numThreads = 4, provider = "cpu")
+        assertEquals("/models/external/test-abc123/encoder.int8.onnx", config.nemo.model)
+        assertEquals("nemo_ctc", config.modelType)
+        assertEquals(4, config.numThreads)
+        assertEquals("cpu", config.provider)
+    }
+
+    @Test
+    fun `ctc zipformer model config builds OfflineZipformerCtcModelConfig`() {
+        val config = ModelFamilySupport.forFamily(ModelFamily.CTC)
+            .buildModelConfig(record(ModelFamily.CTC, modelType = "zipformer_ctc"), numThreads = 2, provider = "nnpapi")
+        assertEquals("/models/external/test-abc123/encoder.int8.onnx", config.zipformerCtc.model)
+        assertEquals("zipformer_ctc", config.modelType)
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun `ctc buildModelConfig rejects unknown modelType`() {
+        ModelFamilySupport.forFamily(ModelFamily.CTC)
+            .buildModelConfig(record(ModelFamily.CTC, modelType = "bad_type"), numThreads = 1, provider = "cpu")
+    }
 }
