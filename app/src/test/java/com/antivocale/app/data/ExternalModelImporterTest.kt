@@ -38,11 +38,16 @@ class ExternalModelImporterTest {
         )
     }
 
+    /** Protobuf-framed metadata prop (key + 0x12 tag + varint length + value), as onnxMetadataValue expects. */
+    private fun metadataProp(key: String, value: String): ByteArray =
+        key.toByteArray() + byteArrayOf(0x12, value.length.toByte()) + value.toByteArray()
+
     /** Source dir with the four role files; the encoder carries the metadata keys in its tail. */
     private fun sourceDir(name: String = "gigaam-v3"): File {
         val dir = tmp.newFolder(name)
         File(dir, "some_encoder_int8.onnx").writeBytes(
-            ByteArray(64) { 1 } + "vocab_size=1024 subsampling_factor=8 model_type=nemo_transducer".toByteArray())
+            ByteArray(64) { 1 } + "vocab_size=1024 subsampling_factor=8 ".toByteArray() +
+                metadataProp("model_type", "nemo_transducer"))
         File(dir, "some_decoder.onnx").writeBytes(ByteArray(16) { 2 })
         File(dir, "some_joiner.onnx").writeBytes(ByteArray(16) { 3 })
         File(dir, "tokens.txt").writeText("<unk> 0\n. 1\n")
@@ -131,6 +136,87 @@ class ExternalModelImporterTest {
         assertEquals(first.id, second.id)
         assertEquals(1, store.records().size)
         assertEquals(1, filesRoot.listFiles()!!.size)
+    }
+
+    // ---- family-aware imports (TASK-331) ----
+
+    /** Whisper source dir: encoder + decoder + tokens; the encoder tail names its model_type. */
+    private fun whisperSourceDir(name: String = "whisper-tiny"): File {
+        val dir = tmp.newFolder(name)
+        File(dir, "whisper_encoder.onnx").writeBytes(
+            ByteArray(32) { 1 } + metadataProp("model_type", "whisper-tiny"))
+        File(dir, "whisper_decoder.onnx").writeBytes(ByteArray(16) { 2 })
+        File(dir, "tokens.txt").writeText("<unk> 0\n")
+        return dir
+    }
+
+    /** SenseVoice source dir: the single acoustic model plus tokens. */
+    private fun senseVoiceSourceDir(name: String = "sense-voice"): File {
+        val dir = tmp.newFolder(name)
+        File(dir, "model.int8.onnx").writeBytes(ByteArray(32) { 5 })
+        File(dir, "tokens.txt").writeText("<unk> 0\n")
+        return dir
+    }
+
+    @Test
+    fun `whisper family import records family, canonical pins, and empty modelType`() = runTest {
+        val record = importer.importFromDirectory(whisperSourceDir(), modelType = "", family = ModelFamily.WHISPER)
+
+        assertEquals(ModelFamily.WHISPER, record.family)
+        assertEquals("", record.modelType)
+        assertEquals(setOf("encoder.int8.onnx", "decoder.int8.onnx", "tokens.txt"), record.files.keys)
+        assertTrue(File(record.dir, "encoder.int8.onnx").exists())
+        assertEquals(3, File(record.dir).listFiles()!!.size)
+    }
+
+    @Test
+    fun `whisper file set imported as TRANSDUCER fails naming transducer expectations`() = runTest {
+        val result = runCatching { importer.importFromDirectory(whisperSourceDir()) }
+
+        assertTrue(result.isFailure)
+        val message = result.exceptionOrNull()!!.message ?: ""
+        assertTrue("error must name the family: $message", message.contains("TRANSDUCER"))
+        assertEquals(0, store.records().size)
+        assertEquals(0, filesRoot.listFiles()!!.size)
+    }
+
+    @Test
+    fun `transducer set imported as WHISPER is rejected by the metadata value check`() = runTest {
+        // The generic-name hole: the encoder carries a model_type KEY (key-presence
+        // passes) but its VALUE is nemo_transducer, so only the value-aware
+        // validateImportedModel call catches it.
+        val result = runCatching { importer.importFromDirectory(sourceDir(), modelType = "", family = ModelFamily.WHISPER) }
+
+        assertTrue(result.isFailure)
+        assertTrue(
+            "error must point at the transducer family: ${result.exceptionOrNull()?.message}",
+            result.exceptionOrNull()?.message?.contains("TRANSDUCER") == true)
+        assertEquals(0, store.records().size)
+    }
+
+    @Test
+    fun `sense voice family import records the single-model role set`() = runTest {
+        val record = importer.importFromDirectory(senseVoiceSourceDir(), modelType = "", family = ModelFamily.SENSE_VOICE)
+
+        assertEquals(ModelFamily.SENSE_VOICE, record.family)
+        assertEquals(setOf("model.int8.onnx", "tokens.txt"), record.files.keys)
+        assertTrue(File(record.dir, "model.int8.onnx").exists())
+    }
+
+    @Test
+    fun `sense voice import of a split model set fails naming sense voice expectations`() = runTest {
+        // An encoder/decoder set has no model-role candidate: the error must name
+        // SENSE_VOICE (metadataFileRole dispatch means validation happens on the
+        // model file, which no plan can produce here).
+        val result = runCatching {
+            importer.importFromDirectory(sourceDir(), modelType = "", family = ModelFamily.SENSE_VOICE)
+        }
+
+        assertTrue(result.isFailure)
+        assertTrue(
+            "error must name the family: ${result.exceptionOrNull()?.message}",
+            result.exceptionOrNull()?.message?.contains("SENSE_VOICE") == true)
+        assertEquals(0, store.records().size)
     }
 
     @Test

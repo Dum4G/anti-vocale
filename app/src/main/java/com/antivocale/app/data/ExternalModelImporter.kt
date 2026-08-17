@@ -67,17 +67,25 @@ class ExternalModelImporter(
 
     /**
      * Maps source file names to canonical role names. The keyword logic lives in the
-     * family support table ([ModelFamilySupport.TransducerSupport], single definition
-     * shared with the engine); this delegate keeps the import call sites unchanged.
+     * family support table ([ModelFamilySupport.forFamily], single definition shared
+     * with the engine); this delegate keeps the import call sites unchanged.
      */
-    internal fun buildCopyPlan(files: List<String>): Map<String, String>? =
-        ModelFamilySupport.forFamily(ModelFamily.TRANSDUCER).buildCopyPlan(files)
+    internal fun buildCopyPlan(files: List<String>, family: ModelFamily = ModelFamily.TRANSDUCER): Map<String, String>? =
+        ModelFamilySupport.forFamily(family).buildCopyPlan(files)
+
+    /** Family-named role-set error shared by the local and URL planning sites. */
+    private fun missingRolesError(family: ModelFamily, names: List<String>): IllegalArgumentException =
+        IllegalArgumentException(
+            "missing required files for $family (${ModelFamilySupport.forFamily(family).requiredRoles().joinToString("/")}); found: $names")
 
     /** SAF folder import: the primary v2a entry point. */
     suspend fun importFromTreeUri(
         context: Context,
         treeUri: Uri,
         modelType: String = "nemo_transducer",
+        family: ModelFamily = ModelFamily.TRANSDUCER,
+        options: Map<String, String> = emptyMap(),
+        languages: List<String> = emptyList(),
     ): ExternalModelRecord {
         val tree = DocumentFile.fromTreeUri(context, treeUri)
             ?: throw IllegalArgumentException("Cannot open the selected folder")
@@ -85,7 +93,7 @@ class ExternalModelImporter(
             .filter { it.isFile }
             .map { SafSource(it, context.contentResolver) }
         val displayName = tree.name ?: "imported-model"
-        return importCore(children, modelType, displayName)
+        return importCore(children, modelType, displayName, family, options, languages)
     }
 
     /** Direct-file import: tests and tooling. The Task 9 migration does NOT use this
@@ -93,9 +101,12 @@ class ExternalModelImporter(
     suspend fun importFromDirectory(
         src: File,
         modelType: String = "nemo_transducer",
+        family: ModelFamily = ModelFamily.TRANSDUCER,
+        options: Map<String, String> = emptyMap(),
+        languages: List<String> = emptyList(),
     ): ExternalModelRecord {
         val children = src.listFiles()?.filter { it.isFile }?.map(::FileSource) ?: emptyList()
-        return importCore(children, modelType, src.name)
+        return importCore(children, modelType, src.name, family, options, languages)
     }
 
     /**
@@ -106,13 +117,15 @@ class ExternalModelImporter(
     suspend fun importFromHuggingFaceRepo(
         repoUrl: String,
         modelType: String = "nemo_transducer",
+        family: ModelFamily = ModelFamily.TRANSDUCER,
+        options: Map<String, String> = emptyMap(),
+        languages: List<String> = emptyList(),
     ): ExternalModelRecord {
         val repoId = HuggingFaceRepoListing.parseRepoId(repoUrl)
             ?: throw IllegalArgumentException("not a HuggingFace repository URL: $repoUrl")
         val files = repoListing.listFiles(repoId)
-        val plan = buildCopyPlan(files.map { it.name })
-            ?: throw IllegalArgumentException(
-                "repository $repoId has no complete transducer role set (encoder/decoder/joiner/tokens)")
+        val plan = buildCopyPlan(files.map { it.name }, family)
+            ?: throw missingRolesError(family, files.map { it.name })
         val triples = plan.map { (canonical, sourceName) ->
             val source = files.first { it.name == sourceName }
             val url = repoListing.resolveUrl(repoId, sourceName)
@@ -121,7 +134,7 @@ class ExternalModelImporter(
                 is HuggingFaceRepoListing.HfFile.Plain -> DownloadTriple(url, canonical, null, source.size)
             }
         }
-        return downloadCore(triples, modelType, repoId.substringAfter('/'), ExternalModelSource.URL, repoUrl)
+        return downloadCore(triples, modelType, repoId.substringAfter('/'), ExternalModelSource.URL, repoUrl, family, options, languages)
     }
 
     /** Catalog-entry JSON import: every file must carry a sha256 pin (hashless entries rejected). */
@@ -131,42 +144,50 @@ class ExternalModelImporter(
     ): ExternalModelRecord {
         val text = repoListing.fetchText(entryUrl)
         val entry = ExternalModelEntryJson.parse(text)
-        val plan = buildCopyPlan(entry.files.map { it.name })
-            ?: throw IllegalArgumentException(
-                "entry ${entry.name} has no complete transducer role set (encoder/decoder/joiner/tokens)")
+        val plan = buildCopyPlan(entry.files.map { it.name }, entry.family)
+            ?: throw missingRolesError(entry.family, entry.files.map { it.name })
         val byName = entry.files.associateBy { it.name }
         val triples = plan.map { (canonical, sourceName) ->
             val f = byName.getValue(sourceName)
             DownloadTriple(f.url, canonical, f.sha256, f.size)
         }
-        return downloadCore(triples, entry.modelType, entry.name, ExternalModelSource.URL, entryUrl, entry.languages)
+        return downloadCore(
+            triples, entry.modelType, entry.name, ExternalModelSource.URL, entryUrl,
+            entry.family, entry.options, entry.languages)
     }
 
     /**
      * URL import: classifies the url (a HuggingFace repo URL, or a catalog-entry JSON
      * url otherwise) and delegates to the matching entry. The classification lives
      * here, next to the two entries it picks between, so callers pass the url through.
+     * The family/options/languages parameters apply to repo imports only: entry JSON
+     * is driven by the entry itself.
      */
     suspend fun importFromUrl(
         url: String,
         modelType: String = "nemo_transducer",
+        family: ModelFamily = ModelFamily.TRANSDUCER,
+        options: Map<String, String> = emptyMap(),
+        languages: List<String> = emptyList(),
     ): ExternalModelRecord =
         if (url.trim().endsWith(".json") || HuggingFaceRepoListing.parseRepoId(url) == null) {
             importFromEntryJson(url, modelType)
         } else {
-            importFromHuggingFaceRepo(url, modelType)
+            importFromHuggingFaceRepo(url, modelType, family, options, languages)
         }
 
     private suspend fun importCore(
         children: List<SourceFile>,
         modelType: String,
         displayName: String,
+        family: ModelFamily = ModelFamily.TRANSDUCER,
+        options: Map<String, String> = emptyMap(),
+        languages: List<String> = emptyList(),
     ): ExternalModelRecord {
         // 1. Copy plan by role.
         val names = children.map { it.name }
-        val plan = buildCopyPlan(names)
-            ?: throw IllegalArgumentException(
-                "missing required model files (encoder/decoder/joiner/tokens); found: $names")
+        val plan = buildCopyPlan(names, family)
+            ?: throw missingRolesError(family, names)
 
         // 2. Unconditional disk pre-flight (spec binding): the import doubles disk usage.
         val root = filesRoot()
@@ -196,7 +217,7 @@ class ExternalModelImporter(
                 pins[canonical] = FilePin(digest.digest().joinToString("") { "%02x".format(it) }, verified = true)
             }
 
-            registerImported(targetDir, pins, ModelFamily.TRANSDUCER, modelType, emptyList(),
+            registerImported(targetDir, pins, family, modelType, options, languages,
                 ExternalModelSource.LOCAL, null, displayName)
         }
     }
@@ -217,6 +238,8 @@ class ExternalModelImporter(
         displayName: String,
         source: ExternalModelSource,
         sourceUrl: String?,
+        family: ModelFamily = ModelFamily.TRANSDUCER,
+        options: Map<String, String> = emptyMap(),
         languages: List<String> = emptyList(),
     ): ExternalModelRecord {
         val root = filesRoot()
@@ -261,7 +284,7 @@ class ExternalModelImporter(
                 pins[triple.canonicalName] = pin
             }
 
-            registerImported(targetDir, pins, ModelFamily.TRANSDUCER, modelType, languages, source, sourceUrl, displayName)
+            registerImported(targetDir, pins, family, modelType, options, languages, source, sourceUrl, displayName)
         }
     }
 
@@ -271,21 +294,28 @@ class ExternalModelImporter(
         pins: Map<String, FilePin>,
         family: ModelFamily,
         modelType: String,
+        options: Map<String, String>,
         languages: List<String>,
         source: ExternalModelSource,
         sourceUrl: String?,
         displayName: String,
     ): ExternalModelRecord {
         // Pre-native metadata validation BEFORE persisting: a wrong family is an
-        // import-time error, never a transcription-time exit(255). The key rule is
-        // the engine's own: [SherpaOnnxBackend.requiredTransducerMetadataKeys].
-        val requiredKeys = SherpaOnnxBackend.requiredTransducerMetadataKeys(modelType)
-        val missingMeta = SherpaOnnxBackend.missingOnnxMetadata(File(targetDir, SherpaOnnxBackend.CANONICAL_ENCODER), requiredKeys)
+        // import-time error, never a transcription-time exit(255). Both the checked
+        // file and the required keys are family-routed ([ModelFamilySupport]); the
+        // value-aware [ModelFamilySupport.validateImportedModel] call is mandatory
+        // alongside the key-presence check, otherwise a generic-name transducer set
+        // imported as WHISPER passes (NeMo transducer encoders also carry a
+        // model_type key; only the VALUE discriminates them).
+        val support = ModelFamilySupport.forFamily(family)
+        val metadataFile = File(targetDir, support.metadataFileRole())
+        val missingMeta = SherpaOnnxBackend.missingOnnxMetadata(metadataFile, support.metadataKeys(modelType))
         if (missingMeta.isNotEmpty()) {
             throw IllegalArgumentException(
-                "the encoder is missing required ONNX metadata ($missingMeta): " +
+                "the ${support.metadataFileRole()} is missing required ONNX metadata ($missingMeta): " +
                     "the files may be corrupt, an incompatible export, or the wrong family")
         }
+        support.validateImportedModel(metadataFile)
 
         // Same-hash dedupe BEFORE creating a new record. The fresh copy is removed
         // unless it landed on the existing record's own directory (same-path
@@ -319,6 +349,7 @@ class ExternalModelImporter(
             languages = languages,
             source = source,
             sourceUrl = sourceUrl,
+            options = options,
             files = pins,
             sizeBytes = sizeBytes,
             importedAt = System.currentTimeMillis(),

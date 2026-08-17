@@ -317,5 +317,34 @@ class HuggingFaceRepoListingTest {
         assertEquals("GigaAM v3", record.displayName)
         assertTrue(record.files.values.all { it.verified })
         assertTrue(File(record.dir, "encoder.int8.onnx").exists())
+        assertEquals(ModelFamily.TRANSDUCER, record.family)
+    }
+
+    @Test
+    fun `importFromEntryJson drives family, options and languages from the entry`() = runTest {
+        val base = server.url("/").toString().trimEnd('/')
+        // Protobuf-framed metadata prop so the value-aware whisper validation reads it.
+        val whisperEncoder = ByteArray(32) { 1 } +
+            "model_type".toByteArray() + byteArrayOf(0x12, 0x0B) + "whisper-tiny".toByteArray()
+        val whisperDecoder = ByteArray(16) { 2 }
+        val whisperTokens = "<unk> 0\n".toByteArray()
+        server.enqueue(MockResponse().setBody("""
+            {"name":"Arabic Whisper","family":"WHISPER","languages":["ar"],
+             "options":{"whisper.language":"ar","whisper.task":"transcribe"},
+             "files":[{"name":"w_encoder.onnx","url":"$base/we","sha256":"${sha256(whisperEncoder)}","size":${whisperEncoder.size}},
+                      {"name":"w_decoder.onnx","url":"$base/wd","sha256":"${sha256(whisperDecoder)}","size":${whisperDecoder.size}},
+                      {"name":"tokens.txt","url":"$base/t","sha256":"${sha256(whisperTokens)}","size":${whisperTokens.size}}]}
+        """.trimIndent()))
+        server.enqueue(MockResponse().setBody(okio.Buffer().write(whisperEncoder)))
+        server.enqueue(MockResponse().setBody(okio.Buffer().write(whisperDecoder)))
+        server.enqueue(MockResponse().setBody(okio.Buffer().write(whisperTokens)))
+
+        val record = importer.importFromEntryJson("$base/entry.json")
+
+        assertEquals(ModelFamily.WHISPER, record.family)
+        assertEquals("", record.modelType)
+        assertEquals(listOf("ar"), record.languages)
+        assertEquals("ar", record.options["whisper.language"])
+        assertEquals("transcribe", record.options["whisper.task"])
     }
 }
