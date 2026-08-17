@@ -9,6 +9,22 @@ import com.k2fsa.sherpa.onnx.OfflineTransducerModelConfig
 import com.k2fsa.sherpa.onnx.OfflineWhisperModelConfig
 import com.k2fsa.sherpa.onnx.OfflineZipformerCtcModelConfig
 
+/** True for transducer joiner files, which also answer to GigaAM's "joint" naming. */
+private fun isJoinerLike(name: String) =
+    name.contains("joiner", ignoreCase = true) || name.contains("joint", ignoreCase = true)
+
+/** True for tokens/vocab text files (the shared tokens-role keyword test). */
+private fun isTokensLike(name: String) =
+    name.contains("tokens", ignoreCase = true) || name.contains("vocab", ignoreCase = true)
+
+/** True for files whose names mark them as transducer exports (rnnt/joiner/joint). */
+private fun isTransducerHinted(name: String) =
+    name.contains("rnnt", ignoreCase = true) || isJoinerLike(name)
+
+/** Family-mismatch discriminator message shared by the non-transducer families. */
+private const val TRANSDUCER_MISMATCH =
+    "candidate set looks like a transducer; pick the TRANSDUCER family"
+
 /**
  * The family support table (spec: multi-family external models): per-family copy
  * planning, metadata routing, and sherpa config construction behind one interface,
@@ -19,18 +35,6 @@ import com.k2fsa.sherpa.onnx.OfflineZipformerCtcModelConfig
  * requires: expected file sets and the record [ExternalModelRecord.modelType]
  * mapping.
  */
-/** True for transducer joiner files, which also answer to GigaAM's "joint" naming. */
-private fun isJoinerLike(name: String) =
-    name.contains("joiner", ignoreCase = true) || name.contains("joint", ignoreCase = true)
-
-/** True for files whose names mark them as transducer exports (rnnt/joiner/joint). */
-private fun isTransducerHinted(name: String) =
-    name.contains("rnnt", ignoreCase = true) || isJoinerLike(name)
-
-/** Family-mismatch discriminator message shared by the non-transducer families. */
-private const val TRANSDUCER_MISMATCH =
-    "candidate set looks like a transducer; pick the TRANSDUCER family"
-
 sealed interface ModelFamilySupport {
     val family: ModelFamily
 
@@ -99,7 +103,6 @@ object TransducerSupport : ModelFamilySupport {
         // both CTC and RNNT variants (istupakov) have multiple vocab files; a bare
         // contains("vocab") over an alphabetical listing picks the CTC one for an
         // RNNT import. The matcher prefers rnnt-hinted and ctc-free candidates.
-        fun isTokensLike(name: String) = name.contains("tokens", ignoreCase = true) || name.contains("vocab", ignoreCase = true)
         val tokens = files.firstOrNull { it.equals("tokens.txt", ignoreCase = true) }
             ?: files.firstOrNull { it.equals("vocab.txt", ignoreCase = true) }
             ?: files.firstOrNull { it.endsWith(".txt") && isTokensLike(it) && it.contains("rnnt", ignoreCase = true) }
@@ -188,7 +191,6 @@ object WhisperSupport : ModelFamilySupport {
             ?: return null
         // Tokens: exact names first, then keyword match preferring non-hinted
         // candidates so listing order cannot hand the role to the transducer vocab.
-        fun isTokensLike(name: String) = name.contains("tokens", ignoreCase = true) || name.contains("vocab", ignoreCase = true)
         val tokens = files.firstOrNull { it.equals("tokens.txt", ignoreCase = true) }
             ?: files.firstOrNull { it.endsWith(".txt") && !isTransducerHinted(it) && isTokensLike(it) }
             ?: files.firstOrNull { it.endsWith(".txt") && isTokensLike(it) }
@@ -304,7 +306,6 @@ object CtcSupport : ModelFamilySupport {
             throw IllegalArgumentException(TRANSDUCER_MISMATCH)
         }
         // Tokens: prefer exact names, then ctc-hinted (mirror of transducer's rnnt-first).
-        fun isTokensLike(name: String) = name.contains("tokens", ignoreCase = true) || name.contains("vocab", ignoreCase = true)
         val tokens = files.firstOrNull { it.equals("tokens.txt", ignoreCase = true) }
             ?: files.firstOrNull { it.equals("vocab.txt", ignoreCase = true) }
             ?: files.firstOrNull { it.endsWith(".txt") && isTokensLike(it) && it.contains("ctc", ignoreCase = true) }
@@ -384,7 +385,7 @@ object SenseVoiceSupport : ModelFamilySupport {
         } ?: return null
         val tokens = files.firstOrNull { it.equals("tokens.txt", ignoreCase = true) }
             ?: files.firstOrNull { it.equals("vocab.txt", ignoreCase = true) }
-            ?: files.firstOrNull { it.endsWith(".txt") && (it.contains("tokens", ignoreCase = true) || it.contains("vocab", ignoreCase = true)) }
+            ?: files.firstOrNull { it.endsWith(".txt") && isTokensLike(it) }
             ?: return null
         return linkedMapOf(
             CANONICAL_MODEL to model,

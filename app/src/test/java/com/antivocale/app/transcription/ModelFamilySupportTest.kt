@@ -164,7 +164,7 @@ class ModelFamilySupportTest {
         val whisperEncoder = java.io.File.createTempFile("whisper-encoder", ".onnx")
         whisperEncoder.deleteOnExit()
         whisperEncoder.writeBytes("model_type".toByteArray() +
-            byteArrayOf(0x12, 0x0d) + "whisper-base".toByteArray())
+            byteArrayOf(0x12, 0x0c) + "whisper-base".toByteArray())
         support.validateImportedModel(whisperEncoder)
 
         // Missing key stays with the key-presence chain: no value, no verdict.

@@ -83,21 +83,30 @@ class SherpaOnnxBackend @Inject constructor() : TranscriptionBackend {
             requiredKeys: List<String>,
             maxScanBytes: Long = ONNX_METADATA_SCAN_LIMIT
         ): List<String> {
-            if (!file.exists() || file.length() == 0L) return requiredKeys
+            // Treat unreadable as "all metadata missing" so the caller shows a clear
+            // ModelLoadError instead of letting an IOException propagate uncaught.
+            val data = readTail(file, maxScanBytes) ?: return requiredKeys
+            return missingOnnxMetadataKeys(data, requiredKeys)
+        }
+
+        /**
+         * Reads the last [maxScanBytes] of [file]. Null when the file is empty/missing
+         * or unreadable (the sentinel each caller picks for its own error handling).
+         */
+        private fun readTail(file: File, maxScanBytes: Long): ByteArray? {
+            if (!file.exists() || file.length() == 0L) return null
             val fileSize = file.length()
             val scanStart = maxOf(0L, fileSize - maxScanBytes)
             val data = ByteArray((fileSize - scanStart).toInt())
-            try {
+            return try {
                 java.io.RandomAccessFile(file, "r").use { raf ->
                     raf.seek(scanStart)
                     raf.readFully(data)
                 }
+                data
             } catch (e: java.io.IOException) {
-                // Treat unreadable as "all metadata missing" so the caller shows a clear
-                // ModelLoadError instead of letting an IOException propagate uncaught.
-                return requiredKeys
+                null
             }
-            return missingOnnxMetadataKeys(data, requiredKeys)
         }
 
         /**
@@ -127,19 +136,8 @@ class SherpaOnnxBackend @Inject constructor() : TranscriptionBackend {
             key: String,
             maxScanBytes: Long = ONNX_METADATA_SCAN_LIMIT
         ): String? {
-            if (!file.exists() || file.length() == 0L) return null
-            val fileSize = file.length()
-            val scanStart = maxOf(0L, fileSize - maxScanBytes)
-            val data = ByteArray((fileSize - scanStart).toInt())
-            return try {
-                java.io.RandomAccessFile(file, "r").use { raf ->
-                    raf.seek(scanStart)
-                    raf.readFully(data)
-                }
-                onnxMetadataValueBytes(data, key)
-            } catch (e: java.io.IOException) {
-                null
-            }
+            val data = readTail(file, maxScanBytes) ?: return null
+            return onnxMetadataValueBytes(data, key)
         }
 
         /** Pure (no I/O) value parser behind [onnxMetadataValue], unit-testable directly. */
