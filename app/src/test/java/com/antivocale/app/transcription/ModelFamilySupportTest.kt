@@ -141,6 +141,40 @@ class ModelFamilySupportTest {
     }
 
     @Test
+    fun `whisper validation rejects a generic-named transducer encoder by model_type value`() {
+        val support = ModelFamilySupport.forFamily(ModelFamily.WHISPER)
+        // Generic names defeat the plan discriminators, so the copy plan itself
+        // succeeds and the metadata VALUE check must catch the mismatch: whisper
+        // encoders carry model_type "whisper-*"; NeMo transducer encoders carry a
+        // model_type KEY with a non-whisper value (key-presence cannot tell them apart).
+        val plan = support.buildCopyPlan(listOf("encoder.onnx", "decoder.onnx", "tokens.txt"))
+        assertEquals("encoder.onnx", plan!!["encoder.int8.onnx"])
+
+        val nemoEncoder = java.io.File.createTempFile("nemo-encoder", ".onnx")
+        nemoEncoder.deleteOnExit()
+        nemoEncoder.writeBytes("model_type".toByteArray() +
+            byteArrayOf(0x12, 0x12) + "EncDecRNNTBPEModel".toByteArray())
+        try {
+            support.validateImportedModel(nemoEncoder)
+            throw AssertionError("expected IllegalArgumentException for a non-whisper model_type value")
+        } catch (e: IllegalArgumentException) {
+            // expected
+        }
+
+        val whisperEncoder = java.io.File.createTempFile("whisper-encoder", ".onnx")
+        whisperEncoder.deleteOnExit()
+        whisperEncoder.writeBytes("model_type".toByteArray() +
+            byteArrayOf(0x12, 0x0d) + "whisper-base".toByteArray())
+        support.validateImportedModel(whisperEncoder)
+
+        // Missing key stays with the key-presence chain: no value, no verdict.
+        val bare = java.io.File.createTempFile("bare", ".onnx")
+        bare.deleteOnExit()
+        bare.writeBytes("vocab_size".toByteArray() + byteArrayOf(0x12, 0x02) + "42".toByteArray())
+        support.validateImportedModel(bare)
+    }
+
+    @Test
     fun `whisper plan prefers non-rnnt candidates regardless of listing order`() {
         val support = ModelFamilySupport.forFamily(ModelFamily.WHISPER)
         val whisperFirst = listOf(
@@ -261,6 +295,14 @@ class ModelFamilySupportTest {
         // (metadataKeys is empty), so the copy plan itself must reject it.
         ModelFamilySupport.forFamily(ModelFamily.CTC).buildCopyPlan(listOf(
             "rnnt_encoder.onnx", "rnnt_decoder.onnx", "rnnt_joint.onnx", "rnnt_tokens.txt"))
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun `ctc plan rejects a generic-named pure transducer set`() {
+        // sherpa-canonical generic names carry no rnnt hint; the joiner in the
+        // pool plus a non-ctc-hinted selected encoder is the tell.
+        ModelFamilySupport.forFamily(ModelFamily.CTC).buildCopyPlan(listOf(
+            "encoder.onnx", "decoder.onnx", "joiner.onnx", "tokens.txt"))
     }
 
     @Test

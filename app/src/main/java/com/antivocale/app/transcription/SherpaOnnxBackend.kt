@@ -113,6 +113,77 @@ class SherpaOnnxBackend @Inject constructor() : TranscriptionBackend {
             }
         }
 
+        /**
+         * Returns the VALUE of metadata prop [key] in [file], or null when absent/unreadable.
+         *
+         * ONNX metadata_props are protobuf StringStringEntryProto pairs (field 1 = key,
+         * field 2 = value, both length-prefixed). The scan reads the file tail once (same
+         * window as [missingOnnxMetadata]), locates the key bytes, and parses the following
+         * length-delimited value (tag 0x12 + varint length). Key occurrences not followed by
+         * a value tag are skipped, so stray key text cannot fool the parser.
+         */
+        fun onnxMetadataValue(
+            file: File,
+            key: String,
+            maxScanBytes: Long = ONNX_METADATA_SCAN_LIMIT
+        ): String? {
+            if (!file.exists() || file.length() == 0L) return null
+            val fileSize = file.length()
+            val scanStart = maxOf(0L, fileSize - maxScanBytes)
+            val data = ByteArray((fileSize - scanStart).toInt())
+            return try {
+                java.io.RandomAccessFile(file, "r").use { raf ->
+                    raf.seek(scanStart)
+                    raf.readFully(data)
+                }
+                onnxMetadataValueBytes(data, key)
+            } catch (e: java.io.IOException) {
+                null
+            }
+        }
+
+        /** Pure (no I/O) value parser behind [onnxMetadataValue], unit-testable directly. */
+        @JvmStatic
+        @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+        internal fun onnxMetadataValueBytes(data: ByteArray, key: String): String? {
+            val needle = key.toByteArray(Charsets.UTF_8)
+            if (needle.isEmpty()) return null
+            val lastStart = data.size - needle.size
+            var i = 0
+            while (i <= lastStart) {
+                // Find the next occurrence of the key.
+                var j = 0
+                while (j < needle.size && data[i + j] == needle[j]) j++
+                if (j == needle.size) {
+                    val p = parseLengthPrefixedValue(data, i + needle.size)
+                    if (p != null) return p
+                }
+                i++
+            }
+            return null
+        }
+
+        /**
+         * Parses a protobuf length-delimited field value at [start]: tag 0x12 (field 2,
+         * wire type 2), varint length, then that many UTF-8 bytes. Null when [start] does
+         * not hold that shape (the key occurrence is not a metadata entry).
+         */
+        private fun parseLengthPrefixedValue(data: ByteArray, start: Int): String? {
+            if (start >= data.size || data[start] != 0x12.toByte()) return null
+            var p = start + 1
+            var len = 0L
+            var shift = 0
+            while (p < data.size) {
+                val b = data[p++].toInt() and 0xFF
+                len = len or ((b and 0x7F).toLong() shl shift)
+                if (b and 0x80 == 0) break
+                shift += 7
+                if (shift > 35) return null
+            }
+            if (len < 1 || len > data.size - p) return null
+            return String(data, p, len.toInt(), Charsets.UTF_8)
+        }
+
         /** Returns true if [haystack] contains [needle] as a contiguous byte subsequence. */
         @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
         internal fun containsSubsequence(haystack: ByteArray, needle: ByteArray): Boolean {

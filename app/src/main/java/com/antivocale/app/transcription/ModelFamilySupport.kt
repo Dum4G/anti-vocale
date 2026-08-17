@@ -49,6 +49,14 @@ sealed interface ModelFamilySupport {
     /** Builds the sherpa [OfflineModelConfig] for [record] (engine-side). */
     fun buildModelConfig(record: ExternalModelRecord, numThreads: Int, provider: String): OfflineModelConfig
 
+    /**
+     * Family-specific value-aware validation on the file named by [metadataFileRole],
+     * fired after import (registerImported) and before the first native load.
+     * Default no-op: most families are covered by the key-presence metadata check
+     * plus the copy-plan structural discriminators.
+     */
+    fun validateImportedModel(file: java.io.File) {}
+
     companion object {
         fun forFamily(family: ModelFamily): ModelFamilySupport = when (family) {
             ModelFamily.TRANSDUCER -> TransducerSupport
@@ -196,6 +204,18 @@ object WhisperSupport : ModelFamilySupport {
 
     override fun metadataKeys(modelType: String): List<String> = listOf("model_type")
 
+    override fun validateImportedModel(file: java.io.File) {
+        // Value-aware discriminator: key presence cannot tell a whisper encoder
+        // from a NeMo transducer encoder (both carry a model_type KEY), but the
+        // values differ (whisper encoders are "whisper-*"). A missing key stays
+        // with the key-presence chain (metadataKeys above).
+        val value = SherpaOnnxBackend.onnxMetadataValue(file, "model_type")
+        if (value != null && !value.startsWith("whisper", ignoreCase = true)) {
+            throw IllegalArgumentException(
+                "model_type metadata is \"$value\": not a whisper encoder; pick the TRANSDUCER family for transducer exports")
+        }
+    }
+
     override fun buildModelConfig(record: ExternalModelRecord, numThreads: Int, provider: String): OfflineModelConfig {
         val language = record.options["whisper.language"]
             ?: record.languages.firstOrNull()
@@ -224,9 +244,10 @@ object WhisperSupport : ModelFamilySupport {
  * tokens/vocab file. A joiner/joint .onnx is rejected as "looks like a
  * transducer; pick the TRANSDUCER family" only when it entered encoder role
  * matching (the fallback tier, i.e. the folder holds a bare transducer set), and
- * a selected rnnt-hinted encoder is rejected the same way (reachable only from a
- * pure transducer pool); a joiner elsewhere in the folder is ignored, since a
- * parent directory legitimately holding several models must still import.
+ * a selected rnnt-hinted encoder, or a non-ctc-hinted encoder alongside a
+ * joiner-like file in the pool (the generic sherpa-canonical names carry no rnnt
+ * hint), is rejected the same way; ctc-hinted winners stay importable so the
+ * mixed istupakov repo folder (joint included) still imports.
  *
  * Token and encoder selection mirror the transducer matcher but with CTC
  * preference: repos that ship both CTC and RNNT variants (istupakov) have
@@ -275,6 +296,13 @@ object CtcSupport : ModelFamilySupport {
         // non-rnnt candidate first), and the CTC metadata check is a no-op
         // (metadataKeys is empty), so reject it here instead of at exit(255).
         if (encoder.contains("rnnt", ignoreCase = true)) throw IllegalArgumentException(TRANSDUCER_MISMATCH)
+        // Generic sherpa-canonical names carry no rnnt hint: a joiner in the pool
+        // alongside a NON-ctc-hinted selected encoder is the transducer tell.
+        // ctc-hinted winners stay importable (the istupakov mixed repo ships CTC
+        // and RNNT variants, joint included, in one folder).
+        if (onnxCandidates.any(::isJoinerLike) && !encoder.contains("ctc", ignoreCase = true)) {
+            throw IllegalArgumentException(TRANSDUCER_MISMATCH)
+        }
         // Tokens: prefer exact names, then ctc-hinted (mirror of transducer's rnnt-first).
         fun isTokensLike(name: String) = name.contains("tokens", ignoreCase = true) || name.contains("vocab", ignoreCase = true)
         val tokens = files.firstOrNull { it.equals("tokens.txt", ignoreCase = true) }
