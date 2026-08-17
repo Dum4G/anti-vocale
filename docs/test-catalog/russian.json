@@ -1,0 +1,25 @@
+{
+  "name": "Russian Conformer (OpenVoiceOS)",
+  "modelType": "conformer_transducer",
+  "languages": ["ru"],
+  "files": [
+    {
+      "name": "encoder-model.int8.onnx",
+      "url": "https://huggingface.co/OpenVoiceOS/nvidia-ru-conformer-transducer-large-onnx/resolve/main/encoder-model.int8.onnx",
+      "sha256": "1bb1386113b910448f26579c1d84022aae7ff5cc60f756eae2a7c3c2f4a87622",
+      "size": 137420853
+    },
+    {
+      "name": "decoder_joint-model.int8.onnx",
+      "url": "https://huggingface.co/OpenVoiceOS/nvidia-ru-conformer-transducer-large-onnx/resolve/main/decoder_joint-model.int8.onnx",
+      "sha256": "c8cd45f3893c45c214003ffd9d7a3593c3372bd1bafee9cdd318ab16b79be88e",
+      "size": 5364682
+    },
+    {
+      "name": "vocab.txt",
+      "url": "https://huggingface.co/OpenVoiceOS/nvidia-ru-conformer-transducer-large-onnx/resolve/main/vocab.txt",
+      "sha256": "82bc55e41b75ddc84eab38eefc2d65ffd18a5269aef627c8b2c0e793dcd44903",
+      "size": 15996
+    }
+  ]
+}

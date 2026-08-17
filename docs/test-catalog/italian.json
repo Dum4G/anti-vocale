@@ -1,0 +1,25 @@
+{
+  "name": "Italian Conformer (OpenVoiceOS)",
+  "modelType": "conformer_transducer",
+  "languages": ["it"],
+  "files": [
+    {
+      "name": "encoder-model.int8.onnx",
+      "url": "https://huggingface.co/OpenVoiceOS/nvidia-it-conformer-transducer-large-onnx/resolve/main/encoder-model.int8.onnx",
+      "sha256": "44b6ab5de4697ea31a3c5ec2832d2a53e3b631d94db92f7f61cbcb3edad98615",
+      "size": 137420853
+    },
+    {
+      "name": "decoder_joint-model.int8.onnx",
+      "url": "https://huggingface.co/OpenVoiceOS/nvidia-it-conformer-transducer-large-onnx/resolve/main/decoder_joint-model.int8.onnx",
+      "sha256": "6134ff1bd5991625dfd25c0e96d5003035a980d775fc594a5ec08b6753c49ad3",
+      "size": 5364682
+    },
+    {
+      "name": "vocab.txt",
+      "url": "https://huggingface.co/OpenVoiceOS/nvidia-it-conformer-transducer-large-onnx/resolve/main/vocab.txt",
+      "sha256": "81ffba0d1b408c08432f38c190ec9813190fd388505e2c51c81ebaa2ae67a253",
+      "size": 10293
+    }
+  ]
+}
