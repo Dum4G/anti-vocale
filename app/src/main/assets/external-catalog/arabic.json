@@ -28,6 +28,12 @@
       "url": "https://huggingface.co/OpenVoiceOS/whisper-large-v3-turbo-arabic-dialectal-v2-onnx/resolve/main/int8/decoder_model_merged_int8.onnx.data",
       "sha256": "369b3b61a7d34a6c90eff7088123ff480c7ab4388d5ed9bcb2f817b4b16f9e8a",
       "size": 687636480
+    },
+    {
+      "name": "tokens.txt",
+      "url": "https://huggingface.co/pantinor/whisper-arabic-dialectal-tokens/resolve/main/tokens.txt",
+      "sha256": "ae17d9cd9ddce4312387c52ebd114f8defe13632a90c1c0e7c0043814b11a72c",
+      "size": 960596
     }
   ]
 }
