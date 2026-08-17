@@ -355,7 +355,10 @@ class ExternalModelImporter(
             }
             val updated = existing.copy(
                 displayName = displayName.trim(),
+                family = family,
                 modelType = modelType,
+                languages = languages,
+                options = options,
                 dir = if (existingDirValid) existing.dir else targetDir.absolutePath,
             )
             store.update(updated)

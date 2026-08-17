@@ -263,6 +263,26 @@ class ExternalModelImporterTest {
     }
 
     @Test
+    fun `same-hash reimport refreshes family, options and languages`() = runTest {
+        val src = whisperSourceDir()
+        val first = importer.importFromDirectory(
+            src, modelType = "", family = ModelFamily.WHISPER,
+            options = mapOf("whisper.language" to "en"), languages = listOf("en"))
+
+        val second = importer.importFromDirectory(
+            src, modelType = "", family = ModelFamily.WHISPER,
+            options = mapOf("whisper.language" to "ar", "whisper.task" to "translate"),
+            languages = listOf("ar"))
+
+        assertEquals(first.id, second.id)
+        assertEquals(first.dir, second.dir)
+        assertEquals(1, store.records().size)
+        assertEquals(ModelFamily.WHISPER, second.family)
+        assertEquals(mapOf("whisper.language" to "ar", "whisper.task" to "translate"), second.options)
+        assertEquals(listOf("ar"), second.languages)
+    }
+
+    @Test
     fun `disk pre-flight blocks imports larger than available space`() = runTest {
         val smallRoot = tmp.newFolder("tiny-root")
         val tightImporter = ExternalModelImporter(store, filesRoot = { smallRoot }, uuid = { "0123456789abcdef" })
