@@ -15,6 +15,30 @@ import java.security.MessageDigest
 import javax.inject.Singleton
 
 /**
+ * The two import entries the ViewModel drives, as a minimal injectable seam so UI-layer
+ * tests can verify argument forwarding without SAF or network machinery (TASK-331 Task 12).
+ * Implemented by [ExternalModelImporter] and faked in ModelViewModelExternalImportTest.
+ */
+interface ExternalModelImportOperations {
+    suspend fun importFromTreeUri(
+        context: Context,
+        treeUri: Uri,
+        modelType: String? = null,
+        family: ModelFamily = ModelFamily.TRANSDUCER,
+        options: Map<String, String> = emptyMap(),
+        languages: List<String> = emptyList(),
+    ): ExternalModelRecord
+
+    suspend fun importFromUrl(
+        url: String,
+        modelType: String? = null,
+        family: ModelFamily = ModelFamily.TRANSDUCER,
+        options: Map<String, String> = emptyMap(),
+        languages: List<String> = emptyList(),
+    ): ExternalModelRecord
+}
+
+/**
  * The single import pipeline for external models (spec: external models platform v2a).
  * Two entries share one core: [importFromTreeUri] (SAF folder picker, the primary v2a
  * path: a SAF tree URI is not a filesystem path, files are copied through
@@ -34,7 +58,7 @@ class ExternalModelImporter(
     private val filesRoot: () -> File,
     private val uuid: () -> String = { java.util.UUID.randomUUID().toString().replace("-", "") },
     private val repoListing: HuggingFaceRepoListing = HuggingFaceRepoListing(),
-) {
+) : ExternalModelImportOperations {
 
     companion object {
         private const val TAG = "ExternalModelImporter"
@@ -181,13 +205,13 @@ class ExternalModelImporter(
     }
 
     /** SAF folder import: the primary v2a entry point. */
-    suspend fun importFromTreeUri(
+    override suspend fun importFromTreeUri(
         context: Context,
         treeUri: Uri,
-        modelType: String? = null,
-        family: ModelFamily = ModelFamily.TRANSDUCER,
-        options: Map<String, String> = emptyMap(),
-        languages: List<String> = emptyList(),
+        modelType: String?,
+        family: ModelFamily,
+        options: Map<String, String>,
+        languages: List<String>,
     ): ExternalModelRecord {
         val tree = DocumentFile.fromTreeUri(context, treeUri)
             ?: throw IllegalArgumentException("Cannot open the selected folder")
@@ -273,12 +297,12 @@ class ExternalModelImporter(
      * The family/options/languages parameters apply to repo imports only: entry JSON
      * is driven by the entry itself.
      */
-    suspend fun importFromUrl(
+    override suspend fun importFromUrl(
         url: String,
-        modelType: String? = null,
-        family: ModelFamily = ModelFamily.TRANSDUCER,
-        options: Map<String, String> = emptyMap(),
-        languages: List<String> = emptyList(),
+        modelType: String?,
+        family: ModelFamily,
+        options: Map<String, String>,
+        languages: List<String>,
     ): ExternalModelRecord =
         if (url.trim().endsWith(".json") || HuggingFaceRepoListing.parseRepoId(url) == null) {
             importFromEntryJson(url)

@@ -73,7 +73,7 @@ class ModelViewModel @Inject constructor(
     @ApplicationContext private val ctx: Context,
     private val backendRegistry: BackendRegistry,
     private val externalModelStore: com.antivocale.app.data.ExternalModelStore,
-    private val externalModelImporter: com.antivocale.app.data.ExternalModelImporter,
+    private val externalModelImporter: com.antivocale.app.data.ExternalModelImportOperations,
 ) : ViewModel() {
 
     val tokenState = tokenManager.tokenState
@@ -2176,13 +2176,44 @@ class ModelViewModel @Inject constructor(
         preferencesManager.parakeetModelPath
             .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5_000), null)
 
-    /** Folder import (SAF): the primary v2a entry. */
-    fun importExternalFromFolder(context: Context, treeUri: Uri, modelType: String) =
-        runExternalImport("External folder") { externalModelImporter.importFromTreeUri(context, treeUri, modelType) }
+    /**
+     * Folder import (SAF): the primary v2a entry. modelType is NOT passed for
+     * non-CTC families: the importer's family-aware resolveModelType governs
+     * (a stale UI string persisted on a non-transducer record is the bug that
+     * rule prevents). CTC has no safe default, so its subtype is explicit.
+     */
+    fun importExternalFromFolder(
+        context: Context,
+        treeUri: Uri,
+        family: com.antivocale.app.data.ModelFamily,
+        ctcModelType: String = "nemo_ctc",
+        options: Map<String, String> = emptyMap(),
+        languages: List<String> = emptyList(),
+    ) = runExternalImport("External folder") {
+        externalModelImporter.importFromTreeUri(
+            context, treeUri,
+            modelType = ctcModelType(family, ctcModelType),
+            family = family, options = options, languages = languages)
+    }
 
     /** URL import: a HuggingFace repo URL or a catalog-entry JSON URL. */
-    fun importExternalFromUrl(url: String, modelType: String) =
-        runExternalImport("External URL") { externalModelImporter.importFromUrl(url, modelType) }
+    fun importExternalFromUrl(
+        url: String,
+        family: com.antivocale.app.data.ModelFamily,
+        ctcModelType: String = "nemo_ctc",
+        options: Map<String, String> = emptyMap(),
+        languages: List<String> = emptyList(),
+    ) = runExternalImport("External URL") {
+        externalModelImporter.importFromUrl(
+            url,
+            modelType = ctcModelType(family, ctcModelType),
+            family = family, options = options, languages = languages)
+    }
+
+    /** Only CTC takes an explicit modelType (it selects the sherpa config subtype);
+     *  every other family passes null so the importer default applies. */
+    private fun ctcModelType(family: com.antivocale.app.data.ModelFamily, ctcModelType: String): String? =
+        if (family == com.antivocale.app.data.ModelFamily.CTC) ctcModelType else null
 
     /** Shared import scaffolding: progress state, IO dispatching, and the failure tail. */
     private fun runExternalImport(label: String, block: suspend () -> com.antivocale.app.data.ExternalModelRecord) {

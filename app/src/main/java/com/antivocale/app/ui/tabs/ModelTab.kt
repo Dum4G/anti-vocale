@@ -119,8 +119,8 @@ fun ModelTab(
 
     var modelInfoVariant by remember { mutableStateOf<ModelVariant?>(null) }
     var externalToDelete by remember { mutableStateOf<com.antivocale.app.data.ExternalModelRecord?>(null) }
-    // Shared modelType selection for imports and family corrections (nemo default).
-    var selectedExternalModelType by remember { mutableStateOf("nemo_transducer") }
+    // Shared family selection + import options for both import paths (folder and URL).
+    var externalImport by remember { mutableStateOf(ExternalImportUiState()) }
 
     // Folder picker launcher for external-model imports (OpenDocumentTree; SAF copy in the VM).
     val externalFolderPicker = rememberLauncherForActivityResult(
@@ -131,7 +131,12 @@ fun ModelTab(
                 it,
                 android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
             )
-            viewModel.importExternalFromFolder(context, it, selectedExternalModelType)
+            viewModel.importExternalFromFolder(
+                context, it, externalImport.family,
+                ctcModelType = externalImport.ctcModelType,
+                options = externalImport.options(),
+                languages = externalImport.languageCodes(),
+            )
         }
     }
 
@@ -672,8 +677,8 @@ fun ModelTab(
                     viewModel = viewModel,
                     activeBackendId = activeBackendId,
                     folderPicker = { externalFolderPicker.launch(null) },
-                    selectedModelType = selectedExternalModelType,
-                    onModelTypeChange = { selectedExternalModelType = it },
+                    selection = externalImport,
+                    onSelectionChange = { externalImport = it },
                     onDeleteRequest = { externalToDelete = it }
                 )
             }
@@ -1054,9 +1059,38 @@ private fun NemotronDownloadSection(
 // ==================== External models section (v2a) ====================
 
 /**
+ * Family selection + conditional options for external-model imports. One immutable
+ * holder so both import paths (folder and URL) share a single selection state.
+ */
+private data class ExternalImportUiState(
+    val family: com.antivocale.app.data.ModelFamily = com.antivocale.app.data.ModelFamily.TRANSDUCER,
+    val ctcModelType: String = "nemo_ctc",
+    val languages: String = "",
+    val whisperLanguage: String = "",
+    val sensevoiceLanguage: String = "",
+    val sensevoiceItn: Boolean = true,
+) {
+    /** Family-specific importer options; blank optional fields are omitted. */
+    fun options(): Map<String, String> = when (family) {
+        com.antivocale.app.data.ModelFamily.WHISPER ->
+            if (whisperLanguage.isBlank()) emptyMap()
+            else mapOf("whisper.language" to whisperLanguage.trim())
+        com.antivocale.app.data.ModelFamily.SENSE_VOICE -> buildMap {
+            if (sensevoiceLanguage.isNotBlank()) put("sensevoice.language", sensevoiceLanguage.trim())
+            put("sensevoice.itn", sensevoiceItn.toString())
+        }
+        else -> emptyMap()
+    }
+
+    /** Comma/space separated language codes for the importer's languages parameter. */
+    fun languageCodes(): List<String> =
+        languages.split(',', ' ', ';').map { it.trim() }.filter { it.isNotEmpty() }
+}
+
+/**
  * Imported external models: one card per record plus the two import actions and the
- * shared architecture selector. The two standing notices (single-pass risk, wrong-family
- * crash) ride along every card.
+ * shared family selector with its conditional options panel. The two standing notices
+ * (single-pass risk, wrong-family crash) ride along every card.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -1064,8 +1098,8 @@ private fun ExternalModelsSection(
     viewModel: ModelViewModel,
     activeBackendId: String,
     folderPicker: () -> Unit,
-    selectedModelType: String,
-    onModelTypeChange: (String) -> Unit,
+    selection: ExternalImportUiState,
+    onSelectionChange: (ExternalImportUiState) -> Unit,
     onDeleteRequest: (com.antivocale.app.data.ExternalModelRecord) -> Unit,
 ) {
     val records by viewModel.externalModels.collectAsState()
@@ -1073,16 +1107,16 @@ private fun ExternalModelsSection(
     var urlDialogOpen by remember { mutableStateOf(false) }
     var urlText by remember { mutableStateOf("") }
     var dropdownExpanded by remember { mutableStateOf(false) }
+    var ctcExpanded by remember { mutableStateOf(false) }
 
-    val typeOptions = remember {
+    val familyOptions = remember {
         listOf(
-            "nemo_transducer" to R.string.external_model_type_nemo,
-            "" to R.string.external_model_type_zipformer,
-            "conformer_transducer" to R.string.external_model_type_conformer
+            com.antivocale.app.data.ModelFamily.TRANSDUCER to R.string.external_family_transducer,
+            com.antivocale.app.data.ModelFamily.WHISPER to R.string.external_family_whisper,
+            com.antivocale.app.data.ModelFamily.CTC to R.string.external_family_ctc,
+            com.antivocale.app.data.ModelFamily.SENSE_VOICE to R.string.external_family_sense_voice,
         )
     }
-    val selectedLabel = typeOptions.firstOrNull { it.first == selectedModelType }?.second
-        ?: R.string.external_model_type_nemo
 
     // Outer section Card matching the curated sections (GigaAM, Nemotron):
     // surfaceVariant background, header with icon + title + description, 16dp padding.
@@ -1109,32 +1143,130 @@ private fun ExternalModelsSection(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Architecture selector visible for BOTH import paths (folder and URL).
+            // Family selector visible for BOTH import paths (folder and URL). Each
+            // entry carries a help line listing the expected files, mirroring the
+            // label + description pattern of the advanced-section button.
             ExposedDropdownMenuBox(
                 expanded = dropdownExpanded,
                 onExpandedChange = { dropdownExpanded = it },
                 modifier = Modifier.padding(bottom = 8.dp)
             ) {
                 OutlinedTextField(
-                    value = stringResource(selectedLabel),
+                    value = stringResource(familyOptions.first { it.first == selection.family }.second),
                     onValueChange = {},
                     readOnly = true,
-                    label = { Text(stringResource(R.string.external_model_type)) },
+                    label = { Text(stringResource(R.string.external_family)) },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = dropdownExpanded) },
                     modifier = Modifier.fillMaxWidth().menuAnchor()
                 )
                 ExposedDropdownMenu(expanded = dropdownExpanded, onDismissRequest = { dropdownExpanded = false }) {
-                    typeOptions.forEach { (value, labelRes) ->
+                    familyOptions.forEach { (value, labelRes) ->
                         DropdownMenuItem(
-                            text = { Text(stringResource(labelRes)) },
+                            text = {
+                                Column {
+                                    Text(stringResource(labelRes))
+                                    Text(
+                                        stringResource(
+                                            when (value) {
+                                                com.antivocale.app.data.ModelFamily.TRANSDUCER -> R.string.external_family_transducer_help
+                                                com.antivocale.app.data.ModelFamily.WHISPER -> R.string.external_family_whisper_help
+                                                com.antivocale.app.data.ModelFamily.CTC -> R.string.external_family_ctc_help
+                                                com.antivocale.app.data.ModelFamily.SENSE_VOICE -> R.string.external_family_sense_voice_help
+                                            }
+                                        ),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            },
                             onClick = {
-                                onModelTypeChange(value)
+                                onSelectionChange(selection.copy(family = value))
                                 dropdownExpanded = false
                             }
                         )
                     }
                 }
             }
+
+            // Conditional options panel below the selector.
+            when (selection.family) {
+                com.antivocale.app.data.ModelFamily.WHISPER -> OutlinedTextField(
+                    value = selection.whisperLanguage,
+                    onValueChange = { onSelectionChange(selection.copy(whisperLanguage = it)) },
+                    label = { Text(stringResource(R.string.external_option_language)) },
+                    placeholder = { Text(stringResource(R.string.external_option_language_hint)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+                )
+                com.antivocale.app.data.ModelFamily.SENSE_VOICE -> {
+                    OutlinedTextField(
+                        value = selection.sensevoiceLanguage,
+                        onValueChange = { onSelectionChange(selection.copy(sensevoiceLanguage = it)) },
+                        label = { Text(stringResource(R.string.external_option_language)) },
+                        placeholder = { Text(stringResource(R.string.external_option_language_hint)) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            stringResource(R.string.external_option_itn),
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Switch(
+                            checked = selection.sensevoiceItn,
+                            onCheckedChange = { onSelectionChange(selection.copy(sensevoiceItn = it)) }
+                        )
+                    }
+                }
+                com.antivocale.app.data.ModelFamily.CTC -> ExposedDropdownMenuBox(
+                    expanded = ctcExpanded,
+                    onExpandedChange = { ctcExpanded = it },
+                    modifier = Modifier.padding(bottom = 8.dp)
+                ) {
+                    OutlinedTextField(
+                        value = if (selection.ctcModelType == "zipformer_ctc")
+                            stringResource(R.string.external_ctc_subtype_zipformer)
+                        else stringResource(R.string.external_ctc_subtype_nemo),
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text(stringResource(R.string.external_ctc_subtype)) },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = ctcExpanded) },
+                        modifier = Modifier.fillMaxWidth().menuAnchor()
+                    )
+                    ExposedDropdownMenu(expanded = ctcExpanded, onDismissRequest = { ctcExpanded = false }) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.external_ctc_subtype_nemo)) },
+                            onClick = {
+                                onSelectionChange(selection.copy(ctcModelType = "nemo_ctc"))
+                                ctcExpanded = false
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.external_ctc_subtype_zipformer)) },
+                            onClick = {
+                                onSelectionChange(selection.copy(ctcModelType = "zipformer_ctc"))
+                                ctcExpanded = false
+                            }
+                        )
+                    }
+                }
+                else -> {}
+            }
+
+            // Languages field for ALL families: stored on the record and used as the
+            // Whisper default language when no explicit option is set.
+            OutlinedTextField(
+                value = selection.languages,
+                onValueChange = { onSelectionChange(selection.copy(languages = it)) },
+                label = { Text(stringResource(R.string.external_languages)) },
+                placeholder = { Text(stringResource(R.string.external_languages_hint)) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+            )
 
             Row(modifier = Modifier.fillMaxWidth()) {
             Button(
@@ -1228,7 +1360,12 @@ private fun ExternalModelsSection(
                     onClick = {
                         urlDialogOpen = false
                         if (urlText.isNotBlank()) {
-                            viewModel.importExternalFromUrl(urlText.trim(), selectedModelType)
+                            viewModel.importExternalFromUrl(
+                                urlText.trim(), selection.family,
+                                ctcModelType = selection.ctcModelType,
+                                options = selection.options(),
+                                languages = selection.languageCodes(),
+                            )
                         }
                     }
                 ) { Text(stringResource(R.string.external_import)) }
