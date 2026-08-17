@@ -219,6 +219,49 @@ class ExternalModelImporterTest {
         assertEquals(0, store.records().size)
     }
 
+    // ---- ONNX split-file sidecars (TASK-331) ----
+
+    @Test
+    fun `onnx sidecar is planned as an extra entry under its source base name`() = runTest {
+        val dir = tmp.newFolder("whisper-split")
+        File(dir, "whisper_encoder.int8.onnx").writeBytes(ByteArray(32) { 1 } + metadataProp("model_type", "whisper-tiny"))
+        File(dir, "whisper_encoder.int8.onnx.data").writeBytes(ByteArray(24) { 9 })
+        File(dir, "whisper_decoder.onnx").writeBytes(ByteArray(16) { 2 })
+        File(dir, "tokens.txt").writeText("<unk> 0\n")
+
+        val record = importer.importFromDirectory(dir, modelType = "", family = ModelFamily.WHISPER)
+
+        // Copied and pinned, keeping its SOURCE base name (sherpa resolves external
+        // data by co-location with the referenced file name), never renamed to a role.
+        assertTrue(File(record.dir, "whisper_encoder.int8.onnx.data").exists())
+        assertTrue(record.files.containsKey("whisper_encoder.int8.onnx.data"))
+        assertEquals(4, File(record.dir).listFiles()!!.size)
+        // The sidecar is NOT a role: the required role set is unchanged.
+        assertEquals(setOf("encoder.int8.onnx", "decoder.int8.onnx", "tokens.txt"),
+            record.files.keys - "whisper_encoder.int8.onnx.data")
+    }
+
+    @Test
+    fun `disk pre-flight totals include the sidecar size`() = runTest {
+        val smallRoot = tmp.newFolder("tiny-root-sidecar")
+        val tightImporter = ExternalModelImporter(store, filesRoot = { smallRoot }, uuid = { "0123456789abcdef" })
+        val src = sourceDir("huge-sidecar")
+        // A sparse sidecar whose length alone exceeds any plausible free space: the
+        // pre-flight must count it, otherwise the import would proceed and then
+        // explode while copying gigabytes that were never accounted for.
+        java.io.RandomAccessFile(File(src, "some_encoder_int8.onnx.data"), "rw").use {
+            it.setLength(Long.MAX_VALUE / 2)
+        }
+
+        val result = runCatching { tightImporter.importFromDirectory(src) }
+
+        assertTrue(result.isFailure)
+        assertTrue(
+            "error must be the disk pre-flight: ${result.exceptionOrNull()?.message}",
+            result.exceptionOrNull()?.message?.contains("disk space") == true)
+        assertEquals(0, store.records().size)
+    }
+
     @Test
     fun `disk pre-flight blocks imports larger than available space`() = runTest {
         val smallRoot = tmp.newFolder("tiny-root")

@@ -321,6 +321,31 @@ class HuggingFaceRepoListingTest {
     }
 
     @Test
+    fun `hf repo import downloads the onnx sidecar as an extra LFS-pinned triple`() = runTest {
+        val sidecarBytes = ByteArray(24) { 9 }
+        server.enqueue(MockResponse().setBody("""
+            [
+              {"type":"file","path":"gigaam_encoder_int8.onnx","lfs":{"oid":"${sha256(encoderBytes)}","size":${encoderBytes.size}},"size":${encoderBytes.size}},
+              {"type":"file","path":"gigaam_encoder_int8.onnx.data","lfs":{"oid":"${sha256(sidecarBytes)}","size":${sidecarBytes.size}},"size":${sidecarBytes.size}},
+              {"type":"file","path":"gigaam_decoder.onnx","lfs":{"oid":"${sha256(decoderBytes)}","size":${decoderBytes.size}},"size":${decoderBytes.size}},
+              {"type":"file","path":"gigaam_joiner.onnx","lfs":{"oid":"${sha256(joinerBytes)}","size":${joinerBytes.size}},"size":${joinerBytes.size}},
+              {"type":"file","path":"tokens.txt","size":${tokensBytes.size}}
+            ]
+        """.trimIndent()))
+        server.enqueue(MockResponse().setBody(okio.Buffer().write(encoderBytes)))
+        server.enqueue(MockResponse().setBody(okio.Buffer().write(decoderBytes)))
+        server.enqueue(MockResponse().setBody(okio.Buffer().write(joinerBytes)))
+        server.enqueue(MockResponse().setBody(okio.Buffer().write(tokensBytes)))
+        // Sidecars are appended after the roles in the download plan.
+        server.enqueue(MockResponse().setBody(okio.Buffer().write(sidecarBytes)))
+
+        val record = importer.importFromHuggingFaceRepo("https://huggingface.co/pantinor/gigaam-v3")
+        assertTrue(File(record.dir, "gigaam_encoder_int8.onnx.data").exists())
+        assertEquals(sha256(sidecarBytes), record.files["gigaam_encoder_int8.onnx.data"]!!.sha256)
+        assertTrue("LFS sidecar pin verified", record.files["gigaam_encoder_int8.onnx.data"]!!.verified)
+    }
+
+    @Test
     fun `importFromEntryJson drives family, options and languages from the entry`() = runTest {
         val base = server.url("/").toString().trimEnd('/')
         // Protobuf-framed metadata prop so the value-aware whisper validation reads it.

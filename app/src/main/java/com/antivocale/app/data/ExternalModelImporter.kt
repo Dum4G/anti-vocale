@@ -78,6 +78,26 @@ class ExternalModelImporter(
         IllegalArgumentException(
             "missing required files for $family (${ModelFamilySupport.forFamily(family).requiredRoles().joinToString("/")}); found: $names")
 
+    /**
+     * ONNX split-file sidecars (AC #9): a sibling `<source>.data` (or `.weights`)
+     * external-data file of any planned `.onnx` source joins the plan as an extra
+     * entry. It is copied and pinned like a role but is NOT a role (the family
+     * [ModelFamilySupport.requiredRoles] sets are unchanged): it keeps its source
+     * base name so the runtime resolves it by co-location with the model file the
+     * ONNX protobuf itself references.
+     */
+    private fun withSidecars(plan: Map<String, String>, names: List<String>): Map<String, String> {
+        val result = LinkedHashMap(plan)
+        for (sourceName in plan.values) {
+            if (!sourceName.endsWith(".onnx")) continue
+            for (suffix in listOf("data", "weights")) {
+                val sidecar = "$sourceName.$suffix"
+                if (names.contains(sidecar) && !result.containsKey(sidecar)) result[sidecar] = sidecar
+            }
+        }
+        return result
+    }
+
     /** SAF folder import: the primary v2a entry point. */
     suspend fun importFromTreeUri(
         context: Context,
@@ -124,8 +144,9 @@ class ExternalModelImporter(
         val repoId = HuggingFaceRepoListing.parseRepoId(repoUrl)
             ?: throw IllegalArgumentException("not a HuggingFace repository URL: $repoUrl")
         val files = repoListing.listFiles(repoId)
-        val plan = buildCopyPlan(files.map { it.name }, family)
-            ?: throw missingRolesError(family, files.map { it.name })
+        val plan = withSidecars(
+            buildCopyPlan(files.map { it.name }, family) ?: throw missingRolesError(family, files.map { it.name }),
+            files.map { it.name })
         val triples = plan.map { (canonical, sourceName) ->
             val source = files.first { it.name == sourceName }
             val url = repoListing.resolveUrl(repoId, sourceName)
@@ -147,9 +168,10 @@ class ExternalModelImporter(
         val plan = buildCopyPlan(entry.files.map { it.name }, entry.family)
             ?: throw missingRolesError(entry.family, entry.files.map { it.name })
         val byName = entry.files.associateBy { it.name }
-        val triples = plan.map { (canonical, sourceName) ->
-            val f = byName.getValue(sourceName)
-            DownloadTriple(f.url, canonical, f.sha256, f.size)
+        val triples = withSidecars(plan, entry.files.map { it.name }).mapNotNull { (canonical, sourceName) ->
+            // A sidecar missing from the entry's file list is skipped: the roles are
+            // the entry's contract, sidecars ride along when declared.
+            byName[sourceName]?.let { f -> DownloadTriple(f.url, canonical, f.sha256, f.size) }
         }
         return downloadCore(
             triples, entry.modelType, entry.name, ExternalModelSource.URL, entryUrl,
@@ -184,10 +206,11 @@ class ExternalModelImporter(
         options: Map<String, String> = emptyMap(),
         languages: List<String> = emptyList(),
     ): ExternalModelRecord {
-        // 1. Copy plan by role.
+        // 1. Copy plan by role, plus any ONNX split-file sidecars.
         val names = children.map { it.name }
-        val plan = buildCopyPlan(names, family)
-            ?: throw missingRolesError(family, names)
+        val plan = withSidecars(
+            buildCopyPlan(names, family) ?: throw missingRolesError(family, names),
+            names)
 
         // 2. Unconditional disk pre-flight (spec binding): the import doubles disk usage.
         val root = filesRoot()
