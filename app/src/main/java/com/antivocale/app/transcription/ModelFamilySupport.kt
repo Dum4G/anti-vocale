@@ -19,6 +19,10 @@ import com.k2fsa.sherpa.onnx.OfflineZipformerCtcModelConfig
  * requires: expected file sets and the record [ExternalModelRecord.modelType]
  * mapping.
  */
+/** True for transducer joiner files, which also answer to GigaAM's "joint" naming. */
+private fun isJoinerLike(name: String) =
+    name.contains("joiner", ignoreCase = true) || name.contains("joint", ignoreCase = true)
+
 sealed interface ModelFamilySupport {
     val family: ModelFamily
 
@@ -118,10 +122,14 @@ object TransducerSupport : ModelFamilySupport {
  * Whisper family: encoder + decoder + tokens; no joiner.
  *
  * Expected file set: one .onnx containing "encoder", one containing "decoder",
- * and one .txt tokens/vocab file. A joiner/joint .onnx among the candidates is
- * rejected as "looks like a transducer; pick the TRANSDUCER family" (structural
+ * and one .txt tokens/vocab file. Tokens are MANDATORY even though the sherpa
+ * whisper config itself takes no tokens path: every real whisper export ships a
+ * tokens.txt and the app's decode path needs it (plan decision, Task 1 finding).
+ * A joiner/joint .onnx that entered encoder/decoder role matching is rejected as
+ * "looks like a transducer; pick the TRANSDUCER family" (structural
  * discriminator preventing a family mismatch from passing import and surfacing
- * as a runtime exit(255)).
+ * as a runtime exit(255)); a joiner elsewhere in the folder is ignored, since a
+ * parent directory legitimately holding several models must still import.
  *
  * Language: [options]["whisper.language"], falling back to [languages][0], then
  * "" (auto; sherpa-onnx performs no language validation per desktop spike).
@@ -140,15 +148,16 @@ object WhisperSupport : ModelFamilySupport {
     )
 
     override fun buildCopyPlan(files: List<String>): Map<String, String>? {
+        val onnxCandidates = files.filter { it.endsWith(".onnx") }
         fun findByRole(vararg keywords: String) =
-            files.firstOrNull { f -> f.endsWith(".onnx") && keywords.any { f.contains(it, ignoreCase = true) } }
+            onnxCandidates.firstOrNull { f -> keywords.any { f.contains(it, ignoreCase = true) } }
         val encoder = findByRole("encoder") ?: return null
         val decoder = findByRole("decoder") ?: return null
-        // Structural discriminator: a joiner/joint file means this is a transducer.
-        val hasJoiner = files.any { f ->
-            f.endsWith(".onnx") && (f.contains("joiner", ignoreCase = true) || f.contains("joint", ignoreCase = true))
-        }
-        if (hasJoiner) throw IllegalArgumentException(
+        // Structural discriminator over the role-matched files only: a joiner/joint
+        // file that won the encoder or decoder role means this is a transducer. A
+        // joiner elsewhere in the folder never entered whisper role matching (a
+        // parent directory holding several models is legitimate).
+        if (isJoinerLike(encoder) || isJoinerLike(decoder)) throw IllegalArgumentException(
             "candidate set contains a joiner/joint file: looks like a transducer; pick the TRANSDUCER family")
         // Tokens: exact names first, then keyword match.
         val tokens = files.firstOrNull { it.equals("tokens.txt", ignoreCase = true) }
@@ -190,13 +199,17 @@ object WhisperSupport : ModelFamilySupport {
  *
  * Expected file set: one .onnx acoustic model (preferably named with "encoder",
  * but CTC exports like GigaAM's v3_ctc.int8.onnx omit the keyword) and one .txt
- * tokens/vocab file. A joiner/joint .onnx among the candidates is rejected as
- * "looks like a transducer; pick the TRANSDUCER family".
+ * tokens/vocab file. A joiner/joint .onnx is rejected as "looks like a
+ * transducer; pick the TRANSDUCER family" only when it entered encoder role
+ * matching (the fallback tier, i.e. the folder holds a bare transducer set); a
+ * joiner elsewhere in the folder is ignored, since a parent directory
+ * legitimately holding several models must still import.
  *
- * Token selection mirrors the transducer matcher but with CTC preference: repos
- * that ship both CTC and RNNT variants (istupakov) have multiple vocab files;
- * ctc-hinted candidates are picked first, rnnt-free as fallback, so a GigaAM CTC
- * import never accidentally picks the RNNT vocab.
+ * Token and encoder selection mirror the transducer matcher but with CTC
+ * preference: repos that ship both CTC and RNNT variants (istupakov) have
+ * multiple vocab and encoder files; ctc-hinted tokens are picked first and
+ * rnnt-hinted files deprioritized, so a GigaAM CTC import never accidentally
+ * picks the RNNT files.
  *
  * Record modelType selects the sherpa config subtype:
  * - "nemo_ctc" -> [OfflineNemoEncDecCtcModelConfig] (NeMo encoder-decoder CTC)
@@ -215,17 +228,25 @@ object CtcSupport : ModelFamilySupport {
     )
 
     override fun buildCopyPlan(files: List<String>): Map<String, String>? {
-        // Structural discriminator: a joiner/joint file means this is a transducer.
-        val hasJoiner = files.any { f ->
-            f.endsWith(".onnx") && (f.contains("joiner", ignoreCase = true) || f.contains("joint", ignoreCase = true))
-        }
-        if (hasJoiner) throw IllegalArgumentException(
-            "candidate set contains a joiner/joint file: looks like a transducer; pick the TRANSDUCER family")
-        // Encoder: CTC exports may not contain "encoder" in the filename (e.g.
-        // GigaAM's v3_ctc.int8.onnx). Prefer keyword match, then any non-joiner .onnx.
-        fun isJoinerLike(name: String) = name.contains("joiner", ignoreCase = true) || name.contains("joint", ignoreCase = true)
-        val encoder = files.firstOrNull { f -> f.endsWith(".onnx") && f.contains("encoder", ignoreCase = true) && !isJoinerLike(f) }
-            ?: files.firstOrNull { f -> f.endsWith(".onnx") && !isJoinerLike(f) }
+        val onnxCandidates = files.filter { it.endsWith(".onnx") }
+        // Encoder tiers, rnnt-hinted files deprioritized (never selected when a
+        // CTC-compatible candidate exists): keyword non-rnnt, any non-rnnt,
+        // keyword, any. CTC exports may not contain "encoder" in the filename
+        // (e.g. GigaAM's v3_ctc.int8.onnx), hence the keyword-free tiers.
+        val eligible = onnxCandidates.filterNot(::isJoinerLike)
+        val encoder = eligible.firstOrNull { it.contains("encoder", ignoreCase = true) && !it.contains("rnnt", ignoreCase = true) }
+            ?: eligible.firstOrNull { !it.contains("rnnt", ignoreCase = true) }
+            ?: eligible.firstOrNull { it.contains("encoder", ignoreCase = true) }
+            ?: eligible.firstOrNull()
+            // Structural discriminator over the fallback tier only: with no
+            // joiner-free candidate left, a joiner/joint .onnx means the folder
+            // holds a bare transducer set. A joiner elsewhere never entered CTC
+            // role matching (a parent directory holding several models is
+            // legitimate).
+            ?: onnxCandidates.firstOrNull(::isJoinerLike)?.let {
+                throw IllegalArgumentException(
+                    "candidate set contains a joiner/joint file: looks like a transducer; pick the TRANSDUCER family")
+            }
             ?: return null
         // Tokens: prefer exact names, then ctc-hinted (mirror of transducer's rnnt-first).
         fun isTokensLike(name: String) = name.contains("tokens", ignoreCase = true) || name.contains("vocab", ignoreCase = true)
@@ -274,8 +295,9 @@ object CtcSupport : ModelFamilySupport {
  * SenseVoice family: a single model .onnx plus a tokens file; no encoder/decoder
  * split and no joiner.
  *
- * Expected file set: one .onnx whose name contains "sense_voice" (or the bare
- * "model.onnx" sherpa ships) and one .txt tokens/vocab file. The model keyword
+ * Expected file set: one .onnx whose name contains "sense_voice" (sherpa
+ * SenseVoice repos also ship the bare "model.onnx"/"model.int8.onnx" names,
+ * matched by a basename "model" prefix) and one .txt tokens/vocab file. The model keyword
  * match deliberately does NOT answer to "encoder": an encoder-only candidate
  * pool means the wrong family was picked, and returning null surfaces that at
  * import time instead of as a runtime exit(255).
@@ -297,7 +319,13 @@ object SenseVoiceSupport : ModelFamilySupport {
 
     override fun buildCopyPlan(files: List<String>): Map<String, String>? {
         val model = files.firstOrNull { f ->
-            f.endsWith(".onnx") && (f.contains("sense_voice", ignoreCase = true) || f.equals("model.onnx", ignoreCase = true))
+            f.endsWith(".onnx") && (
+                f.contains("sense_voice", ignoreCase = true) ||
+                    // sherpa SenseVoice repos ship the acoustic model as model.onnx or
+                    // model.int8.onnx; a basename "model" prefix cannot match encoder
+                    // or decoder files, so it is safe as a role keyword.
+                    f.substringBeforeLast('.').startsWith("model", ignoreCase = true)
+                )
         } ?: return null
         val tokens = files.firstOrNull { it.equals("tokens.txt", ignoreCase = true) }
             ?: files.firstOrNull { it.equals("vocab.txt", ignoreCase = true) }

@@ -103,10 +103,32 @@ class ModelFamilySupportTest {
         assertNull(support.buildCopyPlan(listOf("encoder.onnx", "decoder.onnx")))
     }
 
-    @Test(expected = IllegalArgumentException::class)
-    fun `whisper plan rejects files containing joiner or joint keywords`() {
+    @Test
+    fun `whisper plan ignores a transducer joiner from a multi-model folder`() {
+        // A parent SAF folder legitimately holding several models (here a whisper
+        // pair plus a full transducer set) must still import as Whisper: the joiner
+        // never entered whisper role matching, so the discriminator must not fire.
         val support = ModelFamilySupport.forFamily(ModelFamily.WHISPER)
-        support.buildCopyPlan(listOf("encoder.onnx", "decoder.onnx", "joiner.onnx", "tokens.txt"))
+        val plan = support.buildCopyPlan(listOf(
+            "whisper-encoder.onnx",
+            "whisper-decoder.onnx",
+            "whisper-tokens.txt",
+            "rnnt_encoder.int8.onnx",
+            "rnnt_decoder.int8.onnx",
+            "rnnt_joint.int8.onnx",
+            "rnnt_tokens.txt",
+        ))
+        assertEquals("whisper-encoder.onnx", plan!!["encoder.int8.onnx"])
+        assertEquals("whisper-decoder.onnx", plan["decoder.int8.onnx"])
+        assertEquals("whisper-tokens.txt", plan["tokens.txt"])
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun `whisper plan rejects a joiner-like file that entered role matching`() {
+        val support = ModelFamilySupport.forFamily(ModelFamily.WHISPER)
+        // The encoder candidate itself is joint-named: it entered encoder role
+        // matching, so the discriminator fires.
+        support.buildCopyPlan(listOf("encoder_joint.onnx", "decoder.onnx", "tokens.txt"))
     }
 
     @Test
@@ -182,10 +204,30 @@ class ModelFamilySupportTest {
         assertEquals("v3_e2e_ctc_vocab.txt", plan!!["tokens.txt"])
     }
 
-    @Test(expected = IllegalArgumentException::class)
-    fun `ctc plan rejects files containing joiner or joint keywords`() {
+    @Test
+    fun `ctc plan ignores a transducer set from a multi-model folder`() {
+        // The istupakov-style parent folder ships CTC and RNNT variants together:
+        // the joiner never entered CTC role matching (the rnnt encoder is only
+        // deprioritized, never selected here), so the import must succeed.
         val support = ModelFamilySupport.forFamily(ModelFamily.CTC)
-        support.buildCopyPlan(listOf("encoder.onnx", "joiner.onnx", "tokens.txt"))
+        val plan = support.buildCopyPlan(listOf(
+            "v3_e2e_ctc_vocab.txt",
+            "v3_e2e_rnnt_encoder.int8.onnx",
+            "v3_e2e_rnnt_decoder.int8.onnx",
+            "v3_e2e_rnnt_joint.int8.onnx",
+            "v3_e2e_rnnt_vocab.txt",
+            "v3_ctc.int8.onnx",
+        ))
+        assertEquals("v3_ctc.int8.onnx", plan!!["encoder.int8.onnx"])
+        assertEquals("v3_e2e_ctc_vocab.txt", plan["tokens.txt"])
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun `ctc plan rejects a joiner-like file that entered role matching`() {
+        val support = ModelFamilySupport.forFamily(ModelFamily.CTC)
+        // No encoder-keyword file exists, so the fallback tier considers every
+        // .onnx: the joiner entered encoder role matching and must be rejected.
+        support.buildCopyPlan(listOf("joiner.onnx", "tokens.txt"))
     }
 
     @Test
@@ -236,6 +278,17 @@ class ModelFamilySupportTest {
         assertEquals("sense_voice.onnx", plan!!["model.int8.onnx"])
         assertEquals("tokens.txt", plan["tokens.txt"])
         assertNull(support.buildCopyPlan(listOf("tokens.txt")))
+    }
+
+    @Test
+    fun `sensevoice plan accepts sherpa canonical model source names`() {
+        val support = ModelFamilySupport.forFamily(ModelFamily.SENSE_VOICE)
+        // sherpa SenseVoice repos ship the acoustic model as model.onnx or
+        // model.int8.onnx: both must match the model role.
+        val quantized = support.buildCopyPlan(listOf("model.int8.onnx", "tokens.txt"))
+        assertEquals("model.int8.onnx", quantized!!["model.int8.onnx"])
+        val plain = support.buildCopyPlan(listOf("model.onnx", "tokens.txt"))
+        assertEquals("model.onnx", plain!!["model.int8.onnx"])
     }
 
     @Test
