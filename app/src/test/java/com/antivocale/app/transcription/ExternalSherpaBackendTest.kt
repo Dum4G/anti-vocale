@@ -1,0 +1,116 @@
+package com.antivocale.app.transcription
+
+import com.antivocale.app.data.ExternalModelRecord
+import com.antivocale.app.data.ExternalModelSource
+import com.antivocale.app.data.FilePin
+import com.antivocale.app.data.ModelFamily
+import io.mockk.mockk
+import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Rule
+import org.junit.Test
+import org.junit.rules.TemporaryFolder
+
+/**
+ * Family-dispatch tests for the external-models engine (TASK-331): initialize
+ * routes through [ModelFamilySupport], so missing-file and metadata failures
+ * name the roles of the record's OWN family, not the hardcoded transducer set.
+ * A real OfflineRecognizer cannot be constructed on the JVM, so these tests assert
+ * the pre-native failure-mode ordering only.
+ */
+class ExternalSherpaBackendTest {
+    @get:Rule
+    val tmp = TemporaryFolder()
+
+    private val backend = ExternalSherpaBackend()
+
+    @Test
+    fun `transducer dir missing decoder names the decoder role`() = runTest {
+        val dir = tmp.newFolder("transducer")
+        dir.resolve(SherpaOnnxBackend.CANONICAL_ENCODER).writeText("x")
+        dir.resolve(SherpaOnnxBackend.CANONICAL_JOINER).writeText("x")
+        dir.resolve(SherpaOnnxBackend.CANONICAL_TOKENS).writeText("x")
+
+        val result = backend.initialize(mockk(), config(record(dir, ModelFamily.TRANSDUCER, "nemo_transducer")))
+
+        assertTrue(result.exceptionOrNull() is TranscriptionException.ModelLoadError)
+        val message = result.exceptionOrNull()!!.message!!
+        assertTrue("expected decoder role in: $message", message.contains(SherpaOnnxBackend.CANONICAL_DECODER))
+        assertFalse("must not blame sense-voice roles: $message", message.contains("model.int8.onnx"))
+    }
+
+    @Test
+    fun `sense voice dir missing model file names the model role not encoder`() = runTest {
+        val dir = tmp.newFolder("sensevoice")
+        dir.resolve(SherpaOnnxBackend.CANONICAL_TOKENS).writeText("x")
+
+        val result = backend.initialize(mockk(), config(record(dir, ModelFamily.SENSE_VOICE, "sense_voice")))
+
+        assertTrue(result.exceptionOrNull() is TranscriptionException.ModelLoadError)
+        val message = result.exceptionOrNull()!!.message!!
+        assertTrue("expected model role in: $message", message.contains("model.int8.onnx"))
+        assertFalse("must not blame transducer roles: $message", message.contains("encoder"))
+    }
+
+    @Test
+    fun `sense voice record with model file absent fails before any config construction`() = runTest {
+        val dir = tmp.newFolder("sensevoice-empty")
+        dir.resolve(SherpaOnnxBackend.CANONICAL_TOKENS).writeText("x")
+
+        val result = backend.initialize(mockk(), config(record(dir, ModelFamily.SENSE_VOICE, "sense_voice")))
+
+        // The pre-flight missing-files check must fire before the metadata check or
+        // the OfflineRecognizer constructor, so the failure is a ModelLoadError
+        // naming the model role (not a native/linkage error from config construction).
+        assertTrue(result.exceptionOrNull() is TranscriptionException.ModelLoadError)
+        assertTrue(result.exceptionOrNull()!!.message!!.contains("model.int8.onnx"))
+    }
+
+    @Test
+    fun `sense voice dir with model file present passes the missing-files pre-flight`() = runTest {
+        val dir = tmp.newFolder("sensevoice-full")
+        dir.resolve("model.int8.onnx").writeText("x")
+        dir.resolve(SherpaOnnxBackend.CANONICAL_TOKENS).writeText("x")
+
+        val result = backend.initialize(mockk(), config(record(dir, ModelFamily.SENSE_VOICE, "sense_voice")))
+
+        // Past pre-flight the engine proceeds to native construction, which cannot
+        // succeed on the JVM; assert only that the failure is no longer the
+        // missing-files ModelLoadError (ordering guard, no native mocking).
+        val message = result.exceptionOrNull()?.message ?: ""
+        assertFalse("must be past the missing-files check: $message", message.contains("missing files"))
+    }
+
+    @Test
+    fun `transducer encoder without metadata fails the pre-native metadata check`() = runTest {
+        val dir = tmp.newFolder("transducer-meta")
+        dir.resolve(SherpaOnnxBackend.CANONICAL_ENCODER).writeText("")
+        dir.resolve(SherpaOnnxBackend.CANONICAL_DECODER).writeText("x")
+        dir.resolve(SherpaOnnxBackend.CANONICAL_JOINER).writeText("x")
+        dir.resolve(SherpaOnnxBackend.CANONICAL_TOKENS).writeText("x")
+
+        val result = backend.initialize(mockk(), config(record(dir, ModelFamily.TRANSDUCER, "nemo_transducer")))
+
+        assertTrue(result.exceptionOrNull() is TranscriptionException.ModelLoadError)
+        val message = result.exceptionOrNull()!!.message!!
+        assertTrue("expected metadata failure in: $message", message.contains("metadata"))
+    }
+
+    private fun config(record: ExternalModelRecord) =
+        BackendConfig.ExternalConfig(record, numThreads = 4, provider = "cpu")
+
+    private fun record(dir: java.io.File, family: ModelFamily, modelType: String) = ExternalModelRecord(
+        id = "abc123def456",
+        displayName = "Test model",
+        dir = dir.absolutePath,
+        family = family,
+        modelType = modelType,
+        languages = emptyList(),
+        source = ExternalModelSource.LOCAL,
+        sourceUrl = null,
+        files = emptyMap(),
+        sizeBytes = 1L,
+        importedAt = 0L,
+    )
+}

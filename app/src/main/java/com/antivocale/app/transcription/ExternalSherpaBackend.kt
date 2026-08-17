@@ -4,11 +4,9 @@ import android.content.Context
 import android.util.Log
 import com.antivocale.app.data.ExternalModelRecord
 import com.k2fsa.sherpa.onnx.FeatureConfig
-import com.k2fsa.sherpa.onnx.OfflineModelConfig
 import com.k2fsa.sherpa.onnx.OfflineRecognizer
 import com.k2fsa.sherpa.onnx.OfflineRecognizerConfig
 import com.k2fsa.sherpa.onnx.OfflineStream
-import com.k2fsa.sherpa.onnx.OfflineTransducerModelConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -18,9 +16,9 @@ import javax.inject.Singleton
 /**
  * The single configurable engine for imported external models (spec: external models
  * platform v2a). One [ExternalModelRecord] is configured per [initialize] via
- * [BackendConfig.ExternalConfig]; file names come from
- * [SherpaOnnxBackend.REQUIRED_MODEL_FILES] (the canonical role names the importer
- * downloads/copies to).
+ * [BackendConfig.ExternalConfig]; file names and the sherpa model config come
+ * from [ModelFamilySupport.forFamily] (the per-family table the importer also
+ * uses, so the two cannot drift).
  *
  * Identity contract: [id] returns the placeholder "external" before the first
  * successful initialize and after [unload]; the backend manager routes the
@@ -69,39 +67,35 @@ class ExternalSherpaBackend @Inject constructor() : TranscriptionBackend {
         }
 
         // Pre-native validation (inside IO dispatcher): sherpa-onnx calls exit(255)
-        // when the encoder is missing critical metadata, killing the app silently.
+        // when the family's model file is missing critical metadata, killing the app silently.
+        val support = ModelFamilySupport.forFamily(record.family)
         return withContext(Dispatchers.IO) {
-            val missing = SherpaOnnxBackend.REQUIRED_MODEL_FILES.filterNot { File(dir, it).exists() }
+            val missing = support.requiredRoles().filterNot { File(dir, it).exists() }
             if (missing.isNotEmpty()) {
                 return@withContext Result.failure(TranscriptionException.ModelLoadError(
                     "missing files in ${record.dir}: $missing"))
             }
 
-            // Metadata rule shared with the importer (single definition):
-            // [SherpaOnnxBackend.requiredTransducerMetadataKeys].
-            val requiredKeys = SherpaOnnxBackend.requiredTransducerMetadataKeys(record.modelType)
-            val missingMeta = SherpaOnnxBackend.missingOnnxMetadata(File(dir, SherpaOnnxBackend.CANONICAL_ENCODER), requiredKeys)
+            // Family validation shared with the importer (single definition):
+            // [ModelFamilySupport.metadataKeys] plus value-aware discriminators.
+            val metadataFile = File(dir, support.metadataFileRole())
+            val missingMeta = SherpaOnnxBackend.missingOnnxMetadata(metadataFile, support.metadataKeys(record.modelType))
             if (missingMeta.isNotEmpty()) {
-                Log.e(TAG, "Encoder missing required ONNX metadata: $missingMeta")
+                Log.e(TAG, "${support.metadataFileRole()} missing required ONNX metadata: $missingMeta")
                 return@withContext Result.failure(TranscriptionException.ModelLoadError(
                     "model file is missing required metadata ($missingMeta). " +
                         "The model may be corrupt, an incompatible export, or the wrong family. " +
                         "Try re-importing it or correcting its family."))
             }
+            try {
+                support.validateImportedModel(metadataFile)
+            } catch (e: IllegalArgumentException) {
+                Log.e(TAG, "Family validation failed for ${record.backendId}: ${e.message}")
+                return@withContext Result.failure(TranscriptionException.ModelLoadError(e.message ?: "unknown", e))
+            }
 
             try {
-                val modelConfig = OfflineModelConfig(
-                    transducer = OfflineTransducerModelConfig(
-                        encoder = "${record.dir}/${SherpaOnnxBackend.CANONICAL_ENCODER}",
-                        decoder = "${record.dir}/${SherpaOnnxBackend.CANONICAL_DECODER}",
-                        joiner = "${record.dir}/${SherpaOnnxBackend.CANONICAL_JOINER}"
-                    ),
-                    tokens = "${record.dir}/${SherpaOnnxBackend.CANONICAL_TOKENS}",
-                    modelType = record.modelType,
-                    numThreads = externalConfig.numThreads,
-                    debug = false,
-                    provider = externalConfig.provider
-                )
+                val modelConfig = support.buildModelConfig(record, externalConfig.numThreads, externalConfig.provider)
 
                 val recognizerConfig = OfflineRecognizerConfig(
                     modelConfig = modelConfig,
