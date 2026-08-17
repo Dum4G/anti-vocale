@@ -241,16 +241,25 @@ class ExternalModelImporterTest {
             record.files.keys - "whisper_encoder.int8.onnx.data")
     }
 
+    /**
+     * A sparse length that exceeds the volume's usable space (so the disk pre-flight
+     * must trip) while staying under any filesystem's max file size: CI runners
+     * rejected setLength(Long.MAX_VALUE / 2) with IOException (beyond s_maxbytes),
+     * which broke the unit-test job and, downstream, the release signing chain.
+     */
+    private fun sparseLengthBiggerThanFreeSpace(anchor: File): Long =
+        anchor.usableSpace + (1L shl 30)
+
     @Test
     fun `disk pre-flight totals include the sidecar size`() = runTest {
         val smallRoot = tmp.newFolder("tiny-root-sidecar")
         val tightImporter = ExternalModelImporter(store, filesRoot = { smallRoot }, uuid = { "0123456789abcdef" })
         val src = sourceDir("huge-sidecar")
-        // A sparse sidecar whose length alone exceeds any plausible free space: the
+        // A sparse sidecar whose length alone exceeds the free space: the
         // pre-flight must count it, otherwise the import would proceed and then
         // explode while copying gigabytes that were never accounted for.
         java.io.RandomAccessFile(File(src, "some_encoder_int8.onnx.data"), "rw").use {
-            it.setLength(Long.MAX_VALUE / 2)
+            it.setLength(sparseLengthBiggerThanFreeSpace(src))
         }
 
         val result = runCatching { tightImporter.importFromDirectory(src) }
@@ -323,7 +332,7 @@ class ExternalModelImporterTest {
         val src = tmp.newFolder("huge")
         val huge = File(src, "encoder.onnx")
         // Length only, no allocation: the pre-flight reads lengths, RandomAccessFile sets them sparsely.
-        java.io.RandomAccessFile(huge, "rw").use { it.setLength(Long.MAX_VALUE / 2) }
+        java.io.RandomAccessFile(huge, "rw").use { it.setLength(sparseLengthBiggerThanFreeSpace(src)) }
         File(src, "decoder.onnx").writeBytes(ByteArray(4))
         File(src, "joiner.onnx").writeBytes(ByteArray(4))
         File(src, "tokens.txt").writeText("x")
