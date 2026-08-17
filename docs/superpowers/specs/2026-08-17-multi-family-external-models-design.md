@@ -81,9 +81,9 @@ sealed interface ModelFamilySupport {
   check inspects only the files that entered role matching, not every file in the
   picked SAF folder (a parent directory holding several models is legitimate).
   Builds `OfflineWhisperModelConfig(encoder, decoder, language, task)` with
-  `language = options["whisper.language"] ?: record.languages.firstOrNull() ?: "multi"`
-  (the "multi" sentinel and the UI "auto" mapping are confirmed by the desktop
-  validation, not asserted) and `task = options["whisper.task"] ?: "transcribe"`.
+  `language = options["whisper.language"] ?: record.languages.firstOrNull() ?: ""`
+  (empty string as the auto-detect sentinel; the desktop validation confirmed sherpa
+  performs zero language validation, so the app's default chain is the only guard).
   `tailPaddings` stays at its sherpa default; the engine's 1s silence pad remains
   the single tuning point, so the two mechanisms are never independently adjusted.
   Record `modelType`: empty; `OfflineModelConfig.modelType` = `"whisper"`.
@@ -92,7 +92,9 @@ sealed interface ModelFamilySupport {
   rnnt-first bias would pick the RNNT vocab for a GigaAM CTC import, since that repo
   ships both variants). Same structural discriminator as Whisper: joiner/joint files
   or rnnt-hinted encoders/vocabs in the candidate pool are rejected as transducer
-  files. `modelType` selects the sherpa subtype: `nemo_ctc` →
+  files (rnnt-hinted files are deprioritized, not rejected, so a parent folder
+  holding several models still imports; the joiner rule is what rejects a full
+  transducer set). `modelType` selects the sherpa subtype: `nemo_ctc` →
   `OfflineNemoEncDecCtcModelConfig`, zipformer-style →
   `OfflineZipformerCtcModelConfig` (fed by `OfflineModelConfig.modelType`), unknown
   → import-time error naming valid values.
