@@ -346,6 +346,30 @@ class HuggingFaceRepoListingTest {
     }
 
     @Test
+    fun `entry missing the onnx sidecar its encoder references fails loudly`() = runTest {
+        val base = server.url("/").toString().trimEnd('/')
+        // Split encoder: the protobuf references its external-data file by name.
+        val splitEncoder = ByteArray(32) { 1 } +
+            "vocab_size=1024 subsampling_factor=8 model_type=nemo_transducer some_encoder.onnx.data".toByteArray()
+        server.enqueue(MockResponse().setBody("""
+            {"name":"GigaAM split","modelType":"nemo_transducer",
+             "files":[{"name":"some_encoder.onnx","url":"$base/e","sha256":"${sha256(splitEncoder)}","size":${splitEncoder.size}},
+                      {"name":"decoder.onnx","url":"$base/d","sha256":"${sha256(decoderBytes)}","size":${decoderBytes.size}},
+                      {"name":"joiner.onnx","url":"$base/j","sha256":"${sha256(joinerBytes)}","size":${joinerBytes.size}},
+                      {"name":"tokens.txt","url":"$base/t","sha256":"${sha256(tokensBytes)}","size":${tokensBytes.size}}]}
+        """.trimIndent()))
+        server.enqueue(MockResponse().setBody(okio.Buffer().write(splitEncoder)))
+
+        val result = runCatching { importer.importFromEntryJson("$base/entry.json") }
+
+        assertTrue(result.isFailure)
+        assertTrue(
+            "error must name the missing sidecar: ${result.exceptionOrNull()?.message}",
+            result.exceptionOrNull()?.message?.contains("some_encoder.onnx.data") == true)
+        assertEquals(0, store.records().size)
+    }
+
+    @Test
     fun `importFromEntryJson drives family, options and languages from the entry`() = runTest {
         val base = server.url("/").toString().trimEnd('/')
         // Protobuf-framed metadata prop so the value-aware whisper validation reads it.

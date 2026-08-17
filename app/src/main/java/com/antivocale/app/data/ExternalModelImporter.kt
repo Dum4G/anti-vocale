@@ -39,6 +39,11 @@ class ExternalModelImporter(
     companion object {
         private const val TAG = "ExternalModelImporter"
         private const val COPY_BUFFER = 64 * 1024
+
+        /** External-data suffixes a split ONNX references inside its protobuf. */
+        val SIDECAR_SUFFIXES = listOf("data", "weights")
+        val SIDECAR_MARKERS = SIDECAR_SUFFIXES.map { ".onnx.$it".toByteArray(Charsets.US_ASCII) }
+        const val SIDECAR_MAX_NAME = 256
     }
 
     /** One importable source file, from either the filesystem or SAF. */
@@ -113,6 +118,68 @@ class ExternalModelImporter(
         return result
     }
 
+    /** True for filename-safe bytes ([A-Za-z0-9._-]), the name characters a sidecar
+     *  reference can be walked back over. */
+    private fun isFileNameByte(b: Byte): Boolean {
+        val c = b.toInt() and 0xFF
+        return c in 'a'.code..'z'.code || c in 'A'.code..'Z'.code || c in '0'.code..'9'.code ||
+            c == '.'.code || c == '_'.code || c == '-'.code
+    }
+
+    /**
+     * Streams [file] once and collects the split-ONNX sidecar names its protobuf
+     * references (an external-data location string such as
+     * "whisper_encoder.int8.onnx.data", preserved verbatim because sidecars keep
+     * their source base name). Empty when the model is not split. The rolling
+     * carry keeps chunk-straddling matches findable.
+     */
+    private fun referencedSidecarNames(file: File): Set<String> {
+        val window = SIDECAR_MAX_NAME + ".onnx.weights".length
+        val buf = ByteArray(COPY_BUFFER)
+        val carry = ByteArray(window)
+        var carryLen = 0
+        val found = LinkedHashSet<String>()
+        file.inputStream().use { input ->
+            while (true) {
+                val read = input.read(buf)
+                if (read < 0) break
+                val combined = ByteArray(carryLen + read)
+                System.arraycopy(carry, 0, combined, 0, carryLen)
+                System.arraycopy(buf, 0, combined, carryLen, read)
+                for (marker in SIDECAR_MARKERS) {
+                    var from = 0
+                    while (true) {
+                        val at = indexOfBytes(combined, marker, from) ?: break
+                        var start = at
+                        while (start > 0 && isFileNameByte(combined[start - 1])) start--
+                        if (start < at) {
+                            found.add(String(combined, start, at + marker.size - start, Charsets.US_ASCII))
+                        }
+                        from = at + 1
+                    }
+                }
+                val keep = minOf(combined.size, window)
+                System.arraycopy(combined, combined.size - keep, carry, 0, keep)
+                carryLen = keep
+            }
+        }
+        return found
+    }
+
+    private fun indexOfBytes(haystack: ByteArray, needle: ByteArray, from: Int): Int? {
+        var i = maxOf(from, 0)
+        outer@ while (i <= haystack.size - needle.size) {
+            for (j in needle.indices) {
+                if (haystack[i + j] != needle[j]) {
+                    i++
+                    continue@outer
+                }
+            }
+            return i
+        }
+        return null
+    }
+
     /** SAF folder import: the primary v2a entry point. */
     suspend fun importFromTreeUri(
         context: Context,
@@ -159,9 +226,10 @@ class ExternalModelImporter(
         val repoId = HuggingFaceRepoListing.parseRepoId(repoUrl)
             ?: throw IllegalArgumentException("not a HuggingFace repository URL: $repoUrl")
         val files = repoListing.listFiles(repoId)
+        val names = files.map { it.name }
         val plan = withSidecars(
-            buildCopyPlan(files.map { it.name }, family) ?: throw missingRolesError(family, files.map { it.name }),
-            files.map { it.name })
+            buildCopyPlan(names, family) ?: throw missingRolesError(family, names),
+            names)
         val triples = plan.map { (canonical, sourceName) ->
             val source = files.first { it.name == sourceName }
             val url = repoListing.resolveUrl(repoId, sourceName)
@@ -183,10 +251,15 @@ class ExternalModelImporter(
         val plan = buildCopyPlan(entry.files.map { it.name }, entry.family)
             ?: throw missingRolesError(entry.family, entry.files.map { it.name })
         val byName = entry.files.associateBy { it.name }
-        val triples = withSidecars(plan, entry.files.map { it.name }).mapNotNull { (canonical, sourceName) ->
-            // A sidecar missing from the entry's file list is skipped: the roles are
-            // the entry's contract, sidecars ride along when declared.
-            byName[sourceName]?.let { f -> DownloadTriple(f.url, canonical, f.sha256, f.size) }
+        val triples = withSidecars(plan, entry.files.map { it.name }).map { (canonical, sourceName) ->
+            val f = byName[sourceName]
+                // The map cannot contain a name absent from the entry's file list
+                // (withSidecars only plans declared names), but a silent drop here
+                // would surface as an engine-load failure instead of an import
+                // error, so the invariant is enforced loudly.
+                ?: throw IllegalArgumentException(
+                    "entry ${entry.name} does not list the planned file $sourceName")
+            DownloadTriple(f.url, canonical, f.sha256, f.size)
         }
         return downloadCore(
             triples, entry.modelType, entry.name, ExternalModelSource.URL, entryUrl,
@@ -217,9 +290,9 @@ class ExternalModelImporter(
         children: List<SourceFile>,
         modelType: String?,
         displayName: String,
-        family: ModelFamily = ModelFamily.TRANSDUCER,
-        options: Map<String, String> = emptyMap(),
-        languages: List<String> = emptyList(),
+        family: ModelFamily,
+        options: Map<String, String>,
+        languages: List<String>,
     ): ExternalModelRecord {
         val resolvedModelType = resolveModelType(modelType, family)
         // 1. Copy plan by role, plus any ONNX split-file sidecars.
@@ -290,6 +363,7 @@ class ExternalModelImporter(
         }
         requireDiskSpace(root, triples.sumOf { it.size })
         val targetDir = freshTargetDir(root, displayName)
+        val declaredNames = triples.map { it.canonicalName }.toSet()
 
         return importCleaningUpOnFailure(targetDir) {
             val pins = HashMap<String, FilePin>()
@@ -321,6 +395,18 @@ class ExternalModelImporter(
                     }
                 }
                 pins[triple.canonicalName] = pin
+                // Split-ONNX completeness: an external-data reference inside a
+                // downloaded .onnx whose sidecar is not part of the download set
+                // would only surface as an engine-load failure, so reject it here,
+                // loud and named.
+                if (triple.canonicalName.endsWith(".onnx")) {
+                    val missing = referencedSidecarNames(file).filterNot { it in declaredNames }
+                    if (missing.isNotEmpty()) {
+                        throw IllegalArgumentException(
+                            "$displayName references split-ONNX sidecar(s) ${missing.joinToString()} " +
+                                "that the download set does not include; declare them in the file list")
+                    }
+                }
             }
 
             registerImported(targetDir, pins, family, modelType, options, languages, source, sourceUrl, displayName)
