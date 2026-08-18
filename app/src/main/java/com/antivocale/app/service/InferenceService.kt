@@ -86,6 +86,13 @@ class InferenceService : Service(), TranscriptionListener {
     }
 
     private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob() + CrashReporter.handler)
+
+    /**
+     * In-flight result-notification jobs (onSuccess's auto-copy + save + notify
+     * coroutine). processQueue() awaits these before tearing the service down;
+     * see onSuccess for the race this closes.
+     */
+    private val pendingResultNotifications = java.util.Collections.synchronizedList(mutableListOf<Job>())
     private val requestQueue = ConcurrentLinkedQueue<PendingRequest>()
     private val inFlightTaskIds: MutableSet<String> = ConcurrentHashMap.newKeySet()
     private var currentProcessingJob: Job? = null
@@ -254,6 +261,12 @@ class InferenceService : Service(), TranscriptionListener {
             } finally {
                 _isTranscribing.value = false
             }
+
+            // Wait for any pending result-notification jobs before teardown:
+            // stopSelf -> onDestroy cancels serviceScope, which would kill a
+            // not-yet-run notification coroutine (the TASK-336 race).
+            val pending = synchronized(pendingResultNotifications) { pendingResultNotifications.toList() }
+            pending.forEach { it.join() }
 
             stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
@@ -439,11 +452,21 @@ class InferenceService : Service(), TranscriptionListener {
     ) {
         sendSuccessReply(taskId, resultText)
         if (isShareRequest) {
-            serviceScope.launch {
-                autoCopyIfEnabled(resultText, sourcePackage)
-                saveTranscriptToFileIfEnabled(resultText, sourcePackage)
-                showResultNotification(resultText, sourcePackage, taskId, confidence, detectedLanguage, isPartial, failedChunkCount)
-            }
+            // Track the notification job: processQueue()'s finally must NOT stopSelf
+            // while it is still pending. It used to be an untracked launch, and for
+            // fast single-chunk transcriptions the queue teardown (stopForeground +
+            // stopSelf -> onDestroy -> serviceScope.cancel) won the race, killing the
+            // result notification before it was ever posted. In the background that
+            // read as "the notification vanished and nothing arrived" (TASK-336).
+            pendingResultNotifications.add(serviceScope.launch {
+                try {
+                    autoCopyIfEnabled(resultText, sourcePackage)
+                    saveTranscriptToFileIfEnabled(resultText, sourcePackage)
+                    showResultNotification(resultText, sourcePackage, taskId, confidence, detectedLanguage, isPartial, failedChunkCount)
+                } finally {
+                    pendingResultNotifications.remove(coroutineContext[Job])
+                }
+            })
         }
     }
 
