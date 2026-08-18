@@ -263,7 +263,9 @@ jobs:
           # the right commit, and the reproducibility check fails on a whole-APK
           # diff. Fail fast here instead of silently shipping a wrong reference.
           RECIPE=/home/vagrant/metadata/com.antivocale.app.yml
-          RECIPE_COMMIT=$(awk '/^[[:space:]]+commit:/{print $2; exit}' "$RECIPE")
+          # fdroiddata lists Builds oldest-first (newest entry LAST), so the
+          # newest entry's commit is the last match, not the first.
+          RECIPE_COMMIT=$(awk '/^[[:space:]]+commit:/{c=$2} END{print c}' "$RECIPE")
           if [ -z "$RECIPE_COMMIT" ]; then
             echo "ERROR: could not read commit: from $RECIPE"; exit 1
           fi
