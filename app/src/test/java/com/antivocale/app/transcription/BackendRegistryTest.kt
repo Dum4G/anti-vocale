@@ -162,13 +162,13 @@ class BackendRegistryTest {
     }
 
     @Test
-    fun `all five catalog backends expose dedicated display-name resources, llm derives from path`() {
+    fun `all static backends expose dedicated display-name resources`() {
         assertEquals(R.string.parakeet_name, registry.byBackendId(BuiltInBackendIds.PARAKEET)?.displayNameResId)
         assertEquals(R.string.whisper_title, registry.byBackendId(BuiltInBackendIds.WHISPER)?.displayNameResId)
         assertEquals(R.string.qwen3_asr_title, registry.byBackendId(BuiltInBackendIds.QWEN3_ASR)?.displayNameResId)
         assertEquals(R.string.nemotron_name, registry.byBackendId(BuiltInBackendIds.NEMOTRON)?.displayNameResId)
         assertEquals(R.string.gigaam_name, registry.byBackendId(BuiltInBackendIds.GIGAAM)?.displayNameResId)
-        assertNull(registry.byBackendId(LlmTranscriptionBackend.BACKEND_ID)?.displayNameResId)
+        assertEquals(R.string.llm_backend_name, registry.byBackendId(LlmTranscriptionBackend.BACKEND_ID)?.displayNameResId)
     }
 
     @Test

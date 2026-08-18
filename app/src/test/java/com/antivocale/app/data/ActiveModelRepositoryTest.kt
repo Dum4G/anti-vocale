@@ -9,6 +9,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Test
 
 /**
@@ -234,7 +235,7 @@ class ActiveModelRepositoryTest {
     }
 
     @Test
-    fun `llm backend reads modelPath and derives modelName from filename`() = runTest {
+    fun `llm backend reads modelPath and shows the fixed localized name`() = runTest {
         fakePrefs._transcriptionBackend.value = "llm"
         fakePrefs._modelPath.value = "/data/models/gemma-litert-latest.task"
 
@@ -248,8 +249,10 @@ class ActiveModelRepositoryTest {
 
         assertEquals("llm", emissions.last().backendId)
         assertEquals("/data/models/gemma-litert-latest.task", emissions.last().modelPath)
-        // LLM backend derives name from the filename WITH extension (matches old File(path).name behavior)
-        assertEquals("gemma-litert-latest.task", emissions.last().modelName)
+        // LLM backend has a fixed localized display name (PR #28 nit 2): the raw filename
+        // must NOT leak anymore. mockContext.getString returns "" for any res id, so we
+        // assert the absence of filename leakage rather than the exact localized text.
+        assertNotEquals("gemma-litert-latest.task", emissions.last().modelName)
 
         job.cancel()
     }
