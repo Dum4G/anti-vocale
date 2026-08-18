@@ -120,10 +120,13 @@ class TestTruncate(unittest.TestCase):
         text = "Short text"
         self.assertEqual(mod.truncate(text), text)
 
-    def test_long_text_truncated_to_500(self):
+    def test_long_text_raises_instead_of_silent_truncation(self):
+        # Silent truncation shipped a one-bullet "what's new" for 1.10.0; over-length
+        # must be a build error, not a quiet cut (see truncate docstring).
         text = "x" * 600
-        result = mod.truncate(text)
-        self.assertEqual(len(result), 500)
+        with self.assertRaises(ValueError) as ctx:
+            mod.truncate(text)
+        self.assertIn("500", str(ctx.exception))
 
     def test_exact_500_unchanged(self):
         text = "x" * 500

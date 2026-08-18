@@ -1,12 +1,11 @@
 <en-US>
 What's new in 1.10.0:
 
-• Bring your own models: import custom transcription models from a folder on your phone or from a link, in four architectures (Transducer, Whisper fine-tunes, CTC, SenseVoice). Integrity is verified on import, split-file models are supported, and every imported model gets its own entry in the model list and its own share target. Ideal for languages the built-in models don't cover
-• Model tab redesigned: clearer variant selection for Parakeet and Whisper (Turbo, Distil, Medium, Small), and an honest speed/quality comparison across all eight engines
-• Neural acceleration (NNAPI) is now selectable on every device, and if the accelerator misbehaves the app automatically falls back to CPU on the next start
-• Fixed: crash when selecting the Gemma backend (the issue that made 1.9.2 unusable for some F-Droid users)
-• Fixed: the high-quality quantized Parakeet variant failing to load on some devices
-• All transcription engines unified under the hood: smaller app, faster updates, new languages easier to add
+• Import your own models: custom transcription models from a folder or link (Transducer, Whisper fine-tunes, CTC, SenseVoice), verified and each with its own share target
+• Model tab redesigned, honest speed/quality comparison
+• NNAPI acceleration on every device, automatic CPU recovery
+• Fixed: Gemma selection crash (broke 1.9.2 on F-Droid); quantized Parakeet failing to load
+• Engines unified: smaller app, faster updates
 
 What's new in 1.9.2:
 
@@ -185,12 +184,11 @@ What's new since 1.0.3:
 <it-IT>
 Novità della versione 1.10.0:
 
-• Modelli personali: importa modelli di trascrizione custom da una cartella sul telefono o da un link, in quattro architetture (Transducer, fine-tune di Whisper, CTC, SenseVoice). L'integrità viene verificata all'importazione, i modelli suddivisi in più file sono supportati, e ogni modello importato ha la sua voce nell'elenco e il suo destinatario dedicato nella condivisione. Ideale per lingue non coperte dai modelli inclusi
-• Scheda Modelli ridisegnata: selezione delle varianti più chiara per Parakeet e Whisper (Turbo, Distil, Medium, Small), e un confronto onesto velocità/qualità fra tutti gli otto motori
-• L'accelerazione neurale (NNAPI) ora è selezionabile su tutti i dispositivi, e se l'acceleratore dà problemi l'app torna automaticamente su CPU al riavvio
-• Corretto: crash selezionando il backend Gemma (il problema che rendeva la 1.9.2 inutilizzabile per alcuni utenti F-Droid)
-• Corretto: la variante quantizzata di alta qualità di Parakeet non si caricava su alcuni dispositivi
-• Tutti i motori di trascrizione unificati sotto il cofano: app più leggera, aggiornamenti più rapidi, nuove lingue più facili da aggiungere
+• Modelli personali: importa modelli di trascrizione custom da cartella o link (Transducer, Whisper, CTC, SenseVoice), verificati e con condivisione dedicata
+• Scheda Modelli ridisegnata, confronto velocità/qualità
+• Accelerazione NNAPI su ogni dispositivo, recupero automatico su CPU
+• Corretto: crash selezionando Gemma (la 1.9.2 su F-Droid non partiva); Parakeet quantizzato che non si caricava
+• Motori unificati: app più leggera, aggiornamenti più rapidi
 
 Novità della versione 1.9.2:
 

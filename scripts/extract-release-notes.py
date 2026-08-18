@@ -45,13 +45,22 @@ def extract_latest_version(notes: str) -> str:
 
 
 def truncate(text: str, max_len: int = MAX_LENGTH) -> str:
-    """Truncate text to max_len, preferring to cut at the last newline."""
+    """Fail loudly when the latest section exceeds the Play Store 500-char limit.
+
+    Silent truncation shipped a one-bullet "what's new" for 1.10.0 while the
+    maintainer had written a six-bullet delta: the release looked like it carried
+    a single change. Cutting release notes without telling anyone is never right,
+    so over-length is a build error; keep the latest section per locale within
+    MAX_LENGTH characters (the GitHub release body has no such limit and can
+    stay long).
+    """
     if len(text) <= max_len:
         return text
-    cut = text.rfind("\n", 0, max_len)
-    if cut > max_len * 0.5:
-        return text[:cut]
-    return text[:max_len]
+    raise ValueError(
+        f"release notes for this locale are {len(text)} chars, over the "
+        f"{max_len}-char Play Store limit; shorten the latest section in "
+        "docs/play-store/release-notes.xml (the GitHub release body can stay long)"
+    )
 
 
 def extract_notes(
