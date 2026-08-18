@@ -49,6 +49,8 @@ REQUIREMENTS
 
 Android 8.0+ | 4GB+ RAM recommended | 326MB-1GB storage per model
 
+---
+
 ## Descrizione Breve (80 caratteri max)
 ```
 Trascrivi messaggi vocali offline. Nessuna connessione richiesta.
@@ -97,6 +99,8 @@ Licenza Apache 2.0. Codice sorgente: https://github.com/RisorseArtificiali/anti-
 REQUISITI
 
 Android 8.0+ | 4GB+ di RAM consigliati | 326MB-1GB di spazio per modello
+
+---
 
 ### de-DE (German)
 ## Kurzbeschreibung (80 Zeichen max)
