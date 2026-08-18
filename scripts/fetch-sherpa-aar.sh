@@ -12,7 +12,7 @@
 
 set -euo pipefail
 
-SHERPA_ONNX_VERSION="1.13.4"
+SHERPA_ONNX_VERSION="1.13.5"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
