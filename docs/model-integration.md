@@ -15,7 +15,9 @@ There are two permanent-integration paths, one per JSON document:
 
 The parser is **strict** (`data/catalog/ModelCatalog.kt`): any structural error
 throws with the offending entry/file named, so a wrong document fails at startup
-(built-ins) or at import time (external), never mid-flight.
+(built-ins) or at import time (external), never mid-flight. Flag keys the engine
+does not consume are rejected at parse time too (`parseFlags` only accepts the
+exact keys below), so a typo'd workaround cannot silently no-op.
 
 ---
 
@@ -112,7 +114,11 @@ Top-level shape:
 
 ### Flags
 
-Formalized per-model workarounds (all optional):
+Formalized per-model workarounds (all optional). **This table is exhaustive**:
+`ModelCatalog.parseFlags` rejects any key not listed here with a named parse
+error, so adding a new workaround requires extending both `CatalogFlags` and the
+parser (pinned by `ModelCatalogTest` "flag keys the engine does not consume are
+rejected at parse time").
 
 | Flag | Type | Meaning |
 |---|---|---|
@@ -121,9 +127,7 @@ Formalized per-model workarounds (all optional):
 | `tailPadSeconds` | number | Silence appended before decode (transducer tail-token fix; Parakeet/GigaAM 1, Nemotron 1.5) |
 | `languageOption` | bool | Expose per-stream language option (Nemotron online) |
 | `passLanguage` | bool | Pass the transcription-language code to the recognizer (Whisper) |
-| `chunkMs` | int | Streaming chunk length in ms (Nemotron 1120) |
 | `metaKeys` | [string] | ONNX metadata keys required on the encoder; default `vocab_size` (+ nemo keys for `nemo_transducer`) |
-| `sidecarSize` | bool | Manage the `.size` resume sidecar (default true) |
 | `skipMetadataCheck` | bool | Skip the pre-native ONNX metadata scan (Whisper) |
 | `whisperTailPaddings` | int | Whisper native tailPaddings, 10ms units (e.g. 1000 = 10s) |
 | `blankPenalty` | number | blankPenalty for the offline recognizer (Qwen3-ASR 1.0) |
@@ -132,13 +136,42 @@ Formalized per-model workarounds (all optional):
 
 ### Wiring a built-in beyond the JSON
 
-A built-in backend is more than the catalog entry — the entry ids are pinned by
-`BundledModelCatalogTest` to `BuiltInBackendIds`. Add the id there, and:
+A built-in backend is more than the catalog entry. The catalog is the single
+source of truth (the registry derives descriptors from it), but six touch
+points must stay in lockstep — treat this as the pre-PR checklist:
 
-1. `transcription/BuiltInBackendIds.kt` — add a constant + include it in `ALL`
-2. `di/AppModule.kt` — add a `@Provides`/`@IntoSet` sherpa backend binding for the id
-3. Strings — add the `display`/`description`/variant/title resource keys
-4. `AndroidManifest.xml` — add the share-target activity-alias named in `shareAlias`
+1. **`transcription/BuiltInBackendIds.kt`** — add a constant for the new id and
+   include it in `ALL`. The registry builds every static backend from these ids,
+   so a model without a constant never appears in the backend list.
+2. **`di/AppModule.kt`** — add a `@Provides`/`@IntoSet` sherpa backend binding
+   for the id (`SherpaBackend(entryId)`); this is what makes the id loadable
+   through `TranscriptionBackendManager`.
+3. **Localization — `res/values/strings.xml` (+ translated `values-*/`)** — add
+   the resource keys referenced by the catalog entry: `display`, `description`,
+   every variant `title`/`description`, plus any `noteKey`/`badgeKey`. Keys are
+   referenced BY NAME in the catalog, so the string files and the catalog must
+   agree.
+4. **`data/catalog/CatalogStringKeys.kt`** — map every new resource-key NAME to
+   its `R.string` id. This map is deliberately complete: an unmapped key fails
+   the catalog test suite at startup, and a key that no longer exists in
+   `R.string` fails compilation.
+5. **`AndroidManifest.xml`** — add the share-target `activity-alias` named by
+   `shareAlias` (the alias class routes shared audio to the new backend). The
+   alias `android:name` is a literal string, pinned by `BackendRegistryTest`.
+6. **Tests** — extend the pinned suites so the new entry cannot silently drift:
+   - `BundledModelCatalogTest` pins the entry ids to `BuiltInBackendIds.ALL` and
+     asserts every resource key resolves through `CatalogStringKeys`
+   - `SherpaBackendRolesTest` resolves the real export namings to roles
+
+**Display-name contract.** Every user-visible backend label must come from the
+registry descriptor (`BackendDescriptor.displayNameResId`, else
+`deriveDisplayName`), never from a raw backend id. Consumers that render backend
+names route through this contract — `ActiveModelRepository` for the active-model
+line, `LogsViewModel.getAvailableAudioBackendsWithModels` for the retranscribe
+picker (pinned by `LogsViewModelRetranscribeNamesTest`). A new dispatch site that
+shows a backend's raw `displayName` (`entryId`, e.g. "sherpa-onnx") is a
+regression; the registry contract is the only place that derives the
+user-visible label.
 
 ---
 
