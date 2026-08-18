@@ -36,13 +36,11 @@ jobs:
           PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
         run: |
           python3 scripts/upload-store-listing.py --dry-run \
-            --locales "${{ github.event.inputs.locales }}" \
-            <(echo "$PLAY_SERVICE_ACCOUNT_JSON")
+            --locales "${{ github.event.inputs.locales }}" 
 
       - name: Upload listing (replaces existing screenshots for the locales)
         env:
           PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
         run: |
           python3 scripts/upload-store-listing.py \
-            --locales "${{ github.event.inputs.locales }}" \
-            <(echo "$PLAY_SERVICE_ACCOUNT_JSON")
+            --locales "${{ github.event.inputs.locales }}" 
