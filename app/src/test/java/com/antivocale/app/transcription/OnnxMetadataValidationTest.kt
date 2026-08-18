@@ -157,13 +157,13 @@ class OnnxMetadataValidationTest {
     fun `onnxMetadataValue reads the real NeMo model_type from the stock fixture`() {
         // Ground truth inspected in the fixture bytes:
         // "model_type" 0x12 0x12 "EncDecRNNTBPEModel"
-        val value = SherpaOnnxBackend.onnxMetadataValue(fixtureToFile("parakeet_stock_tail.bin"), "model_type")
+        val value = SherpaBackend.onnxMetadataValue(fixtureToFile("parakeet_stock_tail.bin"), "model_type")
         assertEquals("EncDecRNNTBPEModel", value)
     }
 
     @Test
     fun `onnxMetadataValue returns null for a missing key`() {
-        val value = SherpaOnnxBackend.onnxMetadataValue(fixtureToFile("smoothquant_broken_tail.bin"), "model_type")
+        val value = SherpaBackend.onnxMetadataValue(fixtureToFile("smoothquant_broken_tail.bin"), "model_type")
         assertEquals(null, value)
     }
 
@@ -173,7 +173,7 @@ class OnnxMetadataValidationTest {
         val value = "v".repeat(200)
         val data = "model_type".toByteArray() +
             byteArrayOf(0x12, 0xC8.toByte(), 0x01) + value.toByteArray()
-        assertEquals(value, SherpaOnnxBackend.onnxMetadataValueBytes(data, "model_type"))
+        assertEquals(value, SherpaBackend.onnxMetadataValueBytes(data, "model_type"))
     }
 
     @Test
@@ -182,7 +182,7 @@ class OnnxMetadataValidationTest {
         // must keep scanning and find the real entry later in the buffer.
         val data = "junk model_type junk".toByteArray() +
             "model_type".toByteArray() + byteArrayOf(0x12, 0x03) + "abc".toByteArray()
-        assertEquals("abc", SherpaOnnxBackend.onnxMetadataValueBytes(data, "model_type"))
+        assertEquals("abc", SherpaBackend.onnxMetadataValueBytes(data, "model_type"))
     }
 
     private fun fixtureToFile(name: String): java.io.File {
