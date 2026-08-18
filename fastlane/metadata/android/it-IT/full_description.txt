@@ -1,36 +1,36 @@
-Anti-Vocale trascrive i messaggi vocali delle app di messaggistica più diffuse direttamente sul tuo dispositivo Android. Condividi un vocale dalla tua app di chat e Anti-Vocale lo trasforma in testo on-device, quindi l'audio non lascia mai il telefono.
+Anti-Vocale trascrive i messaggi vocali di WhatsApp, Telegram e altre app di messaggistica direttamente sul tuo dispositivo Android. Tutto avviene on-device: l'audio non lascia mai il tuo telefono.
 
-Nota: Anti-Vocale è pensato per i messaggi vocali condivisi dalle app di messaggistica. L'audio condiviso da altre fonti (ad esempio un registratore vocale) potrebbe usare formati che l'app non riesce ancora a leggere.
+MODELLI INCLUSI
 
-Nessuna connessione internet, nessun cloud, nessun account, nessun tracciamento. I modelli AI girano localmente tramite ONNX Runtime.
+- Parakeet TDT (consigliato): veloce, 25 lingue europee. Due varianti: alta qualità (862MB) o compatta (464MB)
+- Whisper Turbo: 99 lingue, buon equilibrio velocità/qualità
+- Whisper Distil Italian: la migliore qualità in italiano, ottimizzato per vocali
+- Whisper Medium / Small: più accuratezza o download più leggero
+- Nemotron 3.5 streaming: il testo appare in tempo reale durante la decodifica, 45 lingue
+- Qwen3-ASR: compatto, 59 lingue
+- GigaAM v3: russo, molto piccolo e veloce
+- Gemma 4 / 3n (LiteRT): IA multimodale con prompt personalizzabili
 
-SCEGLI IL TUO MODELLO
+PORTA I TUOI MODELLI
 
-Più backend ASR intercambiabili, ognuno con caratteristiche diverse:
-- Parakeet TDT: Multilingua veloce, 25 lingue europee
-- Whisper Distil Italiano: Migliore qualità italiana, ottimizzato per messaggi vocali
-- Whisper Turbo: 99 lingue, bilanciato velocità/qualità
-- Whisper Small: Compatto, 99 lingue
-- Qwen3-ASR: Compatto, 52 lingue
-- Nemotron 3.5 streaming: Visualizzazione progressiva del testo in tempo reale
-- Gemma 4 E2B/E4B: AI multimodale, 140+ lingue
+Importa modelli di trascrizione custom da una cartella sul telefono o da un link: fine-tune di Whisper, modelli CTC, SenseVoice e altre architetture sherpa-onnx. I file vengono verificati all'importazione, i modelli suddivisi in più file sono supportati, e ogni modello importato ha il suo destinatario di condivisione dedicato. Ideale per lingue non coperte dai modelli inclusi.
 
-CARATTERISTICHE
+FUNZIONALITÀ
 
-- Condividi messaggi vocali da qualsiasi app tramite la condivisione Android
-- Copia automatica della trascrizione negli appunti (incolla direttamente in chat)
-- Leggi le trascrizioni lunghe a pagine nella notifica (navigazione avanti/indietro, senza aprire l'app)
-- Salvataggio automatico delle trascrizioni in una cartella a scelta (Drive, Syncthing, Dropbox)
-- Trascrizione di file video (estrae la traccia audio)
-- Visualizzazione progressiva — il testo appare in tempo reale durante la decodifica
-- Preferenze di notifica per-app (copia automatica, condivisione rapida)
-- Registro trascrizioni con ricerca e azioni swipe
-- Rimozione del silenzio ed elaborazione parallela dei chunk per velocità
-- Integrazione con Tasker per l'automazione
+- Condividi vocali da qualunque app tramite la condivisione Android
+- Notifiche smart: copia con un tocco, ricondividi, sfoglia le trascrizioni lunghe senza aprire l'app
+- Copia automatica negli appunti e salvataggio automatico delle trascrizioni in una cartella a scelta (Drive, Syncthing, ...)
+- Trascrizione di file video (con estrazione della traccia audio)
+- Testo progressivo in tempo reale con i modelli in streaming
+- Preferenze di notifica per app
+- Registro delle trascrizioni con ricerca e azioni swipe
+- Rimozione dei silenzi ed elaborazione a blocchi in parallelo per la velocità
+- Accelerazione neurale (NNAPI) sui dispositivi supportati, con ritorno automatico su CPU
+- Integrazione Tasker per l'automazione
 
 PRIVACY
 
-Nessuna rete, nessun account, nessuna raccolta dati, nessuna pubblicità. L'audio non lascia mai il telefono. I modelli si scaricano una volta da HuggingFace; scegline uno e sei pronto.
+Nessuna connessione necessaria dopo il download, nessun account, nessuna raccolta dati, nessuna pubblicità, nessun tracciamento. L'audio non lascia mai il tuo telefono.
 
 OPEN SOURCE
 
@@ -38,4 +38,4 @@ Licenza Apache 2.0. Codice sorgente: https://github.com/RisorseArtificiali/anti-
 
 REQUISITI
 
-Android 8.0+ | 4GB+ RAM consigliati | 350MB-940MB di spazio per modello
+Android 8.0+ | 4GB+ di RAM consigliati | 326MB-1GB di spazio per modello

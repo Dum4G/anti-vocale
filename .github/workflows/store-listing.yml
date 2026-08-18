@@ -1,0 +1,48 @@
+name: Store listing
+
+# Manual trigger only: uploads the Play Store listing (per-locale descriptions
+# from docs/play-store/store-listing.md plus phoneScreenshots from
+# docs/play-store/screenshots/) via scripts/upload-store-listing.py, replacing
+# existing images. Dry-run step runs first and fails the job on any validation
+# error before anything is committed to Play.
+
+on:
+  workflow_dispatch:
+    inputs:
+      locales:
+        description: 'Comma-separated locales to update (default en-US,it-IT)'
+        required: false
+        default: 'en-US,it-IT'
+
+permissions:
+  contents: read
+
+jobs:
+  upload:
+    name: Validate and upload listing
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install google-api-python-client google-auth
+
+      - name: Dry-run validation (nothing is committed)
+        env:
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+        run: |
+          python3 scripts/upload-store-listing.py --dry-run \
+            --locales "${{ github.event.inputs.locales }}" \
+            <(echo "$PLAY_SERVICE_ACCOUNT_JSON")
+
+      - name: Upload listing (replaces existing screenshots for the locales)
+        env:
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+        run: |
+          python3 scripts/upload-store-listing.py \
+            --locales "${{ github.event.inputs.locales }}" \
+            <(echo "$PLAY_SERVICE_ACCOUNT_JSON")

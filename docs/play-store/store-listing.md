@@ -7,58 +7,47 @@ Transcribe voice messages offline. No internet required.
 
 ## Full Description (4000 chars max)
 
-Anti-Vocale transcribes voice messages from WhatsApp, Telegram, and other messaging apps directly on your Android device. All processing happens on-device — your audio never leaves your phone.
+Anti-Vocale transcribes voice messages from WhatsApp, Telegram, and other messaging apps directly on your Android device. All processing happens on-device: your audio never leaves your phone.
 
-**AI MODELS**
+BUILT-IN MODELS
 
-Choose from multiple models:
-- Whisper Turbo (recommended): Fast, accurate, 99 languages
-- Whisper Medium: Very accurate, multilingual
-- Whisper Small: Compact, 99 languages
-- Distil Italian: Optimized for Italian, fastest
-- Gemma 4 E2B: Multimodal AI, 140+ languages
-- Gemma 4 E4B: Higher quality multimodal, 140+ languages
-- Gemma 3n E2B: Multimodal AI, 140+ languages
-- Gemma 3n E4B: Higher quality multimodal, 140+ languages
-- Parakeet TDT: Lightweight, 25 European languages
-- Qwen3-ASR 0.6B: Compact, 52 languages
+- Parakeet TDT (recommended): fast, 25 European languages. Two variants: high-quality (862MB) or compact (464MB)
+- Whisper Turbo: 99 languages, balanced speed and quality
+- Whisper Distil Italian: best Italian quality, tuned for voice messages
+- Whisper Medium / Small: more accuracy or smaller download
+- Nemotron 3.5 streaming: text appears in real time while it decodes, 45 languages
+- Qwen3-ASR: compact, 59 languages
+- GigaAM v3: Russian, very small and fast
+- Gemma 4 / 3n (LiteRT): multimodal AI with customizable prompts
 
-**FEATURES**
+BRING YOUR OWN MODELS
 
-- Share voice messages from any app
-- Smart notifications with one-tap copy or share back
-- Per-app notification settings (auto-copy, quick share)
-- Transcription log with search, swipe actions, and undo
-- Parallel chunk transcription and silence stripping for speed
-- Customizable inference prompts for Gemma models
-- Configurable inference threads with CPU auto-detection
-- Resume interrupted downloads, HuggingFace auth for gated models
+Import custom transcription models from a folder on your phone or from a link: Whisper fine-tunes, CTC models, SenseVoice and other sherpa-onnx architectures. Files are integrity-checked on import, split-file models are supported, and every imported model gets its own share target. Ideal for languages the built-in models don't cover.
+
+FEATURES
+
+- Share voice messages from any app via the Android share sheet
+- Smart notifications: one-tap copy, share back, page through long transcripts without opening the app
+- Auto-copy to clipboard and auto-save transcripts to a folder you pick (Drive, Syncthing, ...)
+- Video file transcription (audio track extracted)
+- Real-time progressive text with streaming models
+- Per-app notification preferences
+- Transcription log with search and swipe actions
+- Silence stripping and parallel chunk processing for speed
+- Neural acceleration (NNAPI) on supported devices, with automatic CPU fallback
 - Tasker integration for automation
 
-**HOW IT WORKS**
+PRIVACY
 
-1. Download an AI model (Whisper Turbo recommended)
-2. Share a voice message from any messaging app
-3. Get the transcription in a notification instantly
-4. Copy or share it back to the conversation
+No network needed after download, no accounts, no data collection, no ads, no tracking. The audio never leaves your phone.
 
-**PRIVACY**
+OPEN SOURCE
 
-No network, no accounts, no data collection, no ads, no tracking.
+Apache 2.0. Source code: https://github.com/RisorseArtificiali/anti-vocale
 
-**OPEN SOURCE**
+REQUIREMENTS
 
-Source code: https://github.com/RisorseArtificiali/anti-vocale
-
-**REQUIREMENTS**
-
-Android 8.0+ | 4GB+ RAM recommended | 350MB-4.5GB storage
-
-**MODEL SIZES**
-
-Whisper Turbo ~988MB | Whisper Medium ~903MB | Whisper Small ~358MB | Distil Italian ~939MB | Gemma 4 E2B 2.6GB | Gemma 4 E4B 3.7GB | Gemma 3n E2B 3.3GB | Gemma 3n E4B 4.2GB | Parakeet TDT ~464MB | Qwen3-ASR ~938MB
-
----
+Android 8.0+ | 4GB+ RAM recommended | 326MB-1GB storage per model
 
 ## Descrizione Breve (80 caratteri max)
 ```
@@ -67,58 +56,47 @@ Trascrivi messaggi vocali offline. Nessuna connessione richiesta.
 
 Italiano / Italian:
 
-Anti-Vocale trascrive i messaggi vocali da WhatsApp, Telegram e altre app di messaggistica direttamente sul tuo dispositivo Android. Tutta l'elaborazione avviene sul dispositivo — i tuoi audio non lasciano mai il telefono.
+Anti-Vocale trascrive i messaggi vocali di WhatsApp, Telegram e altre app di messaggistica direttamente sul tuo dispositivo Android. Tutto avviene on-device: l'audio non lascia mai il tuo telefono.
 
-**MODELLI AI**
+MODELLI INCLUSI
 
-Scegli tra diversi modelli:
-- Whisper Turbo (consigliato): Veloce, accurato, 99 lingue
-- Whisper Medium: Molto preciso, multilingue
-- Whisper Small: Compatto, 99 lingue
-- Distil Italian: Ottimizzato per l'italiano, il più veloce
-- Gemma 4 E2B: AI multimodale, 140+ lingue
-- Gemma 4 E4B: AI multimodale di qualità superiore, 140+ lingue
-- Gemma 3n E2B: AI multimodale, 140+ lingue
-- Gemma 3n E4B: AI multimodale di qualità superiore, 140+ lingue
-- Parakeet TDT: Leggero, 25 lingue europee
-- Qwen3-ASR 0.6B: Compatto, 52 lingue
+- Parakeet TDT (consigliato): veloce, 25 lingue europee. Due varianti: alta qualità (862MB) o compatta (464MB)
+- Whisper Turbo: 99 lingue, buon equilibrio velocità/qualità
+- Whisper Distil Italian: la migliore qualità in italiano, ottimizzato per vocali
+- Whisper Medium / Small: più accuratezza o download più leggero
+- Nemotron 3.5 streaming: il testo appare in tempo reale durante la decodifica, 45 lingue
+- Qwen3-ASR: compatto, 59 lingue
+- GigaAM v3: russo, molto piccolo e veloce
+- Gemma 4 / 3n (LiteRT): IA multimodale con prompt personalizzabili
 
-**FUNZIONALITÀ**
+PORTA I TUOI MODELLI
 
-- Condividi messaggi vocali da qualsiasi app
-- Notifiche intelligenti con copia o condivisione in un tocco
-- Impostazioni per-app (copia automatica, condivisione rapida)
-- Registro trascrizioni con ricerca, azioni swipe e annullamento eliminazione
-- Trascrizione parallela e rimozione silenzio per velocità
-- Prompt personalizzabili per i modelli Gemma
-- Thread configurabili con rilevamento automatico CPU
-- Ripresa download interrotti, autenticazione HuggingFace
-- Integrazione con Tasker per l'automazione
+Importa modelli di trascrizione custom da una cartella sul telefono o da un link: fine-tune di Whisper, modelli CTC, SenseVoice e altre architetture sherpa-onnx. I file vengono verificati all'importazione, i modelli suddivisi in più file sono supportati, e ogni modello importato ha il suo destinatario di condivisione dedicato. Ideale per lingue non coperte dai modelli inclusi.
 
-**COME FUNZIONA**
+FUNZIONALITÀ
 
-1. Scarica un modello AI (Whisper Turbo consigliato)
-2. Condividi un messaggio vocale da qualsiasi app
-3. Ricevi la trascrizione in una notifica istantaneamente
-4. Copia o condividi nella conversazione
+- Condividi vocali da qualunque app tramite la condivisione Android
+- Notifiche smart: copia con un tocco, ricondividi, sfoglia le trascrizioni lunghe senza aprire l'app
+- Copia automatica negli appunti e salvataggio automatico delle trascrizioni in una cartella a scelta (Drive, Syncthing, ...)
+- Trascrizione di file video (con estrazione della traccia audio)
+- Testo progressivo in tempo reale con i modelli in streaming
+- Preferenze di notifica per app
+- Registro delle trascrizioni con ricerca e azioni swipe
+- Rimozione dei silenzi ed elaborazione a blocchi in parallelo per la velocità
+- Accelerazione neurale (NNAPI) sui dispositivi supportati, con ritorno automatico su CPU
+- Integrazione Tasker per l'automazione
 
-**PRIVACY**
+PRIVACY
 
-Nessuna connessione, nessun account, nessun dato raccolto, nessuna pubblicità, nessun tracciamento.
+Nessuna connessione necessaria dopo il download, nessun account, nessuna raccolta dati, nessuna pubblicità, nessun tracciamento. L'audio non lascia mai il tuo telefono.
 
-**OPEN SOURCE**
+OPEN SOURCE
 
-Codice sorgente: https://github.com/RisorseArtificiali/anti-vocale
+Licenza Apache 2.0. Codice sorgente: https://github.com/RisorseArtificiali/anti-vocale
 
-**REQUISITI**
+REQUISITI
 
-Android 8.0+ | 4GB+ RAM consigliati | 350MB-4.5GB spazio
-
-**DIMENSIONI MODELLI**
-
-Whisper Turbo ~988MB | Whisper Medium ~903MB | Whisper Small ~358MB | Distil Italian ~939MB | Gemma 4 E2B 2.6GB | Gemma 4 E4B 3.7GB | Gemma 3n E2B 3.3GB | Gemma 3n E4B 4.2GB | Parakeet TDT ~464MB | Qwen3-ASR ~938MB
-
----
+Android 8.0+ | 4GB+ di RAM consigliati | 326MB-1GB di spazio per modello
 
 ### de-DE (German)
 ## Kurzbeschreibung (80 Zeichen max)
