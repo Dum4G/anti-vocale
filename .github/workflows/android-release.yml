@@ -204,11 +204,16 @@ jobs:
   # per-build binary: check (armeabi-v7a, arm64-v8a, x86_64). Built inside
   # F-Droid's own buildserver image (same toolchain/NDK as F-Droid CI). Each ABI
   # is signed with the project release key and uploaded to the GitHub release as
-  # the reference APK for that ABI. Manual trigger only (run once per release).
+  # the reference APK for that ABI.
   reproducible-fdroid:
     name: Build reproducible F-Droid reference APKs (per-ABI)
     runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch'
+    # Manual dispatch (the runbook flow: recipe pushed to the fork first) AND every
+    # release event. On a fresh release the fork recipe usually still points at the
+    # previous tag, so the recipe guard below fails LOUDLY with remediation text
+    # instead of the old behavior where this job was silently skipped and the
+    # release shipped unsigned-only (GitHub issue #27).
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'release'
     container:
       image: registry.gitlab.com/fdroid/fdroidserver:buildserver-trixie
       options: --user root
@@ -401,4 +406,68 @@ jobs:
             app-fdroid-x86_64-release.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # TASK-333: incomplete or untested releases must fail LOUDLY, never silently.
+  # Root cause of issue #27 was silence on two fronts: the signing job was skipped
+  # without a word on release events, and a red test job produced no explicit
+  # release-level signal. This job turns both into a named red X with remediation.
+  release-sanity:
+    name: Release sanity (loud failure on incomplete releases)
+    runs-on: ubuntu-latest
+    needs: [test, build]
+    # always(): this job exists precisely to report on failed siblings; without it
+    # GitHub would skip it whenever `test` fails, recreating the silence it fixes.
+    if: >-
+      always() &&
+      (github.event_name == 'release' || github.event_name == 'workflow_dispatch')
+    steps:
+      - name: Fail loudly if the test suite did not pass on a release run
+        # != success covers failure, cancelled, and skipped: anything short of a
+        # green test job must not leave a green release signal (review issue 1).
+        if: needs.test.result != 'success'
+        run: |
+          echo "::error::RELEASE WITHOUT A GREEN PIPELINE: the unit-test job result was '${{ needs.test.result }}' (not success)."
+          echo "::error::The release event fires after publishing, so nothing was blocked retroactively;"
+          echo "::error::this red X is the explicit signal to investigate before promoting the release."
+          exit 1
+
+      - name: Fail loudly if any unsigned F-Droid APK has no signed counterpart
+        if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && github.event.inputs.tag != '')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ github.event.inputs.tag || github.ref_name }}
+        run: |
+          set -eu
+          # A release carrying app-fdroid-<abi>-release-unsigned.apk without the
+          # matching signed app-fdroid-<abi>-release.apk is incomplete: F-Droid's
+          # binary: URLs 404 (issue #27). Normal flow note: right after the release
+          # event this EXPECTEDLY fails until the fork recipe is updated and the
+          # reproducible-fdroid job signs and attaches (see docs/release-runbook.md);
+          # the failure is the reminder, not noise.
+          assets=$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${RELEASE_TAG}" --jq '.assets[].name')
+          echo "release assets:"; echo "$assets"
+          missing=0
+          for abi in armeabi-v7a arm64-v8a x86_64; do
+            unsigned="app-fdroid-${abi}-release-unsigned.apk"
+            signed="app-fdroid-${abi}-release.apk"
+            if echo "$assets" | grep -qx "$unsigned" && ! echo "$assets" | grep -qx "$signed"; then
+              echo "::error::INCOMPLETE RELEASE: $unsigned present but $signed missing."
+              missing=1
+            fi
+          done
+          if [ "$missing" -ne 0 ]; then
+            echo "::error::Remediation (see docs/release-runbook.md, steps 4-5): push the updated recipe"
+            echo "::error::to the fdroid-data fork, then re-run the reproducible-fdroid job"
+            echo "::error::(workflow_dispatch with tag ${RELEASE_TAG}) to sign and attach."
+            exit 1
+          fi
+          echo "OK: every unsigned F-Droid APK has its signed counterpart."
+
+      - name: All sanity checks passed
+        # Same predicate as the asset-check step plus a green test job: this message
+        # must never print for a run where a check was skipped or tests were not green.
+        if: >-
+          needs.test.result == 'success' &&
+          (github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && github.event.inputs.tag != ''))
+        run: echo "release sanity ok; test job green, signed/unsigned APK pairing complete"
 
