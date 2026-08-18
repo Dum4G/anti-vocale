@@ -1,7 +1,6 @@
 package com.antivocale.app.transcription
 
 import android.os.Build
-import androidx.annotation.VisibleForTesting
 
 /**
  * Resolves the ONNX Runtime execution provider for inference.
@@ -16,35 +15,6 @@ object InferenceProvider {
     const val AUTO = "auto"
     const val NNAPI = "nnapi"
     const val CPU = "cpu"
-
-    /**
-     * MediaTek SoCs ship notoriously buggy NNAPI drivers (NeuroPilot) that crash with
-     * ANEURALNETWORKS_BAD_DATA or SIGABRT on many ONNX models. Detect them and force CPU
-     * to avoid native crashes. This is a blunt instrument but pragmatic: the research
-     * (docs/scout-reports/2026-08-13-mediatek-crash-research.md) found no safe way to
-     * use NNAPI on MediaTek for our model shapes.
-     */
-    private fun isMediaTek(): Boolean {
-        return isMediaTek(
-            Build.HARDWARE.orEmpty(),
-            Build.BOARD.orEmpty(),
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) Build.SOC_MANUFACTURER.orEmpty() else ""
-        )
-    }
-
-    /**
-     * Pure, testable MediaTek detection. Checks hardware/board/SOC manufacturer strings.
-     * Visible for testing.
-     */
-    @VisibleForTesting
-    internal fun isMediaTek(hardware: String, board: String, socManufacturer: String): Boolean {
-        val hw = hardware.lowercase()
-        val bd = board.lowercase()
-        val soc = socManufacturer.lowercase()
-        return soc.contains("mediatek") ||
-            hw.startsWith("mt") || bd.startsWith("mt") ||
-            hw.contains("mediatek") || bd.contains("mediatek")
-    }
 
     /**
      * Resolves the actual provider string to pass to sherpa-onnx.
@@ -78,9 +48,12 @@ object InferenceProvider {
     }
 
     /**
-     * Valid preference values for the settings dropdown. On MediaTek devices, NNAPI is
-     * excluded because the driver crashes are uncatchable native SIGABRTs.
+     * Valid preference values for the settings dropdown. NNAPI is offered on every
+     * device, matching [resolve]: the blanket MediaTek exclusion was dropped with the
+     * issue-26 re-enable (working Dimensity NNAPI, crash recovery resets to CPU).
+     * This MUST stay consistent with [resolve]; when it did not, the dropdown hid
+     * NNAPI on MediaTek devices while an already-saved preference still used it.
      */
     val options: List<String>
-        get() = if (isMediaTek()) listOf(AUTO, CPU) else listOf(AUTO, NNAPI, CPU)
+        get() = listOf(AUTO, NNAPI, CPU)
 }
