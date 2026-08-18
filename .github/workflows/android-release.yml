@@ -263,17 +263,27 @@ jobs:
           # the right commit, and the reproducibility check fails on a whole-APK
           # diff. Fail fast here instead of silently shipping a wrong reference.
           RECIPE=/home/vagrant/metadata/com.antivocale.app.yml
-          RECIPE_COMMIT=$(awk '/^[[:space:]]+commit:/{print $2; exit}' "$RECIPE")
+          # fdroiddata lists Builds oldest-first (newest entry LAST), so the
+          # newest entry's commit is the last match, not the first.
+          RECIPE_COMMIT=$(awk '/^[[:space:]]+commit:/{c=$2} END{print c}' "$RECIPE")
           if [ -z "$RECIPE_COMMIT" ]; then
             echo "ERROR: could not read commit: from $RECIPE"; exit 1
           fi
-          # Resolve the commit the target tag actually points to (^{} peels an
-          # annotated tag to its target commit).
+          # Resolve the commit the target tag actually points to. ^{} peels an
+          # annotated tag; lightweight tags (created by gh release create, which is
+          # how our betas are tagged) do not resolve under ^{}, so fall back to the
+          # plain ref: for a lightweight tag that ref IS the commit.
           TAG_COMMIT=$(git ls-remote https://github.com/RisorseArtificiali/anti-vocale \
             "refs/tags/${RELEASE_TAG}^{}" 2>/dev/null | awk '{print $1}')
           if [ -z "$TAG_COMMIT" ]; then
-            echo "ERROR: tag ${RELEASE_TAG} not found on the app repo, or it is a lightweight tag"
-            echo "       (this guard needs an annotated tag so ^{} resolves to its commit)"
+            TAG_COMMIT=$(git ls-remote https://github.com/RisorseArtificiali/anti-vocale \
+              "refs/tags/${RELEASE_TAG}" 2>/dev/null | awk '{print $1}')
+            if [ -n "$TAG_COMMIT" ]; then
+              echo "note: ${RELEASE_TAG} is a lightweight tag; using its direct commit"
+            fi
+          fi
+          if [ -z "$TAG_COMMIT" ]; then
+            echo "ERROR: tag ${RELEASE_TAG} not found on the app repo"
             exit 1
           fi
           echo "recipe commit : $RECIPE_COMMIT"

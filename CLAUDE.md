@@ -56,12 +56,34 @@ Android application written in Kotlin for transcribing voice messages locally on
 
 **Unit tests:** `./gradlew :app:testPlayStoreDebugUnitTest` (CI runs the fdroid flavor, `testFdroidDebugUnitTest`: same shared suite, because the playStore debug build carries the `.debug` applicationIdSuffix, which the Firebase google-services.json has no client for). That suffix is a standing trap: the debug package is `com.antivocale.app.debug`, NOT `com.antivocale.app` (the user's real installed app). Whatever touches package ids, shares, or notifications: verify which of the two you are driving.
 
-**Adding a transcription backend → start from BackendRegistry (TASK-254..324 migrated the dispatch sites).** Add a `BackendDescriptor` in `transcription/BackendRegistry.kt` (backend id, ModelType, share alias, preference accessors, display-name derivation). The registry's KDoc carries the live checklist of what consumes it and what legitimately remains separate. Since the migrations:
+**Adding a transcription backend → start from BackendRegistry (TASK-254..324 migrated the dispatch sites).** Add a `BackendDescriptor` in `transcription/BackendRegistry.kt` (backend id, ModelType, share alias, preference accessors, display-name derivation). The registry's KDoc carries the live checklist of what consumes it and what legitimately remains separate. **The registry is NO LONGER stateless**: it takes `ExternalModelStore` + `ExternalModelRecordsProvider` as constructor params; hand-built instances create duplicate collectors and racing read-modify-write domains. Since the migrations:
 - `ActiveModelRepository` (active model name/path), `TranscriptionOrchestrator` (backend loading + saved-path lookup), `ShareTargetManager`/`ShareReceiverActivity` (share targets and alias resolution) all dispatch through the registry.
 - `SettingsViewModel` collects `ActiveModelRepository` (the old dual-state root smell is gone); `ModelViewModel`'s file-validity check keys on the descriptor's ModelType (its benchmark-config when and other BACKEND_ID constant uses are documented in the registry KDoc).
 - Deliberately separate: `ExtractionService.ModelType` stays the persistence/bookkeeping enum (its download dispatch carries no registry data); the manifest `activity-alias` names stay literal strings (pinned by `BackendRegistryTest`); `PreferencesManager` is the data source the descriptors delegate to; `TranscriptionModule`'s `@IntoSet` DI registration is its own concern.
 - The disabled GGUF backend (`"gemma4_gguf"`) has NO descriptor: its literal id is matched explicitly at the fallback sites (orchestrator, repository, ModelViewModel). If it is ever re-enabled, give it a BACKEND_ID constant and a descriptor instead.
 - After adding a backend, still `grep -rE "BACKEND_ID|gemma4_gguf" app/src/main` to confirm the GGUF fallback sites and any constant uses are coherent.
+
+## External-Models Platform (v2a)
+
+User-imported sherpa-onnx transducer models as first-class backends. Key components:
+- `ExternalModelStore` (`data/`): JSON-serialized records in one DataStore key; single source of truth
+- `ExternalModelRecordsProvider`: StateFlow seam for the registry's synchronous `backends` getter
+- `BackendRegistry`: composes static descriptors + dynamic external descriptors (`external:<id>` prefix)
+- `ExternalSherpaBackend`: one configurable engine, routed by the `external:` prefix in `TranscriptionBackendManager`
+- `ExternalModelImporter` (`data/`): single pipeline for folder/URL/entry-JSON imports with SHA-256 pins
+- `ShareExternal` manifest alias: family-level share target opening a chooser (resolved before the subtitle branch)
+- `CustomTransducerMigrator`: one-shot migration in `BridgeApplication.onCreate` (runCatching, marker-first)
+
+Reference docs: `docs/external-models.md` (user-facing import formats, schema).
+
+Gotchas:
+- `ExternalModelStore` has NO `@Inject` (defaulted lambda params break Dagger; AppModule provider instead)
+- The `external:` prefix is intercepted BEFORE the registry lookup in the orchestrator (cold-start race)
+- `buildCopyPlan` role matching: encoder/decoder by keyword, joiner also matches "joint" (GigaAM), tokens prefers rnnt-hinted and ctc-free `.txt` files
+
+## NNAPI crash recovery (issue #26)
+
+NNAPI is available on ALL devices including MediaTek. If a native crash occurs while NNAPI is the selected provider, `MainActivity` auto-resets the preference to CPU on the next launch (leveraging `NativeCrashDetector`). Users see one crash, then the app falls back safely.
 
 ## Skills
 
