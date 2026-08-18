@@ -48,6 +48,20 @@ abstract class TranscriptionOrchestratorTestBase {
 
     @Before
     open fun baseSetUp() {
+        // Managers/downloaders resolve model metadata through BundledCatalog; seed it
+        // from the real asset (read from disk, same probing as BundledModelCatalogTest)
+        // so no Android assets are needed in these non-Robolectric tests.
+        val moduleRelative = java.io.File("src/main/assets/models_catalog.json")
+        val rootRelative = java.io.File("app/src/main/assets/models_catalog.json")
+        val asset = when {
+            moduleRelative.exists() -> moduleRelative
+            rootRelative.exists() -> rootRelative
+            else -> throw IllegalStateException(
+                "Cannot locate models_catalog.json from ${java.io.File(".").absolutePath}")
+        }
+        com.antivocale.app.data.catalog.BundledCatalog.seed(
+            com.antivocale.app.data.catalog.ModelCatalogJson.parseCatalog(asset.readText()))
+
         preferencesManager = mockk(relaxed = true)
         logDao = mockk(relaxed = true) {
             coEvery { getByTaskId(any()) } returns null
@@ -90,7 +104,7 @@ abstract class TranscriptionOrchestratorTestBase {
         every { preferencesManager.defaultPrompt } returns flowOf("")
         every { preferencesManager.keepAliveTimeout } returns flowOf(5)
         every { preferencesManager.progressiveTranscription } returns flowOf(false)
-        every { preferencesManager.whisperModelPath } returns flowOf("/models/whisper")
+        every { preferencesManager.sherpaModelPath("whisper") } returns flowOf("/models/whisper")
     }
 
     protected fun stubPreprocessing(

@@ -1,29 +1,28 @@
 package com.antivocale.app.data
 
-import android.content.Context
-import android.net.Uri
 import android.util.Log
-import androidx.documentfile.provider.DocumentFile
 import com.antivocale.app.data.download.DownloadConfig
 import com.antivocale.app.data.download.HashVerifier
 import com.antivocale.app.data.download.ResumeDownloadHelper
-import com.antivocale.app.transcription.SherpaOnnxBackend
+import com.antivocale.app.transcription.SherpaBackend
 import java.io.File
-import java.io.InputStream
 import java.security.MessageDigest
 import javax.inject.Singleton
 
 /**
- * The single import pipeline for external models (spec: external models platform v2a).
- * Two entries share one core: [importFromTreeUri] (SAF folder picker, the primary v2a
- * path: a SAF tree URI is not a filesystem path, files are copied through
- * ContentResolver) and [importFromDirectory] (direct files, used by tests and tooling).
+ * The single import pipeline for external models (spec: external models platform
+ * v2a, JSON-only revision). External import accepts ONLY serialized catalog-entry
+ * JSON — pasted text ([importFromEntryJsonText]) or a URL to one
+ * ([importFromEntryJson] / [importFromUrl]); the SAF folder and HF repo-list
+ * entries were retired by the JSON-only decision. The JSON is the SAME unified
+ * schema as the built-in catalog ([com.antivocale.app.data.catalog.ModelCatalogJson]),
+ * and the external branch of that parser enforces url+sha256+size per file.
  *
- * Core steps: role-based copy plan (encoder/decoder/joiner/tokens keywords), unconditional
- * disk pre-flight, clean-replace into an id-fragment directory, copy with streaming
- * SHA-256 pins, pre-native metadata validation BEFORE persisting (a wrong family is an
- * import-time error, never a transcription-time exit(255)), same-hash dedupe, then
- * [ExternalModelStore.add].
+ * Core steps: role-based copy plan (encoder/decoder/joiner/tokens keywords),
+ * unconditional disk pre-flight, clean-replace into an id-fragment directory,
+ * download with canonical landing + SHA-256 verification, pre-native metadata
+ * validation BEFORE persisting (a wrong family is an import-time error, never a
+ * transcription-time exit(255)), same-hash dedupe, then [ExternalModelStore.add].
  *
  * No @Inject here: the defaulted lambda parameters are invisible to Dagger (the Task-1
  * MissingBinding lesson); constructed via an AppModule @Provides @Singleton provider.
@@ -38,30 +37,6 @@ class ExternalModelImporter(
     companion object {
         private const val TAG = "ExternalModelImporter"
         private const val COPY_BUFFER = 64 * 1024
-    }
-
-    /** One importable source file, from either the filesystem or SAF. */
-    private interface SourceFile {
-        val name: String
-        val size: Long
-        fun open(): InputStream
-    }
-
-    private class FileSource(private val file: File) : SourceFile {
-        override val name: String get() = file.name
-        override val size: Long get() = file.length()
-        override fun open(): InputStream = file.inputStream()
-    }
-
-    private class SafSource(
-        private val document: DocumentFile,
-        private val resolver: android.content.ContentResolver,
-    ) : SourceFile {
-        override val name: String get() = document.name ?: ""
-        override val size: Long get() = document.length()
-        override fun open(): InputStream =
-            resolver.openInputStream(document.uri)
-                ?: throw IllegalArgumentException("Cannot open ${document.uri}")
     }
 
     /**
@@ -91,71 +66,37 @@ class ExternalModelImporter(
             ?: files.firstOrNull { it.endsWith(".txt") && isTokensLike(it) }
             ?: return null
         return linkedMapOf(
-            SherpaOnnxBackend.CANONICAL_ENCODER to encoder,
-            SherpaOnnxBackend.CANONICAL_DECODER to decoder,
-            SherpaOnnxBackend.CANONICAL_JOINER to joiner,
-            SherpaOnnxBackend.CANONICAL_TOKENS to tokens,
+            SherpaBackend.CANONICAL_ENCODER to encoder,
+            SherpaBackend.CANONICAL_DECODER to decoder,
+            SherpaBackend.CANONICAL_JOINER to joiner,
+            SherpaBackend.CANONICAL_TOKENS to tokens,
         )
     }
 
-    /** SAF folder import: the primary v2a entry point. */
-    suspend fun importFromTreeUri(
-        context: Context,
-        treeUri: Uri,
-        modelType: String = "nemo_transducer",
-    ): ExternalModelRecord {
-        val tree = DocumentFile.fromTreeUri(context, treeUri)
-            ?: throw IllegalArgumentException("Cannot open the selected folder")
-        val children = tree.listFiles()
-            .filter { it.isFile }
-            .map { SafSource(it, context.contentResolver) }
-        val displayName = tree.name ?: "imported-model"
-        return importCore(children, modelType, displayName)
+    /** Paste/direct catalog-entry JSON import (the JSON-only external entry). */
+    suspend fun importFromEntryJsonText(text: String): ExternalModelRecord {
+        val entry = ExternalModelEntryJson.parse(text)
+        return downloadEntry(entry, null)
     }
 
-    /** Direct-file import: tests and tooling. The Task 9 migration does NOT use this
-     *  (it hand-computes pins over the already-copied TASK-313 directory). */
-    suspend fun importFromDirectory(
-        src: File,
-        modelType: String = "nemo_transducer",
-    ): ExternalModelRecord {
-        val children = src.listFiles()?.filter { it.isFile }?.map(::FileSource) ?: emptyList()
-        return importCore(children, modelType, src.name)
+    /** Catalog-entry JSON import by URL: fetch, parse, download. */
+    suspend fun importFromEntryJson(entryUrl: String): ExternalModelRecord {
+        val text = repoListing.fetchText(entryUrl)
+        val entry = ExternalModelEntryJson.parse(text)
+        return downloadEntry(entry, entryUrl)
     }
 
     /**
-     * HuggingFace repo import (plan Task 8): file names map to canonical roles via
-     * [buildCopyPlan] so downloads land under canonical names; LFS files carry a
-     * server-side sha256 pin, plain files get a computed trust-on-first-use pin.
+     * URL import: the url must point at a catalog-entry JSON (external import is
+     * JSON-only — no more folder pickers or HF repo listings).
      */
-    suspend fun importFromHuggingFaceRepo(
-        repoUrl: String,
-        modelType: String = "nemo_transducer",
-    ): ExternalModelRecord {
-        val repoId = HuggingFaceRepoListing.parseRepoId(repoUrl)
-            ?: throw IllegalArgumentException("not a HuggingFace repository URL: $repoUrl")
-        val files = repoListing.listFiles(repoId)
-        val plan = buildCopyPlan(files.map { it.name })
-            ?: throw IllegalArgumentException(
-                "repository $repoId has no complete transducer role set (encoder/decoder/joiner/tokens)")
-        val triples = plan.map { (canonical, sourceName) ->
-            val source = files.first { it.name == sourceName }
-            val url = repoListing.resolveUrl(repoId, sourceName)
-            when (source) {
-                is HuggingFaceRepoListing.HfFile.Lfs -> DownloadTriple(url, canonical, source.sha256, source.size)
-                is HuggingFaceRepoListing.HfFile.Plain -> DownloadTriple(url, canonical, null, source.size)
-            }
-        }
-        return downloadCore(triples, modelType, repoId.substringAfter('/'), ExternalModelSource.URL, repoUrl)
-    }
+    suspend fun importFromUrl(url: String): ExternalModelRecord = importFromEntryJson(url)
 
-    /** Catalog-entry JSON import: every file must carry a sha256 pin (hashless entries rejected). */
-    suspend fun importFromEntryJson(
-        entryUrl: String,
-        modelType: String = "nemo_transducer",
+    /** Shared download tail for the JSON entries: canonical-name landing, verified pins, registration. */
+    private suspend fun downloadEntry(
+        entry: ExternalModelEntryJson.Entry,
+        sourceUrl: String?,
     ): ExternalModelRecord {
-        val text = repoListing.fetchText(entryUrl)
-        val entry = ExternalModelEntryJson.parse(text)
         val plan = buildCopyPlan(entry.files.map { it.name })
             ?: throw IllegalArgumentException(
                 "entry ${entry.name} has no complete transducer role set (encoder/decoder/joiner/tokens)")
@@ -164,89 +105,34 @@ class ExternalModelImporter(
             val f = byName.getValue(sourceName)
             DownloadTriple(f.url, canonical, f.sha256, f.size)
         }
-        return downloadCore(triples, entry.modelType, entry.name, ExternalModelSource.URL, entryUrl, entry.languages)
+        return downloadCore(
+            triples, entry.modelType, entry.name, entry.description,
+            ExternalModelSource.URL, sourceUrl, entry.languages,
+        )
     }
 
-    /**
-     * URL import: classifies the url (a HuggingFace repo URL, or a catalog-entry JSON
-     * url otherwise) and delegates to the matching entry. The classification lives
-     * here, next to the two entries it picks between, so callers pass the url through.
-     */
-    suspend fun importFromUrl(
-        url: String,
-        modelType: String = "nemo_transducer",
-    ): ExternalModelRecord =
-        if (url.trim().endsWith(".json") || HuggingFaceRepoListing.parseRepoId(url) == null) {
-            importFromEntryJson(url, modelType)
-        } else {
-            importFromHuggingFaceRepo(url, modelType)
-        }
-
-    private suspend fun importCore(
-        children: List<SourceFile>,
-        modelType: String,
-        displayName: String,
-    ): ExternalModelRecord {
-        // 1. Copy plan by role.
-        val names = children.map { it.name }
-        val plan = buildCopyPlan(names)
-            ?: throw IllegalArgumentException(
-                "missing required model files (encoder/decoder/joiner/tokens); found: $names")
-
-        // 2. Unconditional disk pre-flight (spec binding): the import doubles disk usage.
-        val root = filesRoot()
-        val totalBytes = plan.values.sumOf { sourceName -> children.first { it.name == sourceName }.size }
-        requireDiskSpace(root, totalBytes)
-
-        // 3. Id-fragment target dir, clean-replace on collision (TASK-313 lesson).
-        val targetDir = freshTargetDir(root, displayName)
-
-        return importCleaningUpOnFailure(targetDir) {
-            // 4. Copy with streaming SHA-256 pins.
-            val pins = HashMap<String, FilePin>()
-            for ((canonical, sourceName) in plan) {
-                val source = children.first { it.name == sourceName }
-                val digest = MessageDigest.getInstance("SHA-256")
-                File(targetDir, canonical).outputStream().use { out ->
-                    source.open().use { input ->
-                        val buffer = ByteArray(COPY_BUFFER)
-                        while (true) {
-                            val read = input.read(buffer)
-                            if (read < 0) break
-                            digest.update(buffer, 0, read)
-                            out.write(buffer, 0, read)
-                        }
-                    }
-                }
-                pins[canonical] = FilePin(digest.digest().joinToString("") { "%02x".format(it) }, verified = true)
-            }
-
-            registerImported(targetDir, pins, ModelFamily.TRANSDUCER, modelType, emptyList(),
-                ExternalModelSource.LOCAL, null, displayName)
-        }
-    }
-
-    /** One downloadable file: source url, canonical destination, optional server-side pin, mandatory size (feeds the disk pre-flight). */
+    /** One downloadable file: source url, canonical destination, server-side pin, size. */
     internal data class DownloadTriple(val url: String, val canonicalName: String, val sha256: String?, val size: Long)
 
     /**
-     * Shared download core for the URL entries (plan Task 8): canonical-name landing,
-     * unconditional pre-flight over known sizes, resumable per-file download
-     * ([com.antivocale.app.data.download.ResumeDownloadHelper]), sha256 verification
-     * when a pin exists and a computed trust-on-first-use pin when not, then the same
-     * registration tail as the local entry (metadata validation, dedupe, store.add).
+     * Shared download core: canonical-name landing, unconditional pre-flight over
+     * known sizes, resumable per-file download
+     * ([com.antivocale.app.data.download.ResumeDownloadHelper]), sha256 verification,
+     * then the same registration tail as the local entry (metadata validation,
+     * dedupe, store.add).
      */
     private suspend fun downloadCore(
         triples: List<DownloadTriple>,
         modelType: String,
         displayName: String,
+        description: String?,
         source: ExternalModelSource,
         sourceUrl: String?,
         languages: List<String> = emptyList(),
     ): ExternalModelRecord {
         val root = filesRoot()
-        // Unconditional pre-flight (spec binding): callers must supply sizes (the HF
-        // listing always has them; entry JSON rejects sizeless files at parse time).
+        // Unconditional pre-flight (spec binding): the JSON parser rejects sizeless files,
+        // so every triple carries its size here.
         val unknownSizes = triples.filter { it.size <= 0L }
         require(unknownSizes.isEmpty()) {
             "cannot pre-flight disk space: no size for ${unknownSizes.joinToString { it.canonicalName }}"
@@ -286,7 +172,8 @@ class ExternalModelImporter(
                 pins[triple.canonicalName] = pin
             }
 
-            registerImported(targetDir, pins, ModelFamily.TRANSDUCER, modelType, languages, source, sourceUrl, displayName)
+            registerImported(targetDir, pins, ModelFamily.TRANSDUCER, modelType, languages,
+                source, sourceUrl, displayName, description)
         }
     }
 
@@ -300,12 +187,13 @@ class ExternalModelImporter(
         source: ExternalModelSource,
         sourceUrl: String?,
         displayName: String,
+        description: String?,
     ): ExternalModelRecord {
         // Pre-native metadata validation BEFORE persisting: a wrong family is an
         // import-time error, never a transcription-time exit(255). The key rule is
-        // the engine's own: [SherpaOnnxBackend.requiredTransducerMetadataKeys].
-        val requiredKeys = SherpaOnnxBackend.requiredTransducerMetadataKeys(modelType)
-        val missingMeta = SherpaOnnxBackend.missingOnnxMetadata(File(targetDir, SherpaOnnxBackend.CANONICAL_ENCODER), requiredKeys)
+        // the engine's own: [SherpaBackend.requiredTransducerMetadataKeys].
+        val requiredKeys = SherpaBackend.requiredTransducerMetadataKeys(modelType)
+        val missingMeta = SherpaBackend.missingOnnxMetadata(File(targetDir, SherpaBackend.CANONICAL_ENCODER), requiredKeys)
         if (missingMeta.isNotEmpty()) {
             throw IllegalArgumentException(
                 "the encoder is missing required ONNX metadata ($missingMeta): " +
@@ -327,6 +215,7 @@ class ExternalModelImporter(
             }
             val updated = existing.copy(
                 displayName = displayName.trim(),
+                description = description?.trim()?.takeIf { it.isNotEmpty() },
                 modelType = modelType,
                 dir = if (existingDirValid) existing.dir else targetDir.absolutePath,
             )
@@ -347,6 +236,7 @@ class ExternalModelImporter(
             files = pins,
             sizeBytes = sizeBytes,
             importedAt = System.currentTimeMillis(),
+            description = description?.trim()?.takeIf { it.isNotEmpty() },
         )
         store.add(record)
         Log.i(TAG, "Imported external model ${record.backendId} from $displayName ($sizeBytes bytes)")

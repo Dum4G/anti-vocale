@@ -22,6 +22,12 @@ data class ExternalModelRecord(
     val files: Map<String, FilePin>,
     val sizeBytes: Long,
     val importedAt: Long,
+    /**
+     * Optional free-form description straight from the user's catalog-entry JSON
+     * (spec decision: external model descriptions/UI strings load from the JSON
+     * regardless of the device language — never localized).
+     */
+    val description: String? = null,
 ) {
     val backendId: String get() = BACKEND_ID_PREFIX + id
 
@@ -30,6 +36,7 @@ data class ExternalModelRecord(
         put("family", family.name); put("modelType", modelType)
         put("languages", JSONArray(languages)); put("source", source.name)
         put("sourceUrl", sourceUrl ?: JSONObject.NULL)
+        put("description", description ?: JSONObject.NULL)
         put("files", JSONObject().apply { files.forEach { (n, p) -> put(n, JSONObject().put("sha256", p.sha256).put("verified", p.verified)) } })
         put("sizeBytes", sizeBytes); put("importedAt", importedAt)
     }
@@ -59,6 +66,7 @@ data class ExternalModelRecord(
                 source = ExternalModelSource.valueOf(o.getString("source")),
                 sourceUrl = if (o.isNull("sourceUrl")) null else o.getString("sourceUrl"),
                 files = files, sizeBytes = o.getLong("sizeBytes"), importedAt = o.getLong("importedAt"),
+                description = if (o.has("description") && !o.isNull("description")) o.getString("description") else null,
             )
         } catch (e: Exception) {
             Log.w(TAG, "Malformed ExternalModelRecord; whole list will be rejected", e)

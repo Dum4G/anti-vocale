@@ -97,7 +97,7 @@ class ActiveModelRepositoryTest {
 
     @Test
     fun `activeModelFlow carries the new backend's saved model path on backend switch`() = runTest {
-        fakePrefs._whisperModelPath.value = "/data/models/whisper-distil-it"
+        fakePrefs._sherpaModelPath("whisper").value = "/data/models/whisper-distil-it"
 
         val repo = makeRepo()
         val emissions = mutableListOf<ActiveModel>()
@@ -107,7 +107,7 @@ class ActiveModelRepositoryTest {
         }
         runCurrent()
 
-        // Switch to whisper: should pick up whisperModelPath
+        // Switch to whisper: should pick up sherpaModelPath("whisper")
         fakePrefs._transcriptionBackend.value = "whisper"
         runCurrent()
         assertEquals("/data/models/whisper-distil-it", emissions.last().modelPath)
@@ -120,7 +120,7 @@ class ActiveModelRepositoryTest {
     @Test
     fun `activeModelFlow emits updated modelPath when active backend path changes`() = runTest {
         fakePrefs._transcriptionBackend.value = "whisper"
-        fakePrefs._whisperModelPath.value = "/data/models/whisper-old"
+        fakePrefs._sherpaModelPath("whisper").value = "/data/models/whisper-old"
 
         val repo = makeRepo()
         val emissions = mutableListOf<ActiveModel>()
@@ -131,7 +131,7 @@ class ActiveModelRepositoryTest {
         runCurrent()
 
         // Change whisper model path while whisper is the active backend
-        fakePrefs._whisperModelPath.value = "/data/models/whisper-new"
+        fakePrefs._sherpaModelPath("whisper").value = "/data/models/whisper-new"
         runCurrent()
         assertEquals(
             "whisper model path change should emit immediately",
@@ -146,7 +146,7 @@ class ActiveModelRepositoryTest {
     @Test
     fun `changing inactive backend path does NOT emit`() = runTest {
         fakePrefs._transcriptionBackend.value = "whisper"
-        fakePrefs._whisperModelPath.value = "/data/models/whisper-distil-it"
+        fakePrefs._sherpaModelPath("whisper").value = "/data/models/whisper-distil-it"
 
         val repo = makeRepo()
         val emissions = mutableListOf<ActiveModel>()
@@ -159,7 +159,7 @@ class ActiveModelRepositoryTest {
         val countBefore = emissions.size
 
         // Changing parakeet path while whisper is active: should NOT emit
-        fakePrefs._parakeetModelPath.value = "/data/models/parakeet-tdt"
+        fakePrefs._sherpaModelPath("sherpa-onnx").value = "/data/models/parakeet-tdt"
         runCurrent()
         assertEquals(
             "Inactive backend path change must not emit",
@@ -175,7 +175,7 @@ class ActiveModelRepositoryTest {
     @Test
     fun `two collectors of activeModelFlow both see the same propagated update`() = runTest {
         fakePrefs._transcriptionBackend.value = "whisper"
-        fakePrefs._whisperModelPath.value = "/data/models/whisper-initial"
+        fakePrefs._sherpaModelPath("whisper").value = "/data/models/whisper-initial"
 
         val repo = makeRepo()
         val emissionsA = mutableListOf<ActiveModel>()
@@ -186,7 +186,7 @@ class ActiveModelRepositoryTest {
         runCurrent()
 
         // Mutate the active backend's model path
-        fakePrefs._whisperModelPath.value = "/data/models/whisper-updated"
+        fakePrefs._sherpaModelPath("whisper").value = "/data/models/whisper-updated"
         runCurrent()
 
         // Both collectors should eventually see the update

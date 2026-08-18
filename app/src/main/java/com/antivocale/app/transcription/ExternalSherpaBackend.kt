@@ -19,7 +19,7 @@ import javax.inject.Singleton
  * The single configurable engine for imported external models (spec: external models
  * platform v2a). One [ExternalModelRecord] is configured per [initialize] via
  * [BackendConfig.ExternalConfig]; file names come from
- * [SherpaOnnxBackend.REQUIRED_MODEL_FILES] (the canonical role names the importer
+ * [SherpaBackend.REQUIRED_MODEL_FILES] (the canonical role names the importer
  * downloads/copies to).
  *
  * Identity contract: [id] returns the placeholder "external" before the first
@@ -71,16 +71,16 @@ class ExternalSherpaBackend @Inject constructor() : TranscriptionBackend {
         // Pre-native validation (inside IO dispatcher): sherpa-onnx calls exit(255)
         // when the encoder is missing critical metadata, killing the app silently.
         return withContext(Dispatchers.IO) {
-            val missing = SherpaOnnxBackend.REQUIRED_MODEL_FILES.filterNot { File(dir, it).exists() }
+            val missing = SherpaBackend.REQUIRED_MODEL_FILES.filterNot { File(dir, it).exists() }
             if (missing.isNotEmpty()) {
                 return@withContext Result.failure(TranscriptionException.ModelLoadError(
                     "missing files in ${record.dir}: $missing"))
             }
 
             // Metadata rule shared with the importer (single definition):
-            // [SherpaOnnxBackend.requiredTransducerMetadataKeys].
-            val requiredKeys = SherpaOnnxBackend.requiredTransducerMetadataKeys(record.modelType)
-            val missingMeta = SherpaOnnxBackend.missingOnnxMetadata(File(dir, SherpaOnnxBackend.CANONICAL_ENCODER), requiredKeys)
+            // [SherpaBackend.requiredTransducerMetadataKeys].
+            val requiredKeys = SherpaBackend.requiredTransducerMetadataKeys(record.modelType)
+            val missingMeta = SherpaBackend.missingOnnxMetadata(File(dir, SherpaBackend.CANONICAL_ENCODER), requiredKeys)
             if (missingMeta.isNotEmpty()) {
                 Log.e(TAG, "Encoder missing required ONNX metadata: $missingMeta")
                 return@withContext Result.failure(TranscriptionException.ModelLoadError(
@@ -92,11 +92,11 @@ class ExternalSherpaBackend @Inject constructor() : TranscriptionBackend {
             try {
                 val modelConfig = OfflineModelConfig(
                     transducer = OfflineTransducerModelConfig(
-                        encoder = "${record.dir}/${SherpaOnnxBackend.CANONICAL_ENCODER}",
-                        decoder = "${record.dir}/${SherpaOnnxBackend.CANONICAL_DECODER}",
-                        joiner = "${record.dir}/${SherpaOnnxBackend.CANONICAL_JOINER}"
+                        encoder = "${record.dir}/${SherpaBackend.CANONICAL_ENCODER}",
+                        decoder = "${record.dir}/${SherpaBackend.CANONICAL_DECODER}",
+                        joiner = "${record.dir}/${SherpaBackend.CANONICAL_JOINER}"
                     ),
-                    tokens = "${record.dir}/${SherpaOnnxBackend.CANONICAL_TOKENS}",
+                    tokens = "${record.dir}/${SherpaBackend.CANONICAL_TOKENS}",
                     modelType = record.modelType,
                     numThreads = externalConfig.numThreads,
                     debug = false,
@@ -133,7 +133,7 @@ class ExternalSherpaBackend @Inject constructor() : TranscriptionBackend {
 
         return withContext(Dispatchers.IO) {
             // Release the native OfflineStream on EVERY path so the JNI handle is freed
-            // deterministically, not left to GC finalization (NemotronStreamingBackend pattern).
+            // deterministically, not left to GC finalization (SherpaBackend pattern).
             var stream: OfflineStream? = null
             try {
                 // Append 1s of silence to improve final token accuracy (Parakeet pattern).

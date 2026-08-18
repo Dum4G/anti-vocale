@@ -26,6 +26,34 @@ data class ModelInfo(
 object ModelInfoProvider {
 
     private val infoMap: Map<String, ModelInfo> by lazy {
+        // Shared across the storage-dir and the catalog variant dir-names.
+        val parakeetInfo = ModelInfo(
+            architectureType = ArchitectureType.TRANSDUCER,
+            maxAudioDuration = null,
+            recommendedThreads = 6..8,
+            quantizationLevel = "INT8",
+            isArm64Only = true,
+            supportsProgressiveTranscription = false,
+            vadRecommended = false,
+            benchmarkWer = 5.4f,
+            relativeSpeed = "17.6x",
+            bestFor = R.string.model_info_best_for_parakeet,
+            performanceNotes = R.string.model_info_notes_parakeet
+        )
+        val nemotronInfo = ModelInfo(
+            architectureType = ArchitectureType.TRANSDUCER,
+            maxAudioDuration = null,
+            recommendedThreads = 4..6,
+            quantizationLevel = "INT8",
+            isArm64Only = true,
+            supportsProgressiveTranscription = true,
+            vadRecommended = false,
+            benchmarkWer = null,
+            relativeSpeed = null,
+            bestFor = R.string.model_info_best_for_nemotron,
+            performanceNotes = R.string.model_info_notes_nemotron
+        )
+
         buildMap {
             put("sherpa-onnx-whisper-small", ModelInfo(
                 architectureType = ArchitectureType.ENCODER_DECODER,
@@ -97,19 +125,15 @@ object ModelInfoProvider {
                 performanceNotes = R.string.model_info_notes_qwen3
             ))
 
-            put("parakeet-tdt", ModelInfo(
-                architectureType = ArchitectureType.TRANSDUCER,
-                maxAudioDuration = null,
-                recommendedThreads = 6..8,
-                quantizationLevel = "INT8",
-                isArm64Only = true,
-                supportsProgressiveTranscription = false,
-                vadRecommended = false,
-                benchmarkWer = 5.4f,
-                relativeSpeed = "17.6x",
-                bestFor = R.string.model_info_best_for_parakeet,
-                performanceNotes = R.string.model_info_notes_parakeet
-            ))
+            // The catalog storage dir ("parakeet-tdt") and the two variant dir-names
+            // both resolve to the same per-model info, so the section-level overlay and
+            // the per-variant cards (catalog variant dir-names) share it.
+            put("parakeet-tdt", parakeetInfo)
+            put("parakeet-tdt-0.6b-v3-smoothquant", parakeetInfo)
+            put("parakeet-tdt-0.6b-v3-int8", parakeetInfo)
+
+            // Nemotron single-variant: key is the catalog variant dir-name.
+            put("nemotron-3.5-asr-streaming-0.6b-1120ms-int8", nemotronInfo)
 
             put("gigaam-v3", ModelInfo(
                 architectureType = ArchitectureType.TRANSDUCER,

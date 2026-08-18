@@ -2,7 +2,7 @@ package com.antivocale.app.data
 
 import android.util.Log
 import com.antivocale.app.data.download.HashVerifier
-import com.antivocale.app.transcription.SherpaOnnxBackend
+import com.antivocale.app.transcription.SherpaBackend
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
@@ -68,7 +68,7 @@ class CustomTransducerMigrator(
             return
         }
 
-        val canonical = SherpaOnnxBackend.REQUIRED_MODEL_FILES
+        val canonical = SherpaBackend.REQUIRED_MODEL_FILES
         val missing = canonical.filterNot { File(dir, it).exists() }
         if (missing.isNotEmpty()) {
             Log.w(TAG, "Custom-transducer directory incomplete ($missing), skipping record creation")

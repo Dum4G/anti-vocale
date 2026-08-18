@@ -37,6 +37,7 @@ class BridgeApplication : Application(), Configuration.Provider {
 
     override fun onCreate() {
         super.onCreate()
+        com.antivocale.app.data.catalog.BundledCatalog.attach(this)
         com.antivocale.app.util.SharedAudioHandler.cleanupOldFiles(this)
         // BEFORE syncAll: a persisted "custom-transductor" id must already resolve to an
         // external record, or the share sync (and any early transcription) would see a

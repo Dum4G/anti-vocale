@@ -23,11 +23,11 @@ internal class FakePreferencesManager : PreferencesManager {
     val _themePreference = MutableStateFlow("DEFAULT")
     val _themeMode = MutableStateFlow("SYSTEM")
     val _transcriptionBackend = MutableStateFlow(PreferencesManager.DEFAULT_TRANSCRIPTION_BACKEND)
-    val _parakeetModelPath = MutableStateFlow<String?>(null)
-    val _whisperModelPath = MutableStateFlow<String?>(null)
-    val _qwen3AsrModelPath = MutableStateFlow<String?>(null)
-    val _nemotronModelPath = MutableStateFlow<String?>(null)
-    val _gigaamModelPath = MutableStateFlow<String?>(null)
+    private val _sherpaModelPaths = mutableMapOf<String, MutableStateFlow<String?>>()
+
+    /** Backing flow for a catalog entry's saved model path (mirrors the keyed accessor). */
+    fun _sherpaModelPath(entryId: String): MutableStateFlow<String?> =
+        _sherpaModelPaths.getOrPut(entryId) { MutableStateFlow(null) }
     val _externalMigrationDone = MutableStateFlow(false)
     val _customTransducerModelPath = MutableStateFlow<String?>(null)
     val _customTransducerModelType = MutableStateFlow(PreferencesManager.DEFAULT_CUSTOM_TRANSDUCER_MODEL_TYPE)
@@ -56,11 +56,7 @@ internal class FakePreferencesManager : PreferencesManager {
     override val themePreference: Flow<String> get() = _themePreference
     override val themeMode: Flow<String> get() = _themeMode
     override val transcriptionBackend: Flow<String> get() = _transcriptionBackend
-    override val parakeetModelPath: Flow<String?> get() = _parakeetModelPath
-    override val whisperModelPath: Flow<String?> get() = _whisperModelPath
-    override val qwen3AsrModelPath: Flow<String?> get() = _qwen3AsrModelPath
-    override val nemotronModelPath: Flow<String?> get() = _nemotronModelPath
-    override val gigaamModelPath: Flow<String?> get() = _gigaamModelPath
+    override fun sherpaModelPath(entryId: String): Flow<String?> = _sherpaModelPath(entryId)
     override val externalMigrationDone: Flow<Boolean> get() = _externalMigrationDone
     override val customTransducerModelPath: Flow<String?> get() = _customTransducerModelPath
     override val customTransducerModelType: Flow<String> get() = _customTransducerModelType
@@ -90,17 +86,9 @@ internal class FakePreferencesManager : PreferencesManager {
     override suspend fun saveThemePreference(theme: String) { _themePreference.value = theme }
     override suspend fun saveThemeMode(mode: String) { _themeMode.value = mode }
     override suspend fun saveTranscriptionBackend(backendId: String) { _transcriptionBackend.value = backendId }
-    override suspend fun saveParakeetModelPath(path: String) { _parakeetModelPath.value = path }
-    override suspend fun clearParakeetModelPath() { _parakeetModelPath.value = null }
-    override suspend fun saveWhisperModelPath(path: String) { _whisperModelPath.value = path }
-    override suspend fun clearWhisperModelPath() { _whisperModelPath.value = null }
-    override suspend fun saveQwen3AsrModelPath(path: String) { _qwen3AsrModelPath.value = path }
-    override suspend fun clearQwen3AsrModelPath() { _qwen3AsrModelPath.value = null }
-    override suspend fun saveNemotronModelPath(path: String) { _nemotronModelPath.value = path }
-    override suspend fun clearNemotronModelPath() { _nemotronModelPath.value = null }
-    override suspend fun saveGigaAmModelPath(path: String) { _gigaamModelPath.value = path }
+    override suspend fun saveSherpaModelPath(entryId: String, path: String) { _sherpaModelPath(entryId).value = path }
+    override suspend fun clearSherpaModelPath(entryId: String) { _sherpaModelPath(entryId).value = null }
     override suspend fun saveExternalMigrationDone(done: Boolean) { _externalMigrationDone.value = done }
-    override suspend fun clearGigaAmModelPath() { _gigaamModelPath.value = null }
     override suspend fun saveGgufModelPath(path: String) { _ggufModelPath.value = path }
     override suspend fun clearGgufModelPath() { _ggufModelPath.value = null }
     override suspend fun saveAutoCopyEnabled(enabled: Boolean) { _autoCopyEnabled.value = enabled }

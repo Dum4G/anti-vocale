@@ -20,6 +20,9 @@ class TranscriptionOrchestratorBackendOverrideTest : TranscriptionOrchestratorTe
     override fun baseSetUp() {
         super.baseSetUp()
         every { preferencesManager.inferenceProvider } returns flowOf("auto")
+        // loadCatalogBackend reads transcriptionLanguage to wire the offline language;
+        // without a stub the relaxed mock Flow never emits (first() cannot complete).
+        every { preferencesManager.transcriptionLanguage } returns flowOf("auto")
     }
 
     @After
@@ -29,13 +32,15 @@ class TranscriptionOrchestratorBackendOverrideTest : TranscriptionOrchestratorTe
     }
 
     private fun createTempModelDir(prefix: String = "model"): File {
-        val dir = File(System.getProperty("java.io.tmpdir"), "$prefix-${System.nanoTime()}")
+        val parent = File(System.getProperty("java.io.tmpdir"), "$prefix-${System.nanoTime()}")
+        parent.mkdirs()
+        tempDirs.add(parent)
+        // The model dir must carry a catalog dir name so SherpaModelManager.isValidModelPath
+        // accepts it. The .onnx files must be non-empty (isFileComplete rejects zero-length
+        // files); tokens.txt just needs to exist.
+        val dir = File(parent, "parakeet-tdt-0.6b-v3-smoothquant")
         dir.mkdirs()
-        tempDirs.add(dir)
-        // Populate the required model files so ParakeetModelManager.isValidModelPath
-        // accepts the directory. The .onnx files must be non-empty (isFileComplete rejects
-        // zero-length files); tokens.txt just needs to exist.
-        ParakeetModelManager.REQUIRED_FILES.forEach { name ->
+        SherpaModelManager.of(BuiltInBackendIds.PARAKEET).REQUIRED_FILES.forEach { name ->
             File(dir, name).writeBytes(if (name.endsWith(".onnx")) byteArrayOf(0) else ByteArray(0))
         }
         return dir
@@ -44,10 +49,17 @@ class TranscriptionOrchestratorBackendOverrideTest : TranscriptionOrchestratorTe
     /**
      * Creates a mock Context with getSystemService(ActivityManager) stubbed to null so the
      * OOM pre-flight memory check in configureSherpaBackend fails open (availBytes=0) instead
-     * of throwing a ClassCastException from the relaxed mock.
+     * of throwing a ClassCastException from the relaxed mock. filesDir points at a real empty
+     * temp dir so SherpaModelManager.resolveActiveModelPath (used when no saved path exists)
+     * scans real paths instead of NPE-ing on a mock File with a null path.
      */
-    private fun createMockContext(): Context = mockk<Context>(relaxed = true) {
-        every { getSystemService(ActivityManager::class.java) } returns null
+    private fun createMockContext(): Context {
+        val contextFilesDir = File(System.getProperty("java.io.tmpdir"), "context-files-${System.nanoTime()}").apply { mkdirs() }
+        tempDirs.add(contextFilesDir)
+        return mockk<Context>(relaxed = true) {
+            every { getSystemService(ActivityManager::class.java) } returns null
+            every { filesDir } returns contextFilesDir
+        }
     }
 
     @Test
@@ -55,8 +67,8 @@ class TranscriptionOrchestratorBackendOverrideTest : TranscriptionOrchestratorTe
         val parakeetDir = createTempModelDir("parakeet")
 
         // Preference says whisper, but override says sherpa-onnx
-        every { preferencesManager.transcriptionBackend } returns flowOf(WhisperBackend.BACKEND_ID)
-        every { preferencesManager.parakeetModelPath } returns flowOf(parakeetDir.absolutePath)
+        every { preferencesManager.transcriptionBackend } returns flowOf(BuiltInBackendIds.WHISPER)
+        every { preferencesManager.sherpaModelPath(BuiltInBackendIds.PARAKEET) } returns flowOf(parakeetDir.absolutePath)
         every { preferencesManager.threadCount } returns flowOf(4)
         every { preferencesManager.keepAliveTimeout } returns flowOf(5)
         every { backendManager.hasActiveBackend() } returns false
@@ -70,7 +82,7 @@ class TranscriptionOrchestratorBackendOverrideTest : TranscriptionOrchestratorTe
             filePath = null,
             source = "share",
             sourcePackage = null,
-            backendOverride = SherpaOnnxBackend.BACKEND_ID,
+            backendOverride = BuiltInBackendIds.PARAKEET,
             queuePosition = 1,
             queueTotal = 1,
             context = context,
@@ -82,7 +94,7 @@ class TranscriptionOrchestratorBackendOverrideTest : TranscriptionOrchestratorTe
         // Should load sherpa-onnx (Parakeet), not Whisper from preferences
         coVerify {
             backendManager.setActiveBackend(
-                backendId = SherpaOnnxBackend.BACKEND_ID,
+                backendId = BuiltInBackendIds.PARAKEET,
                 context = context,
                 config = match {
                     it is BackendConfig.SherpaOnnxConfig &&
@@ -98,7 +110,7 @@ class TranscriptionOrchestratorBackendOverrideTest : TranscriptionOrchestratorTe
 
         // Preference says llm, but override says whisper
         every { preferencesManager.transcriptionBackend } returns flowOf("llm")
-        every { preferencesManager.whisperModelPath } returns flowOf(whisperDir.absolutePath)
+        every { preferencesManager.sherpaModelPath(BuiltInBackendIds.WHISPER) } returns flowOf(whisperDir.absolutePath)
         every { preferencesManager.threadCount } returns flowOf(4)
         every { preferencesManager.transcriptionLanguage } returns flowOf("auto")
         every { preferencesManager.keepAliveTimeout } returns flowOf(5)
@@ -113,7 +125,7 @@ class TranscriptionOrchestratorBackendOverrideTest : TranscriptionOrchestratorTe
             filePath = null,
             source = "share",
             sourcePackage = null,
-            backendOverride = WhisperBackend.BACKEND_ID,
+            backendOverride = BuiltInBackendIds.WHISPER,
             queuePosition = 1,
             queueTotal = 1,
             context = context,
@@ -124,7 +136,7 @@ class TranscriptionOrchestratorBackendOverrideTest : TranscriptionOrchestratorTe
 
         coVerify {
             backendManager.setActiveBackend(
-                backendId = WhisperBackend.BACKEND_ID,
+                backendId = BuiltInBackendIds.WHISPER,
                 context = context,
                 config = any()
             )
@@ -135,8 +147,8 @@ class TranscriptionOrchestratorBackendOverrideTest : TranscriptionOrchestratorTe
     fun `no override falls back to preference`() = runTest {
         val modelDir = createTempModelDir("parakeet")
 
-        every { preferencesManager.transcriptionBackend } returns flowOf(SherpaOnnxBackend.BACKEND_ID)
-        every { preferencesManager.parakeetModelPath } returns flowOf(modelDir.absolutePath)
+        every { preferencesManager.transcriptionBackend } returns flowOf(BuiltInBackendIds.PARAKEET)
+        every { preferencesManager.sherpaModelPath(BuiltInBackendIds.PARAKEET) } returns flowOf(modelDir.absolutePath)
         every { preferencesManager.threadCount } returns flowOf(4)
         every { preferencesManager.keepAliveTimeout } returns flowOf(5)
         every { backendManager.hasActiveBackend() } returns false
@@ -161,7 +173,7 @@ class TranscriptionOrchestratorBackendOverrideTest : TranscriptionOrchestratorTe
 
         coVerify {
             backendManager.setActiveBackend(
-                backendId = SherpaOnnxBackend.BACKEND_ID,
+                backendId = BuiltInBackendIds.PARAKEET,
                 context = context,
                 config = any()
             )
@@ -174,13 +186,13 @@ class TranscriptionOrchestratorBackendOverrideTest : TranscriptionOrchestratorTe
 
         // Active backend is whisper, preference is whisper, but override demands parakeet
         val whisperBackend = mockk<TranscriptionBackend>(relaxed = true) {
-            every { id } returns WhisperBackend.BACKEND_ID
+            every { id } returns BuiltInBackendIds.WHISPER
             every { isReady() } returns true
         }
         every { backendManager.hasActiveBackend() } returns true
         every { backendManager.getActiveBackend() } returns whisperBackend
-        every { preferencesManager.transcriptionBackend } returns flowOf(WhisperBackend.BACKEND_ID)
-        every { preferencesManager.parakeetModelPath } returns flowOf(parakeetDir.absolutePath)
+        every { preferencesManager.transcriptionBackend } returns flowOf(BuiltInBackendIds.WHISPER)
+        every { preferencesManager.sherpaModelPath(BuiltInBackendIds.PARAKEET) } returns flowOf(parakeetDir.absolutePath)
         every { preferencesManager.threadCount } returns flowOf(4)
         every { preferencesManager.keepAliveTimeout } returns flowOf(5)
         coEvery { backendManager.setActiveBackend(any(), any(), any()) } returns Result.success(Unit)
@@ -193,7 +205,7 @@ class TranscriptionOrchestratorBackendOverrideTest : TranscriptionOrchestratorTe
             filePath = null,
             source = "share",
             sourcePackage = null,
-            backendOverride = SherpaOnnxBackend.BACKEND_ID,
+            backendOverride = BuiltInBackendIds.PARAKEET,
             queuePosition = 1,
             queueTotal = 1,
             context = context,
@@ -205,7 +217,7 @@ class TranscriptionOrchestratorBackendOverrideTest : TranscriptionOrchestratorTe
         verify { backendManager.unloadActiveBackend() }
         coVerify {
             backendManager.setActiveBackend(
-                backendId = SherpaOnnxBackend.BACKEND_ID,
+                backendId = BuiltInBackendIds.PARAKEET,
                 context = context,
                 config = any()
             )
@@ -215,7 +227,7 @@ class TranscriptionOrchestratorBackendOverrideTest : TranscriptionOrchestratorTe
     @Test
     fun `override with missing model path returns failure`() = runTest {
         // Override asks for parakeet but no model is configured
-        every { preferencesManager.parakeetModelPath } returns flowOf(null)
+        every { preferencesManager.sherpaModelPath(BuiltInBackendIds.PARAKEET) } returns flowOf(null)
         every { backendManager.hasActiveBackend() } returns false
 
         val context = createMockContext()
@@ -226,7 +238,7 @@ class TranscriptionOrchestratorBackendOverrideTest : TranscriptionOrchestratorTe
             filePath = null,
             source = "share",
             sourcePackage = null,
-            backendOverride = SherpaOnnxBackend.BACKEND_ID,
+            backendOverride = BuiltInBackendIds.PARAKEET,
             queuePosition = 1,
             queueTotal = 1,
             context = context,
@@ -324,7 +336,7 @@ class TranscriptionOrchestratorBackendOverrideTest : TranscriptionOrchestratorTe
         val parakeetDir = createTempModelDir("parakeet")
 
         // Override says sherpa-onnx
-        every { preferencesManager.parakeetModelPath } returns flowOf(parakeetDir.absolutePath)
+        every { preferencesManager.sherpaModelPath(BuiltInBackendIds.PARAKEET) } returns flowOf(parakeetDir.absolutePath)
         every { preferencesManager.threadCount } returns flowOf(4)
         every { preferencesManager.keepAliveTimeout } returns flowOf(5)
         every { backendManager.hasActiveBackend() } returns false
@@ -339,7 +351,7 @@ class TranscriptionOrchestratorBackendOverrideTest : TranscriptionOrchestratorTe
             filePath = null,
             source = "share",
             sourcePackage = null,
-            backendOverride = SherpaOnnxBackend.BACKEND_ID,
+            backendOverride = BuiltInBackendIds.PARAKEET,
             queuePosition = 1,
             queueTotal = 1,
             context = context,
@@ -351,7 +363,7 @@ class TranscriptionOrchestratorBackendOverrideTest : TranscriptionOrchestratorTe
         // Should load sherpa-onnx for the override, then unload it
         coVerify(ordering = io.mockk.Ordering.ORDERED) {
             backendManager.setActiveBackend(
-                backendId = SherpaOnnxBackend.BACKEND_ID,
+                backendId = BuiltInBackendIds.PARAKEET,
                 context = context,
                 config = any()
             )

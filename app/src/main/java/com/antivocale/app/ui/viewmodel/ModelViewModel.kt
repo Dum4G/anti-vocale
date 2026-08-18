@@ -5,7 +5,6 @@ import android.util.Log
 import android.content.Intent
 import android.net.Uri
 import androidx.core.content.ContextCompat
-import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.antivocale.app.data.ActiveModelRepository
@@ -14,34 +13,28 @@ import com.antivocale.app.BuildConfig
 import com.antivocale.app.data.ModelDownloader
 import com.antivocale.app.data.PreferencesManager
 import com.antivocale.app.data.ShareTargetManager
+import com.antivocale.app.data.ExternalModelImporter
+import com.antivocale.app.data.ExternalModelRecord
+import com.antivocale.app.data.ExternalModelStore
 import com.antivocale.app.transcription.BackendRegistry
-import com.antivocale.app.transcription.GigaAmBackend
-import com.antivocale.app.transcription.GigaAmDownloader
-import com.antivocale.app.transcription.GigaAmModelManager
+import com.antivocale.app.transcription.BuiltInBackendIds
+import com.antivocale.app.transcription.CatalogVariantUi
 import com.antivocale.app.transcription.LlmTranscriptionBackend
-import com.antivocale.app.transcription.NemotronDownloader
-import com.antivocale.app.transcription.NemotronModelManager
-import com.antivocale.app.transcription.NemotronStreamingBackend
+import com.antivocale.app.transcription.SherpaModelDownloader
+import com.antivocale.app.transcription.SherpaModelManager
+import com.antivocale.app.transcription.cleanOrphanedModelDirs
 import com.antivocale.app.R
+import com.antivocale.app.data.catalog.BundledCatalog
+import com.antivocale.app.data.catalog.CatalogEntry
 import com.antivocale.app.data.download.DownloadState
 import com.antivocale.app.manager.LlmManager
 import com.antivocale.app.service.ExtractionService
-import com.antivocale.app.transcription.Qwen3AsrBackend
-import com.antivocale.app.transcription.SherpaOnnxBackend
-import com.antivocale.app.transcription.WhisperBackend
-import com.antivocale.app.transcription.ParakeetDownloader
-import com.antivocale.app.transcription.ParakeetModelManager
-import com.antivocale.app.transcription.WhisperDownloader
-import com.antivocale.app.transcription.WhisperModelManager
-import com.antivocale.app.transcription.Qwen3AsrDownloader
-import com.antivocale.app.transcription.Qwen3AsrModelManager
-// GGUF: import com.antivocale.app.transcription.Gemma4GgufModelManager
-// GGUF: import com.antivocale.app.transcription.Gemma4GgufBackend
 import com.antivocale.app.transcription.TranscriptionBackendManager
 import com.antivocale.app.transcription.BackendConfig
 import com.antivocale.app.transcription.InferenceProvider
 import com.antivocale.app.benchmark.BenchmarkManager
 import com.antivocale.app.benchmark.BenchmarkState
+import com.antivocale.app.util.formatFileSize
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -49,6 +42,7 @@ import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -72,8 +66,8 @@ class ModelViewModel @Inject constructor(
     private val shareTargetManager: ShareTargetManager,
     @ApplicationContext private val ctx: Context,
     private val backendRegistry: BackendRegistry,
-    private val externalModelStore: com.antivocale.app.data.ExternalModelStore,
-    private val externalModelImporter: com.antivocale.app.data.ExternalModelImporter,
+    private val externalModelStore: ExternalModelStore,
+    private val externalModelImporter: ExternalModelImporter,
 ) : ViewModel() {
 
     val tokenState = tokenManager.tokenState
@@ -104,26 +98,6 @@ class ModelViewModel @Inject constructor(
     }
 
     /**
-     * Parakeet download UI state — uses per-variant maps like Qwen3-ASR.
-     *
-     * Note: Parakeet has NO user-facing variant selector. The active model is auto-resolved
-     * at transcription time via [ParakeetModelManager.resolveActiveModelPath] (prefer
-     * SmoothQuant, fall back to Stock int8). Both variants are still independently
-     * downloadable / deletable from the UI.
-     */
-    data class ParakeetUiState(
-        val selectedVariant: ParakeetModelManager.Variant? = null,
-        val downloadedVariants: Set<ParakeetModelManager.Variant> = emptySet(),
-        val variantDownloadStates: Map<ParakeetModelManager.Variant, VariantDownloadState> = emptyMap(),
-        val modelPath: String? = null,
-        val showDownloadDialog: Boolean = false,
-        val showDeleteDialog: Boolean = false,
-        val variantToDelete: ParakeetModelManager.Variant? = null
-    ) {
-        val isAnyDownloading: Boolean get() = variantDownloadStates.values.any { it.isDownloading }
-    }
-
-    /**
      * Per-variant download state — isolates progress, errors, and downloading
      * flag so that concurrent downloads on different variants don't cross-contaminate.
      */
@@ -136,80 +110,22 @@ class ModelViewModel @Inject constructor(
     )
 
     /**
-     * Whisper download UI state — uses per-variant maps for download tracking.
+     * Generic per-entry UI state for a bundled catalog model (Parakeet, Whisper,
+     * Qwen3-ASR, Nemotron, GigaAM). Keyed by the catalog entry id, so the whole
+     * sherpa-onnx family shares one code path; variant names are the catalog
+     * variant names (strings), not per-model enums.
      */
-    data class WhisperUiState(
-        val selectedVariant: WhisperModelManager.Variant? = null,
-        val downloadedVariants: Set<WhisperModelManager.Variant> = emptySet(),
-        val variantDownloadStates: Map<WhisperModelManager.Variant, VariantDownloadState> = emptyMap(),
+    data class ModelEntryUiState(
+        val downloadedVariants: Set<String> = emptySet(),
+        val variantDownloadStates: Map<String, VariantDownloadState> = emptyMap(),
         val modelPath: String? = null,
         // Confirmation dialogs
         val showDownloadDialog: Boolean = false,
         val showDeleteDialog: Boolean = false,
-        val variantToDelete: WhisperModelManager.Variant? = null,
-        val variantsNeedingExtraction: Set<WhisperModelManager.Variant> = emptySet(),
-        val orphanedVariants: Set<WhisperModelManager.Variant> = emptySet()
-    ) {
-        val isAnyDownloading: Boolean get() = variantDownloadStates.values.any { it.isDownloading }
-    }
-
-    /**
-     * Qwen3-ASR download UI state — uses per-variant maps for download tracking.
-     */
-    data class Qwen3AsrUiState(
-        val selectedVariant: Qwen3AsrModelManager.Variant? = null,
-        val downloadedVariants: Set<Qwen3AsrModelManager.Variant> = emptySet(),
-        val variantDownloadStates: Map<Qwen3AsrModelManager.Variant, VariantDownloadState> = emptyMap(),
-        val modelPath: String? = null,
-        val showDownloadDialog: Boolean = false,
-        val showDeleteDialog: Boolean = false,
-        val variantToDelete: Qwen3AsrModelManager.Variant? = null
-    ) {
-        val isAnyDownloading: Boolean get() = variantDownloadStates.values.any { it.isDownloading }
-    }
-
-    /**
-     * Nemotron download UI state — single-variant (NemotronDownloader is `Unit`-keyed),
-     * so a single download slot is tracked instead of a per-variant map.
-     */
-    data class NemotronUiState(
-        val isDownloading: Boolean = false,
-        val downloadProgress: Float = 0f,
-        val downloadState: DownloadState = DownloadState.Idle,
-        val modelPath: String? = null,
-        val errorMessage: String? = null,
-        val partialDownload: DownloadState.PartiallyDownloaded? = null,
-        val showDownloadDialog: Boolean = false,
-        val showDeleteDialog: Boolean = false
-    )
-
-    /**
-     * GigaAM v3 download UI state — single-variant (GigaAmDownloader is `Unit`-keyed),
-     * so a single download slot is tracked instead of a per-variant map. Mirrors [NemotronUiState].
-     */
-    data class GigaAmUiState(
-        val isDownloading: Boolean = false,
-        val downloadProgress: Float = 0f,
-        val downloadState: DownloadState = DownloadState.Idle,
-        val modelPath: String? = null,
-        val errorMessage: String? = null,
-        val partialDownload: DownloadState.PartiallyDownloaded? = null,
-        val showDownloadDialog: Boolean = false,
-        val showDeleteDialog: Boolean = false
-    )
-
-    /**
-     * GGUF download UI state — uses String-based variant keys since GGUF classes are disabled.
-     * GGUF: change String back to Gemma4GgufModelManager.GgufVariant when re-enabling
-     */
-    data class GgufUiState(
         val selectedVariant: String? = null,
-        val downloadedVariants: Set<String> = emptySet(),
-        val variantDownloadStates: Map<String, VariantDownloadState> = emptyMap(),
-        val modelPath: String? = null,
-        val showDownloadDialog: Boolean = false,
-        val showDeleteDialog: Boolean = false,
-        val variantToDelete: String? = null
+        val variantToDelete: String? = null,
+        val variantsNeedingExtraction: Set<String> = emptySet(),
+        val orphanedVariants: Set<String> = emptySet()
     ) {
         val isAnyDownloading: Boolean get() = variantDownloadStates.values.any { it.isDownloading }
     }
@@ -231,29 +147,9 @@ class ModelViewModel @Inject constructor(
     private val _downloadUiState = MutableStateFlow(DownloadUiState())
     val downloadUiState: StateFlow<DownloadUiState> = _downloadUiState.asStateFlow()
 
-    // Parakeet state - must be declared before init block
-    private val _parakeetState = MutableStateFlow(ParakeetUiState())
-    val parakeetState: StateFlow<ParakeetUiState> = _parakeetState.asStateFlow()
-
-    // Whisper state - must be declared before init block
-    private val _whisperState = MutableStateFlow(WhisperUiState())
-    val whisperState: StateFlow<WhisperUiState> = _whisperState.asStateFlow()
-
-    // Qwen3-ASR state - must be declared before init block
-    private val _qwen3AsrState = MutableStateFlow(Qwen3AsrUiState())
-    val qwen3AsrState: StateFlow<Qwen3AsrUiState> = _qwen3AsrState.asStateFlow()
-
-    // Nemotron state - must be declared before init block
-    private val _nemotronState = MutableStateFlow(NemotronUiState())
-    val nemotronState: StateFlow<NemotronUiState> = _nemotronState.asStateFlow()
-
-    // GigaAM state - must be declared before init block
-    private val _gigaAmState = MutableStateFlow(GigaAmUiState())
-    val gigaAmState: StateFlow<GigaAmUiState> = _gigaAmState.asStateFlow()
-
-    // GGUF state - must be declared before init block
-    private val _ggufState = MutableStateFlow(GgufUiState())
-    val ggufState: StateFlow<GgufUiState> = _ggufState.asStateFlow()
+    // Generic catalog model state (keyed by catalog entry id)
+    private val _catalogStates = MutableStateFlow<Map<String, ModelEntryUiState>>(emptyMap())
+    val catalogStates: StateFlow<Map<String, ModelEntryUiState>> = _catalogStates.asStateFlow()
 
     sealed class SnackbarEvent {
         data class Message(val text: String) : SnackbarEvent()
@@ -275,20 +171,13 @@ class ModelViewModel @Inject constructor(
         llmManager.setOnExternalLoadCallback { modelPath ->
             onModelExternallyLoaded(modelPath)
         }
-        // Observe ExtractionService progress state
+        // Observe ExtractionService progress state. Dispatch keys on the catalog
+        // entry id (modelKey); anything unknown falls through to the LLM backend.
         viewModelScope.launch {
             ExtractionService.progressState.collect { progress ->
-                when (progress.modelType) {
-                    ExtractionService.ModelType.PARAKEET -> handleServiceProgressParakeet(progress)
-                    ExtractionService.ModelType.WHISPER -> handleServiceProgressWhisper(progress)
-                    ExtractionService.ModelType.QWEN3_ASR -> handleServiceProgressQwen3Asr(progress)
-                    ExtractionService.ModelType.NEMOTRON -> handleServiceProgressNemotron(progress)
-                    ExtractionService.ModelType.GIGAAM -> handleServiceProgressGigaAm(progress)
-                    // GGUF: disabled
-                    ExtractionService.ModelType.GEMMA4_GGUF -> { /* no-op */ }
-                    // External models: imported locally, no service download progress.
-                    ExtractionService.ModelType.EXTERNAL -> { /* no-op */ }
-                    ExtractionService.ModelType.GEMMA -> handleServiceProgressGemma(progress)
+                when {
+                    BundledCatalog.byId(progress.modelKey) != null -> handleCatalogProgress(progress.modelKey, progress)
+                    progress.modelKey == LlmTranscriptionBackend.BACKEND_ID -> handleServiceProgressGemma(progress)
                 }
             }
         }
@@ -298,17 +187,8 @@ class ModelViewModel @Inject constructor(
         refreshDownloadedModels()
         // Check for HuggingFace token
         refreshTokenState()
-        // Check for Parakeet model
-        refreshParakeetState()
-        // Check for Whisper model
-        refreshWhisperState()
-        // Check for Qwen3-ASR model
-        refreshQwen3AsrState()
-        // Check for Nemotron model
-        refreshNemotronState()
-        // Check for GigaAM model
-        refreshGigaAmState()
-        // GGUF: disabled — refreshGgufState() commented out
+        // Refresh all catalog-backed model entries
+        refreshCatalogEntries()
         // Detect partial downloads
         detectPartialDownloads()
         // Reclaim disk space from stranded old-version model directories left by
@@ -318,45 +198,35 @@ class ModelViewModel @Inject constructor(
     }
 
     /**
-     * Sweeps each backend's model storage directory and deletes subdirectories whose name
+     * All bundled catalog entries in catalog order — the sections rendered by the
+     * Model tab come from the catalog, never from hard-coded per-model code.
+     */
+    val catalogEntries: List<CatalogEntry> get() = BundledCatalog.entries()
+
+    /**
+     * Sweeps each catalog model's storage directory and deletes subdirectories whose name
      * is not a currently-known variant dir-name. Runs once at startup, off the main thread.
      * See [com.antivocale.app.transcription.cleanOrphanedModelDirs] for the safety contract.
      */
     private fun cleanOrphanedModelDirs() {
         viewModelScope.launch(Dispatchers.IO) {
             val context = ctx
-
-            val parakeetReclaimed = com.antivocale.app.transcription.cleanOrphanedModelDirs(
-                ParakeetModelManager.getModelStorageDir(context),
-                ParakeetModelManager.validModelDirNames
-            )
-            val whisperReclaimed = com.antivocale.app.transcription.cleanOrphanedModelDirs(
-                WhisperModelManager.getModelStorageDir(context),
-                WhisperModelManager.validModelDirNames
-            )
-            val qwen3Reclaimed = com.antivocale.app.transcription.cleanOrphanedModelDirs(
-                Qwen3AsrModelManager.getModelStorageDir(context),
-                Qwen3AsrModelManager.validModelDirNames
-            )
-            val nemotronReclaimed = com.antivocale.app.transcription.cleanOrphanedModelDirs(
-                NemotronModelManager.getModelStorageDir(context),
-                NemotronModelManager.validModelDirNames
-            )
-            val gigaamReclaimed = com.antivocale.app.transcription.cleanOrphanedModelDirs(
-                GigaAmModelManager.getModelStorageDir(context),
-                GigaAmModelManager.validModelDirNames
-            )
-
-            val total = parakeetReclaimed + whisperReclaimed + qwen3Reclaimed + nemotronReclaimed + gigaamReclaimed
+            var total = 0L
+            val perEntry = mutableMapOf<String, Long>()
+            for (entryId in BuiltInBackendIds.ALL) {
+                val manager = SherpaModelManager.of(entryId)
+                val reclaimed = cleanOrphanedModelDirs(
+                    manager.getModelStorageDir(context),
+                    manager.validModelDirNames
+                )
+                perEntry[entryId] = reclaimed
+                total += reclaimed
+            }
             if (total > 0L) {
                 Log.i(
                     TAG,
-                    "Reclaimed ${com.antivocale.app.util.formatFileSize(total)} of orphaned model dirs " +
-                        "(parakeet=${com.antivocale.app.util.formatFileSize(parakeetReclaimed)}, " +
-                        "whisper=${com.antivocale.app.util.formatFileSize(whisperReclaimed)}, " +
-                        "qwen3=${com.antivocale.app.util.formatFileSize(qwen3Reclaimed)}, " +
-                        "nemotron=${com.antivocale.app.util.formatFileSize(nemotronReclaimed)}, " +
-                        "gigaam=${com.antivocale.app.util.formatFileSize(gigaamReclaimed)})"
+                    "Reclaimed ${formatFileSize(total)} of orphaned model dirs " +
+                        "(${perEntry.map { "${it.key}=${formatFileSize(it.value)}" }.joinToString(", ")})"
                 )
             }
         }
@@ -391,7 +261,7 @@ class ModelViewModel @Inject constructor(
     }
 
     /**
-     * Shared skeleton for all three model-type progress handlers.
+     * Shared skeleton for all model progress handlers.
      * Updates the given [stateFlow] with progress, then dispatches terminal states.
      */
     private fun handleServiceProgress(
@@ -424,240 +294,56 @@ class ModelViewModel @Inject constructor(
         }
     }
 
-    private fun handleServiceProgressParakeet(progress: ExtractionService.ExtractionProgress) {
-        val variant = ParakeetModelManager.Variant.entries
-            .find { it.name.lowercase() == progress.variant }
-
+    /**
+     * Generic progress handler for the catalog-backed models. The variant name is
+     * the catalog variant name (from [ExtractionService.ExtractionProgress.variant]),
+     * resolved from progress (not ViewModel state) so auto-selection works even after
+     * ViewModel recreation during download.
+     */
+    private fun handleCatalogProgress(entryId: String, progress: ExtractionService.ExtractionProgress) {
+        val variantName = progress.variant
         handleServiceProgress(
             state = progress.downloadState,
             updateFlow = { state, prog ->
-                if (variant != null) {
-                    _parakeetState.update {
-                        it.copy(variantDownloadStates = it.variantDownloadStates.updateVariant(variant) {
-                            copy(downloadState = state, downloadProgress = prog ?: downloadProgress)
-                        })
-                    }
+                if (variantName != null) {
+                    updateEntry(entryId) { it.copy(variantDownloadStates = it.variantDownloadStates.updateVariant(variantName) {
+                        copy(downloadState = state, downloadProgress = prog ?: downloadProgress)
+                    }) }
                 }
             },
             onError = { msg, _ ->
-                if (variant != null) {
-                    _parakeetState.update {
-                        it.copy(variantDownloadStates = it.variantDownloadStates.updateVariant(variant) {
-                            copy(isDownloading = false, errorMessage = msg)
-                        })
-                    }
+                if (variantName != null) {
+                    updateEntry(entryId) { it.copy(variantDownloadStates = it.variantDownloadStates.updateVariant(variantName) {
+                        copy(isDownloading = false, errorMessage = msg)
+                    }) }
                 }
                 detectPartialDownloads()
             },
             onComplete = { file ->
-                _parakeetState.update {
-                    it.copy(
-                        modelPath = file.absolutePath,
-                        downloadedVariants = if (variant != null) it.downloadedVariants + variant else it.downloadedVariants,
-                        variantDownloadStates = it.variantDownloadStates.removeVariant(variant)
-                    )
-                }
+                updateEntry(entryId) { it.copy(
+                    modelPath = file.absolutePath,
+                    downloadedVariants = if (variantName != null) it.downloadedVariants + variantName else it.downloadedVariants,
+                    variantDownloadStates = it.variantDownloadStates.removeVariant(variantName),
+                    variantsNeedingExtraction = it.variantsNeedingExtraction - (variantName ?: ""),
+                    orphanedVariants = it.orphanedVariants - (variantName ?: "")
+                ) }
                 shareTargetManager.onModelDownloaded()
-                if (variant != null) {
-                    // Persist the freshly downloaded variant as the saved preference; auto-fallback
-                    // will still prefer SmoothQuant at transcription time regardless of what's saved.
+                if (variantName != null) {
+                    // Persist the freshly downloaded variant as the saved preference.
                     viewModelScope.launch {
-                        preferencesManager.saveParakeetModelPath(file.absolutePath)
+                        preferencesManager.saveSherpaModelPath(entryId, file.absolutePath)
                     }
-                    if (_uiState.value.modelName.isBlank()) useParakeetModel()
-                    viewModelScope.launch { _snackbarEvent.tryEmit(SnackbarEvent.Message(ctx.getString(R.string.parakeet_downloaded))) }
+                    if (_uiState.value.modelName.isBlank()) useModel(entryId, variantName)
+                    val displayName = ctx.getString(CatalogVariantUi.of(entryId, variantName).titleResId)
+                    viewModelScope.launch { _snackbarEvent.tryEmit(SnackbarEvent.Message(ctx.getString(R.string.catalog_model_downloaded, displayName))) }
                 }
             },
             onCancelled = {
-                if (variant != null) {
-                    _parakeetState.update {
-                        it.copy(variantDownloadStates = it.variantDownloadStates.updateVariant(variant) {
-                            copy(isDownloading = false, errorMessage = null)
-                        })
-                    }
+                if (variantName != null) {
+                    updateEntry(entryId) { it.copy(variantDownloadStates = it.variantDownloadStates.updateVariant(variantName) {
+                        copy(isDownloading = false, errorMessage = null)
+                    }) }
                 }
-                detectPartialDownloads()
-            }
-        )
-    }
-
-    private fun handleServiceProgressWhisper(progress: ExtractionService.ExtractionProgress) {
-        // Resolve variant from progress (not ViewModel state) so auto-selection
-        // works even after ViewModel recreation during download
-        val variant = WhisperModelManager.Variant.entries
-            .find { it.name.lowercase() == progress.variant }
-
-        handleServiceProgress(
-            state = progress.downloadState,
-            updateFlow = { state, prog ->
-                if (variant != null) {
-                    _whisperState.update {
-                        it.copy(variantDownloadStates = it.variantDownloadStates.updateVariant(variant) {
-                            copy(downloadState = state, downloadProgress = prog ?: downloadProgress)
-                        })
-                    }
-                }
-            },
-            onError = { msg, _ ->
-                if (variant != null) {
-                    _whisperState.update {
-                        it.copy(variantDownloadStates = it.variantDownloadStates.updateVariant(variant) {
-                            copy(isDownloading = false, errorMessage = msg)
-                        })
-                    }
-                }
-                detectPartialDownloads()
-            },
-            onComplete = { file ->
-                _whisperState.update {
-                    it.copy(
-                        modelPath = file.absolutePath,
-                        downloadedVariants = if (variant != null) it.downloadedVariants + variant else it.downloadedVariants,
-                        variantDownloadStates = it.variantDownloadStates.removeVariant(variant)
-                    )
-                }
-                shareTargetManager.onModelDownloaded()
-                if (variant != null) {
-                    if (_uiState.value.modelName.isBlank()) useWhisperModel(variant)
-                    val displayName = ctx.getString(variant.titleResId)
-                    viewModelScope.launch { _snackbarEvent.tryEmit(SnackbarEvent.Message(ctx.getString(R.string.whisper_downloaded, displayName))) }
-                }
-            },
-            onCancelled = {
-                if (variant != null) {
-                    _whisperState.update {
-                        it.copy(variantDownloadStates = it.variantDownloadStates.updateVariant(variant) {
-                            copy(isDownloading = false, errorMessage = null)
-                        })
-                    }
-                }
-                detectPartialDownloads()
-            }
-        )
-    }
-
-    private fun handleServiceProgressQwen3Asr(progress: ExtractionService.ExtractionProgress) {
-        val variant = Qwen3AsrModelManager.Variant.entries
-            .find { it.name.lowercase() == progress.variant }
-
-        handleServiceProgress(
-            state = progress.downloadState,
-            updateFlow = { state, prog ->
-                if (variant != null) {
-                    _qwen3AsrState.update {
-                        it.copy(variantDownloadStates = it.variantDownloadStates.updateVariant(variant) {
-                            copy(downloadState = state, downloadProgress = prog ?: downloadProgress)
-                        })
-                    }
-                }
-            },
-            onError = { msg, _ ->
-                if (variant != null) {
-                    _qwen3AsrState.update {
-                        it.copy(variantDownloadStates = it.variantDownloadStates.updateVariant(variant) {
-                            copy(isDownloading = false, errorMessage = msg)
-                        })
-                    }
-                }
-                detectPartialDownloads()
-            },
-            onComplete = { file ->
-                _qwen3AsrState.update {
-                    it.copy(
-                        modelPath = file.absolutePath,
-                        downloadedVariants = if (variant != null) it.downloadedVariants + variant else it.downloadedVariants,
-                        variantDownloadStates = it.variantDownloadStates.removeVariant(variant)
-                    )
-                }
-                shareTargetManager.onModelDownloaded()
-                if (variant != null) {
-                    if (_uiState.value.modelName.isBlank()) useQwen3AsrModel(variant)
-                    val displayName = ctx.getString(variant.titleResId)
-                    viewModelScope.launch { _snackbarEvent.tryEmit(SnackbarEvent.Message(ctx.getString(R.string.qwen3_asr_downloaded, displayName))) }
-                }
-            },
-            onCancelled = {
-                if (variant != null) {
-                    _qwen3AsrState.update {
-                        it.copy(variantDownloadStates = it.variantDownloadStates.updateVariant(variant) {
-                            copy(isDownloading = false, errorMessage = null)
-                        })
-                    }
-                }
-                detectPartialDownloads()
-            }
-        )
-    }
-
-    private fun handleServiceProgressNemotron(progress: ExtractionService.ExtractionProgress) {
-        handleServiceProgress(
-            state = progress.downloadState,
-            updateFlow = { state, prog ->
-                _nemotronState.update {
-                    it.copy(downloadState = state, downloadProgress = prog ?: it.downloadProgress)
-                }
-            },
-            onError = { msg, _ ->
-                _nemotronState.update { it.copy(isDownloading = false, errorMessage = msg) }
-                detectPartialDownloads()
-            },
-            onComplete = { file ->
-                _nemotronState.update {
-                    it.copy(
-                        modelPath = file.absolutePath,
-                        isDownloading = false,
-                        downloadProgress = 1f,
-                        downloadState = DownloadState.Idle
-                    )
-                }
-                shareTargetManager.onModelDownloaded()
-                viewModelScope.launch {
-                    preferencesManager.saveNemotronModelPath(file.absolutePath)
-                }
-                if (_uiState.value.modelName.isBlank()) useNemotronModel()
-                viewModelScope.launch {
-                    _snackbarEvent.tryEmit(SnackbarEvent.Message(ctx.getString(R.string.nemotron_downloaded, ctx.getString(R.string.nemotron_name))))
-                }
-            },
-            onCancelled = {
-                _nemotronState.update { it.copy(isDownloading = false, errorMessage = null) }
-                detectPartialDownloads()
-            }
-        )
-    }
-
-    private fun handleServiceProgressGigaAm(progress: ExtractionService.ExtractionProgress) {
-        handleServiceProgress(
-            state = progress.downloadState,
-            updateFlow = { state, prog ->
-                _gigaAmState.update {
-                    it.copy(downloadState = state, downloadProgress = prog ?: it.downloadProgress)
-                }
-            },
-            onError = { msg, _ ->
-                _gigaAmState.update { it.copy(isDownloading = false, errorMessage = msg) }
-                detectPartialDownloads()
-            },
-            onComplete = { file ->
-                _gigaAmState.update {
-                    it.copy(
-                        modelPath = file.absolutePath,
-                        isDownloading = false,
-                        downloadProgress = 1f,
-                        downloadState = DownloadState.Idle
-                    )
-                }
-                shareTargetManager.onModelDownloaded()
-                viewModelScope.launch {
-                    preferencesManager.saveGigaAmModelPath(file.absolutePath)
-                }
-                if (_uiState.value.modelName.isBlank()) useGigaAmModel()
-                viewModelScope.launch {
-                    _snackbarEvent.tryEmit(SnackbarEvent.Message(ctx.getString(R.string.gigaam_downloaded, ctx.getString(R.string.gigaam_name))))
-                }
-            },
-            onCancelled = {
-                _gigaAmState.update { it.copy(isDownloading = false, errorMessage = null) }
                 detectPartialDownloads()
             }
         )
@@ -730,31 +416,35 @@ class ModelViewModel @Inject constructor(
 
     // ==================== Variant state helpers ====================
 
+    /** Applies a block to one catalog entry's UI state, creating the default when absent. */
+    private fun updateEntry(entryId: String, block: (ModelEntryUiState) -> ModelEntryUiState) {
+        _catalogStates.update { it + (entryId to block(it[entryId] ?: ModelEntryUiState())) }
+    }
+
     /**
-     * Unified cancel for all model types. Stops the service, then on IO
+     * Unified cancel for catalog models. Stops the service, then on IO
      * detects any partial download and atomically transitions from
      * Downloading → PartiallyDownloaded (or removes the variant if clean).
      * The variant stays in the map until the IO work finishes, so the UI
      * never renders an intermediate Idle frame.
      */
-    private fun <V> cancelVariantDownload(
-        variant: V,
+    private fun cancelVariantDownload(
+        entryId: String,
+        variantName: String,
         cancelAction: () -> Unit,
-        detectPartial: (Context, V) -> DownloadState.PartiallyDownloaded?,
-        getCurrentStates: () -> Map<V, VariantDownloadState>,
-        applyUpdatedStates: (Map<V, VariantDownloadState>) -> Unit,
-        modelType: ExtractionService.ModelType,
-        variantKey: String
+        detectPartial: (Context, String) -> DownloadState.PartiallyDownloaded?,
+        getCurrentStates: () -> Map<String, VariantDownloadState>,
+        applyUpdatedStates: (Map<String, VariantDownloadState>) -> Unit,
     ) {
         cancelAction()
-        stopExtractionService(modelType, variantKey)
+        stopExtractionService(entryId, variantName)
         viewModelScope.launch(Dispatchers.IO) {
-            val partial = detectPartial(ctx, variant)
+            val partial = detectPartial(ctx, variantName)
             val current = getCurrentStates()
             val updated = if (partial != null) {
-                current + (variant to VariantDownloadState(partialDownload = partial))
+                current + (variantName to VariantDownloadState(partialDownload = partial))
             } else {
-                current - variant
+                current - variantName
             }
             applyUpdatedStates(updated)
         }
@@ -764,17 +454,17 @@ class ModelViewModel @Inject constructor(
 
     /**
      * Sends a cancel intent to [ExtractionService].
-     * When [modelType] and [variant] are provided, only that specific
+     * When [modelKey] and [variant] are provided, only that specific
      * download is cancelled; otherwise all active downloads are cancelled.
      */
     private fun stopExtractionService(
-        modelType: ExtractionService.ModelType? = null,
+        modelKey: String? = null,
         variant: String? = null
     ) {
         val context = ctx
         val intent = Intent(context, ExtractionService::class.java).apply {
             action = ExtractionService.ACTION_CANCEL
-            modelType?.let { putExtra(ExtractionService.EXTRA_MODEL_TYPE, it.key) }
+            modelKey?.let { putExtra(ExtractionService.EXTRA_MODEL_KEY, it) }
             variant?.let { putExtra(ExtractionService.EXTRA_CANCEL_VARIANT, it) }
         }
         ContextCompat.startForegroundService(context, intent)
@@ -811,91 +501,41 @@ class ModelViewModel @Inject constructor(
                 }
             }
 
-            // Check Parakeet variants
-            val activeParakeetDownloads = _parakeetState.value.variantDownloadStates
-                .filter { it.value.isDownloading }.keys
-            val parakeetPartials = mutableMapOf<ParakeetModelManager.Variant, DownloadState.PartiallyDownloaded>()
-            for (variant in ParakeetModelManager.Variant.entries) {
-                if (!ParakeetDownloader.isModelDownloaded(context, variant) && variant !in activeParakeetDownloads) {
-                    val partial = ParakeetDownloader.detectPartialDownload(context, variant)
-                    if (partial != null) {
-                        parakeetPartials[variant] = partial
-                    }
-                }
-            }
-            if (parakeetPartials.isNotEmpty()) {
-                _parakeetState.update {
-                    it.copy(variantDownloadStates = it.variantDownloadStates.mergePartials(parakeetPartials))
-                }
-            }
-
-            // Check Whisper variants
-            val activeWhisperDownloads = _whisperState.value.variantDownloadStates
-                .filter { it.value.isDownloading }.keys
-            val whisperNeedsExtraction = mutableSetOf<WhisperModelManager.Variant>()
-            val whisperOrphaned = mutableSetOf<WhisperModelManager.Variant>()
-            val whisperPartials = mutableMapOf<WhisperModelManager.Variant, DownloadState.PartiallyDownloaded>()
-            for (variant in WhisperModelManager.Variant.entries) {
-                if (!WhisperDownloader.isModelDownloaded(context, variant)) {
-                    if (variant !in activeWhisperDownloads) {
-                        val partial = WhisperDownloader.detectPartialDownload(context, variant)
-                        if (partial != null) {
-                            whisperPartials[variant] = partial
+            // Check catalog model entries generically (all variants of every entry)
+            for (entryId in BuiltInBackendIds.ALL) {
+                val entry = BundledCatalog.byId(entryId) ?: continue
+                val downloader = SherpaModelDownloader.of(entryId)
+                val manager = SherpaModelManager.of(entryId)
+                val current = _catalogStates.value[entryId] ?: ModelEntryUiState()
+                val activeDownloads = current.variantDownloadStates
+                    .filter { it.value.isDownloading }.keys
+                val partials = mutableMapOf<String, DownloadState.PartiallyDownloaded>()
+                val needsExtraction = mutableSetOf<String>()
+                val orphaned = mutableSetOf<String>()
+                for (variant in entry.variants) {
+                    val vName = variant.name
+                    if (!downloader.isModelDownloaded(context, vName)) {
+                        if (vName !in activeDownloads) {
+                            val partial = downloader.detectPartialDownload(context, vName)
+                            if (partial != null) {
+                                partials[vName] = partial
+                            }
+                        }
+                        if (downloader.needsExtraction(context, vName)) {
+                            needsExtraction.add(vName)
+                        }
+                        // Check for orphaned model directory
+                        if (File(manager.getModelStorageDir(context), variant.dirName).exists()) {
+                            orphaned.add(vName)
                         }
                     }
-                    if (WhisperDownloader.needsExtraction(context, variant)) {
-                        whisperNeedsExtraction.add(variant)
-                    }
-                    // Check for orphaned model directory
-                    val modelDir = java.io.File(
-                        WhisperModelManager.getModelStorageDir(context),
-                        WhisperDownloader.getModelDirName(variant)
+                }
+                updateEntry(entryId) {
+                    it.copy(
+                        variantDownloadStates = it.variantDownloadStates.mergePartials(partials),
+                        variantsNeedingExtraction = needsExtraction,
+                        orphanedVariants = orphaned
                     )
-                    if (modelDir.exists()) {
-                        whisperOrphaned.add(variant)
-                    }
-                }
-            }
-            _whisperState.update {
-                it.copy(
-                    variantDownloadStates = it.variantDownloadStates.mergePartials(whisperPartials),
-                    variantsNeedingExtraction = whisperNeedsExtraction,
-                    orphanedVariants = whisperOrphaned
-                )
-            }
-
-            // Check Qwen3-ASR variants
-            val activeQwen3Downloads = _qwen3AsrState.value.variantDownloadStates
-                .filter { it.value.isDownloading }.keys
-            val qwen3Partials = mutableMapOf<Qwen3AsrModelManager.Variant, DownloadState.PartiallyDownloaded>()
-            for (variant in Qwen3AsrModelManager.Variant.entries) {
-                if (!Qwen3AsrDownloader.isModelDownloaded(context, variant) && variant !in activeQwen3Downloads) {
-                    val partial = Qwen3AsrDownloader.detectPartialDownload(context, variant)
-                    if (partial != null) {
-                        qwen3Partials[variant] = partial
-                    }
-                }
-            }
-            if (qwen3Partials.isNotEmpty()) {
-                _qwen3AsrState.update {
-                    it.copy(variantDownloadStates = it.variantDownloadStates.mergePartials(qwen3Partials))
-                }
-            }
-
-            // GGUF: disabled — partial download detection skipped entirely
-
-            // Check Nemotron (single-variant) — only when not actively downloading
-            if (!_nemotronState.value.isDownloading && NemotronDownloader.getModelPath(context) == null) {
-                val nemotronPartial = NemotronDownloader.detectPartialDownload(context)
-                if (nemotronPartial != null) {
-                    _nemotronState.update { it.copy(partialDownload = nemotronPartial) }
-                }
-            }
-            // Check GigaAM (single-variant) — only when not actively downloading
-            if (!_gigaAmState.value.isDownloading && GigaAmDownloader.getModelPath(context) == null) {
-                val gigaamPartial = GigaAmDownloader.detectPartialDownload(context)
-                if (gigaamPartial != null) {
-                    _gigaAmState.update { it.copy(partialDownload = gigaamPartial) }
                 }
             }
         }
@@ -907,6 +547,55 @@ class ModelViewModel @Inject constructor(
     fun refreshTokenState() {
         _downloadUiState.update { it.copy(hasToken = tokenManager.hasToken()) }
     }
+
+    // ==================== Catalog model state refresh ====================
+
+    /** Refreshes download/path state for every catalog entry, off the main thread. */
+    fun refreshCatalogEntries() {
+        viewModelScope.launch(Dispatchers.IO) {
+            for (entryId in BuiltInBackendIds.ALL) {
+                refreshCatalogEntry(entryId)
+            }
+        }
+    }
+
+    /**
+     * Discovers downloaded variants and resolves the active model path for one
+     * catalog entry (auto-fallback semantics live in [SherpaModelManager]).
+     */
+    private suspend fun refreshCatalogEntry(entryId: String) {
+        val context = ctx
+        val entry = BundledCatalog.byId(entryId) ?: return
+        val downloader = SherpaModelDownloader.of(entryId)
+        val manager = SherpaModelManager.of(entryId)
+        val downloadedVariants = entry.variants
+            .filter { downloader.isModelDownloaded(context, it.name) }
+            .map { it.name }
+            .toSet()
+        val activePath = manager.resolveActiveModelPath(context)
+        val needsExtraction = mutableSetOf<String>()
+        val orphaned = mutableSetOf<String>()
+        for (variant in entry.variants) {
+            val vName = variant.name
+            if (vName !in downloadedVariants) {
+                if (downloader.needsExtraction(context, vName)) needsExtraction.add(vName)
+                if (File(manager.getModelStorageDir(context), variant.dirName).exists()) orphaned.add(vName)
+            }
+        }
+        updateEntry(entryId) {
+            it.copy(
+                downloadedVariants = downloadedVariants,
+                modelPath = activePath,
+                variantsNeedingExtraction = needsExtraction,
+                orphanedVariants = orphaned,
+            )
+        }
+    }
+
+    /** Saved model-path preference flow for a catalog entry (survives restarts). */
+    fun savedModelPath(entryId: String): StateFlow<String?> =
+        preferencesManager.sherpaModelPath(entryId)
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     private fun loadSavedModelPath() {
         viewModelScope.launch {
@@ -922,30 +611,25 @@ class ModelViewModel @Inject constructor(
                     // File-existence validation is backend-specific (directory vs file vs custom
                     // check). This when-block stays here because it drives the statusMessage, not
                     // because it dispatches preferences (that is now the repository's job).
-                    // TASK-324: key on the registry descriptor's ModelType instead of the
-                    // backend-id strings, mirroring TranscriptionOrchestrator.ensureBackendLoaded.
-                    // The disabled GGUF backend is unregistered, so its literal id is matched
-                    // before the lookup; the registered LLM backend (GEMMA) and unknown ids
-                    // (null descriptor) both fall to validateModelPath, exactly as the former
-                    // string-keyed else did.
+                    // TASK-324: key on the registry descriptor instead of the backend-id strings,
+                    // mirroring TranscriptionOrchestrator.ensureBackendLoaded. The disabled GGUF
+                    // backend is unregistered, so its literal id is matched before the lookup; the
+                    // registered LLM backend ("llm") and unknown ids (null descriptor) both fall to
+                    // validateModelPath, exactly as the former string-keyed else did.
                     val isValid = when (active.backendId) {
                         "gemma4_gguf" -> {
                             val file = File(path)
                             file.exists() && file.isFile
                         }
-                        else -> when (backendRegistry.byBackendId(active.backendId)?.modelType) {
-                            ExtractionService.ModelType.PARAKEET -> File(path).exists()
-                            ExtractionService.ModelType.WHISPER,
-                            ExtractionService.ModelType.QWEN3_ASR,
-                            ExtractionService.ModelType.NEMOTRON,
-                            ExtractionService.ModelType.GIGAAM,
-                            ExtractionService.ModelType.EXTERNAL -> {
-                                val dir = File(path)
-                                dir.exists() && dir.isDirectory
+                        else -> when (val descriptor = backendRegistry.byBackendId(active.backendId)) {
+                            null -> validateModelPath(path)
+                            else -> when {
+                                descriptor.backendId == LlmTranscriptionBackend.BACKEND_ID -> validateModelPath(path)
+                                else -> {
+                                    val dir = File(path)
+                                    dir.exists() && dir.isDirectory
+                                }
                             }
-                            // The registered LLM backend ("llm" -> GEMMA) validates as a file.
-                            ExtractionService.ModelType.GEMMA -> validateModelPath(path)
-                            else -> validateModelPath(path)
                         }
                     }
                     val displayName = name ?: path.substringAfterLast("/")
@@ -967,9 +651,6 @@ class ModelViewModel @Inject constructor(
             }
         }
     }
-
-
-
 
     fun openFilePicker() {
         viewModelScope.launch {
@@ -1107,7 +788,6 @@ class ModelViewModel @Inject constructor(
         return File(path).name
     }
 
-
     /**
      * Called when the model is automatically unloaded due to inactivity timeout.
      */
@@ -1188,7 +868,7 @@ class ModelViewModel @Inject constructor(
 
         val context = ctx
         val intent = Intent(context, ExtractionService::class.java).apply {
-            putExtra(ExtractionService.EXTRA_MODEL_TYPE, ExtractionService.ModelType.GEMMA.key)
+            putExtra(ExtractionService.EXTRA_MODEL_KEY, LlmTranscriptionBackend.BACKEND_ID)
             putExtra(ExtractionService.EXTRA_VARIANT, variantKey(variant))
         }
         ContextCompat.startForegroundService(context, intent)
@@ -1222,15 +902,20 @@ class ModelViewModel @Inject constructor(
     /**
      * Cancels the ongoing Gemma download.
      */
-    fun cancelDownload(variant: ModelDownloader.ModelVariant) = cancelVariantDownload(
-        variant,
-        cancelAction = { ModelDownloader.cancel(variant) },
-        detectPartial = { ctx, v -> ModelDownloader.detectPartialDownload(ctx, v) },
-        getCurrentStates = { _downloadUiState.value.variantDownloadStates },
-        applyUpdatedStates = { states -> _downloadUiState.update { it.copy(variantDownloadStates = states, downloadError = null) } },
-        modelType = ExtractionService.ModelType.GEMMA,
-        variantKey = variantKey(variant)
-    )
+    fun cancelDownload(variant: ModelDownloader.ModelVariant) {
+        ModelDownloader.cancel(variant)
+        stopExtractionService(LlmTranscriptionBackend.BACKEND_ID, variantKey(variant))
+        viewModelScope.launch(Dispatchers.IO) {
+            val partial = ModelDownloader.detectPartialDownload(ctx, variant)
+            val current = _downloadUiState.value.variantDownloadStates
+            val updated = if (partial != null) {
+                current + (variant to VariantDownloadState(partialDownload = partial))
+            } else {
+                current - variant
+            }
+            _downloadUiState.update { it.copy(variantDownloadStates = updated, downloadError = null) }
+        }
+    }
 
     /**
      * Checks if a model variant is already downloaded.
@@ -1264,7 +949,6 @@ class ModelViewModel @Inject constructor(
         }
     }
 
-
     /**
      * Deletes a downloaded model and refreshes the state.
      */
@@ -1287,7 +971,6 @@ class ModelViewModel @Inject constructor(
             }
         }
     }
-
 
     /**
      * Shows the delete confirmation dialog for a model.
@@ -1380,489 +1063,100 @@ class ModelViewModel @Inject constructor(
         }
     }
 
-    // ==================== Parakeet Model Download ====================
+    // ==================== Catalog Models (generic, catalog-driven) ====================
 
     /**
-     * Refreshes the Parakeet model state. Discovers downloaded variants and resolves
-     * the auto-fallback active model path (prefer SmoothQuant, else Stock int8).
+     * Starts a download for one catalog entry's variant via [ExtractionService].
+     * The whole sherpa-onnx family (Parakeet, Whisper, Qwen3-ASR, Nemotron, GigaAM)
+     * shares this single path; everything model-specific comes from the catalog.
      */
-    fun refreshParakeetState() {
-        viewModelScope.launch(Dispatchers.IO) {
-            val context = ctx
-            val downloadedVariants = ParakeetModelManager.Variant.entries
-                .filter { ParakeetDownloader.isModelDownloaded(context, it) }
-                .toSet()
-            val activePath = ParakeetModelManager.resolveActiveModelPath(context)
-            _parakeetState.update {
-                it.copy(
-                    downloadedVariants = downloadedVariants,
-                    modelPath = activePath
-                )
-            }
-        }
-    }
-
-    // ==================== Parakeet Confirmation Dialogs ====================
-
-    fun showParakeetDownloadDialog(variant: ParakeetModelManager.Variant) {
-        _parakeetState.update { it.copy(showDownloadDialog = true, selectedVariant = variant) }
-    }
-
-    fun dismissParakeetDownloadDialog() {
-        _parakeetState.update { it.copy(showDownloadDialog = false) }
-    }
-
-    fun confirmParakeetDownload() {
-        val variant = _parakeetState.value.selectedVariant ?: return
-        startParakeetDownload(variant)
-    }
-
-    fun showParakeetDeleteDialog(variant: ParakeetModelManager.Variant) {
-        _parakeetState.update { it.copy(showDeleteDialog = true, variantToDelete = variant) }
-    }
-
-    fun dismissParakeetDeleteDialog() {
-        _parakeetState.update { it.copy(showDeleteDialog = false, variantToDelete = null) }
-    }
-
-    fun confirmParakeetDelete() {
-        val variant = _parakeetState.value.variantToDelete ?: return
-        _parakeetState.update { it.copy(showDeleteDialog = false) }
-        deleteParakeetModel(variant)
-    }
-
-    // ==================== Parakeet Download Methods ====================
-
-    fun startParakeetDownload(variant: ParakeetModelManager.Variant) {
-        _parakeetState.update {
-            it.copy(
-                showDownloadDialog = false,
-                selectedVariant = variant,
-                variantDownloadStates = it.variantDownloadStates + (variant to VariantDownloadState(
-                    downloadState = DownloadState.Connecting(""),
-                    downloadProgress = 0f,
-                    isDownloading = true,
-                    errorMessage = null,
-                    partialDownload = null
-                ))
-            )
-        }
-        val context = ctx
-        val intent = Intent(context, ExtractionService::class.java).apply {
-            putExtra(ExtractionService.EXTRA_MODEL_TYPE, ExtractionService.ModelType.PARAKEET.key)
-            putExtra(ExtractionService.EXTRA_VARIANT, variantKey(variant))
-        }
-        ContextCompat.startForegroundService(context, intent)
-    }
-
-    fun cancelParakeetDownload(variant: ParakeetModelManager.Variant) = cancelVariantDownload(
-        variant,
-        cancelAction = { ParakeetDownloader.cancel(variant) },
-        detectPartial = { ctx, v -> ParakeetDownloader.detectPartialDownload(ctx, v) },
-        getCurrentStates = { _parakeetState.value.variantDownloadStates },
-        applyUpdatedStates = { states -> _parakeetState.update { it.copy(variantDownloadStates = states) } },
-        modelType = ExtractionService.ModelType.PARAKEET,
-        variantKey = variantKey(variant)
-    )
-
-    fun resumeParakeetDownload(variant: ParakeetModelManager.Variant) {
-        _parakeetState.update { it.copy(
-            variantDownloadStates = it.variantDownloadStates.updateVariant(variant) {
-                copy(partialDownload = null)
-            }
-        ) }
-        startParakeetDownload(variant)
-    }
-
-    fun clearParakeetPartialDownload(variant: ParakeetModelManager.Variant) {
-        viewModelScope.launch(Dispatchers.IO) {
-            ParakeetDownloader.clearPartialDownload(ctx, variant)
-            _parakeetState.update {
-                it.copy(variantDownloadStates = it.variantDownloadStates - variant)
-            }
-        }
-    }
-
-    /**
-     * Uses the Parakeet model (switches backend to sherpa-onnx).
-     *
-     * The active variant is auto-resolved via [ParakeetModelManager.resolveActiveModelPath]
-     * (prefer SmoothQuant, else Stock int8). There is no user variant selector for Parakeet.
-     */
-    fun useParakeetModel(variant: ParakeetModelManager.Variant? = null) {
-        viewModelScope.launch {
-            val context = ctx
-            // When the user picks a specific variant from its card, honor that
-            // choice; otherwise auto-resolve (prefer SmoothQuant, else Stock int8).
-            val modelPath = variant?.let { ParakeetDownloader.getModelPath(context, it) }
-                ?: ParakeetModelManager.resolveActiveModelPath(context)
-                ?: _parakeetState.value.modelPath
-            if (modelPath != null) {
-                // Save resolved Parakeet path and switch backend preference
-                preferencesManager.saveParakeetModelPath(modelPath)
-                preferencesManager.saveTranscriptionBackend(SherpaOnnxBackend.BACKEND_ID)
-
-                val message = ctx.getString(R.string.model_selected_message, ctx.getString(R.string.parakeet_name))
-                _uiState.update { it.copy(
-                    modelPath = modelPath,
-                    modelName = ctx.getString(R.string.parakeet_name),
-                    status = ModelStatus.UNLOADED,
-                    statusMessage = message
-                )}
-
-                _snackbarEvent.tryEmit(SnackbarEvent.Message(message))
-                llmManager.resetKeepAliveTimer()
-            }
-        }
-    }
-
-    fun deleteParakeetModel(variant: ParakeetModelManager.Variant) {
-        viewModelScope.launch(Dispatchers.IO) {
-            val context = ctx
-            val success = ParakeetDownloader.deleteModel(context, variant)
-            if (success) {
-                _parakeetState.update {
-                    it.copy(downloadedVariants = _parakeetState.value.downloadedVariants - variant)
-                }
-                // Re-resolve the active path; if the deleted variant was the saved one, clear it.
-                val activePath = ParakeetModelManager.resolveActiveModelPath(context)
-                val savedPath = preferencesManager.parakeetModelPath.first()
-                if (savedPath != null && savedPath.contains(ParakeetDownloader.getModelDirName(variant))) {
-                    if (activePath != null) {
-                        preferencesManager.saveParakeetModelPath(activePath)
-                    } else {
-                        preferencesManager.saveParakeetModelPath("")
-                        shareTargetManager.onModelDeleted(SherpaOnnxBackend.BACKEND_ID)
-                    }
-                }
-                _parakeetState.update { it.copy(modelPath = activePath) }
-                _snackbarEvent.tryEmit(SnackbarEvent.Message(context.getString(R.string.parakeet_deleted)))
-            }
-        }
-    }
-
-    // ==================== Whisper Model Download ====================
-
-    /**
-     * Refreshes the Whisper model state.
-     */
-    fun refreshWhisperState() {
-        viewModelScope.launch {
-            val context = ctx
-            val downloadedVariants = WhisperModelManager.Variant.entries
-                .filter { WhisperDownloader.isModelDownloaded(context, it) }
-                .toSet()
-
-            _whisperState.update { it.copy(
-                downloadedVariants = downloadedVariants
-            )}
-        }
-    }
-
-    // ==================== Whisper Confirmation Dialogs ====================
-
-    /**
-     * Shows the Whisper download confirmation dialog.
-     */
-    fun showWhisperDownloadDialog(variant: WhisperModelManager.Variant) {
-        _whisperState.update { it.copy(
-            selectedVariant = variant,
-            showDownloadDialog = true
-        )}
-    }
-
-    /**
-     * Dismisses the Whisper download confirmation dialog.
-     */
-    fun dismissWhisperDownloadDialog() {
-        _whisperState.update { it.copy(showDownloadDialog = false) }
-    }
-
-    /**
-     * Confirms and starts the Whisper download.
-     */
-    fun confirmWhisperDownload() {
-        val variant = _whisperState.value.selectedVariant ?: return
-        val needsExtraction = _whisperState.value.variantsNeedingExtraction.contains(variant)
-        startWhisperDownload(
-            variant,
-            dismissDialog = true,
-            initialState = if (needsExtraction) DownloadState.Extracting(0, 0) else DownloadState.Connecting("")
-        )
-    }
-
-    /**
-     * Shows the Whisper delete confirmation dialog.
-     */
-    fun showWhisperDeleteDialog(variant: WhisperModelManager.Variant) {
-        _whisperState.update { it.copy(
-            variantToDelete = variant,
-            showDeleteDialog = true
-        )}
-    }
-
-    /**
-     * Dismisses the Whisper delete confirmation dialog.
-     */
-    fun dismissWhisperDeleteDialog() {
-        _whisperState.update { it.copy(
-            showDeleteDialog = false,
-            variantToDelete = null
-        )}
-    }
-
-    /**
-     * Confirms and deletes the Whisper model.
-     */
-    fun confirmWhisperDelete() {
-        val variant = _whisperState.value.variantToDelete ?: return
-        _whisperState.update { it.copy(showDeleteDialog = false) }
-        deleteWhisperModel(variant)
-    }
-
-    /**
-     * Starts downloading a Whisper model variant via [ExtractionService].
-     */
-    fun startWhisperDownload(
-        variant: WhisperModelManager.Variant,
-        dismissDialog: Boolean = false,
-        initialState: DownloadState = DownloadState.Connecting("")
-    ) {
-        _whisperState.update { it.copy(
+    fun startDownload(entryId: String, variantName: String, dismissDialog: Boolean = false, initialState: DownloadState = DownloadState.Connecting("")) {
+        updateEntry(entryId) { it.copy(
             showDownloadDialog = if (dismissDialog) false else it.showDownloadDialog,
-            selectedVariant = variant,
-            variantDownloadStates = it.variantDownloadStates + (variant to VariantDownloadState(
+            selectedVariant = variantName,
+            variantDownloadStates = it.variantDownloadStates + (variantName to VariantDownloadState(
                 downloadState = initialState,
                 downloadProgress = 0f,
                 isDownloading = true,
                 errorMessage = null,
                 partialDownload = null
             ))
-        )}
+        ) }
 
         val context = ctx
         val intent = Intent(context, ExtractionService::class.java).apply {
-            putExtra(ExtractionService.EXTRA_MODEL_TYPE, ExtractionService.ModelType.WHISPER.key)
-            putExtra(ExtractionService.EXTRA_VARIANT, variantKey(variant))
+            putExtra(ExtractionService.EXTRA_MODEL_KEY, entryId)
+            putExtra(ExtractionService.EXTRA_VARIANT, variantName)
         }
         ContextCompat.startForegroundService(context, intent)
     }
 
     /**
-     * Resumes a partial Whisper download.
+     * Resumes a partial catalog download.
      */
-    fun resumeWhisperDownload(variant: WhisperModelManager.Variant) {
-        _whisperState.update { it.copy(
-            variantDownloadStates = it.variantDownloadStates.updateVariant(variant) {
+    fun resumeDownload(entryId: String, variantName: String) {
+        updateEntry(entryId) { it.copy(
+            variantDownloadStates = it.variantDownloadStates.updateVariant(variantName) {
                 copy(partialDownload = null)
             }
         ) }
-        startWhisperDownload(variant)
+        startDownload(entryId, variantName)
     }
 
     /**
-     * Clears a partial Whisper download (tar file only).
-     * The model directory is preserved — use [clearOrphanedWhisperFiles] to remove it.
+     * Clears a partial catalog download (e.g. the .tar file for Whisper; the model
+     * directory is preserved — use [clearOrphanedFiles] to remove it).
      */
-    fun clearWhisperPartialDownload(variant: WhisperModelManager.Variant) {
-        viewModelScope.launch {
-            val context = ctx
-            WhisperDownloader.clearPartialDownload(context, variant)
-            _whisperState.update {
-                it.copy(
-                    variantDownloadStates = it.variantDownloadStates - variant,
-                    variantsNeedingExtraction = emptySet()
-                )
-            }
+    fun clearPartialDownload(entryId: String, variantName: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            SherpaModelDownloader.of(entryId).clearPartialDownload(ctx, variantName)
+            updateEntry(entryId) { it.copy(
+                variantDownloadStates = it.variantDownloadStates - variantName,
+                variantsNeedingExtraction = it.variantsNeedingExtraction - variantName,
+            ) }
             detectPartialDownloads()
         }
     }
 
     /**
-     * Clears an orphaned Whisper model directory (partial extraction leftovers).
-     * The tar file is preserved so extraction can be retried.
+     * Clears an orphaned catalog model directory (partial extraction leftovers).
+     * The partial download file is preserved so extraction can be retried.
      */
-    fun clearOrphanedWhisperFiles(variant: WhisperModelManager.Variant) {
-        viewModelScope.launch {
-            val context = ctx
-            WhisperDownloader.deleteModel(context, variant)
-            _whisperState.update {
-                it.copy(
-                    orphanedVariants = it.orphanedVariants - variant
-                )
-            }
+    fun clearOrphanedFiles(entryId: String, variantName: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            SherpaModelDownloader.of(entryId).deleteModel(ctx, variantName)
+            updateEntry(entryId) { it.copy(orphanedVariants = it.orphanedVariants - variantName) }
             detectPartialDownloads()
         }
     }
 
     /**
-     * Cancels the Whisper download.
+     * Cancels a catalog model download.
      */
-    fun cancelWhisperDownload(variant: WhisperModelManager.Variant) = cancelVariantDownload(
-        variant,
-        cancelAction = { WhisperDownloader.cancel(variant) },
-        detectPartial = { ctx, v -> WhisperDownloader.detectPartialDownload(ctx, v) },
-        getCurrentStates = { _whisperState.value.variantDownloadStates },
-        applyUpdatedStates = { states -> _whisperState.update { it.copy(variantDownloadStates = states) } },
-        modelType = ExtractionService.ModelType.WHISPER,
-        variantKey = variantKey(variant)
+    fun cancelDownload(entryId: String, variantName: String) = cancelVariantDownload(
+        entryId = entryId,
+        variantName = variantName,
+        cancelAction = { SherpaModelDownloader.of(entryId).cancel(variantName) },
+        detectPartial = { context, v -> SherpaModelDownloader.of(entryId).detectPartialDownload(context, v) },
+        getCurrentStates = { _catalogStates.value[entryId]?.variantDownloadStates ?: emptyMap() },
+        applyUpdatedStates = { states -> updateEntry(entryId) { it.copy(variantDownloadStates = states) } }
     )
 
     /**
-     * Uses the Whisper model (switches backend to whisper).
+     * Uses a catalog model variant (switches the transcription backend to the entry id).
      */
-    fun useWhisperModel(variant: WhisperModelManager.Variant) {
+    fun useModel(entryId: String, variantName: String) {
         viewModelScope.launch {
             val context = ctx
-            val modelPath = WhisperDownloader.getModelPath(context, variant)
+            val downloader = SherpaModelDownloader.of(entryId)
+            val modelPath = downloader.getModelPath(context, variantName)
+                ?: SherpaModelManager.of(entryId).resolveActiveModelPath(context)
+                ?: _catalogStates.value[entryId]?.modelPath
             if (modelPath != null) {
-                val displayName = context.getString(variant.titleResId)
-                // Save Whisper model path and switch backend preference
-                preferencesManager.saveWhisperModelPath(modelPath)
-                preferencesManager.saveTranscriptionBackend(WhisperBackend.BACKEND_ID)
+                preferencesManager.saveSherpaModelPath(entryId, modelPath)
+                preferencesManager.saveTranscriptionBackend(entryId)
 
-                val message = context.getString(R.string.model_selected_message, displayName)
-                _uiState.update { it.copy(
-                    modelName = displayName,
-                    status = ModelStatus.UNLOADED,
-                    statusMessage = message
-                )}
-
-                _snackbarEvent.tryEmit(SnackbarEvent.Message(message))
-            }
-        }
-    }
-
-    /**
-     * Deletes a Whisper model variant.
-     */
-    fun deleteWhisperModel(variant: WhisperModelManager.Variant) {
-        viewModelScope.launch {
-            val context = ctx
-            val success = WhisperDownloader.deleteModel(context, variant)
-            if (success) {
-                val displayName = context.getString(variant.titleResId)
-                // Update state to remove the variant
-                _whisperState.update { it.copy(
-                    downloadedVariants = _whisperState.value.downloadedVariants - variant
-                )}
-                // Clear saved path if this was the selected variant
-                val savedPath = preferencesManager.whisperModelPath.first()
-                if (savedPath?.contains(variant.dirName) == true) {
-                    preferencesManager.clearWhisperModelPath()
-                    _uiState.update { it.copy(modelPath = "", modelName = "") }
-                    shareTargetManager.onModelDeleted(WhisperBackend.BACKEND_ID)
-                }
-                _snackbarEvent.tryEmit(SnackbarEvent.Message(context.getString(R.string.whisper_deleted, displayName)))
-            }
-        }
-    }
-
-    // ==================== Qwen3-ASR Model Download ====================
-
-    /**
-     * Refreshes the Qwen3-ASR model state.
-     */
-    fun refreshQwen3AsrState() {
-        viewModelScope.launch(Dispatchers.IO) {
-            val context = ctx
-            val downloadedVariants = Qwen3AsrModelManager.Variant.entries
-                .filter { Qwen3AsrDownloader.isModelDownloaded(context, it) }
-                .toSet()
-            _qwen3AsrState.update { it.copy(downloadedVariants = downloadedVariants) }
-        }
-    }
-
-    // ==================== Qwen3-ASR Confirmation Dialogs ====================
-
-    fun showQwen3AsrDownloadDialog(variant: Qwen3AsrModelManager.Variant) {
-        _qwen3AsrState.update { it.copy(showDownloadDialog = true, selectedVariant = variant) }
-    }
-
-    fun dismissQwen3AsrDownloadDialog() {
-        _qwen3AsrState.update { it.copy(showDownloadDialog = false) }
-    }
-
-    fun confirmQwen3AsrDownload() {
-        val variant = _qwen3AsrState.value.selectedVariant ?: return
-        startQwen3AsrDownload(variant)
-    }
-
-    fun showQwen3AsrDeleteDialog(variant: Qwen3AsrModelManager.Variant) {
-        _qwen3AsrState.update { it.copy(showDeleteDialog = true, variantToDelete = variant) }
-    }
-
-    fun dismissQwen3AsrDeleteDialog() {
-        _qwen3AsrState.update { it.copy(showDeleteDialog = false, variantToDelete = null) }
-    }
-
-    fun confirmQwen3AsrDelete() {
-        val variant = _qwen3AsrState.value.variantToDelete ?: return
-        _qwen3AsrState.update { it.copy(showDeleteDialog = false) }
-        deleteQwen3AsrModel(variant)
-    }
-
-    // ==================== Qwen3-ASR Download Methods ====================
-
-    fun startQwen3AsrDownload(variant: Qwen3AsrModelManager.Variant) {
-        _qwen3AsrState.update {
-            it.copy(
-                showDownloadDialog = false,
-                selectedVariant = variant,
-                variantDownloadStates = it.variantDownloadStates + (variant to VariantDownloadState(
-                    downloadState = DownloadState.Connecting(""),
-                    downloadProgress = 0f,
-                    isDownloading = true,
-                    errorMessage = null,
-                    partialDownload = null
-                ))
-            )
-        }
-        val context = ctx
-        val intent = Intent(context, ExtractionService::class.java).apply {
-            putExtra(ExtractionService.EXTRA_MODEL_TYPE, ExtractionService.ModelType.QWEN3_ASR.key)
-            putExtra(ExtractionService.EXTRA_VARIANT, variantKey(variant))
-        }
-        ContextCompat.startForegroundService(context, intent)
-    }
-
-    fun cancelQwen3AsrDownload(variant: Qwen3AsrModelManager.Variant) = cancelVariantDownload(
-        variant,
-        cancelAction = { Qwen3AsrDownloader.cancel(variant) },
-        detectPartial = { ctx, v -> Qwen3AsrDownloader.detectPartialDownload(ctx, v) },
-        getCurrentStates = { _qwen3AsrState.value.variantDownloadStates },
-        applyUpdatedStates = { states -> _qwen3AsrState.update { it.copy(variantDownloadStates = states) } },
-        modelType = ExtractionService.ModelType.QWEN3_ASR,
-        variantKey = variantKey(variant)
-    )
-
-    fun resumeQwen3AsrDownload(variant: Qwen3AsrModelManager.Variant) {
-        _qwen3AsrState.update { it.copy(
-            variantDownloadStates = it.variantDownloadStates.updateVariant(variant) {
-                copy(partialDownload = null)
-            }
-        ) }
-        startQwen3AsrDownload(variant)
-    }
-
-    fun clearQwen3AsrPartialDownload(variant: Qwen3AsrModelManager.Variant) {
-        viewModelScope.launch(Dispatchers.IO) {
-            Qwen3AsrDownloader.clearPartialDownload(ctx, variant)
-            _qwen3AsrState.update {
-                it.copy(variantDownloadStates = it.variantDownloadStates - variant)
-            }
-        }
-    }
-
-    fun useQwen3AsrModel(variant: Qwen3AsrModelManager.Variant) {
-        viewModelScope.launch {
-            val context = ctx
-            val modelPath = Qwen3AsrDownloader.getModelPath(context, variant)
-            if (modelPath != null) {
-                preferencesManager.saveQwen3AsrModelPath(modelPath)
-                preferencesManager.saveTranscriptionBackend(Qwen3AsrBackend.BACKEND_ID)
-
-                val displayName = context.getString(variant.titleResId)
+                val displayName = context.getString(CatalogVariantUi.of(entryId, variantName).titleResId)
                 val message = context.getString(R.string.model_selected_message, displayName)
                 _uiState.update {
                     it.copy(
@@ -1878,274 +1172,76 @@ class ModelViewModel @Inject constructor(
         }
     }
 
-    fun deleteQwen3AsrModel(variant: Qwen3AsrModelManager.Variant) {
-        viewModelScope.launch(Dispatchers.IO) {
-            val context = ctx
-            val success = Qwen3AsrDownloader.deleteModel(context, variant)
-            if (success) {
-                _qwen3AsrState.update {
-                    it.copy(downloadedVariants = _qwen3AsrState.value.downloadedVariants - variant)
-                }
-                val savedPath = preferencesManager.qwen3AsrModelPath.first()
-                if (savedPath != null && savedPath.contains(Qwen3AsrDownloader.getModelDirName(variant))) {
-                    preferencesManager.clearQwen3AsrModelPath()
-                    _uiState.update { it.copy(modelPath = "", modelName = "") }
-                    shareTargetManager.onModelDeleted(Qwen3AsrBackend.BACKEND_ID)
-                }
-                val displayName = context.getString(variant.titleResId)
-                _snackbarEvent.tryEmit(SnackbarEvent.Message(context.getString(R.string.qwen3_asr_deleted, displayName)))
-            }
-        }
-    }
-
-    // ==================== Nemotron Model Download ====================
-
     /**
-     * Refreshes the Nemotron model state. Single-variant: checks whether the model
-     * is downloaded and resolves its path.
+     * Deletes a catalog model variant. When the deleted variant is the saved active one,
+     * re-resolves the active path (auto-fallback) or clears the saved path and backend.
      */
-    fun refreshNemotronState() {
+    fun deleteModel(entryId: String, variantName: String) {
         viewModelScope.launch(Dispatchers.IO) {
             val context = ctx
-            val path = NemotronDownloader.getModelPath(context)
-            _nemotronState.update { it.copy(modelPath = path) }
-        }
-    }
-
-    // ==================== Nemotron Confirmation Dialogs ====================
-
-    fun showNemotronDownloadDialog() {
-        _nemotronState.update { it.copy(showDownloadDialog = true) }
-    }
-
-    fun dismissNemotronDownloadDialog() {
-        _nemotronState.update { it.copy(showDownloadDialog = false) }
-    }
-
-    fun confirmNemotronDownload() {
-        startNemotronDownload()
-    }
-
-    fun showNemotronDeleteDialog() {
-        _nemotronState.update { it.copy(showDeleteDialog = true) }
-    }
-
-    fun dismissNemotronDeleteDialog() {
-        _nemotronState.update { it.copy(showDeleteDialog = false) }
-    }
-
-    fun confirmNemotronDelete() {
-        _nemotronState.update { it.copy(showDeleteDialog = false) }
-        deleteNemotronModel()
-    }
-
-    // ==================== Nemotron Download Methods ====================
-
-    fun startNemotronDownload() {
-        _nemotronState.update {
-            it.copy(
-                showDownloadDialog = false,
-                isDownloading = true,
-                downloadProgress = 0f,
-                downloadState = DownloadState.Connecting(""),
-                errorMessage = null,
-                partialDownload = null
-            )
-        }
-        val context = ctx
-        val intent = Intent(context, ExtractionService::class.java).apply {
-            putExtra(ExtractionService.EXTRA_MODEL_TYPE, ExtractionService.ModelType.NEMOTRON.key)
-        }
-        ContextCompat.startForegroundService(context, intent)
-    }
-
-    fun cancelNemotronDownload() {
-        NemotronDownloader.cancel()
-        stopExtractionService(ExtractionService.ModelType.NEMOTRON, null)
-        viewModelScope.launch(Dispatchers.IO) {
-            val partial = NemotronDownloader.detectPartialDownload(ctx)
-            _nemotronState.update {
-                it.copy(isDownloading = false, partialDownload = partial)
-            }
-        }
-    }
-
-    fun resumeNemotronDownload() {
-        _nemotronState.update { it.copy(partialDownload = null) }
-        startNemotronDownload()
-    }
-
-    fun clearNemotronPartialDownload() {
-        viewModelScope.launch(Dispatchers.IO) {
-            NemotronDownloader.clearPartialDownload(ctx)
-            _nemotronState.update { it.copy(partialDownload = null) }
-        }
-    }
-
-    fun useNemotronModel() {
-        viewModelScope.launch {
-            val context = ctx
-            val modelPath = NemotronDownloader.getModelPath(context) ?: _nemotronState.value.modelPath
-            if (modelPath != null) {
-                preferencesManager.saveNemotronModelPath(modelPath)
-                preferencesManager.saveTranscriptionBackend(NemotronStreamingBackend.BACKEND_ID)
-
-                val displayName = context.getString(R.string.nemotron_name)
-                val message = context.getString(R.string.model_selected_message, displayName)
-                _uiState.update {
-                    it.copy(
-                        modelName = displayName,
-                        status = ModelStatus.UNLOADED,
-                        statusMessage = message
-                    )
-                }
-
-                _snackbarEvent.tryEmit(SnackbarEvent.Message(message))
-                llmManager.resetKeepAliveTimer()
-            }
-        }
-    }
-
-    fun deleteNemotronModel() {
-        viewModelScope.launch(Dispatchers.IO) {
-            val context = ctx
-            val success = NemotronDownloader.deleteModel(context)
+            val downloader = SherpaModelDownloader.of(entryId)
+            val success = downloader.deleteModel(context, variantName)
             if (success) {
-                val savedPath = preferencesManager.nemotronModelPath.first()
-                if (savedPath != null) {
-                    preferencesManager.clearNemotronModelPath()
-                    _uiState.update { it.copy(modelPath = "", modelName = "") }
-                    shareTargetManager.onModelDeleted(NemotronStreamingBackend.BACKEND_ID)
+                val variant = BundledCatalog.byId(entryId)?.variant(variantName)
+                updateEntry(entryId) { it.copy(
+                    downloadedVariants = it.downloadedVariants - variantName,
+                    variantsNeedingExtraction = it.variantsNeedingExtraction - variantName,
+                    orphanedVariants = it.orphanedVariants - variantName,
+                ) }
+                // Re-resolve the active path; if the deleted variant was the saved one, fall back.
+                val activePath = SherpaModelManager.of(entryId).resolveActiveModelPath(context)
+                val savedPath = preferencesManager.sherpaModelPath(entryId).first()
+                if (variant != null && savedPath != null && savedPath.contains(variant.dirName)) {
+                    if (activePath != null) {
+                        preferencesManager.saveSherpaModelPath(entryId, activePath)
+                    } else {
+                        preferencesManager.clearSherpaModelPath(entryId)
+                        _uiState.update { it.copy(modelPath = "", modelName = "") }
+                        shareTargetManager.onModelDeleted(entryId)
+                    }
                 }
-                _nemotronState.update { it.copy(modelPath = null) }
-                _snackbarEvent.tryEmit(SnackbarEvent.Message(context.getString(R.string.nemotron_deleted, context.getString(R.string.nemotron_name))))
+                updateEntry(entryId) { it.copy(modelPath = activePath) }
+                val displayName = context.getString(CatalogVariantUi.of(entryId, variantName).titleResId)
+                _snackbarEvent.tryEmit(SnackbarEvent.Message(context.getString(R.string.catalog_model_deleted, displayName)))
             }
         }
     }
 
-    // ==================== GigaAM Model Download ====================
+    // ==================== Catalog Confirmation Dialogs ====================
 
-    /**
-     * Refreshes the GigaAM model state. Single-variant: checks whether the model
-     * is downloaded and resolves its path.
-     */
-    fun refreshGigaAmState() {
-        viewModelScope.launch(Dispatchers.IO) {
-            val context = ctx
-            val path = GigaAmDownloader.getModelPath(context)
-            _gigaAmState.update { it.copy(modelPath = path) }
-        }
+    fun showDownloadDialog(entryId: String, variantName: String) {
+        updateEntry(entryId) { it.copy(showDownloadDialog = true, selectedVariant = variantName) }
     }
 
-    // ==================== GigaAM Confirmation Dialogs ====================
-
-    fun showGigaAmDownloadDialog() {
-        _gigaAmState.update { it.copy(showDownloadDialog = true) }
+    fun dismissDownloadDialog(entryId: String) {
+        updateEntry(entryId) { it.copy(showDownloadDialog = false) }
     }
 
-    fun dismissGigaAmDownloadDialog() {
-        _gigaAmState.update { it.copy(showDownloadDialog = false) }
+    fun confirmDownload(entryId: String) {
+        val state = _catalogStates.value[entryId] ?: return
+        val variant = state.selectedVariant ?: return
+        val needsExtraction = state.variantsNeedingExtraction.contains(variant)
+        startDownload(
+            entryId,
+            variant,
+            dismissDialog = true,
+            initialState = if (needsExtraction) DownloadState.Extracting(0, 0) else DownloadState.Connecting("")
+        )
     }
 
-    fun confirmGigaAmDownload() {
-        startGigaAmDownload()
+    fun showDeleteDialog(entryId: String, variantName: String) {
+        updateEntry(entryId) { it.copy(showDeleteDialog = true, variantToDelete = variantName) }
     }
 
-    fun showGigaAmDeleteDialog() {
-        _gigaAmState.update { it.copy(showDeleteDialog = true) }
+    fun dismissDeleteDialog(entryId: String) {
+        updateEntry(entryId) { it.copy(showDeleteDialog = false, variantToDelete = null) }
     }
 
-    fun dismissGigaAmDeleteDialog() {
-        _gigaAmState.update { it.copy(showDeleteDialog = false) }
-    }
-
-    fun confirmGigaAmDelete() {
-        _gigaAmState.update { it.copy(showDeleteDialog = false) }
-        deleteGigaAmModel()
-    }
-
-    // ==================== GigaAM Download Methods ====================
-
-    fun startGigaAmDownload() {
-        _gigaAmState.update {
-            it.copy(
-                showDownloadDialog = false,
-                isDownloading = true,
-                downloadProgress = 0f,
-                downloadState = DownloadState.Connecting(""),
-                errorMessage = null,
-                partialDownload = null
-            )
-        }
-        val context = ctx
-        val intent = Intent(context, ExtractionService::class.java).apply {
-            putExtra(ExtractionService.EXTRA_MODEL_TYPE, ExtractionService.ModelType.GIGAAM.key)
-        }
-        ContextCompat.startForegroundService(context, intent)
-    }
-
-    fun cancelGigaAmDownload() {
-        GigaAmDownloader.cancel()
-        stopExtractionService(ExtractionService.ModelType.GIGAAM, null)
-        viewModelScope.launch(Dispatchers.IO) {
-            val partial = GigaAmDownloader.detectPartialDownload(ctx)
-            _gigaAmState.update {
-                it.copy(isDownloading = false, partialDownload = partial)
-            }
-        }
-    }
-
-    fun resumeGigaAmDownload() {
-        _gigaAmState.update { it.copy(partialDownload = null) }
-        startGigaAmDownload()
-    }
-
-    fun clearGigaAmPartialDownload() {
-        viewModelScope.launch(Dispatchers.IO) {
-            GigaAmDownloader.clearPartialDownload(ctx)
-            _gigaAmState.update { it.copy(partialDownload = null) }
-        }
-    }
-
-    fun useGigaAmModel() {
-        viewModelScope.launch {
-            val context = ctx
-            val modelPath = GigaAmDownloader.getModelPath(context) ?: _gigaAmState.value.modelPath
-            if (modelPath != null) {
-                preferencesManager.saveGigaAmModelPath(modelPath)
-                preferencesManager.saveTranscriptionBackend(GigaAmBackend.BACKEND_ID)
-
-                val displayName = context.getString(R.string.gigaam_name)
-                val message = context.getString(R.string.model_selected_message, displayName)
-                _uiState.update {
-                    it.copy(
-                        modelName = displayName,
-                        status = ModelStatus.UNLOADED,
-                        statusMessage = message
-                    )
-                }
-
-                _snackbarEvent.tryEmit(SnackbarEvent.Message(message))
-                llmManager.resetKeepAliveTimer()
-            }
-        }
-    }
-
-    fun deleteGigaAmModel() {
-        viewModelScope.launch(Dispatchers.IO) {
-            val context = ctx
-            val success = GigaAmDownloader.deleteModel(context)
-            if (success) {
-                val savedPath = preferencesManager.gigaamModelPath.first()
-                if (savedPath != null) {
-                    preferencesManager.clearGigaAmModelPath()
-                    _uiState.update { it.copy(modelPath = "", modelName = "") }
-                    shareTargetManager.onModelDeleted(GigaAmBackend.BACKEND_ID)
-                }
-                _gigaAmState.update { it.copy(modelPath = null) }
-                _snackbarEvent.tryEmit(SnackbarEvent.Message(context.getString(R.string.gigaam_deleted, context.getString(R.string.gigaam_name))))
-            }
-        }
+    fun confirmDelete(entryId: String) {
+        val state = _catalogStates.value[entryId] ?: return
+        val variant = state.variantToDelete ?: return
+        updateEntry(entryId) { it.copy(showDeleteDialog = false) }
+        deleteModel(entryId, variant)
     }
 
     // ==================== External models (v2a) ====================
@@ -2161,31 +1257,26 @@ class ModelViewModel @Inject constructor(
     val externalImportState: StateFlow<ExternalImportState> = _externalImportState.asStateFlow()
 
     /** Valid external records for the section cards (dir exists on disk). */
-    val externalModels: StateFlow<List<com.antivocale.app.data.ExternalModelRecord>> =
+    val externalModels: StateFlow<List<ExternalModelRecord>> =
         externalModelStore.validRecordsFlow
-            .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5_000), emptyList())
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     /** Persisted active backend id, for card active-state keyed on identity (not display name). */
     val activeBackendId: StateFlow<String> =
         preferencesManager.transcriptionBackend
-            .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5_000),
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000),
                 PreferencesManager.DEFAULT_TRANSCRIPTION_BACKEND)
 
-    /** Saved Parakeet model path (preference), for variant active-state that survives restarts. */
-    val savedParakeetPath: StateFlow<String?> =
-        preferencesManager.parakeetModelPath
-            .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5_000), null)
-
-    /** Folder import (SAF): the primary v2a entry. */
-    fun importExternalFromFolder(context: Context, treeUri: Uri, modelType: String) =
-        runExternalImport("External folder") { externalModelImporter.importFromTreeUri(context, treeUri, modelType) }
-
     /** URL import: a HuggingFace repo URL or a catalog-entry JSON URL. */
-    fun importExternalFromUrl(url: String, modelType: String) =
-        runExternalImport("External URL") { externalModelImporter.importFromUrl(url, modelType) }
+    fun importExternalFromUrl(url: String) =
+        runExternalImport("External URL") { externalModelImporter.importFromUrl(url) }
+
+    /** JSON paste import: an entry JSON document. */
+    fun importExternalFromJsonText(text: String) =
+        runExternalImport("External JSON") { externalModelImporter.importFromEntryJsonText(text) }
 
     /** Shared import scaffolding: progress state, IO dispatching, and the failure tail. */
-    private fun runExternalImport(label: String, block: suspend () -> com.antivocale.app.data.ExternalModelRecord) {
+    private fun runExternalImport(label: String, block: suspend () -> ExternalModelRecord) {
         _externalImportState.value = ExternalImportState.Importing
         viewModelScope.launch(Dispatchers.IO) {
             runCatching { block() }
@@ -2201,7 +1292,7 @@ class ModelViewModel @Inject constructor(
         }
     }
 
-    private fun onExternalImported(record: com.antivocale.app.data.ExternalModelRecord) {
+    private fun onExternalImported(record: ExternalModelRecord) {
         _externalImportState.value = ExternalImportState.Idle
         _snackbarEvent.tryEmit(SnackbarEvent.Message(ctx.getString(R.string.external_imported, record.displayName)))
         shareTargetManager.onModelDownloaded()
@@ -2212,11 +1303,11 @@ class ModelViewModel @Inject constructor(
     }
 
     /** Selects an imported model as the active transcription backend. */
-    fun useExternalModel(record: com.antivocale.app.data.ExternalModelRecord) {
+    fun useExternalModel(record: ExternalModelRecord) {
         viewModelScope.launch { activateExternalModel(record) }
     }
 
-    private suspend fun activateExternalModel(record: com.antivocale.app.data.ExternalModelRecord) {
+    private suspend fun activateExternalModel(record: ExternalModelRecord) {
         preferencesManager.saveTranscriptionBackend(record.backendId)
         val message = ctx.getString(R.string.model_selected_message, record.displayName)
         _uiState.update {
@@ -2236,10 +1327,10 @@ class ModelViewModel @Inject constructor(
      * When the deleted model is the persisted active backend, reset to the default backend
      * (otherwise the orchestrator's registry lookup would fall through to the LLM loader).
      */
-    fun deleteExternalModel(record: com.antivocale.app.data.ExternalModelRecord) {
+    fun deleteExternalModel(record: ExternalModelRecord) {
         viewModelScope.launch(Dispatchers.IO) {
             externalModelStore.delete(record.id)
-            java.io.File(record.dir).deleteRecursively()
+            File(record.dir).deleteRecursively()
             if (preferencesManager.transcriptionBackend.first() == record.backendId) {
                 preferencesManager.saveTranscriptionBackend(PreferencesManager.DEFAULT_TRANSCRIPTION_BACKEND)
                 _uiState.update { it.copy(modelPath = "", modelName = "") }
@@ -2249,158 +1340,6 @@ class ModelViewModel @Inject constructor(
                 ctx.getString(R.string.external_deleted, record.displayName)))
         }
     }
-
-    // ==================== GGUF: DISABLED ====================
-    // Move files from app/src/gguf-disabled/ back to main and uncomment to re-enable
-    /* GGUF disabled
-
-    private fun handleServiceProgressGguf(progress: ExtractionService.ExtractionProgress) {
-        val variant = Gemma4GgufModelManager.GgufVariant.entries
-            .find { it.name.lowercase() == progress.variant }
-
-        handleServiceProgress(
-            state = progress.downloadState,
-            updateFlow = { state, prog ->
-                if (variant != null) {
-                    _ggufState.update {
-                        it.copy(variantDownloadStates = it.variantDownloadStates.updateVariant(variant) {
-                            copy(downloadState = state, downloadProgress = prog ?: downloadProgress)
-                        })
-                    }
-                }
-            },
-            onError = { msg, _ ->
-                if (variant != null) {
-                    _ggufState.update {
-                        it.copy(variantDownloadStates = it.variantDownloadStates.updateVariant(variant) {
-                            copy(isDownloading = false, errorMessage = msg)
-                        })
-                    }
-                }
-                detectPartialDownloads()
-            },
-            onComplete = { file ->
-                _ggufState.update {
-                    it.copy(
-                        modelPath = file.absolutePath,
-                        downloadedVariants = if (variant != null) it.downloadedVariants + variant else it.downloadedVariants,
-                        variantDownloadStates = it.variantDownloadStates.removeVariant(variant)
-                    )
-                }
-                if (variant != null) {
-                    if (_uiState.value.modelName.isBlank()) useGgufModel(variant)
-                    val displayName = ctx.getString(variant.titleResId)
-                    viewModelScope.launch { _snackbarEvent.tryEmit(SnackbarEvent.Message(ctx.getString(R.string.gguf_downloaded, displayName))) }
-                }
-            },
-            onCancelled = {
-                if (variant != null) {
-                    _ggufState.update {
-                        it.copy(variantDownloadStates = it.variantDownloadStates.updateVariant(variant) {
-                            copy(isDownloading = false, errorMessage = null)
-                        })
-                    }
-                }
-                detectPartialDownloads()
-            }
-        )
-    }
-
-    fun refreshGgufState() {
-        viewModelScope.launch(Dispatchers.IO) {
-            val context = ctx
-            val downloadedVariants = Gemma4GgufModelManager.GgufVariant.entries
-                .filter { Gemma4GgufModelManager.isDownloaded(context, it) }
-                .toSet()
-            _ggufState.update { it.copy(downloadedVariants = downloadedVariants) }
-        }
-    }
-
-    // ==================== GGUF Confirmation Dialogs ====================
-
-    fun showGgufDownloadDialog(variant: Gemma4GgufModelManager.GgufVariant) {
-        _ggufState.update { it.copy(showDownloadDialog = true, selectedVariant = variant) }
-    }
-
-    fun dismissGgufDownloadDialog() {
-        _ggufState.update { it.copy(showDownloadDialog = false) }
-    }
-
-    fun confirmGgufDownload() {
-        val variant = _ggufState.value.selectedVariant ?: return
-        startGgufDownload(variant)
-    }
-
-    fun showGgufDeleteDialog(variant: Gemma4GgufModelManager.GgufVariant) {
-        _ggufState.update { it.copy(showDeleteDialog = true, variantToDelete = variant) }
-    }
-
-    fun dismissGgufDeleteDialog() {
-        _ggufState.update { it.copy(showDeleteDialog = false, variantToDelete = null) }
-    }
-
-    fun confirmGgufDelete() {
-        val variant = _ggufState.value.variantToDelete ?: return
-        _ggufState.update { it.copy(showDeleteDialog = false) }
-        deleteGgufModel(variant)
-    }
-
-    // ==================== GGUF Download Methods ====================
-
-    fun startGgufDownload(variant: Gemma4GgufModelManager.GgufVariant) {
-        _ggufState.update {
-            it.copy(
-                showDownloadDialog = false,
-                selectedVariant = variant,
-                variantDownloadStates = it.variantDownloadStates + (variant to VariantDownloadState(
-                    downloadState = DownloadState.Connecting(""),
-                    downloadProgress = 0f,
-                    isDownloading = true,
-                    errorMessage = null,
-                    partialDownload = null
-                ))
-            )
-        }
-        val context = ctx
-        val intent = Intent(context, ExtractionService::class.java).apply {
-            putExtra(ExtractionService.EXTRA_MODEL_TYPE, ExtractionService.ModelType.GEMMA4_GGUF.key)
-            putExtra(ExtractionService.EXTRA_VARIANT, variantKey(variant))
-        }
-        ContextCompat.startForegroundService(context, intent)
-    }
-
-    fun cancelGgufDownload(variant: Gemma4GgufModelManager.GgufVariant) = cancelVariantDownload(
-        variant,
-        cancelAction = { Gemma4GgufModelManager.cancel(variant) },
-        detectPartial = { ctx, v -> Gemma4GgufModelManager.detectPartialDownload(ctx, v) },
-        getCurrentStates = { _ggufState.value.variantDownloadStates },
-        applyUpdatedStates = { states -> _ggufState.update { it.copy(variantDownloadStates = states) } },
-        modelType = ExtractionService.ModelType.GEMMA4_GGUF,
-        variantKey = variantKey(variant)
-    )
-
-    fun resumeGgufDownload(variant: Gemma4GgufModelManager.GgufVariant) {
-        _ggufState.update { it.copy(
-            variantDownloadStates = it.variantDownloadStates.updateVariant(variant) {
-                copy(partialDownload = null)
-            }
-        ) }
-        startGgufDownload(variant)
-    }
-
-    fun clearGgufPartialDownload(variant: Gemma4GgufModelManager.GgufVariant) {
-        viewModelScope.launch(Dispatchers.IO) {
-            Gemma4GgufModelManager.clearPartialDownload(ctx, variant)
-            _ggufState.update {
-                it.copy(variantDownloadStates = it.variantDownloadStates - variant)
-            }
-        }
-    }
-    */
-
-    // GGUF: disabled — move files from gguf-disabled/ to re-enable
-    // fun useGgufModel(variant: Gemma4GgufModelManager.GgufVariant) { ... }
-    // fun deleteGgufModel(variant: Gemma4GgufModelManager.GgufVariant) { ... }
 
     /**
      * Sets a downloaded File as the active model.
@@ -2452,25 +1391,21 @@ class ModelViewModel @Inject constructor(
             val providerPref = preferencesManager.inferenceProvider.first()
             val resolvedProvider = InferenceProvider.resolve(providerPref)
 
-            val config = when (backendId) {
-                WhisperBackend.BACKEND_ID -> {
+            val config = when {
+                backendId == "gemma4_gguf" -> BackendConfig.GgufConfig(
+                    modelPath = modelPath,
+                    threadCount = threadCount
+                )
+                BundledCatalog.byId(backendId) != null -> {
+                    val entry = BundledCatalog.byId(backendId)!!
                     val lang = preferencesManager.transcriptionLanguage.first()
                     BackendConfig.SherpaOnnxConfig(
                         modelDir = modelPath,
                         numThreads = threadCount,
-                        language = if (lang == "auto") "" else lang,
+                        language = if (entry.flags.passLanguage) { if (lang == "auto") "" else lang } else "",
                         provider = resolvedProvider
                     )
                 }
-                SherpaOnnxBackend.BACKEND_ID, Qwen3AsrBackend.BACKEND_ID, NemotronStreamingBackend.BACKEND_ID, GigaAmBackend.BACKEND_ID -> BackendConfig.SherpaOnnxConfig(
-                    modelDir = modelPath,
-                    numThreads = threadCount,
-                    provider = resolvedProvider
-                )
-                "gemma4_gguf" /* GGUF: Gemma4GgufBackend.BACKEND_ID */ -> BackendConfig.GgufConfig(
-                    modelPath = modelPath,
-                    threadCount = threadCount
-                )
                 else -> {
                     _benchmarkState.value = BenchmarkState.Error("Unsupported backend for benchmark")
                     return@launch

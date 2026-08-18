@@ -25,7 +25,7 @@ class TranscriptionOrchestratorTest : TranscriptionOrchestratorTestBase() {
     @Test
     fun `deriveDisplayName extracts Whisper variant from path`() {
         val result = orchestrator.deriveDisplayName(
-            WhisperBackend.BACKEND_ID,
+            BuiltInBackendIds.WHISPER,
             "/data/models/sherpa-onnx-whisper-turbo",
             "Whisper"
         )
@@ -45,7 +45,7 @@ class TranscriptionOrchestratorTest : TranscriptionOrchestratorTestBase() {
     @Test
     fun `deriveDisplayName extracts Qwen3 variant`() {
         val result = orchestrator.deriveDisplayName(
-            Qwen3AsrBackend.BACKEND_ID,
+            BuiltInBackendIds.QWEN3_ASR,
             "/data/models/sherpa-onnx-qwen3-asr-large-int8",
             "Qwen3-ASR"
         )
@@ -319,8 +319,8 @@ class TranscriptionOrchestratorTest : TranscriptionOrchestratorTestBase() {
         }
         every { backendManager.hasActiveBackend() } returns true
         every { backendManager.getActiveBackend() } returns oldBackend
-        every { preferencesManager.transcriptionBackend } returns flowOf("sherpa_onnx")
-        every { preferencesManager.parakeetModelPath } returns flowOf("/models/parakeet")
+        every { preferencesManager.transcriptionBackend } returns flowOf(BuiltInBackendIds.PARAKEET)
+        every { preferencesManager.sherpaModelPath(BuiltInBackendIds.PARAKEET) } returns flowOf("/models/parakeet")
         every { preferencesManager.threadCount } returns flowOf(4)
 
         coEvery { backendManager.setActiveBackend(any(), any(), any()) } returns Result.success(Unit)

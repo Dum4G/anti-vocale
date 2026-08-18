@@ -32,7 +32,7 @@ class TranscriptionOrchestratorPipelineProgressiveTest : TranscriptionOrchestrat
         every { preferencesManager.threadCount } returns flowOf(4)
         every { preferencesManager.defaultPrompt } returns flowOf("")
         every { preferencesManager.keepAliveTimeout } returns flowOf(5)
-        every { preferencesManager.whisperModelPath } returns flowOf("/models/whisper")
+        every { preferencesManager.sherpaModelPath("whisper") } returns flowOf("/models/whisper")
         every { preferencesManager.inferenceProvider } returns flowOf("auto")
         every { preferencesManager.progressiveTranscription } returns flowOf(true)
         coEvery { transcriptionCalibrator.getEstimate(any(), any()) } returns null

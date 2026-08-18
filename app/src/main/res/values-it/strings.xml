@@ -160,6 +160,14 @@
     <string name="gigaam_downloaded">%1$s scaricato</string>
     <string name="gigaam_deleted">%1$s eliminato</string>
 
+    <!-- Sezione generica da catalogo (modelli sherpa-onnx guidati da catalogo) -->
+    <string name="catalog_model_downloaded">%1$s scaricato</string>
+    <string name="catalog_model_deleted">%1$s eliminato</string>
+    <string name="catalog_download_confirm_title">Scaricare %1$s?</string>
+    <string name="catalog_download_confirm_message">Verranno scaricati ~%1$dMB.</string>
+    <string name="catalog_extract_confirm_title">Estrarre %1$s?</string>
+    <string name="catalog_extract_confirm_message">Il file del modello è già stato scaricato. Verrà estratto per l\'uso.</string>
+
     <!-- Download status -->
     <string name="download_status_downloading">Download in corso…</string>
     <string name="download_status_extracting">Estrazione di %1$s…</string>
@@ -701,6 +709,8 @@
     <string name="model_info_notes_parakeet">Nessun limite di durata audio. VAD non necessario. Ideale per chi priorità alla velocità.</string>
     <string name="model_info_best_for_gigaam">Migliore accuratezza sul russo on-device</string>
     <string name="model_info_notes_gigaam">Solo russo. Punteggiatura e maiuscole native.</string>
+    <string name="model_info_best_for_nemotron">Trascrizione in streaming per audio lunghi</string>
+    <string name="model_info_notes_nemotron">Trasduttore in streaming a bassa latenza. Rilevamento multilingue automatico con opzione lingua per flusso.</string>
     <string name="model_info_best_for_gemma">LLM multimodale per compiti testo + audio</string>
     <string name="model_info_notes_gemma">Non ottimizzato per ASR puro. Usare per funzionalità avanzate come comprensione audio combinata con generazione testo.</string>
     <string name="model_info_benchmark_wer">Tasso di errore parole (italiano): %.1f%%</string>
@@ -720,11 +730,13 @@
     <string name="share_target_external">Anti-Vocale (Esterno)</string>
     <string name="external_none_imported">Nessun modello esterno importato</string>
     <string name="external_section_title">Modelli esterni</string>
-    <string name="external_import_folder">Seleziona cartella</string>
+    <string name="external_import_json">Incolla JSON</string>
+    <string name="external_json_dialog_title">Importa modello esterno (JSON)</string>
+    <string name="external_json_hint">Incolla il JSON della voce di catalogo del modello</string>
     <string name="model_advanced_section">Avanzate</string>
     <string name="model_advanced_description">Importa manualmente file di modello</string>
     <string name="external_import_url">Importa da URL</string>
-    <string name="external_url_hint">URL repo HuggingFace o voce di catalogo JSON</string>
+    <string name="external_url_hint">URL di un JSON di voce di catalogo (termina con .json)</string>
     <string name="external_url_dialog_title">Importa modello esterno</string>
     <string name="external_import">Importa</string>
     <string name="external_importing">Importazione modello…</string>
@@ -732,12 +744,8 @@
     <string name="external_imported">Importato %1$s</string>
     <string name="external_delete_confirm">Eliminare il modello esterno %1$s?</string>
     <string name="external_deleted">%1$s eliminato</string>
-    <string name="external_model_type">Architettura (lascia il default se la trascrizione funziona)</string>
-    <string name="external_model_type_nemo">NeMo transducer (predefinito)</string>
-    <string name="external_model_type_zipformer">Zipformer transducer</string>
-    <string name="external_model_type_conformer">Conformer transducer</string>
     <string name="external_notice_single_pass">Trascrizione in passaggio singolo: con modelli grandi l\'audio molto lungo può fallire. Accorcia l\'audio o usa un modello più piccolo.</string>
-    <string name="external_notice_family">Se la trascrizione si interrompe senza errori l\'architettura potrebbe essere sbagliata: elimina e reimporta il modello con un\'architettura diversa.</string>
+    <string name="external_notice_family">Se la trascrizione si interrompe senza errori l\'architettura dichiarata nel modello potrebbe essere sbagliata: correggi il modelType nel JSON e reimporta.</string>
     <string name="share_targets_title">Destinazioni di condivisione</string>
     <string name="share_targets_description">Mostra ogni modello scaricato come opzione separata nella scheda di condivisione di Android. Il modello viene usato temporaneamente per la singola trascrizione.</string>
     <string name="advanced_sharing_toggle">Mostra modelli nella scheda di condivisione</string>

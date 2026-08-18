@@ -31,7 +31,20 @@ class PreferencesManagerImpl(
         private val THEME_PREFERENCE = stringPreferencesKey("theme_preference")
         private val THEME_MODE = stringPreferencesKey("theme_mode")
         private val TRANSCRIPTION_BACKEND = stringPreferencesKey("transcription_backend")
-        private val PARAKEET_MODEL_PATH = stringPreferencesKey("parakeet_model_path")
+        private val SHERPA_MODEL_PATH_PREFIX = "sherpa_model_path_"
+        /**
+         * Data-store keys of the pre-consolidation per-model path preferences, mapped to
+         * their catalog entry id. Read as a legacy fallback so previously downloaded model
+         * paths survive the consolidation; the new keyed preference is written on save.
+         */
+        private val LEGACY_MODEL_PATH_KEYS: Map<String, androidx.datastore.preferences.core.Preferences.Key<String>> = mapOf(
+            "sherpa-onnx" to stringPreferencesKey("parakeet_model_path"),
+            "whisper" to stringPreferencesKey("whisper_model_path"),
+            "qwen3-asr" to stringPreferencesKey("qwen3_asr_model_path"),
+            "nemotron-streaming" to stringPreferencesKey("nemotron_model_path"),
+            "gigaam" to stringPreferencesKey("gigaam_model_path"),
+        )
+        private fun sherpaModelPathKey(entryId: String) = stringPreferencesKey("$SHERPA_MODEL_PATH_PREFIX$entryId")
         private val CUSTOM_TRANSDUCER_MODEL_PATH = stringPreferencesKey("custom_transducer_model_path")
         private val CUSTOM_TRANSDUCER_MODEL_TYPE = stringPreferencesKey("custom_transducer_model_type")
         private val WHISPER_MODEL_PATH = stringPreferencesKey("whisper_model_path")
@@ -68,13 +81,9 @@ class PreferencesManagerImpl(
         val themePreference: String = PreferencesManager.DEFAULT_THEME,
         val themeMode: String = PreferencesManager.DEFAULT_THEME_MODE,
         val transcriptionBackend: String = PreferencesManager.DEFAULT_TRANSCRIPTION_BACKEND,
-        val parakeetModelPath: String? = null,
+        val sherpaModelPaths: Map<String, String?> = emptyMap(),
         val customTransducerModelPath: String? = null,
         val customTransducerModelType: String = PreferencesManager.DEFAULT_CUSTOM_TRANSDUCER_MODEL_TYPE,
-        val whisperModelPath: String? = null,
-        val qwen3AsrModelPath: String? = null,
-        val nemotronModelPath: String? = null,
-        val gigaamModelPath: String? = null,
         val externalMigrationDone: Boolean = false,
         val ggufModelPath: String? = null,
         val autoCopyEnabled: Boolean = PreferencesManager.DEFAULT_AUTO_COPY_ENABLED,
@@ -102,14 +111,12 @@ class PreferencesManagerImpl(
         themePreference = this[THEME_PREFERENCE] ?: PreferencesManager.DEFAULT_THEME,
         themeMode = this[THEME_MODE] ?: PreferencesManager.DEFAULT_THEME_MODE,
         transcriptionBackend = this[TRANSCRIPTION_BACKEND] ?: PreferencesManager.DEFAULT_TRANSCRIPTION_BACKEND,
-        parakeetModelPath = this[PARAKEET_MODEL_PATH],
+        sherpaModelPaths = LEGACY_MODEL_PATH_KEYS.entries.associate { (entryId, legacyKey) ->
+            entryId to (this[sherpaModelPathKey(entryId)] ?: this[legacyKey])
+        },
         customTransducerModelPath = this[CUSTOM_TRANSDUCER_MODEL_PATH],
         customTransducerModelType = this[CUSTOM_TRANSDUCER_MODEL_TYPE]
             ?: PreferencesManager.DEFAULT_CUSTOM_TRANSDUCER_MODEL_TYPE,
-        whisperModelPath = this[WHISPER_MODEL_PATH],
-        qwen3AsrModelPath = this[QWEN3_ASR_MODEL_PATH],
-        nemotronModelPath = this[NEMOTRON_MODEL_PATH],
-        gigaamModelPath = this[GIGAAM_MODEL_PATH],
         externalMigrationDone = this[EXTERNAL_MIGRATION_DONE] ?: false,
         ggufModelPath = this[GGUF_MODEL_PATH],
         autoCopyEnabled = this[AUTO_COPY_ENABLED] ?: PreferencesManager.DEFAULT_AUTO_COPY_ENABLED,
@@ -204,21 +211,27 @@ class PreferencesManagerImpl(
         cache.updateAndGet { it.copy(transcriptionBackend = backendId) }
     }
 
-    override val parakeetModelPath: Flow<String?> = context.dataStore.data.map { it[PARAKEET_MODEL_PATH] }
-        .onStart { emit(cache.get().parakeetModelPath) }
-
-    override suspend fun saveParakeetModelPath(path: String) {
-        context.dataStore.edit { preferences ->
-            preferences[PARAKEET_MODEL_PATH] = path
-        }
-        cache.updateAndGet { it.copy(parakeetModelPath = path) }
+    override fun sherpaModelPath(entryId: String): Flow<String?> {
+        val legacyKey = LEGACY_MODEL_PATH_KEYS[entryId]
+        return context.dataStore.data.map { prefs ->
+            prefs[sherpaModelPathKey(entryId)] ?: legacyKey?.let { prefs[it] }
+        }.onStart { emit(cache.get().sherpaModelPaths[entryId]) }
     }
 
-    override suspend fun clearParakeetModelPath() {
+    override suspend fun saveSherpaModelPath(entryId: String, path: String) {
         context.dataStore.edit { preferences ->
-            preferences.remove(PARAKEET_MODEL_PATH)
+            preferences[sherpaModelPathKey(entryId)] = path
+            LEGACY_MODEL_PATH_KEYS[entryId]?.let { preferences.remove(it) }
         }
-        cache.updateAndGet { it.copy(parakeetModelPath = null) }
+        cache.updateAndGet { it.copy(sherpaModelPaths = it.sherpaModelPaths + (entryId to path)) }
+    }
+
+    override suspend fun clearSherpaModelPath(entryId: String) {
+        context.dataStore.edit { preferences ->
+            preferences.remove(sherpaModelPathKey(entryId))
+            LEGACY_MODEL_PATH_KEYS[entryId]?.let { preferences.remove(it) }
+        }
+        cache.updateAndGet { it.copy(sherpaModelPaths = it.sherpaModelPaths - entryId) }
     }
 
     override val customTransducerModelPath: Flow<String?> = context.dataStore.data.map { it[CUSTOM_TRANSDUCER_MODEL_PATH] }
@@ -228,62 +241,8 @@ class PreferencesManagerImpl(
         .map { it[CUSTOM_TRANSDUCER_MODEL_TYPE] ?: PreferencesManager.DEFAULT_CUSTOM_TRANSDUCER_MODEL_TYPE }
         .onStart { emit(cache.get().customTransducerModelType) }
 
-    override val whisperModelPath: Flow<String?> = context.dataStore.data.map { it[WHISPER_MODEL_PATH] }
-        .onStart { emit(cache.get().whisperModelPath) }
-
-    override suspend fun saveWhisperModelPath(path: String) {
-        context.dataStore.edit { preferences ->
-            preferences[WHISPER_MODEL_PATH] = path
-        }
-        cache.updateAndGet { it.copy(whisperModelPath = path) }
-    }
-
-    override suspend fun clearWhisperModelPath() {
-        context.dataStore.edit { preferences ->
-            preferences.remove(WHISPER_MODEL_PATH)
-        }
-        cache.updateAndGet { it.copy(whisperModelPath = null) }
-    }
-
-    override val qwen3AsrModelPath: Flow<String?> = context.dataStore.data.map { it[QWEN3_ASR_MODEL_PATH] }
-        .onStart { emit(cache.get().qwen3AsrModelPath) }
-
-    override suspend fun saveQwen3AsrModelPath(path: String) {
-        context.dataStore.edit { preferences ->
-            preferences[QWEN3_ASR_MODEL_PATH] = path
-        }
-        cache.updateAndGet { it.copy(qwen3AsrModelPath = path) }
-    }
-
-    override suspend fun clearQwen3AsrModelPath() {
-        context.dataStore.edit { preferences ->
-            preferences.remove(QWEN3_ASR_MODEL_PATH)
-        }
-        cache.updateAndGet { it.copy(qwen3AsrModelPath = null) }
-    }
-
-    override val nemotronModelPath: Flow<String?> = context.dataStore.data.map { it[NEMOTRON_MODEL_PATH] }
-        .onStart { emit(cache.get().nemotronModelPath) }
-
-    override suspend fun saveNemotronModelPath(path: String) {
-        context.dataStore.edit { preferences ->
-            preferences[NEMOTRON_MODEL_PATH] = path
-        }
-        cache.updateAndGet { it.copy(nemotronModelPath = path) }
-    }
-
-    override suspend fun clearNemotronModelPath() {
-        context.dataStore.edit { preferences ->
-            preferences.remove(NEMOTRON_MODEL_PATH)
-        }
-        cache.updateAndGet { it.copy(nemotronModelPath = null) }
-    }
-
     override val ggufModelPath: Flow<String?> = context.dataStore.data.map { it[GGUF_MODEL_PATH] }
         .onStart { emit(cache.get().ggufModelPath) }
-
-    override val gigaamModelPath: Flow<String?> = context.dataStore.data.map { it[GIGAAM_MODEL_PATH] }
-        .onStart { emit(cache.get().gigaamModelPath) }
 
     override val externalMigrationDone: Flow<Boolean> = context.dataStore.data.map { it[EXTERNAL_MIGRATION_DONE] ?: false }
         .onStart { emit(cache.get().externalMigrationDone) }
@@ -293,20 +252,6 @@ class PreferencesManagerImpl(
             preferences[EXTERNAL_MIGRATION_DONE] = done
         }
         cache.updateAndGet { it.copy(externalMigrationDone = done) }
-    }
-
-    override suspend fun saveGigaAmModelPath(path: String) {
-        context.dataStore.edit { preferences ->
-            preferences[GIGAAM_MODEL_PATH] = path
-        }
-        cache.updateAndGet { it.copy(gigaamModelPath = path) }
-    }
-
-    override suspend fun clearGigaAmModelPath() {
-        context.dataStore.edit { preferences ->
-            preferences.remove(GIGAAM_MODEL_PATH)
-        }
-        cache.updateAndGet { it.copy(gigaamModelPath = null) }
     }
 
     override suspend fun saveGgufModelPath(path: String) {

@@ -39,7 +39,7 @@ class ExtractionServiceTest {
         val service = controller.create().get()
         val intent = Intent(service, ExtractionService::class.java).apply {
             action = ExtractionService.ACTION_CANCEL
-            putExtra(ExtractionService.EXTRA_MODEL_TYPE, "whisper")
+            putExtra(ExtractionService.EXTRA_MODEL_KEY, "whisper")
             putExtra(ExtractionService.EXTRA_CANCEL_VARIANT, "turbo")
         }
 
@@ -66,7 +66,7 @@ class ExtractionServiceTest {
         val service = controller.create().get()
         val intent = Intent(service, ExtractionService::class.java).apply {
             action = ExtractionService.ACTION_CANCEL
-            putExtra(ExtractionService.EXTRA_MODEL_TYPE, "whisper")
+            putExtra(ExtractionService.EXTRA_MODEL_KEY, "whisper")
             // No EXTRA_CANCEL_VARIANT — cancel all whisper downloads
         }
 
@@ -105,7 +105,7 @@ class ExtractionServiceTest {
         val service = controller.create().get()
         val intent = Intent(service, ExtractionService::class.java).apply {
             action = ExtractionService.ACTION_CANCEL
-            putExtra(ExtractionService.EXTRA_MODEL_TYPE, "whisper")
+            putExtra(ExtractionService.EXTRA_MODEL_KEY, "whisper")
             putExtra(ExtractionService.EXTRA_CANCEL_VARIANT, "turbo")
         }
 
@@ -149,12 +149,12 @@ class ExtractionServiceTest {
 
     @Test
     fun `jobKey produces correct format with variant`() {
-        assertEquals("whisper:turbo", jobKey(ExtractionService.ModelType.WHISPER, "turbo"))
+        assertEquals("whisper:turbo", jobKey("whisper", "turbo"))
     }
 
     @Test
     fun `jobKey produces correct format with null variant`() {
-        assertEquals("parakeet:", jobKey(ExtractionService.ModelType.PARAKEET, null))
+        assertEquals("parakeet:", jobKey("parakeet", null))
     }
 
     // ---- Mirrors of private functions for direct testing ----
@@ -165,7 +165,7 @@ class ExtractionServiceTest {
         return NOTIFICATION_ID_BASE + (key.hashCode() and 0x7FFFFFFF) % NOTIFICATION_ID_RANGE
     }
 
-    private fun jobKey(modelType: ExtractionService.ModelType, variant: String?): String {
-        return "${modelType.key}:${variant ?: ""}"
+    private fun jobKey(modelKey: String, variant: String?): String {
+        return "$modelKey:${variant ?: ""}"
     }
 }

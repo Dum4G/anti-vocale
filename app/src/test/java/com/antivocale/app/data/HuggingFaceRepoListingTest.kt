@@ -15,10 +15,10 @@ import java.io.File
 import java.security.MessageDigest
 
 /**
- * URL-import tests (plan v2a, Task 8): repo-id parsing, HF tree listing (LFS oid vs
- * plain file), catalog-entry JSON parsing with mandatory hashes, and the end-to-end
- * importer path against a MockWebServer (canonical landing, verified vs TOFU pins,
- * hashless-entry rejection).
+ * JSON-only external-import tests (spec decision): catalog-entry JSON parsing
+ * (literal name/description, mandatory url+sha256+size) and the end-to-end URL
+ * import path against a MockWebServer (fetch JSON, canonical landing, verified
+ * pins, hashless-entry rejection).
  */
 class HuggingFaceRepoListingTest {
 
@@ -36,7 +36,7 @@ class HuggingFaceRepoListingTest {
     fun setUp() {
         server = MockWebServer()
         server.start()
-        listing = HuggingFaceRepoListing(apiBase = server.url("/").toString().trimEnd('/'))
+        listing = HuggingFaceRepoListing()
         fake = FakePreferencesManager()
         store = ExternalModelStore(fake)
         filesRoot = tmp.newFolder("external-root")
@@ -56,50 +56,23 @@ class HuggingFaceRepoListingTest {
     private fun sha256(bytes: ByteArray): String =
         MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
 
-    // ---- parsing ----
+    // ---- entry JSON parsing (unified catalog schema) ----
 
     @Test
-    fun `parseRepoId accepts repo urls and rejects others`() {
-        assertEquals("pantinor/gigaam-v3", HuggingFaceRepoListing.parseRepoId("https://huggingface.co/pantinor/gigaam-v3"))
-        assertEquals("pantinor/gigaam-v3", HuggingFaceRepoListing.parseRepoId("https://huggingface.co/pantinor/gigaam-v3/tree/main"))
-        assertEquals("istupakov/gigaam-v3-onnx", HuggingFaceRepoListing.parseRepoId("istupakov/gigaam-v3-onnx"))
-        assertNull(HuggingFaceRepoListing.parseRepoId("https://huggingface.co/only-owner"))
-        assertNull(HuggingFaceRepoListing.parseRepoId("https://example.com/a/b"))
-    }
-
-    @Test
-    fun `tree listing maps lfs and plain files`() = runTest {
-        server.enqueue(MockResponse().setBody("""
-            [
-              {"type":"file","path":"gigaam_v3_e2e_rnnt_encoder_int8.onnx","lfs":{"oid":"${"a".repeat(64)}","size":318995997},"size":318995997},
-              {"type":"file","path":"tokens.txt","size":13353},
-              {"type":"directory","path":"subdir"}
-            ]
-        """.trimIndent()))
-
-        val files = listing.listFiles("pantinor/gigaam-v3")
-
-        assertEquals(2, files.size)
-        val lfs = files[0] as HuggingFaceRepoListing.HfFile.Lfs
-        assertEquals("gigaam_v3_e2e_rnnt_encoder_int8.onnx", lfs.name)
-        assertEquals("a".repeat(64), lfs.sha256)
-        assertEquals(318995997L, lfs.size)
-        assertTrue(files[1] is HuggingFaceRepoListing.HfFile.Plain)
-        assertEquals("tokens.txt", (files[1] as HuggingFaceRepoListing.HfFile.Plain).name)
-    }
-
-    @Test
-    fun `entry json parses and demands hashes`() {
+    fun `entry json parses literal display and demands hashes and sizes`() {
         val entry = ExternalModelEntryJson.parse("""
-            {"name":"GigaAM v3","modelType":"nemo_transducer","languages":["ru"],
+            {"name":"GigaAM v3","description":"Sber RNNT","modelType":"nemo_transducer","languages":["ru"],
              "files":[{"name":"some_encoder.onnx","url":"https://x/e.onnx","sha256":"${"b".repeat(64)}","size":100},
                       {"name":"decoder.onnx","url":"https://x/d.onnx","sha256":"${"c".repeat(64)}","size":50},
                       {"name":"joiner.onnx","url":"https://x/j.onnx","sha256":"${"d".repeat(64)}","size":50},
                       {"name":"tokens.txt","url":"https://x/t.txt","sha256":"${"e".repeat(64)}","size":10}]}
         """.trimIndent())
         assertEquals("GigaAM v3", entry.name)
+        assertEquals("Sber RNNT", entry.description)
         assertEquals("nemo_transducer", entry.modelType)
+        assertEquals(listOf("ru"), entry.languages)
         assertEquals(4, entry.files.size)
+        assertEquals(100L, entry.files.first().size)
 
         val hashless = runCatching {
             ExternalModelEntryJson.parse("""{"name":"x","files":[{"name":"a.onnx","url":"https://x/a"}]}""")
@@ -112,9 +85,38 @@ class HuggingFaceRepoListingTest {
                 """{"name":"x","files":[{"name":"a.onnx","url":"https://x/a","sha256":"${"f".repeat(64)}"}]}""")
         }
         assertTrue(sizeless.isFailure)
+
+        // A url-less file is rejected as well.
+        val urlless = runCatching {
+            ExternalModelEntryJson.parse(
+                """{"name":"x","files":[{"name":"a.onnx","sha256":"${"g".repeat(64)}","size":10}]}""")
+        }
+        assertTrue(urlless.isFailure)
     }
 
-    // ---- end-to-end against the mock server ----
+    @Test
+    fun `external entry name must be literal, never a resource key`() {
+        val resourceKeyed = runCatching {
+            ExternalModelEntryJson.parse(
+                """{"display":{"resourceKey":"parakeet_name"},"files":[{"name":"a.onnx","url":"https://x/a","sha256":"${"h".repeat(64)}","size":1}]}""")
+        }
+        assertTrue(resourceKeyed.isFailure)
+    }
+
+    @Test
+    fun `entry json defaults modelType to nemo_transducer`() {
+        val entry = ExternalModelEntryJson.parse("""
+            {"name":"NoType",
+             "files":[{"name":"e.onnx","url":"https://x/e","sha256":"${"b".repeat(64)}","size":1},
+                      {"name":"d.onnx","url":"https://x/d","sha256":"${"c".repeat(64)}","size":1},
+                      {"name":"j.onnx","url":"https://x/j","sha256":"${"d".repeat(64)}","size":1},
+                      {"name":"t.txt","url":"https://x/t","sha256":"${"e".repeat(64)}","size":1}]}
+        """.trimIndent())
+        assertEquals("nemo_transducer", entry.modelType)
+        assertNull(entry.description)
+    }
+
+    // ---- end-to-end URL import against the mock server ----
 
     private val encoderBytes = ByteArray(64) { 1 } + "vocab_size=1024 subsampling_factor=8 model_type=nemo_transducer".toByteArray()
     private val decoderBytes = ByteArray(16) { 2 }
@@ -122,35 +124,7 @@ class HuggingFaceRepoListingTest {
     private val tokensBytes = "<unk> 0\n. 1\n".toByteArray()
 
     @Test
-    fun `importFromHuggingFaceRepo downloads under canonical names with TOFU for non-LFS`() = runTest {
-        server.enqueue(MockResponse().setBody("""
-            [
-              {"type":"file","path":"gigaam_encoder_int8.onnx","lfs":{"oid":"${sha256(encoderBytes)}","size":${encoderBytes.size}},"size":${encoderBytes.size}},
-              {"type":"file","path":"gigaam_decoder.onnx","lfs":{"oid":"${sha256(decoderBytes)}","size":${decoderBytes.size}},"size":${decoderBytes.size}},
-              {"type":"file","path":"gigaam_joiner.onnx","lfs":{"oid":"${sha256(joinerBytes)}","size":${joinerBytes.size}},"size":${joinerBytes.size}},
-              {"type":"file","path":"tokens.txt","size":${tokensBytes.size}}
-            ]
-        """.trimIndent()))
-        server.enqueue(MockResponse().setBody(okio.Buffer().write(encoderBytes)))
-        server.enqueue(MockResponse().setBody(okio.Buffer().write(decoderBytes)))
-        server.enqueue(MockResponse().setBody(okio.Buffer().write(joinerBytes)))
-        server.enqueue(MockResponse().setBody(okio.Buffer().write(tokensBytes)))
-
-        val record = importer.importFromHuggingFaceRepo("https://huggingface.co/pantinor/gigaam-v3")
-
-        assertEquals(ExternalModelSource.URL, record.source)
-        assertEquals(4, record.files.size)
-        assertTrue(File(record.dir, "encoder.int8.onnx").exists())
-        assertTrue(File(record.dir, "decoder.int8.onnx").exists())
-        assertTrue(File(record.dir, "joiner.int8.onnx").exists())
-        assertTrue(File(record.dir, "tokens.txt").exists())
-        assertTrue("LFS pins verified", record.files["encoder.int8.onnx"]!!.verified)
-        assertTrue("non-LFS pin computed (TOFU)", !record.files["tokens.txt"]!!.verified)
-        assertEquals(sha256(tokensBytes), record.files["tokens.txt"]!!.sha256)
-    }
-
-    @Test
-    fun `importFromEntryJson downloads all files and verifies their hashes`() = runTest {
+    fun `importFromEntryJson fetches the json, downloads all files and verifies their hashes`() = runTest {
         val base = server.url("/").toString().trimEnd('/')
         server.enqueue(MockResponse().setBody("""
             {"name":"GigaAM v3","modelType":"nemo_transducer",
@@ -169,5 +143,6 @@ class HuggingFaceRepoListingTest {
         assertEquals("GigaAM v3", record.displayName)
         assertTrue(record.files.values.all { it.verified })
         assertTrue(File(record.dir, "encoder.int8.onnx").exists())
+        assertTrue(File(record.dir, "tokens.txt").exists())
     }
 }

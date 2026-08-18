@@ -3,13 +3,10 @@ package com.antivocale.app.di
 import com.antivocale.app.data.DefaultExternalModelRecordsProvider
 import com.antivocale.app.data.ExternalModelRecordsProvider
 import com.antivocale.app.manager.LlmManager
-import com.antivocale.app.transcription.GigaAmBackend
+import com.antivocale.app.transcription.BuiltInBackendIds
 import com.antivocale.app.transcription.LlmTranscriptionBackend
-import com.antivocale.app.transcription.NemotronStreamingBackend
-import com.antivocale.app.transcription.Qwen3AsrBackend
-import com.antivocale.app.transcription.SherpaOnnxBackend
+import com.antivocale.app.transcription.SherpaBackend
 import com.antivocale.app.transcription.TranscriptionBackend
-import com.antivocale.app.transcription.WhisperBackend
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -28,30 +25,32 @@ class TranscriptionModule {
         fun provideLlmBackend(llmManager: LlmManager): TranscriptionBackend =
             LlmTranscriptionBackend(llmManager)
 
+        // One SherpaBackend instance per bundled catalog entry: the model family and
+        // tuning all come from the catalog, so the instances differ only in entry id.
         @Provides
         @IntoSet
         @Singleton
-        fun provideSherpaOnnxBackend(): TranscriptionBackend = SherpaOnnxBackend()
+        fun provideParakeetBackend(): TranscriptionBackend = SherpaBackend(BuiltInBackendIds.PARAKEET)
 
         @Provides
         @IntoSet
         @Singleton
-        fun provideWhisperBackend(): TranscriptionBackend = WhisperBackend()
+        fun provideWhisperBackend(): TranscriptionBackend = SherpaBackend(BuiltInBackendIds.WHISPER)
 
         @Provides
         @IntoSet
         @Singleton
-        fun provideQwen3AsrBackend(): TranscriptionBackend = Qwen3AsrBackend()
+        fun provideQwen3AsrBackend(): TranscriptionBackend = SherpaBackend(BuiltInBackendIds.QWEN3_ASR)
 
         @Provides
         @IntoSet
         @Singleton
-        fun provideGigaAmBackend(): TranscriptionBackend = GigaAmBackend()
+        fun provideNemotronBackend(): TranscriptionBackend = SherpaBackend(BuiltInBackendIds.NEMOTRON)
 
         @Provides
         @IntoSet
         @Singleton
-        fun provideNemotronStreamingBackend(): TranscriptionBackend = NemotronStreamingBackend()
+        fun provideGigaAmBackend(): TranscriptionBackend = SherpaBackend(BuiltInBackendIds.GIGAAM)
 
         // GGUF: re-enable by moving files from gguf-disabled/ and adding back:
         // @Binds abstract fun bindGgufInferenceEngine(impl: LlamaBroEngine): GgufInferenceEngine

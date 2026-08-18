@@ -9,15 +9,17 @@ interface PreferencesManager {
     val themePreference: Flow<String>
     val themeMode: Flow<String>
     val transcriptionBackend: Flow<String>
-    val parakeetModelPath: Flow<String?>
+    /**
+     * Saved model-path preference for a built-in sherpa-onnx catalog entry,
+     * keyed by the entry id (BackendRegistry descriptors delegate to this).
+     * The per-model preference keys of older app versions are read as a
+     * legacy fallback until the value is re-saved.
+     */
+    fun sherpaModelPath(entryId: String): Flow<String?>
     // Migration-only readers (custom-transducer -> external-model, v2a Task 9): the backend
     // and its mutators are gone; CustomTransducerMigrator is the last consumer of these.
     val customTransducerModelPath: Flow<String?>
     val customTransducerModelType: Flow<String>
-    val whisperModelPath: Flow<String?>
-    val qwen3AsrModelPath: Flow<String?>
-    val nemotronModelPath: Flow<String?>
-    val gigaamModelPath: Flow<String?>
     /** One-shot custom-transducer -> external-model migration marker (v2a Task 9). */
     val externalMigrationDone: Flow<Boolean>
     val ggufModelPath: Flow<String?>
@@ -45,18 +47,8 @@ interface PreferencesManager {
     suspend fun saveThemePreference(theme: String)
     suspend fun saveThemeMode(mode: String)
     suspend fun saveTranscriptionBackend(backendId: String)
-    suspend fun saveParakeetModelPath(path: String)
-    suspend fun clearParakeetModelPath()
-    suspend fun saveWhisperModelPath(path: String)
-    suspend fun clearWhisperModelPath()
-    suspend fun saveQwen3AsrModelPath(path: String)
-    suspend fun clearQwen3AsrModelPath()
-
-    suspend fun saveNemotronModelPath(path: String)
-    suspend fun clearNemotronModelPath()
-
-    suspend fun saveGigaAmModelPath(path: String)
-    suspend fun clearGigaAmModelPath()
+    suspend fun saveSherpaModelPath(entryId: String, path: String)
+    suspend fun clearSherpaModelPath(entryId: String)
 
     suspend fun saveExternalMigrationDone(done: Boolean)
 

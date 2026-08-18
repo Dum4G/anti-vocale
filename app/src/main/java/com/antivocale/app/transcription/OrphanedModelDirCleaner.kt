@@ -24,7 +24,7 @@ private const val TAG = "OrphanedModelDirCleaner"
  * rest of the sweep.
  *
  * @param storageDir The parent directory that holds per-variant model subdirectories
- *                   (e.g. [ParakeetModelManager.getModelStorageDir]).
+ *                   (e.g. [SherpaModelManager.getModelStorageDir]).
  * @param validDirNames The set of currently-known variant directory names for the
  *                      backend that owns [storageDir]. Subdirectories whose name is
  *                      not in this set are considered orphaned.

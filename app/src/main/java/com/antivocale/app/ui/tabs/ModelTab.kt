@@ -1,6 +1,5 @@
 package com.antivocale.app.ui.tabs
 
-import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
@@ -17,7 +16,6 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import android.content.Context
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import kotlinx.coroutines.delay
@@ -30,55 +28,29 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.style.TextDecoration
 import com.antivocale.app.R
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.antivocale.app.data.ModelDownloader
+import com.antivocale.app.data.catalog.CatalogDisplay
+import com.antivocale.app.data.catalog.CatalogEntry
+import com.antivocale.app.data.catalog.CatalogStringKeys
 import com.antivocale.app.data.download.DownloadState
 import com.antivocale.app.service.InferenceService
-import com.antivocale.app.util.formatFileSize
-import com.antivocale.app.transcription.WhisperModelManager
-import com.antivocale.app.transcription.WhisperBackend
-import com.antivocale.app.transcription.SherpaOnnxBackend
-import com.antivocale.app.transcription.Qwen3AsrBackend
-import com.antivocale.app.transcription.WhisperDownloader
-import com.antivocale.app.transcription.Qwen3AsrDownloader
-import com.antivocale.app.transcription.Qwen3AsrModelManager
-import com.antivocale.app.transcription.NemotronDownloader
-import com.antivocale.app.transcription.NemotronModelVariant
-import com.antivocale.app.transcription.NemotronStreamingBackend
-import com.antivocale.app.transcription.GigaAmBackend
-import com.antivocale.app.transcription.GigaAmDownloader
-import com.antivocale.app.transcription.GigaAmModelVariant
-import com.antivocale.app.transcription.ParakeetDownloader
-import com.antivocale.app.transcription.ParakeetModelManager
-import com.antivocale.app.transcription.Language
-// GGUF: import com.antivocale.app.transcription.Gemma4GgufBackend
-// GGUF: import com.antivocale.app.transcription.Gemma4GgufModelManager
+import com.antivocale.app.transcription.CatalogVariantUi
 import com.antivocale.app.transcription.ModelInfoProvider
 import com.antivocale.app.transcription.ModelVariant
+import com.antivocale.app.transcription.SherpaModelDownloader
 import com.antivocale.app.ui.components.DownloadButtonState
-import com.antivocale.app.ui.components.DownloadProgressView
 import com.antivocale.app.ui.components.InfoIconButton
 import com.antivocale.app.ui.components.LanguageFilterBar
 import com.antivocale.app.ui.components.ModelVariantCard
 import com.antivocale.app.ui.components.ModelVariantCardState
 import com.antivocale.app.ui.components.UnloadModelButton
-import com.antivocale.app.ui.components.PartialDownloadSection
 import com.antivocale.app.ui.components.BenchmarkDialog
 import com.antivocale.app.ui.components.DeleteConfirmationDialog
 import com.antivocale.app.ui.components.DownloadConfirmationDialog
 import com.antivocale.app.ui.components.ModelInfoOverlay
 import com.antivocale.app.benchmark.BenchmarkState
 import com.antivocale.app.ui.viewmodel.ModelViewModel
-
-/** Generic Parakeet info used for the section-level info overlay. */
-private val ParakeetVariant = object : ModelVariant {
-    override val titleResId = R.string.parakeet_title
-    override val descriptionResId = R.string.parakeet_description
-    override val dirName = "parakeet-tdt"
-    override val estimatedSizeMB = 862L
-    override val supportedLanguageCodes = Language.PARAKEET
-}
 
 private fun <T> filterVariants(
     entries: List<T>,
@@ -88,12 +60,6 @@ private fun <T> filterVariants(
     if (languageCode == null) return entries
     return entries.filter { languageCode in getCodes(it) }
 }
-
-/** GGUF inference via llama-bro only ships native libs for arm64-v8a. */
-private fun supportsArm64(): Boolean =
-    Build.SUPPORTED_ABIS?.any { it.equals("arm64-v8a", ignoreCase = true) } == true
-
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -105,12 +71,7 @@ fun ModelTab(
     val uiState by viewModel.uiState.collectAsState()
     val activeBackendId by viewModel.activeBackendId.collectAsState()
     val downloadUiState by viewModel.downloadUiState.collectAsState()
-    val parakeetState by viewModel.parakeetState.collectAsState()
-    val whisperState by viewModel.whisperState.collectAsState()
-    val qwen3AsrState by viewModel.qwen3AsrState.collectAsState()
-    val nemotronState by viewModel.nemotronState.collectAsState()
-    val gigaAmState by viewModel.gigaAmState.collectAsState()
-    val ggufState by viewModel.ggufState.collectAsState()
+    val catalogStates by viewModel.catalogStates.collectAsState()
 
     // Transcription active state — used to warn about destructive operations
     val isTranscribing by InferenceService.isTranscribing.collectAsState()
@@ -119,21 +80,6 @@ fun ModelTab(
 
     var modelInfoVariant by remember { mutableStateOf<ModelVariant?>(null) }
     var externalToDelete by remember { mutableStateOf<com.antivocale.app.data.ExternalModelRecord?>(null) }
-    // Shared modelType selection for imports and family corrections (nemo default).
-    var selectedExternalModelType by remember { mutableStateOf("nemo_transducer") }
-
-    // Folder picker launcher for external-model imports (OpenDocumentTree; SAF copy in the VM).
-    val externalFolderPicker = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenDocumentTree()
-    ) { uri ->
-        uri?.let {
-            context.contentResolver.takePersistableUriPermission(
-                it,
-                android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
-            )
-            viewModel.importExternalFromFolder(context, it, selectedExternalModelType)
-        }
-    }
 
     // Snackbar host state for displaying errors
     val snackbarHostState = remember { SnackbarHostState() }
@@ -164,21 +110,6 @@ fun ModelTab(
     // Language filter state
     var filterLanguageCode by remember { mutableStateOf<String?>(null) }
 
-    val visibleWhisperVariants = remember(filterLanguageCode) {
-        filterVariants(WhisperModelManager.Variant.entries, filterLanguageCode) { it.supportedLanguageCodes }
-    }
-    val visibleQwen3AsrVariants = remember(filterLanguageCode) {
-        filterVariants(Qwen3AsrModelManager.Variant.entries, filterLanguageCode) { it.supportedLanguageCodes }
-    }
-    val showGigaAm = remember(filterLanguageCode) {
-        filterLanguageCode == null || filterLanguageCode in Language.GIGAAM
-    }
-    val showParakeet = remember(filterLanguageCode) {
-        filterLanguageCode == null || filterLanguageCode in Language.PARAKEET
-    }
-    val visibleParakeetVariants = remember(filterLanguageCode) {
-        filterVariants(ParakeetModelManager.Variant.entries, filterLanguageCode) { it.supportedLanguageCodes }
-    }
     val visibleGemmaVariants = remember(filterLanguageCode) {
         filterVariants(ModelDownloader.ModelVariant.entries, filterLanguageCode) { it.supportedLanguageCodes }
     }
@@ -232,34 +163,6 @@ fun ModelTab(
         )
     }
 
-    // Parakeet download confirmation dialog
-    if (parakeetState.showDownloadDialog) {
-        val variant = parakeetState.selectedVariant
-        DownloadConfirmationDialog(
-            title = stringResource(R.string.parakeet_download_confirm_title),
-            message = stringResource(
-                R.string.parakeet_download_confirm_message,
-                variant?.estimatedSizeMB?.toInt() ?: 862
-            ),
-            onConfirm = { viewModel.confirmParakeetDownload() },
-            onDismiss = { viewModel.dismissParakeetDownloadDialog() }
-        )
-    }
-
-    // Parakeet delete confirmation dialog
-    if (parakeetState.showDeleteDialog) {
-        val variant = parakeetState.variantToDelete
-        val variantDisplayName = variant?.let { stringResource(it.titleResId) } ?: stringResource(R.string.parakeet_name)
-        val isParakeetActive = uiState.modelName == stringResource(R.string.parakeet_name)
-        DeleteConfirmationDialog(
-            modelName = variantDisplayName,
-            isTranscribing = isTranscribing,
-            isActiveModel = isParakeetActive,
-            onConfirm = { viewModel.confirmParakeetDelete() },
-            onDismiss = { viewModel.dismissParakeetDeleteDialog() }
-        )
-    }
-
     // Gemma download confirmation dialog
     if (downloadUiState.showDownloadDialog) {
         val variant = downloadUiState.selectedVariant
@@ -285,102 +188,6 @@ fun ModelTab(
         )
     }
 
-    // Whisper download confirmation dialog
-    if (whisperState.showDownloadDialog) {
-        val variant = whisperState.selectedVariant
-        val isExtract = variant != null && whisperState.variantsNeedingExtraction.contains(variant)
-        DownloadConfirmationDialog(
-            title = stringResource(if (isExtract) R.string.whisper_extract_confirm_title else R.string.whisper_download_confirm_title, variant?.let { stringResource(it.titleResId) } ?: "Whisper"),
-            message = stringResource(if (isExtract) R.string.whisper_extract_confirm_message else R.string.whisper_download_confirm_message, variant?.estimatedSizeMB?.toInt() ?: 75),
-            confirmButtonText = stringResource(if (isExtract) R.string.extract_model else R.string.download),
-            onConfirm = { viewModel.confirmWhisperDownload() },
-            onDismiss = { viewModel.dismissWhisperDownloadDialog() }
-        )
-    }
-
-    // Whisper delete confirmation dialog
-    if (whisperState.showDeleteDialog) {
-        val variant = whisperState.variantToDelete
-        val variantDisplayName = variant?.let { stringResource(it.titleResId) } ?: "Whisper"
-        val isWhisperModelActive = uiState.modelName == variantDisplayName
-        DeleteConfirmationDialog(
-            modelName = variantDisplayName,
-            isTranscribing = isTranscribing,
-            isActiveModel = isWhisperModelActive,
-            onConfirm = { viewModel.confirmWhisperDelete() },
-            onDismiss = { viewModel.dismissWhisperDeleteDialog() }
-        )
-    }
-
-    // Qwen3-ASR download confirmation dialog
-    if (qwen3AsrState.showDownloadDialog) {
-        val variant = qwen3AsrState.selectedVariant
-        DownloadConfirmationDialog(
-            title = stringResource(R.string.qwen3_asr_download_confirm_title, variant?.let { stringResource(it.titleResId) } ?: "Qwen3-ASR"),
-            message = stringResource(R.string.qwen3_asr_download_confirm_message, variant?.estimatedSizeMB?.toInt() ?: 827),
-            onConfirm = { viewModel.confirmQwen3AsrDownload() },
-            onDismiss = { viewModel.dismissQwen3AsrDownloadDialog() }
-        )
-    }
-
-    // Qwen3-ASR delete confirmation dialog
-    if (qwen3AsrState.showDeleteDialog) {
-        val variant = qwen3AsrState.variantToDelete
-        val variantDisplayName = variant?.let { stringResource(it.titleResId) } ?: "Qwen3-ASR"
-        val isQwen3ModelActive = uiState.modelName == variantDisplayName
-        DeleteConfirmationDialog(
-            modelName = variantDisplayName,
-            isTranscribing = isTranscribing,
-            isActiveModel = isQwen3ModelActive,
-            onConfirm = { viewModel.confirmQwen3AsrDelete() },
-            onDismiss = { viewModel.dismissQwen3AsrDeleteDialog() }
-        )
-    }
-
-    // Nemotron download confirmation dialog
-    if (nemotronState.showDownloadDialog) {
-        DownloadConfirmationDialog(
-            title = stringResource(R.string.nemotron_download_confirm_title, stringResource(R.string.nemotron_name)),
-            message = stringResource(R.string.nemotron_download_confirm_message, NemotronModelVariant.estimatedSizeMB.toInt()),
-            onConfirm = { viewModel.confirmNemotronDownload() },
-            onDismiss = { viewModel.dismissNemotronDownloadDialog() }
-        )
-    }
-
-    // Nemotron delete confirmation dialog
-    if (nemotronState.showDeleteDialog) {
-        val nemotronDisplayName = stringResource(R.string.nemotron_name)
-        DeleteConfirmationDialog(
-            modelName = nemotronDisplayName,
-            isTranscribing = isTranscribing,
-            isActiveModel = uiState.modelName == nemotronDisplayName,
-            onConfirm = { viewModel.confirmNemotronDelete() },
-            onDismiss = { viewModel.dismissNemotronDeleteDialog() }
-        )
-    }
-
-    // GigaAM download confirmation dialog
-    if (gigaAmState.showDownloadDialog) {
-        DownloadConfirmationDialog(
-            title = stringResource(R.string.gigaam_download_confirm_title),
-            message = stringResource(R.string.gigaam_download_confirm_message, GigaAmModelVariant.estimatedSizeMB.toInt()),
-            onConfirm = { viewModel.confirmGigaAmDownload() },
-            onDismiss = { viewModel.dismissGigaAmDownloadDialog() }
-        )
-    }
-
-    // GigaAM delete confirmation dialog
-    if (gigaAmState.showDeleteDialog) {
-        val gigaamDisplayName = stringResource(R.string.gigaam_name)
-        DeleteConfirmationDialog(
-            modelName = gigaamDisplayName,
-            isTranscribing = isTranscribing,
-            isActiveModel = uiState.modelName == gigaamDisplayName,
-            onConfirm = { viewModel.confirmGigaAmDelete() },
-            onDismiss = { viewModel.dismissGigaAmDeleteDialog() }
-        )
-    }
-
     // External-model delete confirmation dialog
     externalToDelete?.let { record ->
         androidx.compose.material3.AlertDialog(
@@ -399,10 +206,6 @@ fun ModelTab(
             }
         )
     }
-
-    // GGUF: disabled — download/delete dialogs commented out (GgufVariant type unavailable)
-    // if (ggufState.showDownloadDialog) { ... viewModel.confirmGgufDownload() ... }
-    // if (ggufState.showDeleteDialog) { ... viewModel.confirmGgufDelete() ... }
 
     // Unload model confirmation dialog
     if (showUnloadDialog) {
@@ -520,66 +323,25 @@ fun ModelTab(
             )
         }
 
-        // Whisper section - multilingual ASR backend (recommended)
-        if (visibleWhisperVariants.isNotEmpty()) {
-            WhisperDownloadSection(
-                viewModel = viewModel,
-                activeModelName = uiState.modelName,
-                guardedModelSwitch = guardedSwitch,
-                visibleVariants = visibleWhisperVariants,
-                onInfoClick = { modelInfoVariant = it }
-            )
-        }
-
-        // Qwen3-ASR section - state-of-the-art multilingual ASR backend
-        if (visibleQwen3AsrVariants.isNotEmpty()) {
-            Qwen3AsrDownloadSection(
-                viewModel = viewModel,
-                activeModelName = uiState.modelName,
-                guardedModelSwitch = guardedSwitch,
-                visibleVariants = visibleQwen3AsrVariants,
-                onInfoClick = { modelInfoVariant = it }
-            )
-        }
-
-        // Nemotron 3.5 section - streaming transducer ASR backend (single-variant)
-        NemotronDownloadSection(
-            viewModel = viewModel,
-            activeModelName = uiState.modelName,
-            guardedModelSwitch = guardedSwitch,
-            onInfoClick = { modelInfoVariant = NemotronModelVariant }
-        )
-
-        // GigaAM v3 section - Russian ASR backend (single-variant)
-        if (showGigaAm) {
-            GigaAmDownloadSection(
-                viewModel = viewModel,
-                activeModelName = uiState.modelName,
-                guardedModelSwitch = guardedSwitch,
-                onInfoClick = { modelInfoVariant = GigaAmModelVariant }
-            )
-        }
-
-        // GGUF section - on-device LLM text generation via llama.cpp
-        // Hidden: llama-bro 1.2.3 does not yet support the Gemma 4 GGUF architecture.
-        // Re-enable when llama-bro ships LLM_ARCH_GEMMA4 or we convert to .litertlm.
-        // GgufDownloadSection(
-        //     viewModel = viewModel,
-        //     activeModelName = uiState.modelName,
-        //     guardedModelSwitch = guardedSwitch,
-        //     isSupported = supportsArm64(),
-        //     onInfoClick = { modelInfoVariant = it }
-        // )
-
-        // Parakeet TDT section - fast multilingual ASR backend (auto-fallback: SmoothQuant → Stock int8)
-        if (visibleParakeetVariants.isNotEmpty()) {
-            ParakeetDownloadSection(
-                viewModel = viewModel,
-                activeModelName = uiState.modelName,
-                guardedModelSwitch = guardedSwitch,
-                visibleVariants = visibleParakeetVariants,
-                onInfoClick = { modelInfoVariant = it }
-            )
+        // Catalog-driven model sections (Parakeet, Whisper, Qwen3-ASR, Nemotron, GigaAM).
+        // One generic section per catalog entry — all model-specific behavior lives in the
+        // catalog, never in hard-coded per-model UI.
+        viewModel.catalogEntries.forEach { entry ->
+            val visibleVariants = remember(entry.id, filterLanguageCode) {
+                filterVariants(CatalogVariantUi.forEntry(entry.id), filterLanguageCode) { it.supportedLanguageCodes }
+            }
+            if (visibleVariants.isNotEmpty()) {
+                CatalogModelSection(
+                    viewModel = viewModel,
+                    entry = entry,
+                    state = catalogStates[entry.id] ?: ModelViewModel.ModelEntryUiState(),
+                    activeBackendId = activeBackendId,
+                    isTranscribing = isTranscribing,
+                    visibleVariants = visibleVariants,
+                    guardedModelSwitch = guardedSwitch,
+                    onInfoClick = { modelInfoVariant = it }
+                )
+            }
         }
 
         // Download models section - Gemma LLM models (advanced features)
@@ -671,9 +433,6 @@ fun ModelTab(
                 ExternalModelsSection(
                     viewModel = viewModel,
                     activeBackendId = activeBackendId,
-                    folderPicker = { externalFolderPicker.launch(null) },
-                    selectedModelType = selectedExternalModelType,
-                    onModelTypeChange = { selectedExternalModelType = it },
                     onDeleteRequest = { externalToDelete = it }
                 )
             }
@@ -834,28 +593,40 @@ private fun ModelDownloadSection(
     }
 }
 
-// ==================== Qwen3-ASR Download Section ====================
+// ==================== Catalog model section (generic) ====================
 
 /**
- * Section for downloading Qwen3-ASR model (sherpa-onnx backend).
- * Supports multiple variants with download/delete/use functionality.
+ * One section for a bundled catalog model (Parakeet, Whisper, Qwen3-ASR, Nemotron,
+ * GigaAM). Everything — header title/description, variant cards, download/delete
+ * dialogs, info and comparison buttons — is driven by the [CatalogEntry] and the
+ * per-entry UI state, so there is no per-model code left in the UI layer.
  */
 @Composable
-private fun Qwen3AsrDownloadSection(
+private fun CatalogModelSection(
     viewModel: ModelViewModel,
-    activeModelName: String,
-    guardedModelSwitch: (() -> Unit) -> Unit = {},
-    visibleVariants: List<Qwen3AsrModelManager.Variant> = Qwen3AsrModelManager.Variant.entries,
-    onInfoClick: (ModelVariant) -> Unit = {}
+    entry: CatalogEntry,
+    state: ModelViewModel.ModelEntryUiState,
+    activeBackendId: String,
+    isTranscribing: Boolean,
+    visibleVariants: List<CatalogVariantUi>,
+    guardedModelSwitch: (() -> Unit) -> Unit,
+    onInfoClick: (ModelVariant) -> Unit,
 ) {
     val context = LocalContext.current
-    val qwen3AsrState by viewModel.qwen3AsrState.collectAsState()
+    val savedPath by viewModel.savedModelPath(entry.id).collectAsState()
+    val isEntryActive = activeBackendId == entry.id
+    var showSpeedComparison by remember(entry.id) { mutableStateOf(false) }
+
+    val entryTitleResId = (entry.display as? CatalogDisplay.Resource)?.key
+        ?.let { CatalogStringKeys.resolve(it) }
+        ?: CatalogVariantUi.of(entry.id).titleResId
+    val entryDescriptionResId = (entry.description as? CatalogDisplay.Resource)?.key?.let { CatalogStringKeys.resolve(it) }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
             containerColor = when {
-                qwen3AsrState.isAnyDownloading -> MaterialTheme.colorScheme.secondaryContainer
+                state.isAnyDownloading -> MaterialTheme.colorScheme.secondaryContainer
                 else -> MaterialTheme.colorScheme.surfaceVariant
             }
         )
@@ -870,14 +641,14 @@ private fun Qwen3AsrDownloadSection(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         imageVector = when {
-                            qwen3AsrState.downloadedVariants.isNotEmpty() -> Icons.Default.CheckCircle
-                            qwen3AsrState.isAnyDownloading -> Icons.Default.CloudDownload
-                            else -> Icons.Default.Translate
+                            state.downloadedVariants.isNotEmpty() -> Icons.Default.CheckCircle
+                            state.isAnyDownloading -> Icons.Default.CloudDownload
+                            else -> if (entry.isStreaming) Icons.Default.GraphicEq else Icons.Default.Translate
                         },
                         contentDescription = null,
                         tint = when {
-                            qwen3AsrState.downloadedVariants.isNotEmpty() -> MaterialTheme.colorScheme.primary
-                            qwen3AsrState.isAnyDownloading -> MaterialTheme.colorScheme.secondary
+                            state.downloadedVariants.isNotEmpty() -> MaterialTheme.colorScheme.primary
+                            state.isAnyDownloading -> MaterialTheme.colorScheme.secondary
                             else -> MaterialTheme.colorScheme.onSurfaceVariant
                         },
                         modifier = Modifier.size(24.dp)
@@ -885,15 +656,28 @@ private fun Qwen3AsrDownloadSection(
                     Spacer(modifier = Modifier.width(12.dp))
                     Column {
                         Text(
-                            text = stringResource(R.string.qwen3_asr_title),
+                            text = stringResource(entryTitleResId),
                             style = MaterialTheme.typography.titleMedium
                         )
-                        Text(
-                            text = stringResource(R.string.qwen3_asr_description),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        if (entryDescriptionResId != null) {
+                            Text(
+                                text = stringResource(entryDescriptionResId),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+                when {
+                    entry.speedComparison -> IconButton(onClick = { showSpeedComparison = true }) {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = stringResource(R.string.speed_comparison_title),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(20.dp)
                         )
                     }
+                    entry.noteKey != null -> InfoIconButton(onClick = { onInfoClick(CatalogVariantUi.of(entry.id)) })
                 }
             }
 
@@ -901,34 +685,63 @@ private fun Qwen3AsrDownloadSection(
 
             // Model variant cards
             visibleVariants.forEach { variant ->
-                val variantState = qwen3AsrState.variantDownloadStates[variant]
+                val variantState = state.variantDownloadStates[variant.variantName]
+                val needsExtraction = state.variantsNeedingExtraction.contains(variant.variantName)
+                val isOrphaned = state.orphanedVariants.contains(variant.variantName)
                 ModelVariantCard(
                     state = ModelVariantCardState(
                         variant = variant,
-                        isActive = activeModelName == stringResource(variant.titleResId),
+                        // The whole entry resolves to one active backend; mark the card active
+                        // only if this entry is the active backend AND this variant's directory
+                        // is the saved (auto-resolved) one.
+                        isActive = isEntryActive && savedPath?.endsWith(variant.dirName) == true,
                         downloadProgress = variantState?.downloadProgress ?: 0f,
                         downloadState = variantState?.downloadState ?: DownloadState.Idle,
                         errorMessage = variantState?.errorMessage,
                         partialDownload = variantState?.partialDownload,
                         buttonState = when {
                             variantState?.isDownloading == true -> DownloadButtonState.Downloading
-                            qwen3AsrState.downloadedVariants.contains(variant) -> DownloadButtonState.Downloaded
+                            state.downloadedVariants.contains(variant.variantName) -> DownloadButtonState.Downloaded
+                            isOrphaned && needsExtraction -> DownloadButtonState.Orphaned
+                            needsExtraction -> DownloadButtonState.NeedsExtraction
                             variantState?.partialDownload != null -> DownloadButtonState.PartiallyDownloaded
                             else -> DownloadButtonState.Idle
                         }
                     ),
                     downloadButtonTextResId = R.string.download,
-                    onDownloadClick = { viewModel.showQwen3AsrDownloadDialog(variant) },
-                    onCancelClick = { viewModel.cancelQwen3AsrDownload(variant) },
-                    onResumeClick = { viewModel.resumeQwen3AsrDownload(variant) },
-                    onClearPartialClick = { viewModel.clearQwen3AsrPartialDownload(variant) },
-                    onUseClick = { guardedModelSwitch { viewModel.useQwen3AsrModel(variant) } },
-                    onDeleteClick = { viewModel.showQwen3AsrDeleteDialog(variant) },
+                    extraBadges = variant.badgeKey?.let { badgeKey ->
+                        {
+                            Surface(
+                                color = MaterialTheme.colorScheme.secondary,
+                                shape = MaterialTheme.shapes.small
+                            ) {
+                                Text(
+                                    text = stringResource(CatalogStringKeys.resolve(badgeKey)),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSecondary,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+                    },
+                    cancelTextExtractor = { downloadState ->
+                        if (downloadState is DownloadState.Extracting)
+                            stringResource(R.string.cancel_extract)
+                        else
+                            stringResource(R.string.cancel_download)
+                    },
+                    onDownloadClick = { viewModel.showDownloadDialog(entry.id, variant.variantName) },
+                    onCancelClick = { viewModel.cancelDownload(entry.id, variant.variantName) },
+                    onResumeClick = { viewModel.resumeDownload(entry.id, variant.variantName) },
+                    onClearPartialClick = { viewModel.clearPartialDownload(entry.id, variant.variantName) },
+                    onExtraActionClick = { viewModel.clearOrphanedFiles(entry.id, variant.variantName) },
+                    onUseClick = { guardedModelSwitch { viewModel.useModel(entry.id, variant.variantName) } },
+                    onDeleteClick = { viewModel.showDeleteDialog(entry.id, variant.variantName) },
                     onBenchmarkClick = {
-                        val path = Qwen3AsrDownloader.getModelPath(context, variant)
+                        val path = SherpaModelDownloader.of(entry.id).getModelPath(context, variant.variantName)
                         if (path != null) {
                             viewModel.startBenchmark(
-                                Qwen3AsrBackend.BACKEND_ID,
+                                entry.id,
                                 path,
                                 context.getString(variant.titleResId)
                             )
@@ -940,149 +753,69 @@ private fun Qwen3AsrDownloadSection(
             }
         }
     }
-}
 
-
-// ==================== Nemotron Download Section ====================
-
-/**
- * Section for downloading the Nemotron 3.5 streaming model (sherpa-onnx Online backend).
- * Single-variant — renders one [ModelVariantCard] bound to [NemotronModelVariant].
- */
-@Composable
-private fun NemotronDownloadSection(
-    viewModel: ModelViewModel,
-    activeModelName: String,
-    guardedModelSwitch: (() -> Unit) -> Unit = {},
-    onInfoClick: (ModelVariant) -> Unit = {}
-) {
-    val context = LocalContext.current
-    val nemotronState by viewModel.nemotronState.collectAsState()
-    val variant = NemotronModelVariant
-    val isDownloaded = nemotronState.modelPath != null
-
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = when {
-                nemotronState.isDownloading -> MaterialTheme.colorScheme.secondaryContainer
-                else -> MaterialTheme.colorScheme.surfaceVariant
-            }
+    // Download confirmation dialog (extraction-aware: a downloaded-but-unextracted
+    // Whisper tar prompts to extract instead of re-downloading).
+    if (state.showDownloadDialog) {
+        val selectedName = state.selectedVariant?.let { stringResource(CatalogVariantUi.of(entry.id, it).titleResId) }
+            ?: stringResource(entryTitleResId)
+        val isExtract = state.selectedVariant != null && state.variantsNeedingExtraction.contains(state.selectedVariant)
+        val sizeMb = state.selectedVariant?.let { CatalogVariantUi.of(entry.id, it).estimatedSizeMB.toInt() } ?: 0
+        DownloadConfirmationDialog(
+            title = stringResource(
+                if (isExtract) R.string.catalog_extract_confirm_title else R.string.catalog_download_confirm_title,
+                selectedName
+            ),
+            message = stringResource(
+                if (isExtract) R.string.catalog_extract_confirm_message else R.string.catalog_download_confirm_message,
+                sizeMb
+            ),
+            confirmButtonText = stringResource(if (isExtract) R.string.extract_model else R.string.download),
+            onConfirm = { viewModel.confirmDownload(entry.id) },
+            onDismiss = { viewModel.dismissDownloadDialog(entry.id) }
         )
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            // Header
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = when {
-                            isDownloaded -> Icons.Default.CheckCircle
-                            nemotronState.isDownloading -> Icons.Default.CloudDownload
-                            else -> Icons.Default.GraphicEq
-                        },
-                        contentDescription = null,
-                        tint = when {
-                            isDownloaded -> MaterialTheme.colorScheme.primary
-                            nemotronState.isDownloading -> MaterialTheme.colorScheme.secondary
-                            else -> MaterialTheme.colorScheme.onSurfaceVariant
-                        },
-                        modifier = Modifier.size(24.dp)
-                    )
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Column {
-                        Text(
-                            text = stringResource(R.string.nemotron_title),
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                        Text(
-                            text = stringResource(R.string.nemotron_description),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            }
+    }
 
-            Spacer(modifier = Modifier.height(8.dp))
+    // Delete confirmation dialog
+    if (state.showDeleteDialog) {
+        val variant = state.variantToDelete?.let { CatalogVariantUi.of(entry.id, it) }
+        val variantDisplayName = variant?.let { stringResource(it.titleResId) } ?: stringResource(entryTitleResId)
+        val isVariantActive = isEntryActive && variant != null && savedPath?.endsWith(variant.dirName) == true
+        DeleteConfirmationDialog(
+            modelName = variantDisplayName,
+            isTranscribing = isTranscribing,
+            isActiveModel = isVariantActive,
+            onConfirm = { viewModel.confirmDelete(entry.id) },
+            onDismiss = { viewModel.dismissDeleteDialog(entry.id) }
+        )
+    }
 
-            ModelVariantCard(
-                state = ModelVariantCardState(
-                    variant = variant,
-                    isActive = activeModelName == stringResource(R.string.nemotron_name),
-                    downloadProgress = nemotronState.downloadProgress,
-                    downloadState = nemotronState.downloadState,
-                    errorMessage = nemotronState.errorMessage,
-                    partialDownload = nemotronState.partialDownload,
-                    buttonState = when {
-                        nemotronState.isDownloading -> DownloadButtonState.Downloading
-                        isDownloaded -> DownloadButtonState.Downloaded
-                        nemotronState.partialDownload != null -> DownloadButtonState.PartiallyDownloaded
-                        else -> DownloadButtonState.Idle
-                    }
-                ),
-                downloadButtonTextResId = R.string.nemotron_download,
-                onDownloadClick = { viewModel.showNemotronDownloadDialog() },
-                onCancelClick = { viewModel.cancelNemotronDownload() },
-                onResumeClick = { viewModel.resumeNemotronDownload() },
-                onClearPartialClick = { viewModel.clearNemotronPartialDownload() },
-                onUseClick = { guardedModelSwitch { viewModel.useNemotronModel() } },
-                onDeleteClick = { viewModel.showNemotronDeleteDialog() },
-                onBenchmarkClick = {
-                    val path = NemotronDownloader.getModelPath(context)
-                    if (path != null) {
-                        viewModel.startBenchmark(
-                            NemotronStreamingBackend.BACKEND_ID,
-                            path,
-                            context.getString(R.string.nemotron_name)
-                        )
-                    }
-                },
-                onInfoClick = { onInfoClick(variant) }
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-        }
+    // Speed comparison dialog (catalog-flagged entry: Whisper)
+    if (showSpeedComparison) {
+        SpeedComparisonDialog(onDismiss = { showSpeedComparison = false })
     }
 }
-
-
-// ==================== GigaAM Download Section ====================
 
 // ==================== External models section (v2a) ====================
 
 /**
- * Imported external models: one card per record plus the two import actions and the
- * shared architecture selector. The two standing notices (single-pass risk, wrong-family
- * crash) ride along every card.
+ * Imported external models: one card per record plus the two JSON-only import
+ * actions (paste text / URL). The standing notices (single-pass risk,
+ * wrong-family crash) ride along every card.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ExternalModelsSection(
     viewModel: ModelViewModel,
     activeBackendId: String,
-    folderPicker: () -> Unit,
-    selectedModelType: String,
-    onModelTypeChange: (String) -> Unit,
     onDeleteRequest: (com.antivocale.app.data.ExternalModelRecord) -> Unit,
 ) {
     val records by viewModel.externalModels.collectAsState()
     val importState by viewModel.externalImportState.collectAsState()
     var urlDialogOpen by remember { mutableStateOf(false) }
     var urlText by remember { mutableStateOf("") }
-    var dropdownExpanded by remember { mutableStateOf(false) }
-
-    val typeOptions = remember {
-        listOf(
-            "nemo_transducer" to R.string.external_model_type_nemo,
-            "" to R.string.external_model_type_zipformer,
-            "conformer_transducer" to R.string.external_model_type_conformer
-        )
-    }
-    val selectedLabel = typeOptions.firstOrNull { it.first == selectedModelType }?.second
-        ?: R.string.external_model_type_nemo
+    var pasteDialogOpen by remember { mutableStateOf(false) }
+    var pasteText by remember { mutableStateOf("") }
 
     // Outer section Card matching the curated sections (GigaAM, Nemotron):
     // surfaceVariant background, header with icon + title + description, 16dp padding.
@@ -1109,42 +842,15 @@ private fun ExternalModelsSection(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Architecture selector visible for BOTH import paths (folder and URL).
-            ExposedDropdownMenuBox(
-                expanded = dropdownExpanded,
-                onExpandedChange = { dropdownExpanded = it },
-                modifier = Modifier.padding(bottom = 8.dp)
-            ) {
-                OutlinedTextField(
-                    value = stringResource(selectedLabel),
-                    onValueChange = {},
-                    readOnly = true,
-                    label = { Text(stringResource(R.string.external_model_type)) },
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = dropdownExpanded) },
-                    modifier = Modifier.fillMaxWidth().menuAnchor()
-                )
-                ExposedDropdownMenu(expanded = dropdownExpanded, onDismissRequest = { dropdownExpanded = false }) {
-                    typeOptions.forEach { (value, labelRes) ->
-                        DropdownMenuItem(
-                            text = { Text(stringResource(labelRes)) },
-                            onClick = {
-                                onModelTypeChange(value)
-                                dropdownExpanded = false
-                            }
-                        )
-                    }
-                }
-            }
-
+            // JSON-only import (spec decision): the entry JSON declares everything
+            // (name, description, modelType, languages, files) — no shared selector.
             Row(modifier = Modifier.fillMaxWidth()) {
             Button(
-                onClick = folderPicker,
+                onClick = { pasteDialogOpen = true },
                 enabled = importState !is ModelViewModel.ExternalImportState.Importing,
                 modifier = Modifier.weight(1f)
             ) {
-                Icon(Icons.Default.FolderOpen, contentDescription = null)
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(stringResource(R.string.external_import_folder))
+                Text(stringResource(R.string.external_import_json))
             }
             Spacer(modifier = Modifier.width(8.dp))
             OutlinedButton(
@@ -1206,29 +912,56 @@ private fun ExternalModelsSection(
         }
     }
 
+    if (pasteDialogOpen) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { pasteDialogOpen = false },
+            title = { Text(stringResource(R.string.external_json_dialog_title)) },
+            text = {
+                OutlinedTextField(
+                    value = pasteText,
+                    onValueChange = { pasteText = it },
+                    placeholder = { Text(stringResource(R.string.external_json_hint)) },
+                    minLines = 6,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                androidx.compose.material3.TextButton(
+                    onClick = {
+                        pasteDialogOpen = false
+                        if (pasteText.isNotBlank()) {
+                            viewModel.importExternalFromJsonText(pasteText.trim())
+                        }
+                    }
+                ) { Text(stringResource(R.string.external_import)) }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = { pasteDialogOpen = false }) {
+                    Text(stringResource(android.R.string.cancel))
+                }
+            }
+        )
+    }
+
     if (urlDialogOpen) {
         androidx.compose.material3.AlertDialog(
             onDismissRequest = { urlDialogOpen = false },
             title = { Text(stringResource(R.string.external_url_dialog_title)) },
             text = {
-                Column {
-                    OutlinedTextField(
-                        value = urlText,
-                        onValueChange = { urlText = it },
-                        placeholder = { Text(stringResource(R.string.external_url_hint)) },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    // Architecture selector is in the section above (visible for both
-                    // import paths), not duplicated here.
-                }
+                OutlinedTextField(
+                    value = urlText,
+                    onValueChange = { urlText = it },
+                    placeholder = { Text(stringResource(R.string.external_url_hint)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
             },
             confirmButton = {
                 androidx.compose.material3.TextButton(
                     onClick = {
                         urlDialogOpen = false
                         if (urlText.isNotBlank()) {
-                            viewModel.importExternalFromUrl(urlText.trim(), selectedModelType)
+                            viewModel.importExternalFromUrl(urlText.trim())
                         }
                     }
                 ) { Text(stringResource(R.string.external_import)) }
@@ -1282,6 +1015,14 @@ private fun ExternalModelCard(
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                        record.description?.takeIf { it.isNotBlank() }?.let { desc ->
+                            Text(
+                                desc,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(top = 4.dp)
+                            )
+                        }
                     }
                 }
                 if (isActive) {
@@ -1319,621 +1060,138 @@ private fun ExternalModelCard(
     }
 }
 
+// ==================== Speed comparison dialog ====================
+
 /**
- * Section for downloading the GigaAM v3 model (sherpa-onnx nemo_transducer backend).
- * Single-variant: renders one [ModelVariantCard] bound to [GigaAmModelVariant].
+ * Static model speed/quality comparison shown from the Whisper section header.
+ * Pure informational content — no model state involved.
  */
 @Composable
-private fun GigaAmDownloadSection(
-    viewModel: ModelViewModel,
-    activeModelName: String,
-    guardedModelSwitch: (() -> Unit) -> Unit = {},
-    onInfoClick: (ModelVariant) -> Unit = {}
-) {
-    val context = LocalContext.current
-    val gigaAmState by viewModel.gigaAmState.collectAsState()
-    val variant = GigaAmModelVariant
-    val isDownloaded = gigaAmState.modelPath != null
-
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = when {
-                gigaAmState.isDownloading -> MaterialTheme.colorScheme.secondaryContainer
-                else -> MaterialTheme.colorScheme.surfaceVariant
-            }
-        )
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            // Header
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = when {
-                            isDownloaded -> Icons.Default.CheckCircle
-                            gigaAmState.isDownloading -> Icons.Default.CloudDownload
-                            else -> Icons.Default.GraphicEq
-                        },
-                        contentDescription = null,
-                        tint = when {
-                            isDownloaded -> MaterialTheme.colorScheme.primary
-                            gigaAmState.isDownloading -> MaterialTheme.colorScheme.secondary
-                            else -> MaterialTheme.colorScheme.onSurfaceVariant
-                        },
-                        modifier = Modifier.size(24.dp)
-                    )
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Column {
-                        Text(
-                            text = stringResource(R.string.gigaam_title),
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                        Text(
-                            text = stringResource(R.string.gigaam_description),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            ModelVariantCard(
-                state = ModelVariantCardState(
-                    variant = variant,
-                    isActive = activeModelName == stringResource(R.string.gigaam_name),
-                    downloadProgress = gigaAmState.downloadProgress,
-                    downloadState = gigaAmState.downloadState,
-                    errorMessage = gigaAmState.errorMessage,
-                    partialDownload = gigaAmState.partialDownload,
-                    buttonState = when {
-                        gigaAmState.isDownloading -> DownloadButtonState.Downloading
-                        isDownloaded -> DownloadButtonState.Downloaded
-                        gigaAmState.partialDownload != null -> DownloadButtonState.PartiallyDownloaded
-                        else -> DownloadButtonState.Idle
-                    }
-                ),
-                downloadButtonTextResId = R.string.gigaam_download,
-                onDownloadClick = { viewModel.showGigaAmDownloadDialog() },
-                onCancelClick = { viewModel.cancelGigaAmDownload() },
-                onResumeClick = { viewModel.resumeGigaAmDownload() },
-                onClearPartialClick = { viewModel.clearGigaAmPartialDownload() },
-                onUseClick = { guardedModelSwitch { viewModel.useGigaAmModel() } },
-                onDeleteClick = { viewModel.showGigaAmDeleteDialog() },
-                onBenchmarkClick = {
-                    val path = GigaAmDownloader.getModelPath(context)
-                    if (path != null) {
-                        viewModel.startBenchmark(
-                            GigaAmBackend.BACKEND_ID,
-                            path,
-                            context.getString(R.string.gigaam_name)
-                        )
-                    }
-                },
-                onInfoClick = { onInfoClick(variant) }
+private fun SpeedComparisonDialog(onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                stringResource(R.string.speed_comparison_title),
+                style = MaterialTheme.typography.titleMedium
             )
-            Spacer(modifier = Modifier.height(8.dp))
-        }
-    }
-}
-
-
-// ==================== GGUF Download Section ====================
-/* GGUF: disabled — uncomment when re-enabling GGUF
-// @Composable
-// private fun GgufDownloadSection(
-//     viewModel: ModelViewModel,
-//     activeModelName: String,
-//     guardedModelSwitch: (() -> Unit) -> Unit = {},
-//     isSupported: Boolean = true,
-//     onInfoClick: (ModelVariant) -> Unit = {}
-// ) {
-//     val context = LocalContext.current
-//     val ggufState by viewModel.ggufState.collectAsState()
-// 
-//     Card(
-//         modifier = Modifier.fillMaxWidth(),
-//         colors = CardDefaults.cardColors(
-//             containerColor = when {
-//                 !isSupported -> MaterialTheme.colorScheme.errorContainer
-//                 ggufState.isAnyDownloading -> MaterialTheme.colorScheme.secondaryContainer
-//                 else -> MaterialTheme.colorScheme.surfaceVariant
-//             }
-//         )
-//     ) {
-//         Column(modifier = Modifier.padding(16.dp)) {
-//             // Header
-//             Row(
-//                 modifier = Modifier.fillMaxWidth(),
-//                 horizontalArrangement = Arrangement.SpaceBetween,
-//                 verticalAlignment = Alignment.CenterVertically
-//             ) {
-//                 Row(verticalAlignment = Alignment.CenterVertically) {
-//                     Icon(
-//                         imageVector = when {
-//                             !isSupported -> Icons.Default.Warning
-//                             ggufState.downloadedVariants.isNotEmpty() -> Icons.Default.CheckCircle
-//                             ggufState.isAnyDownloading -> Icons.Default.CloudDownload
-//                             else -> Icons.Default.SmartToy
-//                         },
-//                         contentDescription = null,
-//                         tint = when {
-//                             !isSupported -> MaterialTheme.colorScheme.error
-//                             ggufState.downloadedVariants.isNotEmpty() -> MaterialTheme.colorScheme.primary
-//                             ggufState.isAnyDownloading -> MaterialTheme.colorScheme.secondary
-//                             else -> MaterialTheme.colorScheme.onSurfaceVariant
-//                         },
-//                         modifier = Modifier.size(24.dp)
-//                     )
-//                     Spacer(modifier = Modifier.width(12.dp))
-//                     Column {
-//                         Text(
-//                             text = stringResource(R.string.gguf_title),
-//                             style = MaterialTheme.typography.titleMedium
-//                         )
-//                         Text(
-//                             text = stringResource(R.string.gguf_description),
-//                             style = MaterialTheme.typography.bodySmall,
-//                             color = MaterialTheme.colorScheme.onSurfaceVariant
-//                         )
-//                     }
-//                 }
-//             }
-// 
-//             if (!isSupported) {
-//                 Spacer(modifier = Modifier.height(8.dp))
-//                 Text(
-//                     text = stringResource(R.string.gguf_unsupported_arch),
-//                     style = MaterialTheme.typography.bodySmall,
-//                     color = MaterialTheme.colorScheme.error
-//                 )
-//                 return@Card
-//             }
-// 
-//             Spacer(modifier = Modifier.height(8.dp))
-// 
-//             // Model variant cards
-//             Gemma4GgufModelManager.GgufVariant.entries.forEach { variant ->
-//                 val variantState = ggufState.variantDownloadStates[variant]
-//                 ModelVariantCard(
-//                     state = ModelVariantCardState(
-//                         variant = variant,
-//                         isActive = activeModelName == stringResource(variant.titleResId),
-//                         downloadProgress = variantState?.downloadProgress ?: 0f,
-//                         downloadState = variantState?.downloadState ?: DownloadState.Idle,
-//                         errorMessage = variantState?.errorMessage,
-//                         partialDownload = variantState?.partialDownload,
-//                         buttonState = when {
-//                             variantState?.isDownloading == true -> DownloadButtonState.Downloading
-//                             ggufState.downloadedVariants.contains(variant) -> DownloadButtonState.Downloaded
-//                             variantState?.partialDownload != null -> DownloadButtonState.PartiallyDownloaded
-//                             else -> DownloadButtonState.Idle
-//                         }
-//                     ),
-//                     downloadButtonTextResId = R.string.download,
-//                     onDownloadClick = { viewModel.showGgufDownloadDialog(variant) },
-//                     onCancelClick = { viewModel.cancelGgufDownload(variant) },
-//                     onResumeClick = { viewModel.resumeGgufDownload(variant) },
-//                     onClearPartialClick = { viewModel.clearGgufPartialDownload(variant) },
-//                     onUseClick = { guardedModelSwitch { viewModel.useGgufModel(variant) } },
-//                     onDeleteClick = { viewModel.showGgufDeleteDialog(variant) },
-//                     onBenchmarkClick = {
-//                         val path = Gemma4GgufModelManager.getLocalPath(context, variant)
-//                         if (path != null) {
-//                             viewModel.startBenchmark(
-//                                 Gemma4GgufBackend.BACKEND_ID,
-//                                 path,
-//                                 context.getString(variant.titleResId)
-//                             )
-//                         }
-//                     },
-//                     onInfoClick = { onInfoClick(variant) }
-//                 )
-//                 Spacer(modifier = Modifier.height(8.dp))
-//             }
-//         }
-//     }
-// }
-*/
-
-
-// ==================== Parakeet Download Section ====================
-
-/**
- * Section for downloading Parakeet TDT models (sherpa-onnx backend).
- *
- * Two variants: SmoothQuant (recommended) and Stock int8 (lighter fallback).
- * Both are independently downloadable. The active model is auto-resolved at
- * transcription time (prefer SmoothQuant → Stock int8); there is no user-facing
- * variant selector. Mirrors [Qwen3AsrDownloadSection].
- */
-@Composable
-private fun ParakeetDownloadSection(
-    viewModel: ModelViewModel,
-    activeModelName: String,
-    guardedModelSwitch: (() -> Unit) -> Unit = {},
-    visibleVariants: List<ParakeetModelManager.Variant> = ParakeetModelManager.Variant.entries,
-    onInfoClick: (ModelVariant) -> Unit = {}
-) {
-    val context = LocalContext.current
-    val parakeetState by viewModel.parakeetState.collectAsState()
-    val parakeetName = stringResource(R.string.parakeet_name)
-    val savedParakeetPath by viewModel.savedParakeetPath.collectAsState()
-    val isParakeetBackendActive = activeModelName == parakeetName
-    // Use the SAVED path (preference), not parakeetState.modelPath (which can lag
-    // behind the actual active model on startup or after a preference change).
-    val activeParakeetPath = savedParakeetPath ?: parakeetState.modelPath
-
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = when {
-                parakeetState.isAnyDownloading -> MaterialTheme.colorScheme.secondaryContainer
-                else -> MaterialTheme.colorScheme.surfaceVariant
-            }
-        )
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            // Header
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = when {
-                            parakeetState.downloadedVariants.isNotEmpty() -> Icons.Default.CheckCircle
-                            parakeetState.isAnyDownloading -> Icons.Default.CloudDownload
-                            else -> Icons.Default.GraphicEq
-                        },
-                        contentDescription = null,
-                        tint = when {
-                            parakeetState.downloadedVariants.isNotEmpty() -> MaterialTheme.colorScheme.primary
-                            parakeetState.isAnyDownloading -> MaterialTheme.colorScheme.secondary
-                            else -> MaterialTheme.colorScheme.onSurfaceVariant
-                        },
-                        modifier = Modifier.size(24.dp)
-                    )
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Column {
-                        Text(
-                            text = stringResource(R.string.parakeet_title),
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                        Text(
-                            text = stringResource(R.string.parakeet_description),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-                InfoIconButton(onClick = { onInfoClick(ParakeetVariant) })
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Model variant cards
-            visibleVariants.forEach { variant ->
-                val variantState = parakeetState.variantDownloadStates[variant]
-                ModelVariantCard(
-                    state = ModelVariantCardState(
-                        variant = variant,
-                        // The whole Parakeet backend resolves to one active model; mark the
-                        // card active only if Parakeet is the active backend AND this variant's
-                        // directory is the auto-resolved one.
-                        isActive = isParakeetBackendActive && activeParakeetPath?.endsWith(variant.dirName) == true,
-                        downloadProgress = variantState?.downloadProgress ?: 0f,
-                        downloadState = variantState?.downloadState ?: DownloadState.Idle,
-                        errorMessage = variantState?.errorMessage,
-                        partialDownload = variantState?.partialDownload,
-                        buttonState = when {
-                            variantState?.isDownloading == true -> DownloadButtonState.Downloading
-                            parakeetState.downloadedVariants.contains(variant) -> DownloadButtonState.Downloaded
-                            variantState?.partialDownload != null -> DownloadButtonState.PartiallyDownloaded
-                            else -> DownloadButtonState.Idle
-                        }
-                    ),
-                    downloadButtonTextResId = R.string.download,
-                    onDownloadClick = { viewModel.showParakeetDownloadDialog(variant) },
-                    onCancelClick = { viewModel.cancelParakeetDownload(variant) },
-                    onResumeClick = { viewModel.resumeParakeetDownload(variant) },
-                    onClearPartialClick = { viewModel.clearParakeetPartialDownload(variant) },
-                    onUseClick = { guardedModelSwitch { viewModel.useParakeetModel(variant) } },
-                    onDeleteClick = { viewModel.showParakeetDeleteDialog(variant) },
-                    onBenchmarkClick = {
-                        val path = ParakeetDownloader.getModelPath(context, variant)
-                        if (path != null) {
-                            viewModel.startBenchmark(
-                                SherpaOnnxBackend.BACKEND_ID,
-                                path,
-                                context.getString(variant.titleResId)
-                            )
-                        }
-                    },
-                    onInfoClick = { onInfoClick(variant) }
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-            }
-        }
-    }
-}
-
-// ==================== Whisper Download Section ====================
-
-/**
- * Section for downloading Whisper models (sherpa-onnx backend).
- * No authentication required - downloads from GitHub releases.
- * Excellent multilingual support with proper punctuation.
- */
-@Composable
-private fun WhisperDownloadSection(
-    viewModel: ModelViewModel,
-    activeModelName: String,
-    guardedModelSwitch: (() -> Unit) -> Unit = {},
-    visibleVariants: List<WhisperModelManager.Variant> = WhisperModelManager.Variant.entries,
-    onInfoClick: (ModelVariant) -> Unit = {}
-) {
-    val context = LocalContext.current
-    val whisperState by viewModel.whisperState.collectAsState()
-    var showSpeedComparison by remember { mutableStateOf(false) }
-
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = when {
-                whisperState.isAnyDownloading -> MaterialTheme.colorScheme.secondaryContainer
-                else -> MaterialTheme.colorScheme.surfaceVariant
-            }
-        )
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            // Header
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = when {
-                            whisperState.downloadedVariants.isNotEmpty() -> Icons.Default.CheckCircle
-                            whisperState.isAnyDownloading -> Icons.Default.CloudDownload
-                            else -> Icons.Default.Translate
-                        },
-                        contentDescription = null,
-                        tint = when {
-                            whisperState.downloadedVariants.isNotEmpty() -> MaterialTheme.colorScheme.primary
-                            whisperState.isAnyDownloading -> MaterialTheme.colorScheme.secondary
-                            else -> MaterialTheme.colorScheme.onSurfaceVariant
-                        },
-                        modifier = Modifier.size(24.dp)
-                    )
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Column {
-                        Text(
-                            text = stringResource(R.string.whisper_title),
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                        Text(
-                            text = stringResource(R.string.whisper_description),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-                IconButton(onClick = { showSpeedComparison = true }) {
-                    Icon(
-                        imageVector = Icons.Default.Info,
-                        contentDescription = stringResource(R.string.speed_comparison_title),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Model variant selection
-            visibleVariants.forEach { variant ->
-                val needsExtraction = whisperState.variantsNeedingExtraction.contains(variant)
-                val isOrphaned = whisperState.orphanedVariants.contains(variant)
-                val variantState = whisperState.variantDownloadStates[variant]
-                ModelVariantCard(
-                    state = ModelVariantCardState(
-                        variant = variant,
-                        isActive = activeModelName == stringResource(variant.titleResId),
-                        downloadProgress = variantState?.downloadProgress ?: 0f,
-                        downloadState = variantState?.downloadState ?: DownloadState.Idle,
-                        errorMessage = variantState?.errorMessage,
-                        partialDownload = variantState?.partialDownload,
-                        buttonState = when {
-                            variantState?.isDownloading == true -> DownloadButtonState.Downloading
-                            whisperState.downloadedVariants.contains(variant) -> DownloadButtonState.Downloaded
-                            isOrphaned && needsExtraction -> DownloadButtonState.Orphaned
-                            needsExtraction -> DownloadButtonState.NeedsExtraction
-                            variantState?.partialDownload != null -> DownloadButtonState.PartiallyDownloaded
-                            else -> DownloadButtonState.Idle
-                        }
-                    ),
-                    downloadButtonTextResId = R.string.download,
-                    extraBadges = {
-                        if (variant == WhisperModelManager.Variant.DISTIL_LARGE_V3) {
-                            Surface(
-                                color = MaterialTheme.colorScheme.secondary,
-                                shape = MaterialTheme.shapes.small
-                            ) {
-                                Text(
-                                    text = stringResource(R.string.best_italian_badge),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSecondary,
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                )
-                            }
-                        }
-                    },
-                    cancelTextExtractor = { downloadState ->
-                        if (downloadState is DownloadState.Extracting)
-                            stringResource(R.string.cancel_extract)
-                        else
-                            stringResource(R.string.cancel_download)
-                    },
-                    onDownloadClick = { viewModel.showWhisperDownloadDialog(variant) },
-                    onCancelClick = { viewModel.cancelWhisperDownload(variant) },
-                    onResumeClick = { viewModel.resumeWhisperDownload(variant) },
-                    onClearPartialClick = { viewModel.clearWhisperPartialDownload(variant) },
-                    onExtraActionClick = { viewModel.clearOrphanedWhisperFiles(variant) },
-                    onUseClick = { guardedModelSwitch { viewModel.useWhisperModel(variant) } },
-                    onDeleteClick = { viewModel.showWhisperDeleteDialog(variant) },
-                    onBenchmarkClick = {
-                        val path = WhisperDownloader.getModelPath(context, variant)
-                        if (path != null) {
-                            viewModel.startBenchmark(
-                                WhisperBackend.BACKEND_ID,
-                                path,
-                                context.getString(variant.titleResId)
-                            )
-                        }
-                    },
-                    onInfoClick = { onInfoClick(variant) }
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-            }
-        }
-    }
-
-    // Speed comparison dialog
-    if (showSpeedComparison) {
-        AlertDialog(
-            onDismissRequest = { showSpeedComparison = false },
-            title = {
+        },
+        text = {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                 Text(
-                    stringResource(R.string.speed_comparison_title),
-                    style = MaterialTheme.typography.titleMedium
+                    stringResource(R.string.speed_comparison_subtitle),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-            },
-            text = {
-                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                    Text(
-                        stringResource(R.string.speed_comparison_subtitle),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
-                    // Comparison table
-                    Surface(
-                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
-                        Column(modifier = Modifier.padding(8.dp)) {
-                            // Header row
-                            Row(modifier = Modifier.fillMaxWidth()) {
-                                Text(
-                                    stringResource(R.string.speed_comparison_header_model),
-                                    modifier = Modifier.weight(2f),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                                Text(
-                                    stringResource(R.string.speed_comparison_header_size),
-                                    modifier = Modifier.weight(1f),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                                Text(
-                                    stringResource(R.string.speed_comparison_header_speed),
-                                    modifier = Modifier.weight(1f),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                                Text(
-                                    stringResource(R.string.speed_comparison_header_quality),
-                                    modifier = Modifier.weight(1.5f),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                            }
-                            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-
-                            // Whisper Turbo (best Whisper speed/quality balance)
-                            ComparisonRow(
-                                name = stringResource(R.string.speed_comparison_turbo_name),
-                                size = stringResource(R.string.speed_comparison_turbo_size),
-                                speed = stringResource(R.string.speed_comparison_turbo_speed),
-                                quality = stringResource(R.string.speed_comparison_turbo_quality)
+                // Comparison table
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Column(modifier = Modifier.padding(8.dp)) {
+                        // Header row
+                        Row(modifier = Modifier.fillMaxWidth()) {
+                            Text(
+                                stringResource(R.string.speed_comparison_header_model),
+                                modifier = Modifier.weight(2f),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary
                             )
-                            // Whisper Medium
-                            ComparisonRow(
-                                name = stringResource(R.string.speed_comparison_medium_name),
-                                size = stringResource(R.string.speed_comparison_medium_size),
-                                speed = stringResource(R.string.speed_comparison_medium_speed),
-                                quality = stringResource(R.string.speed_comparison_medium_quality)
+                            Text(
+                                stringResource(R.string.speed_comparison_header_size),
+                                modifier = Modifier.weight(1f),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary
                             )
-                            // Whisper Small
-                            ComparisonRow(
-                                name = stringResource(R.string.speed_comparison_small_name),
-                                size = stringResource(R.string.speed_comparison_small_size),
-                                speed = stringResource(R.string.speed_comparison_small_speed),
-                                quality = stringResource(R.string.speed_comparison_small_quality)
+                            Text(
+                                stringResource(R.string.speed_comparison_header_speed),
+                                modifier = Modifier.weight(1f),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary
                             )
-                            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-                            // Distil Italian (best Italian quality)
-                            ComparisonRow(
-                                name = stringResource(R.string.speed_comparison_distil_it_name),
-                                size = stringResource(R.string.speed_comparison_distil_it_size),
-                                speed = stringResource(R.string.speed_comparison_distil_it_speed),
-                                quality = stringResource(R.string.speed_comparison_distil_it_quality),
-                                badge = stringResource(R.string.speed_comparison_distil_it_note),
-                                muted = false
-                            )
-                            // Parakeet TDT (recommended)
-                            ComparisonRow(
-                                name = stringResource(R.string.speed_comparison_parakeet_name),
-                                size = stringResource(R.string.speed_comparison_parakeet_size),
-                                speed = stringResource(R.string.speed_comparison_parakeet_speed),
-                                quality = stringResource(R.string.speed_comparison_parakeet_quality),
-                                badge = stringResource(R.string.speed_comparison_parakeet_note),
-                                muted = false
-                            )
-                            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-                            // Qwen3-ASR (broadest language coverage)
-                            ComparisonRow(
-                                name = stringResource(R.string.speed_comparison_qwen3_name),
-                                size = stringResource(R.string.speed_comparison_qwen3_size),
-                                speed = stringResource(R.string.speed_comparison_qwen3_speed),
-                                quality = stringResource(R.string.speed_comparison_qwen3_quality)
-                            )
-                            // GigaAM v3 (Russian)
-                            ComparisonRow(
-                                name = stringResource(R.string.speed_comparison_gigaam_name),
-                                size = stringResource(R.string.speed_comparison_gigaam_size),
-                                speed = stringResource(R.string.speed_comparison_gigaam_speed),
-                                quality = stringResource(R.string.speed_comparison_gigaam_quality)
-                            )
-                            // Nemotron (streaming, experimental)
-                            ComparisonRow(
-                                name = stringResource(R.string.speed_comparison_nemotron_name),
-                                size = stringResource(R.string.speed_comparison_nemotron_size),
-                                speed = stringResource(R.string.speed_comparison_nemotron_speed),
-                                quality = stringResource(R.string.speed_comparison_nemotron_quality)
+                            Text(
+                                stringResource(R.string.speed_comparison_header_quality),
+                                modifier = Modifier.weight(1.5f),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary
                             )
                         }
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+
+                        // Whisper Turbo (best Whisper speed/quality balance)
+                        ComparisonRow(
+                            name = stringResource(R.string.speed_comparison_turbo_name),
+                            size = stringResource(R.string.speed_comparison_turbo_size),
+                            speed = stringResource(R.string.speed_comparison_turbo_speed),
+                            quality = stringResource(R.string.speed_comparison_turbo_quality)
+                        )
+                        // Whisper Medium
+                        ComparisonRow(
+                            name = stringResource(R.string.speed_comparison_medium_name),
+                            size = stringResource(R.string.speed_comparison_medium_size),
+                            speed = stringResource(R.string.speed_comparison_medium_speed),
+                            quality = stringResource(R.string.speed_comparison_medium_quality)
+                        )
+                        // Whisper Small
+                        ComparisonRow(
+                            name = stringResource(R.string.speed_comparison_small_name),
+                            size = stringResource(R.string.speed_comparison_small_size),
+                            speed = stringResource(R.string.speed_comparison_small_speed),
+                            quality = stringResource(R.string.speed_comparison_small_quality)
+                        )
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                        // Distil Italian (best Italian quality)
+                        ComparisonRow(
+                            name = stringResource(R.string.speed_comparison_distil_it_name),
+                            size = stringResource(R.string.speed_comparison_distil_it_size),
+                            speed = stringResource(R.string.speed_comparison_distil_it_speed),
+                            quality = stringResource(R.string.speed_comparison_distil_it_quality),
+                            badge = stringResource(R.string.speed_comparison_distil_it_note),
+                            muted = false
+                        )
+                        // Parakeet TDT (recommended)
+                        ComparisonRow(
+                            name = stringResource(R.string.speed_comparison_parakeet_name),
+                            size = stringResource(R.string.speed_comparison_parakeet_size),
+                            speed = stringResource(R.string.speed_comparison_parakeet_speed),
+                            quality = stringResource(R.string.speed_comparison_parakeet_quality),
+                            badge = stringResource(R.string.speed_comparison_parakeet_note),
+                            muted = false
+                        )
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                        // Qwen3-ASR (broadest language coverage)
+                        ComparisonRow(
+                            name = stringResource(R.string.speed_comparison_qwen3_name),
+                            size = stringResource(R.string.speed_comparison_qwen3_size),
+                            speed = stringResource(R.string.speed_comparison_qwen3_speed),
+                            quality = stringResource(R.string.speed_comparison_qwen3_quality)
+                        )
+                        // GigaAM v3 (Russian)
+                        ComparisonRow(
+                            name = stringResource(R.string.speed_comparison_gigaam_name),
+                            size = stringResource(R.string.speed_comparison_gigaam_size),
+                            speed = stringResource(R.string.speed_comparison_gigaam_speed),
+                            quality = stringResource(R.string.speed_comparison_gigaam_quality)
+                        )
+                        // Nemotron (streaming, experimental)
+                        ComparisonRow(
+                            name = stringResource(R.string.speed_comparison_nemotron_name),
+                            size = stringResource(R.string.speed_comparison_nemotron_size),
+                            speed = stringResource(R.string.speed_comparison_nemotron_speed),
+                            quality = stringResource(R.string.speed_comparison_nemotron_quality)
+                        )
                     }
                 }
-            },
-            confirmButton = {
-                TextButton(onClick = { showSpeedComparison = false }) {
-                    Text(stringResource(R.string.dismiss))
-                }
             }
-        )
-    }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.dismiss))
+            }
+        }
+    )
 }
 
 @Composable

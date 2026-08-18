@@ -12,6 +12,7 @@ import com.antivocale.app.data.ShareTargetManager
 import com.antivocale.app.data.TranscriptionCalibrator
 import com.antivocale.app.data.ExternalModelImporter
 import com.antivocale.app.data.ExternalModelStore
+import com.antivocale.app.data.catalog.BundledModelCatalog
 import java.util.concurrent.TimeUnit
 import com.antivocale.app.data.local.AppDatabase
 import com.antivocale.app.data.local.LogDao
@@ -27,6 +28,12 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 object AppModule {
+
+    @Provides
+    @Singleton
+    fun provideBundledModelCatalog(@ApplicationContext context: Context): BundledModelCatalog {
+        return BundledModelCatalog(context)
+    }
 
     @Provides
     @Singleton

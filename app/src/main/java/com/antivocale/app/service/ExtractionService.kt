@@ -12,12 +12,11 @@ import com.antivocale.app.R
 import com.antivocale.app.data.ModelDownloader
 import com.antivocale.app.data.download.DownloadState
 import com.antivocale.app.data.HuggingFaceTokenManager
-import com.antivocale.app.transcription.GigaAmDownloader
-import com.antivocale.app.transcription.NemotronDownloader
-import com.antivocale.app.transcription.ParakeetDownloader
-import com.antivocale.app.transcription.Qwen3AsrDownloader
-import com.antivocale.app.transcription.WhisperDownloader
-// GGUF: import com.antivocale.app.transcription.Gemma4GgufModelManager
+import com.antivocale.app.data.catalog.BundledCatalog
+import com.antivocale.app.transcription.BuiltInBackendIds
+import com.antivocale.app.transcription.CatalogVariantUi
+import com.antivocale.app.transcription.LlmTranscriptionBackend
+import com.antivocale.app.transcription.SherpaModelDownloader
 import com.antivocale.app.util.CrashReporter
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CancellationException
@@ -40,6 +39,12 @@ import javax.inject.Inject
  * Supports concurrent downloads — each variant runs in its own coroutine job.
  * The ViewModel observes [progressState] to update per-variant UI state.
  *
+ * The download target is identified by a plain model KEY string: a bundled
+ * catalog entry id for the built-in sherpa-onnx models, or
+ * [LlmTranscriptionBackend.BACKEND_ID] for the Gemma model. There is no
+ * per-model dispatch — built-in downloads all go through
+ * [SherpaModelDownloader] and only the non-catalog Gemma path is separate.
+ *
  * Notification follows the same pattern as [InferenceService].
  */
 @AndroidEntryPoint
@@ -55,7 +60,8 @@ class ExtractionService : Service() {
 
         const val ACTION_CANCEL = "com.antivocale.app.CANCEL_EXTRACTION"
 
-        const val EXTRA_MODEL_TYPE = "model_type"
+        /** Model key: a bundled catalog entry id, or [LlmTranscriptionBackend.BACKEND_ID]. */
+        const val EXTRA_MODEL_KEY = "model_key"
         const val EXTRA_VARIANT = "variant"
         const val EXTRA_CANCEL_VARIANT = "cancel_variant"
 
@@ -72,31 +78,15 @@ class ExtractionService : Service() {
         val progressState = _progressState.asSharedFlow()
     }
 
-    /** Typed model type identifier — replaces raw strings across Service/ViewModel boundary. */
-    enum class ModelType(val key: String) {
-        PARAKEET("parakeet"),
-        WHISPER("whisper"),
-        QWEN3_ASR("qwen3-asr"),
-        NEMOTRON("nemotron"),
-        GIGAAM("gigaam"),
-        GEMMA("gemma"),
-        GEMMA4_GGUF("gemma4-gguf"),
-        EXTERNAL("external");
-
-        companion object {
-            fun fromKey(key: String?): ModelType? = entries.find { it.key == key }
-        }
-    }
-
     data class ExtractionProgress(
-        val modelType: ModelType,
+        val modelKey: String,
         val variant: String? = null,
         val downloadState: DownloadState
     )
 
     private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob() + CrashReporter.handler)
 
-    /** Active download jobs, keyed by "$modelType:$variant". */
+    /** Active download jobs, keyed by "$modelKey:$variant". */
     private val activeJobs = ConcurrentHashMap<String, Job>()
 
     /** Keys of downloads whose user-requested cancel is in progress. */
@@ -110,33 +100,19 @@ class ExtractionService : Service() {
         NOTIFICATION_ID_BASE + (key.hashCode() and 0x7FFFFFFF) % NOTIFICATION_ID_RANGE
 
     /** Builds a unique key for tracking a download job. */
-    private fun jobKey(modelType: ModelType, variant: String?): String =
-        "${modelType.key}:${variant ?: ""}"
+    private fun jobKey(modelKey: String, variant: String?): String =
+        "$modelKey:${variant ?: ""}"
 
     /** Resolves a human-readable model name for the notification. */
-    private fun resolveDisplayName(modelType: ModelType, variant: String?): String {
-        return when (modelType) {
-            ModelType.PARAKEET -> {
-                val pv = ParakeetVariant.fromString(variant)
-                pv?.let { getString(it.titleResId) } ?: getString(R.string.parakeet_title)
-            }
-            ModelType.WHISPER -> {
-                val wv = WhisperVariant.fromString(variant)
-                wv?.let { getString(it.titleResId) } ?: "Whisper"
-            }
-            ModelType.QWEN3_ASR -> {
-                val qv = Qwen3Variant.fromString(variant)
-                qv?.let { getString(it.titleResId) } ?: "Qwen3-ASR"
-            }
-            ModelType.NEMOTRON -> getString(R.string.nemotron_name)
-            ModelType.GIGAAM -> getString(R.string.gigaam_name)
-            ModelType.GEMMA -> GemmaVariant.fromString(variant).displayName
-            // GGUF: disabled
-            // ModelType.GEMMA4_GGUF -> { val gv = GgufVariant.fromString(variant); gv?.let { getString(it.titleResId) } ?: "Gemma 4 GGUF" }
-            ModelType.GEMMA4_GGUF -> "Gemma 4 GGUF"
-            // Bookkeeping fallback only: the registry descriptor carries the per-model name.
-            ModelType.EXTERNAL -> "External model"
+    private fun resolveDisplayName(modelKey: String, variant: String?): String {
+        if (BundledCatalog.byId(modelKey) != null) {
+            val variantName = variant ?: BundledCatalog.byId(modelKey)!!.defaultVariant.name
+            return getString(CatalogVariantUi.of(modelKey, variantName).titleResId)
         }
+        if (modelKey == LlmTranscriptionBackend.BACKEND_ID) {
+            return GemmaVariant.fromString(variant).displayName
+        }
+        return modelKey
     }
 
     override fun onCreate() {
@@ -147,9 +123,9 @@ class ExtractionService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_CANCEL) {
-            val type = ModelType.fromKey(intent.getStringExtra(EXTRA_MODEL_TYPE))
+            val modelKey = intent.getStringExtra(EXTRA_MODEL_KEY)
             val variant = intent.getStringExtra(EXTRA_CANCEL_VARIANT)
-            val key = type?.let { jobKey(it, variant) }
+            val key = modelKey?.let { jobKey(it, variant) }
             val nid = key?.let { notificationIdForKey(it) } ?: NOTIFICATION_ID_BASE
             startForeground(nid, createNotification(
                 getString(R.string.notification_cancelling),
@@ -167,14 +143,14 @@ class ExtractionService : Service() {
             return START_NOT_STICKY
         }
 
-        val modelType = ModelType.fromKey(intent.getStringExtra(EXTRA_MODEL_TYPE)) ?: run {
-            Log.w(TAG, "No model_type extra, stopping")
+        val modelKey = intent.getStringExtra(EXTRA_MODEL_KEY) ?: run {
+            Log.w(TAG, "No model_key extra, stopping")
             stopSelf()
             return START_NOT_STICKY
         }
         val variant = intent.getStringExtra(EXTRA_VARIANT)
-        val key = jobKey(modelType, variant)
-        val displayName = resolveDisplayName(modelType, variant)
+        val key = jobKey(modelKey, variant)
+        val displayName = resolveDisplayName(modelKey, variant)
         displayNames[key] = displayName
         val nid = notificationIdForKey(key)
 
@@ -189,7 +165,7 @@ class ExtractionService : Service() {
         activeJobs[key]?.cancel()
 
         val job = serviceScope.launch {
-            executeDownload(modelType, variant)
+            executeDownload(modelKey, variant)
             activeJobs.remove(key)
         }
         activeJobs[key] = job
@@ -212,118 +188,46 @@ class ExtractionService : Service() {
         Log.i(TAG, "Service destroyed")
     }
 
-    private suspend fun executeDownload(modelType: ModelType, variant: String?) {
-        val key = jobKey(modelType, variant)
+    private suspend fun executeDownload(modelKey: String, variant: String?) {
+        val key = jobKey(modelKey, variant)
         val nid = notificationIdForKey(key)
         try {
-            when (modelType) {
-                ModelType.PARAKEET -> {
-                    val parakeetVariant = ParakeetVariant.fromString(variant)
-                        ?: run {
-                            _progressState.tryEmit(ExtractionProgress(
-                                ModelType.PARAKEET, variant,
-                                DownloadState.Error("Unknown variant: $variant")
-                            ))
-                            return
-                        }
-                    ParakeetDownloader.downloadModel(
-                        context = applicationContext,
-                        variant = parakeetVariant,
-                        onProgress = {},
-                        onStateChange = { state ->
-                            _progressState.tryEmit(ExtractionProgress(ModelType.PARAKEET, variant, downloadState = state))
-                            updateNotificationFromState(key, state)
-                        }
-                    )
-                }
-                ModelType.WHISPER -> {
-                    val whisperVariant = WhisperVariant.fromString(variant)
-                        ?: run {
-                            _progressState.tryEmit(ExtractionProgress(
-                                ModelType.WHISPER, variant,
-                                DownloadState.Error("Unknown variant: $variant")
-                            ))
-                            return
-                        }
-                    WhisperDownloader.downloadModel(
-                        context = applicationContext,
-                        variant = whisperVariant,
-                        onProgress = {},
-                        onStateChange = { state ->
-                            _progressState.tryEmit(ExtractionProgress(ModelType.WHISPER, variant, downloadState = state))
-                            updateNotificationFromState(key, state)
-                        }
-                    )
-                }
-                ModelType.QWEN3_ASR -> {
-                    val qwen3Variant = Qwen3Variant.fromString(variant)
-                        ?: run {
-                            _progressState.tryEmit(ExtractionProgress(
-                                ModelType.QWEN3_ASR, variant,
-                                DownloadState.Error("Unknown variant: $variant")
-                            ))
-                            return
-                        }
-                    Qwen3AsrDownloader.downloadModel(
-                        context = applicationContext,
-                        variant = qwen3Variant,
-                        onProgress = {},
-                        onStateChange = { state ->
-                            _progressState.tryEmit(ExtractionProgress(ModelType.QWEN3_ASR, variant, downloadState = state))
-                            updateNotificationFromState(key, state)
-                        }
-                    )
-                }
-                ModelType.NEMOTRON -> {
-                    NemotronDownloader.downloadModel(
-                        context = applicationContext,
-                        onProgress = {},
-                        onStateChange = { state ->
-                            _progressState.tryEmit(ExtractionProgress(ModelType.NEMOTRON, variant, downloadState = state))
-                            updateNotificationFromState(key, state)
-                        }
-                    )
-                }
-                ModelType.GIGAAM -> {
-                    GigaAmDownloader.downloadModel(
-                        context = applicationContext,
-                        onProgress = {},
-                        onStateChange = { state ->
-                            _progressState.tryEmit(ExtractionProgress(ModelType.GIGAAM, variant, downloadState = state))
-                            updateNotificationFromState(key, state)
-                        }
-                    )
-                }
-                ModelType.GEMMA -> {
-                    val gemmaVariant = GemmaVariant.fromString(variant)
-                    ModelDownloader.downloadModel(
-                        context = applicationContext,
-                        variant = gemmaVariant,
-                        tokenManager = huggingFaceTokenManager,
-                        onProgress = {},
-                        onStateChange = { state ->
-                            _progressState.tryEmit(ExtractionProgress(ModelType.GEMMA, variant, downloadState = state))
-                            updateNotificationFromState(key, state)
-                        }
-                    )
-                }
-                // GGUF: disabled
-                ModelType.GEMMA4_GGUF -> {
-                    _progressState.tryEmit(ExtractionProgress(modelType, variant, DownloadState.Error("GGUF not available")))
-                }
-                // External models: imported through the importer in the Model tab, never this service.
-                ModelType.EXTERNAL -> { /* no service-driven download: imports run through the importer */ }
+            val onStateChange: (DownloadState) -> Unit = { state ->
+                _progressState.tryEmit(ExtractionProgress(modelKey, variant, downloadState = state))
+                updateNotificationFromState(key, state)
+            }
+            if (BundledCatalog.byId(modelKey) != null) {
+                SherpaModelDownloader.of(modelKey).downloadModel(
+                    context = applicationContext,
+                    variantName = variant,
+                    onProgress = {},
+                    onStateChange = onStateChange
+                )
+            } else if (modelKey == LlmTranscriptionBackend.BACKEND_ID) {
+                val gemmaVariant = GemmaVariant.fromString(variant)
+                ModelDownloader.downloadModel(
+                    context = applicationContext,
+                    variant = gemmaVariant,
+                    tokenManager = huggingFaceTokenManager,
+                    onProgress = {},
+                    onStateChange = onStateChange
+                )
+            } else {
+                _progressState.tryEmit(ExtractionProgress(
+                    modelKey, variant,
+                    DownloadState.Error("Unknown model key: $modelKey")
+                ))
             }
         } catch (e: CancellationException) {
             Log.i(TAG, "Download cancelled: $key")
             _progressState.tryEmit(ExtractionProgress(
-                modelType, variant,
+                modelKey, variant,
                 DownloadState.Cancelled("User cancelled")
             ))
         } catch (e: Exception) {
             Log.e(TAG, "Unexpected error during download: $key", e)
             _progressState.tryEmit(ExtractionProgress(
-                modelType, variant,
+                modelKey, variant,
                 DownloadState.Error(e.message ?: "Unknown error", e)
             ))
         } finally {
@@ -351,66 +255,34 @@ class ExtractionService : Service() {
         // "Retrying") from being posted after cancellation.
     }
 
-    /** Cancels the underlying downloader for a given model type and optional variant. */
-    private fun cancelDownloaderFor(type: ModelType, variant: String? = null) {
-        when (type) {
-            ModelType.PARAKEET -> {
-                if (variant != null) {
-                    ParakeetVariant.fromString(variant)?.let { ParakeetDownloader.cancel(it) }
-                } else {
-                    ParakeetDownloader.cancel()
-                }
+    /** Cancels the underlying downloader for a given model key and optional variant. */
+    private fun cancelDownloaderFor(modelKey: String, variant: String? = null) {
+        if (BundledCatalog.byId(modelKey) != null) {
+            SherpaModelDownloader.of(modelKey).cancel(variant)
+        } else if (modelKey == LlmTranscriptionBackend.BACKEND_ID) {
+            if (variant != null) {
+                ModelDownloader.cancel(GemmaVariant.fromString(variant))
+            } else {
+                ModelDownloader.cancel()
             }
-            ModelType.WHISPER -> {
-                if (variant != null) {
-                    WhisperVariant.fromString(variant)?.let { WhisperDownloader.cancel(it) }
-                } else {
-                    WhisperDownloader.cancel()
-                }
-            }
-            ModelType.QWEN3_ASR -> {
-                if (variant != null) {
-                    Qwen3Variant.fromString(variant)?.let { Qwen3AsrDownloader.cancel(it) }
-                } else {
-                    Qwen3AsrDownloader.cancel()
-                }
-            }
-            ModelType.GEMMA -> {
-                if (variant != null) {
-                    ModelDownloader.cancel(GemmaVariant.fromString(variant))
-                } else {
-                    ModelDownloader.cancel()
-                }
-            }
-            ModelType.NEMOTRON -> {
-                NemotronDownloader.cancel()
-            }
-            ModelType.GIGAAM -> {
-                GigaAmDownloader.cancel()
-            }
-            // GGUF: disabled
-            ModelType.GEMMA4_GGUF -> { /* no-op: GGUF downloader not available */ }
-            // External models: imported, never downloaded by the service.
-            ModelType.EXTERNAL -> { /* no-op: external models have no service-driven download */ }
         }
+        // Unknown/GGUF/external keys: no service-driven downloader.
     }
 
     private fun handleCancel(intent: Intent) {
         val cancelVariant = intent.getStringExtra(EXTRA_CANCEL_VARIANT)
-        val cancelModelType = intent.getStringExtra(EXTRA_MODEL_TYPE)
+        val cancelModelKey = intent.getStringExtra(EXTRA_MODEL_KEY)
 
-        if (cancelVariant != null && cancelModelType != null) {
-            val type = ModelType.fromKey(cancelModelType) ?: return
-            val key = jobKey(type, cancelVariant)
+        if (cancelVariant != null && cancelModelKey != null) {
+            val key = jobKey(cancelModelKey, cancelVariant)
             Log.i(TAG, "Cancel requested for: $key")
             cancelJobByKey(key)
-            cancelDownloaderFor(type, cancelVariant)
-        } else if (cancelModelType != null) {
-            val type = ModelType.fromKey(cancelModelType) ?: return
-            Log.i(TAG, "Cancel all for model type: $type")
-            val prefix = "${type.key}:"
+            cancelDownloaderFor(cancelModelKey, cancelVariant)
+        } else if (cancelModelKey != null) {
+            Log.i(TAG, "Cancel all for model key: $cancelModelKey")
+            val prefix = "$cancelModelKey:"
             activeJobs.keys.filter { it.startsWith(prefix) }.toList().forEach { cancelJobByKey(it) }
-            cancelDownloaderFor(type)
+            cancelDownloaderFor(cancelModelKey)
         } else {
             Log.i(TAG, "Cancel all requested")
             cancellingKeys.addAll(activeJobs.keys)
@@ -418,7 +290,7 @@ class ExtractionService : Service() {
             activeJobs.clear()
             // Don't clear cancellingKeys — each coroutine's finally block removes its key,
             // preventing stale notification updates during cancellation.
-            ModelType.entries.forEach { cancelDownloaderFor(it) }
+            (BuiltInBackendIds.ALL + LlmTranscriptionBackend.BACKEND_ID).forEach { cancelDownloaderFor(it) }
         }
 
         if (activeJobs.isEmpty()) {
@@ -533,40 +405,6 @@ class ExtractionService : Service() {
 
     // ---- Variant helpers ----
 
-    /** Resolves a string variant name to a Whisper [WhisperModelManager.Variant]. */
-    private object WhisperVariant {
-        fun fromString(name: String?): com.antivocale.app.transcription.WhisperModelManager.Variant? {
-            return when (name) {
-                "small" -> com.antivocale.app.transcription.WhisperModelManager.Variant.SMALL
-                "turbo" -> com.antivocale.app.transcription.WhisperModelManager.Variant.TURBO
-                "medium" -> com.antivocale.app.transcription.WhisperModelManager.Variant.MEDIUM
-                "distil_large_v3" -> com.antivocale.app.transcription.WhisperModelManager.Variant.DISTIL_LARGE_V3
-                else -> null
-            }
-        }
-    }
-
-    /** Resolves a string variant name to a Qwen3-ASR [Qwen3AsrModelManager.Variant]. */
-    private object Qwen3Variant {
-        fun fromString(name: String?): com.antivocale.app.transcription.Qwen3AsrModelManager.Variant? {
-            return when (name) {
-                "qwen3_asr_0_6b" -> com.antivocale.app.transcription.Qwen3AsrModelManager.Variant.QWEN3_ASR_0_6B
-                else -> null
-            }
-        }
-    }
-
-    /** Resolves a string variant name to a Parakeet [ParakeetModelManager.Variant]. */
-    private object ParakeetVariant {
-        fun fromString(name: String?): com.antivocale.app.transcription.ParakeetModelManager.Variant? {
-            return when (name) {
-                "smoothquant" -> com.antivocale.app.transcription.ParakeetModelManager.Variant.SMOOTHQUANT
-                "stock_int8" -> com.antivocale.app.transcription.ParakeetModelManager.Variant.STOCK_INT8
-                else -> null
-            }
-        }
-    }
-
     /** Resolves a string variant name to a Gemma [ModelDownloader.ModelVariant]. */
     private object GemmaVariant {
         fun fromString(name: String?): ModelDownloader.ModelVariant {
@@ -579,17 +417,4 @@ class ExtractionService : Service() {
             }
         }
     }
-
-    /** Resolves a string variant name to a GGUF [Gemma4GgufModelManager.GgufVariant]. */
-    // GGUF: disabled — uncomment when re-enabling GGUF
-    // private object GgufVariant {
-    //     fun fromString(name: String?): Gemma4GgufModelManager.GgufVariant? {
-    //         return when (name) {
-    //             "q4_k_m" -> Gemma4GgufModelManager.GgufVariant.Q4_K_M
-    //             "q5_k_m" -> Gemma4GgufModelManager.GgufVariant.Q5_K_M
-    //             "q8_0" -> Gemma4GgufModelManager.GgufVariant.Q8_0
-    //             else -> null
-    //         }
-    //     }
-    // }
 }

@@ -1,8 +1,8 @@
 package com.antivocale.app.data.download
 
-import com.antivocale.app.transcription.ParakeetModelManager
-import com.antivocale.app.transcription.WhisperModelManager
+import com.antivocale.app.transcription.SherpaModelManager
 import org.junit.Assert.*
+import org.junit.Before
 import org.junit.Test
 import java.io.File
 
@@ -15,6 +15,21 @@ import java.io.File
  * - Clear removes all files AND sidecars so fresh downloads start from 0
  */
 class DownloadClearIntegrationTest {
+
+    @Before
+    fun setUp() {
+        // Managers validate via BundledCatalog; seed it from the real asset so no
+        // Android assets are needed here.
+        val moduleRelative = File("src/main/assets/models_catalog.json")
+        val rootRelative = File("app/src/main/assets/models_catalog.json")
+        val asset = when {
+            moduleRelative.exists() -> moduleRelative
+            rootRelative.exists() -> rootRelative
+            else -> throw IllegalStateException("Cannot locate models_catalog.json from ${File(".").absolutePath}")
+        }
+        com.antivocale.app.data.catalog.BundledCatalog.seed(
+            com.antivocale.app.data.catalog.ModelCatalogJson.parseCatalog(asset.readText()))
+    }
 
     // ==================== isFileComplete ====================
 
@@ -84,59 +99,62 @@ class DownloadClearIntegrationTest {
 
     @Test
     fun `BUG REPRO - 2MB partial ONNX files fail validation with sidecars`() {
-        val dir = tempDir()
+        val dir = File(tempDir(), "sherpa-onnx-whisper-small")
+        dir.mkdirs()
         try {
-            File(dir, "tokens.txt").writeText("tokens")
+            File(dir, "small-tokens.txt").writeText("tokens")
 
-            val encoder = File(dir, "encoder.int8.onnx")
+            val encoder = File(dir, "small-encoder.int8.onnx")
             encoder.writeText("x".repeat(2_000_000))
             ResumeDownloadHelper.sizeSidecar(encoder).writeText("900000000")
 
-            val decoder = File(dir, "decoder.int8.onnx")
+            val decoder = File(dir, "small-decoder.int8.onnx")
             decoder.writeText("x".repeat(2_000_000))
             ResumeDownloadHelper.sizeSidecar(decoder).writeText("900000000")
 
             assertNull(
                 "2MB partials should be rejected (they'd pass old >1MB check)",
-                WhisperModelManager.validateModelDirectory(dir)
+                SherpaModelManager.of("whisper").validateModelDirectory(dir)
             )
         } finally { dir.deleteRecursively() }
     }
 
     @Test
     fun `complete files with matching sidecars pass validation`() {
-        val dir = tempDir()
+        val dir = File(tempDir(), "sherpa-onnx-whisper-small")
+        dir.mkdirs()
         try {
-            val tokens = File(dir, "tokens.txt")
+            val tokens = File(dir, "small-tokens.txt")
             tokens.writeText("tokens data")
             ResumeDownloadHelper.sizeSidecar(tokens).writeText("11")
 
-            val encoder = File(dir, "encoder.int8.onnx")
+            val encoder = File(dir, "small-encoder.int8.onnx")
             encoder.writeText("x".repeat(1000))
             ResumeDownloadHelper.sizeSidecar(encoder).writeText("1000")
 
-            val decoder = File(dir, "decoder.int8.onnx")
+            val decoder = File(dir, "small-decoder.int8.onnx")
             decoder.writeText("x".repeat(1000))
             ResumeDownloadHelper.sizeSidecar(decoder).writeText("1000")
 
             assertNotNull(
                 "Complete files should pass even with sidecars present",
-                WhisperModelManager.validateModelDirectory(dir)
+                SherpaModelManager.of("whisper").validateModelDirectory(dir)
             )
         } finally { dir.deleteRecursively() }
     }
 
     @Test
     fun `files without sidecars pass validation`() {
-        val dir = tempDir()
+        val dir = File(tempDir(), "sherpa-onnx-whisper-small")
+        dir.mkdirs()
         try {
-            File(dir, "tokens.txt").writeText("tokens")
-            File(dir, "encoder.int8.onnx").writeText("x".repeat(100))
-            File(dir, "decoder.int8.onnx").writeText("x".repeat(100))
+            File(dir, "small-tokens.txt").writeText("tokens")
+            File(dir, "small-encoder.int8.onnx").writeText("x".repeat(100))
+            File(dir, "small-decoder.int8.onnx").writeText("x".repeat(100))
 
             assertNotNull(
                 "Files without sidecars (extracted/sideloaded) should be valid",
-                WhisperModelManager.validateModelDirectory(dir)
+                SherpaModelManager.of("whisper").validateModelDirectory(dir)
             )
         } finally { dir.deleteRecursively() }
     }
@@ -145,7 +163,8 @@ class DownloadClearIntegrationTest {
 
     @Test
     fun `Parakeet rejects partial ONNX files with sidecars`() {
-        val dir = tempDir()
+        val dir = File(tempDir(), "parakeet-tdt-0.6b-v3-smoothquant")
+        dir.mkdirs()
         try {
             File(dir, "tokens.txt").writeText("tokens")
             for (name in listOf("encoder.int8.onnx", "decoder.int8.onnx", "joiner.int8.onnx")) {
@@ -154,21 +173,22 @@ class DownloadClearIntegrationTest {
                 ResumeDownloadHelper.sizeSidecar(file).writeText("500000000")
             }
 
-            assertNull(ParakeetModelManager.validateModelDirectory(dir))
+            assertNull(SherpaModelManager.of("sherpa-onnx").validateModelDirectory(dir))
         } finally { dir.deleteRecursively() }
     }
 
     @Test
     fun `Parakeet accepts complete ONNX files with matching sidecars`() {
-        val dir = tempDir()
+        val dir = File(tempDir(), "parakeet-tdt-0.6b-v3-smoothquant")
+        dir.mkdirs()
         try {
-            for (name in ParakeetModelManager.REQUIRED_FILES) {
+            for (name in SherpaModelManager.of("sherpa-onnx").REQUIRED_FILES) {
                 val file = File(dir, name)
                 file.writeText("x".repeat(1000))
                 ResumeDownloadHelper.sizeSidecar(file).writeText("1000")
             }
 
-            assertNotNull(ParakeetModelManager.validateModelDirectory(dir))
+            assertNotNull(SherpaModelManager.of("sherpa-onnx").validateModelDirectory(dir))
         } finally { dir.deleteRecursively() }
     }
 

@@ -7,6 +7,8 @@ import com.antivocale.app.data.FakePreferencesManager
 import com.antivocale.app.transcription.staticRegistry
 import io.mockk.every
 import io.mockk.mockk
+import java.io.ByteArrayInputStream
+import java.io.File
 import java.nio.file.Files
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -51,6 +53,18 @@ class ModelViewModelActiveModelTest {
     /** Real empty dir backing the mocked Context's filesDir. */
     private val filesRoot = Files.createTempDirectory("mvm-files").toFile()
 
+    private fun catalogJson(): String {
+        val moduleRelative = File("src/main/assets/models_catalog.json")
+        val rootRelative = File("app/src/main/assets/models_catalog.json")
+        val asset = when {
+            moduleRelative.exists() -> moduleRelative
+            rootRelative.exists() -> rootRelative
+            else -> throw IllegalStateException(
+                "Cannot locate models_catalog.json from ${File(".").absolutePath}")
+        }
+        return asset.readText()
+    }
+
     private val mockContext: Context = mockk<Context>(relaxed = true) {
         every { filesDir } returns filesRoot
         every { getString(any()) } answers { "str:${args[0]}" }
@@ -65,6 +79,17 @@ class ModelViewModelActiveModelTest {
     fun setup() {
         Dispatchers.setMain(testDispatcher)
         fakePrefs = FakePreferencesManager()
+        // The catalog-driven downloaders resolve through BundledCatalog, so the
+        // mocked Context must serve the real bundled asset (read from disk, same
+        // probing as BundledModelCatalogTest) and round-trip as its own
+        // applicationContext.
+        val assetManager = mockk<android.content.res.AssetManager>(relaxed = true)
+        every { assetManager.open(any()) } answers {
+            ByteArrayInputStream(catalogJson().toByteArray(Charsets.UTF_8))
+        }
+        every { mockContext.assets } returns assetManager
+        every { mockContext.applicationContext } returns mockContext
+        com.antivocale.app.data.catalog.BundledCatalog.attach(mockContext)
         viewModel = ModelViewModel(
             preferencesManager = fakePrefs,
             activeModelRepository = ActiveModelRepository(fakePrefs, mockContext, staticRegistry()),
@@ -95,9 +120,11 @@ class ModelViewModelActiveModelTest {
      * fake preferences to whisper-with-a-real-directory updates modelPath,
      * modelName and statusMessage through the real repository.
      *
-     * The directory is real but contains no tokens.txt, so the repository's
-     * name derivation falls back to File(path).name; whisper validity only
-     * requires exists()+isDirectory, so statusMessage is the "ready" resource.
+     * The directory is real but contains no tokens.txt, so whisper validity
+     * only requires exists()+isDirectory, hence the "ready" status message.
+     * Whisper has a fixed catalog display name (whisper_title), so modelName is
+     * the localized title rather than the directory name, and the ready message
+     * embeds that title.
      */
     @Test
     fun `saved whisper model preference propagates into uiState through real repository`() = runTest {
@@ -106,14 +133,17 @@ class ModelViewModelActiveModelTest {
         assertEquals("", viewModel.uiState.value.modelPath)
 
         val modelDir = Files.createTempDirectory("whisper-test").toFile()
-        fakePrefs._whisperModelPath.value = modelDir.absolutePath
+        fakePrefs._sherpaModelPath("whisper").value = modelDir.absolutePath
         fakePrefs._transcriptionBackend.value = "whisper"
         runCurrent()
 
         val state = viewModel.uiState.value
         assertEquals(modelDir.absolutePath, state.modelPath)
-        assertEquals(modelDir.name, state.modelName)
-        assertEquals("str:${R.string.backend_model_ready}:${modelDir.name}", state.statusMessage)
+        assertEquals("str:${R.string.whisper_title}", state.modelName)
+        assertEquals(
+            "str:${R.string.backend_model_ready}:str:${R.string.whisper_title}",
+            state.statusMessage
+        )
     }
 
     @Test
@@ -122,7 +152,7 @@ class ModelViewModelActiveModelTest {
         // points at a real directory (whisper: valid -> "ready" status message).
         val whisperDir = Files.createTempDirectory("whisper-initial").toFile()
         fakePrefs._transcriptionBackend.value = "whisper"
-        fakePrefs._whisperModelPath.value = whisperDir.absolutePath
+        fakePrefs._sherpaModelPath("whisper").value = whisperDir.absolutePath
         runCurrent()
 
         // Switch to a second backend that has a DIFFERENT saved model path.

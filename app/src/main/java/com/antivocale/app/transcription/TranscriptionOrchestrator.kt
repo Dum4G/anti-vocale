@@ -11,6 +11,9 @@ import com.antivocale.app.data.ExternalModelRecord
 import com.antivocale.app.data.ExternalModelStore
 import com.antivocale.app.data.PreferencesManager
 import com.antivocale.app.data.TranscriptionCalibrator
+import com.antivocale.app.data.catalog.BundledCatalog
+import com.antivocale.app.data.catalog.CatalogDisplay
+import com.antivocale.app.data.catalog.CatalogStringKeys
 import com.antivocale.app.data.local.LogDao
 import com.antivocale.app.data.local.toEntity
 import com.antivocale.app.data.local.toLogEntry
@@ -317,11 +320,12 @@ class TranscriptionOrchestrator @Inject constructor(
                 backendManager.unloadActiveBackend()
             }
 
-            // TASK-322: dispatch on the registry descriptor's ModelType instead of the
-            // backend-id strings. The loaders keep their distinct bodies (only the keying
-            // changed). The disabled GGUF backend is unregistered, so its literal id is
-            // matched before the lookup; unknown ids yield a null descriptor and fall
-            // through to the LLM loader, exactly as the former string-keyed when did.
+            // Sherpa-onnx consolidation: the load dispatch keys on the registry
+            // descriptor (the catalog entry id); every built-in model goes through
+            // the one generic [loadCatalogBackend]. The disabled GGUF backend is
+            // unregistered, so its literal id is matched before the lookup; unknown
+            // ids yield a null descriptor and fall through to the LLM loader, exactly
+            // as the former ModelType-keyed when did.
             // External ids are intercepted BEFORE the registry lookup for a behavioral
             // reason, not a registry gap: a prefix-matched id whose record is gone must
             // fail fast with NotInitialized instead of falling through to the LLM
@@ -330,16 +334,11 @@ class TranscriptionOrchestrator @Inject constructor(
                 loadExternalBackend(context, preferredBackendId)
             } else when (preferredBackendId) {
                 GGUF_BACKEND_ID -> loadGgufBackend(context)
-                else -> when (backendRegistry.byBackendId(preferredBackendId)?.modelType) {
-                    ExtractionService.ModelType.PARAKEET -> loadSherpaOnnxBackend(context)
-                    ExtractionService.ModelType.WHISPER -> loadWhisperBackend(context)
-                    ExtractionService.ModelType.QWEN3_ASR -> loadQwen3AsrBackend(context)
-                    ExtractionService.ModelType.NEMOTRON -> loadNemotronBackend(context)
-                    ExtractionService.ModelType.GIGAAM -> loadGigaAmBackend(context)
-                    // The registered LLM backend ("llm" -> GEMMA) loads here, as before.
-                    ExtractionService.ModelType.GEMMA -> loadLlmBackend(context)
-                    else -> loadLlmBackend(context)
-                }
+                // The LLM backend ("llm") stores its model in the generic preference.
+                LlmTranscriptionBackend.BACKEND_ID -> loadLlmBackend(context)
+                else -> backendRegistry.byBackendId(preferredBackendId)?.let { descriptor ->
+                    loadCatalogBackend(context, descriptor)
+                } ?: loadLlmBackend(context)
             }
 
             loadResult.fold(
@@ -367,21 +366,46 @@ class TranscriptionOrchestrator @Inject constructor(
         )
     }
 
-    private suspend fun loadSherpaOnnxModel(
-        backendId: String,
-        modelPathFlow: kotlinx.coroutines.flow.Flow<String?>,
-        label: String,
-        language: String = "",
-        context: Context
-    ): Result<Unit> {
-        val modelPath = modelPathFlow.first()
-        if (modelPath.isNullOrBlank()) {
-            return Result.failure(TranscriptionException.NotInitialized())
+    private suspend fun loadCatalogBackend(context: Context, descriptor: BackendDescriptor): Result<Unit> {
+        val entry = BundledCatalog.byId(descriptor.backendId)
+            ?: return Result.failure(TranscriptionException.NotInitialized())
+        // The saved path is the user's explicit variant choice (useModel(variant)): honor
+        // it when it still exists. Only fall back to auto-resolution when the saved path
+        // is blank or its directory is gone (deleted, cleaner).
+        val savedPath = descriptor.modelPathFlow(preferencesManager).first()
+        val resolvedPath = when {
+            !savedPath.isNullOrBlank() && File(savedPath).isDirectory -> savedPath
+            else -> SherpaModelManager.of(entry.id).resolveActiveModelPath(context, fallbackPath = savedPath)
+        } ?: return Result.failure(TranscriptionException.NotInitialized())
+        // Persist the resolved path so the rest of the app (UI, benchmark) sees a valid path.
+        if (resolvedPath != savedPath) {
+            descriptor.saveModelPath(preferencesManager, resolvedPath)
         }
-        return configureSherpaBackend(backendId, modelPath, label, language, context)
+        // Language wiring is catalog data: languageOption (online Nemotron) passes "auto"
+        // or a code per stream; passLanguage (offline Whisper) maps "auto" to "" so the
+        // model auto-detects and passes a concrete code through; everything else gets "".
+        val languagePref = preferencesManager.transcriptionLanguage.first()
+        val language = when {
+            entry.flags.languageOption ->
+                if (languagePref.isBlank() || languagePref == "system") "auto" else languagePref
+            entry.flags.passLanguage ->
+                if (languagePref == "auto") "" else languagePref
+            else -> ""
+        }
+        val label = when (val d = entry.display) {
+            is CatalogDisplay.Resource -> context.getString(CatalogStringKeys.resolve(d.key))
+            is CatalogDisplay.Literal -> d.text
+        }
+        return configureSherpaBackend(
+            backendId = descriptor.backendId,
+            modelPath = resolvedPath,
+            label = label,
+            language = language,
+            context = context,
+            modelType = entry.modelType,
+        )
     }
 
-    /** Returns the system's available memory (the closest user-space analog to MemAvailable). */
     private fun availableMemoryBytes(context: Context): Long {
         val info = ActivityManager.MemoryInfo()
         val am = context.getSystemService(ActivityManager::class.java)
@@ -497,72 +521,6 @@ class TranscriptionOrchestrator @Inject constructor(
             )
         }
     }
-
-    private suspend fun loadSherpaOnnxBackend(context: Context): Result<Unit> {
-        // The saved path is the user's explicit variant choice (useParakeetModel(variant)):
-        // honor it when it still exists. Only fall back to auto-resolution when the saved
-        // path is blank or its directory is gone (deleted, cleaner).
-        val savedPath = preferencesManager.parakeetModelPath.first()
-        val resolvedPath = when {
-            !savedPath.isNullOrBlank() && java.io.File(savedPath).isDirectory -> savedPath
-            else -> ParakeetModelManager.resolveActiveModelPath(context, fallbackPath = savedPath)
-        } ?: return Result.failure(TranscriptionException.NotInitialized())
-        // Persist the resolved path so the rest of the app (UI, benchmark) sees a valid path.
-        if (resolvedPath != savedPath) {
-            preferencesManager.saveParakeetModelPath(resolvedPath)
-        }
-        return configureSherpaBackend(
-            backendId = SherpaOnnxBackend.BACKEND_ID,
-            modelPath = resolvedPath,
-            label = "Parakeet",
-            context = context
-        )
-    }
-
-    private suspend fun loadWhisperBackend(context: Context) = loadSherpaOnnxModel(
-        backendId = WhisperBackend.BACKEND_ID,
-        modelPathFlow = preferencesManager.whisperModelPath,
-        label = "Whisper",
-        language = preferencesManager.transcriptionLanguage.first().let { lang ->
-            if (lang == "auto") "" else lang
-        },
-        context = context
-    )
-
-    private suspend fun loadQwen3AsrBackend(context: Context) = loadSherpaOnnxModel(
-        backendId = Qwen3AsrBackend.BACKEND_ID,
-        modelPathFlow = preferencesManager.qwen3AsrModelPath,
-        label = "Qwen3-ASR",
-        context = context
-    )
-
-    private suspend fun loadNemotronBackend(context: Context): Result<Unit> {
-        val modelPath = preferencesManager.nemotronModelPath.first()
-        if (modelPath.isNullOrBlank()) {
-            return Result.failure(TranscriptionException.NotInitialized())
-        }
-        return configureSherpaBackend(
-            backendId = NemotronStreamingBackend.BACKEND_ID,
-            modelPath = modelPath,
-            label = "Nemotron",
-            // AC #3: Nemotron multilingual conditions on a language-ID prompt per stream via
-            // OnlineStream.setOption("language", ...). "auto" = auto-detect; otherwise a code (it/en/...).
-            language = preferencesManager.transcriptionLanguage.first().let { lang ->
-                when {
-                    lang.isBlank() || lang == "system" -> "auto"
-                    else -> lang
-                }
-            },
-            context = context
-        )
-    }
-
-    private suspend fun loadGigaAmBackend(context: Context): Result<Unit> = loadSherpaOnnxModel(
-        backendId = GigaAmBackend.BACKEND_ID,
-        modelPathFlow = preferencesManager.gigaamModelPath,
-        label = "GigaAM",
-        context = context
-    )
 
     // GGUF: disabled — move files from gguf-disabled/ to re-enable the body below
     private suspend fun loadGgufBackend(context: Context): Result<Unit> {
@@ -1376,13 +1334,13 @@ class TranscriptionOrchestrator @Inject constructor(
     internal fun deriveDisplayName(backendId: String, modelPath: String, fallbackName: String?): String {
         val dirName = File(modelPath).name
         return when (backendId) {
-            WhisperBackend.BACKEND_ID -> {
+            BuiltInBackendIds.WHISPER -> {
                 val variant = dirName.removePrefix("sherpa-onnx-whisper-")
                     .replace("-", " ")
                     .replaceFirstChar { it.uppercase() }
                 if (variant.isNotEmpty()) "Whisper $variant" else fallbackName ?: "Whisper"
             }
-            Qwen3AsrBackend.BACKEND_ID -> {
+            BuiltInBackendIds.QWEN3_ASR -> {
                 dirName.removePrefix("sherpa-onnx-qwen3-asr-")
                     .replace("-int8", "")
                     .replace("-", " ")

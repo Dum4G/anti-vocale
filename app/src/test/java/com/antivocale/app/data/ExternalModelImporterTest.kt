@@ -1,6 +1,9 @@
 package com.antivocale.app.data
 
 import kotlinx.coroutines.test.runTest
+import okhttp3.mockwebserver.MockResponse
+import okhttp3.mockwebserver.MockWebServer
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
@@ -9,18 +12,20 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.io.File
+import java.security.MessageDigest
 
 /**
- * Local-entry importer tests (plan v2a, Task 7): role-based copy plan, id-fragment
- * directory uniqueness, streaming pins, metadata validation before persisting,
- * missing-role failure, same-hash dedupe. The SAF entry (importFromTreeUri) is a
- * thin DocumentFile port of the same core and is device-verified (Task 12).
+ * JSON-only importer tests (spec: external models platform v2a, JSON-only
+ * revision): catalog-entry JSON text import (canonical-name landing, verified
+ * pins, metadata validation before persisting, missing-role failure, same-hash
+ * dedupe, disk pre-flight). All downloads run against a MockWebServer.
  */
 class ExternalModelImporterTest {
 
     @get:Rule
     val tmp = TemporaryFolder()
 
+    private lateinit var server: MockWebServer
     private lateinit var fake: FakePreferencesManager
     private lateinit var store: ExternalModelStore
     private lateinit var filesRoot: File
@@ -28,6 +33,8 @@ class ExternalModelImporterTest {
 
     @Before
     fun setUp() {
+        server = MockWebServer()
+        server.start()
         fake = FakePreferencesManager()
         store = ExternalModelStore(fake)
         filesRoot = tmp.newFolder("external-root")
@@ -38,26 +45,51 @@ class ExternalModelImporterTest {
         )
     }
 
-    /** Source dir with the four role files; the encoder carries the metadata keys in its tail. */
-    private fun sourceDir(name: String = "gigaam-v3"): File {
-        val dir = tmp.newFolder(name)
-        File(dir, "some_encoder_int8.onnx").writeBytes(
-            ByteArray(64) { 1 } + "vocab_size=1024 subsampling_factor=8 model_type=nemo_transducer".toByteArray())
-        File(dir, "some_decoder.onnx").writeBytes(ByteArray(16) { 2 })
-        File(dir, "some_joiner.onnx").writeBytes(ByteArray(16) { 3 })
-        File(dir, "tokens.txt").writeText("<unk> 0\n. 1\n")
-        return dir
+    @After
+    fun tearDown() {
+        server.shutdown()
+    }
+
+    private fun sha256(bytes: ByteArray): String =
+        MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
+
+    private val encoderBytes = ByteArray(64) { 1 } + "vocab_size=1024 subsampling_factor=8 model_type=nemo_transducer".toByteArray()
+    private val decoderBytes = ByteArray(16) { 2 }
+    private val joinerBytes = ByteArray(16) { 3 }
+    private val tokensBytes = "<unk> 0\n. 1\n".toByteArray()
+
+    /** A complete catalog-entry JSON referencing the four role files on the server. */
+    private fun entryJson(name: String = "GigaAM v3", encoder: ByteArray = encoderBytes): String {
+        val base = server.url("/").toString().trimEnd('/')
+        return """{"name":"$name","description":"Test entry","modelType":"nemo_transducer","languages":["ru"],
+             "files":[
+               {"name":"my_encoder.onnx","url":"$base/encoder.bin","sha256":"${sha256(encoder)}","size":${encoder.size}},
+               {"name":"decoder.onnx","url":"$base/decoder.bin","sha256":"${sha256(decoderBytes)}","size":${decoderBytes.size}},
+               {"name":"joiner.onnx","url":"$base/joiner.bin","sha256":"${sha256(joinerBytes)}","size":${joinerBytes.size}},
+               {"name":"tokens.txt","url":"$base/tokens.bin","sha256":"${sha256(tokensBytes)}","size":${tokensBytes.size}}]}"""
+    }
+
+    private fun enqueueFiles() {
+        server.enqueue(MockResponse().setBody(okio.Buffer().write(encoderBytes)))
+        server.enqueue(MockResponse().setBody(okio.Buffer().write(decoderBytes)))
+        server.enqueue(MockResponse().setBody(okio.Buffer().write(joinerBytes)))
+        server.enqueue(MockResponse().setBody(okio.Buffer().write(tokensBytes)))
     }
 
     @Test
-    fun `local import copies to id-fragment dir, records pins, registers the record`() = runTest {
-        val src = sourceDir()
-        val record = importer.importFromDirectory(src)
+    fun `json text import downloads under canonical names and registers the record`() = runTest {
+        enqueueFiles()
+        val record = importer.importFromEntryJsonText(entryJson())
 
         assertEquals(4, record.files.size)
         assertTrue(record.files.values.all { it.verified })
-        assertTrue(File(record.dir).isDirectory)
-        assertEquals(4, File(record.dir).listFiles()!!.size)
+        assertEquals("GigaAM v3", record.displayName)
+        assertEquals("Test entry", record.description)
+        assertEquals(listOf("ru"), record.languages)
+        assertTrue(File(record.dir, "encoder.int8.onnx").exists())
+        assertTrue(File(record.dir, "decoder.int8.onnx").exists())
+        assertTrue(File(record.dir, "joiner.int8.onnx").exists())
+        assertTrue(File(record.dir, "tokens.txt").exists())
         assertTrue("dir must embed the id fragment", record.dir.endsWith(record.id.take(6)))
         assertEquals(listOf(record), store.records())
     }
@@ -99,10 +131,11 @@ class ExternalModelImporterTest {
 
     @Test
     fun `missing role fails with a clean error and registers nothing`() = runTest {
-        val src = tmp.newFolder("incomplete")
-        File(src, "tokens.txt").writeText("x")
+        val base = server.url("/").toString().trimEnd('/')
+        val json = """{"name":"incomplete","files":[
+            {"name":"tokens.txt","url":"$base/t","sha256":"${"a".repeat(64)}","size":1}]}"""
 
-        val result = runCatching { importer.importFromDirectory(src) }
+        val result = runCatching { importer.importFromEntryJsonText(json) }
 
         assertTrue(result.isFailure)
         assertEquals(0, store.records().size)
@@ -111,43 +144,54 @@ class ExternalModelImporterTest {
 
     @Test
     fun `encoder without metadata fails import cleanly`() = runTest {
-        val src = tmp.newFolder("badmeta")
-        File(src, "encoder.onnx").writeBytes(ByteArray(32) { 7 })
-        File(src, "decoder.onnx").writeBytes(ByteArray(8) { 2 })
-        File(src, "joiner.onnx").writeBytes(ByteArray(8) { 3 })
-        File(src, "tokens.txt").writeText("x")
-
-        val result = runCatching { importer.importFromDirectory(src) }
+        enqueueFiles()
+        val badEncoder = ByteArray(32) { 7 }  // no required ONNX metadata keys
+        val result = runCatching { importer.importFromEntryJsonText(entryJson(encoder = badEncoder)) }
 
         assertTrue(result.isFailure)
         assertEquals(0, store.records().size)
+        // The fresh target dir is removed by the cleanup-on-failure tail.
+        assertEquals(0, filesRoot.listFiles()!!.size)
     }
 
     @Test
-    fun `same-hash reimport offers no second directory`() = runTest {
-        val src = sourceDir()
-        val first = importer.importFromDirectory(src)
-        val second = importer.importFromDirectory(src)
+    fun `same-hash reimport dedupes onto the existing record`() = runTest {
+        enqueueFiles()
+        val first = importer.importFromEntryJsonText(entryJson())
+        enqueueFiles()
+        val second = importer.importFromEntryJsonText(entryJson())
+
         assertEquals(first.id, second.id)
         assertEquals(1, store.records().size)
         assertEquals(1, filesRoot.listFiles()!!.size)
     }
 
     @Test
+    fun `hashless or sizeless entry files are rejected at parse time`() = runTest {
+        val hashless = """{"name":"x","files":[{"name":"a.onnx","url":"https://x/a"}]}"""
+        assertTrue(runCatching { importer.importFromEntryJsonText(hashless) }.isFailure)
+
+        val sizeless = """{"name":"x","files":[{"name":"a.onnx","url":"https://x/a","sha256":"${"f".repeat(64)}"}]}"""
+        assertTrue(runCatching { importer.importFromEntryJsonText(sizeless) }.isFailure)
+        assertEquals(0, store.records().size)
+        assertEquals(0, filesRoot.listFiles()!!.size)
+    }
+
+    @Test
     fun `disk pre-flight blocks imports larger than available space`() = runTest {
         val smallRoot = tmp.newFolder("tiny-root")
         val tightImporter = ExternalModelImporter(store, filesRoot = { smallRoot }, uuid = { "0123456789abcdef" })
-        // TemporaryFolder cannot shrink usableSpace; instead verify the guard fires by
-        // faking a huge source: a sparse file whose length exceeds the free space heuristic.
-        val src = tmp.newFolder("huge")
-        val huge = File(src, "encoder.onnx")
-        // Length only, no allocation: the pre-flight reads lengths, RandomAccessFile sets them sparsely.
-        java.io.RandomAccessFile(huge, "rw").use { it.setLength(Long.MAX_VALUE / 2) }
-        File(src, "decoder.onnx").writeBytes(ByteArray(4))
-        File(src, "joiner.onnx").writeBytes(ByteArray(4))
-        File(src, "tokens.txt").writeText("x")
+        val base = server.url("/").toString().trimEnd('/')
+        val json = """{"name":"huge","files":[
+            {"name":"e.onnx","url":"$base/e","sha256":"${"a".repeat(64)}","size":${Long.MAX_VALUE / 2}},
+            {"name":"d.onnx","url":"$base/d","sha256":"${"b".repeat(64)}","size":1},
+            {"name":"j.onnx","url":"$base/j","sha256":"${"c".repeat(64)}","size":1},
+            {"name":"t.txt","url":"$base/t","sha256":"${"d".repeat(64)}","size":1}]}"""
 
-        val result = runCatching { tightImporter.importFromDirectory(src) }
+        val result = runCatching { tightImporter.importFromEntryJsonText(json) }
+
         assertTrue(result.isFailure)
+        // Pre-flight fires before any network round-trip.
+        assertEquals(0, server.requestCount)
     }
 }

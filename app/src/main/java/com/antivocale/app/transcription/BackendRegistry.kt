@@ -1,12 +1,13 @@
 package com.antivocale.app.transcription
 
 import android.content.Context
-import com.antivocale.app.R
 import com.antivocale.app.data.ExternalModelRecord
 import com.antivocale.app.data.ExternalModelRecordsProvider
 import com.antivocale.app.data.ExternalModelStore
 import com.antivocale.app.data.PreferencesManager
-import com.antivocale.app.service.ExtractionService
+import com.antivocale.app.data.catalog.BundledCatalog
+import com.antivocale.app.data.catalog.CatalogDisplay
+import com.antivocale.app.data.catalog.CatalogStringKeys
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import java.io.File
@@ -14,42 +15,38 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Immutable metadata about one transcription backend, tying together the three
+ * Immutable metadata about one transcription backend, tying together the two
  * independent identifier schemes the app currently dispatches on:
  *
- *  - the [backendId] string ([TranscriptionBackend.id] / the `BACKEND_ID`
- *    companion constants, also persisted as the `transcriptionBackend`
- *    preference),
- *  - the [modelType] enum used by download/bookkeeping code
- *    ([ExtractionService.ModelType]),
+ *  - the [backendId] string ([TranscriptionBackend.id] / the persisted
+ *    `transcriptionBackend` preference),
  *  - the [shareAlias] manifest activity-alias used to route share targets
  *    (single source since TASK-323: ShareReceiverActivity and ShareTargetManager
  *    resolve it through the registry; the manifest activity-alias android:name
  *    attributes themselves stay literal strings).
  *
- * It also carries the per-backend saved-model-path preference accessors and the
+ * It also carries the saved-model-path preference accessors and the
  * display-name derivation, so the parallel `when` blocks can collapse into
- * registry lookups.
+ * registry lookups. The old bookkeeping [ExtractionService.ModelType] enum is
+ * gone (consolidation): sherpa-onnx dispatch now keys on the [backendId] string
+ * everywhere (service, orchestrator, view model).
+ *
+ * The five sherpa-onnx static descriptors are built from the bundled catalog
+ * (share alias, streaming flag, fixed display-name resource and the path-derived
+ * display name all come from the catalog entry), so the registry cannot drift
+ * from the catalog; the LLM backend (LiteRT, not a catalog entry) stays
+ * hand-written here by design.
  *
  * Display-name contract: if [displayNameResId] is non-null the backend has a
  * fixed localized name (`context.getString(displayNameResId)`); otherwise call
- * [deriveDisplayName] with the saved model path. Backends whose name depends on
- * the downloaded variant (Whisper, Qwen3-ASR) derive it via their model
- * manager; the default derivation is the model file name. This is the single
- * implementation of the derivations (ActiveModelRepository consumes it since
- * TASK-321).
- *
- * Differences between backends are expressed as capability flags
- * ([isStreaming]) rather than forcing uniform metadata: the LLM backend
- * (Gemma) has no dedicated display-name resource and stores its model path in
- * the generic `modelPath` preference, which its accessors reflect.
+ * [deriveDisplayName] with the saved model path — a variant title resolved from
+ * the catalog for entries without an explicit display (Whisper, Qwen3-ASR), else
+ * the model file name. This is the single implementation of the derivations
+ * (ActiveModelRepository consumes it since TASK-321).
  */
 data class BackendDescriptor(
     /** Value of the backend's `BACKEND_ID` companion constant (e.g. "sherpa-onnx"). */
     val backendId: String,
-
-    /** Download/bookkeeping enum for this backend's models. */
-    val modelType: ExtractionService.ModelType,
 
     /**
      * Share-target activity-alias for this backend: the manifest
@@ -72,7 +69,7 @@ data class BackendDescriptor(
     /**
      * Derives the user-visible model name from the saved model path.
      * Used when [displayNameResId] is null; the [Context] supplies localized
-     * variant titles where the model manager resolves one.
+     * variant titles where the catalog resolves one.
      */
     val deriveDisplayName: (context: Context, path: String) -> String = { _, path -> File(path).name },
 
@@ -88,8 +85,7 @@ data class BackendDescriptor(
 
 /**
  * Single source of truth for transcription-backend metadata: the ordered list
- * of [BackendDescriptor]s plus lookups by backend-id, [ExtractionService.ModelType],
- * and share alias.
+ * of [BackendDescriptor]s plus lookups by backend-id and share alias.
  *
  * The list is the static six plus dynamic descriptors derived from the
  * external model store (spec: external models platform v2a): every valid
@@ -102,68 +98,27 @@ data class BackendDescriptor(
  * collectors and split store mutations across racing read-modify-write
  * domains that can lose updates.
  *
- * TASK-254 introduced the abstraction; the migration is complete as of
- * TASK-324. Status of the dispatch sites from the CLAUDE.md "Architecture
- * Gotchas" section, plus the repository noted last:
- *
- * Migrated onto this registry:
- *  - [com.antivocale.app.data.ActiveModelRepository] (TASK-321; backend ids
- *    without a descriptor keep their legacy fallbacks there: GGUF's dedicated
- *    ggufModelPath, generic modelPath for other unknowns)
- *  - [com.antivocale.app.transcription.TranscriptionOrchestrator] (TASK-322;
- *    the backend-load dispatch keys on the descriptor's modelType and the
- *    saved-model-path lookup reads the descriptor's model-path flow, with the
- *    GGUF literal and unknown-id fallbacks kept locally; its calibration
- *    display-name derivation is still a string-keyed when (BACKEND_ID
- *    constants) that deliberately keeps its own dir-name semantics, see
- *    TranscriptionOrchestratorTest)
- *  - the share-target sites (TASK-323):
- *    [com.antivocale.app.receiver.ShareReceiverActivity].backendIdForAlias
- *    resolves the intent's alias component via byShareAlias (unknown aliases
- *    still yield null; the private ALIAS_* constants are gone), and
- *    [com.antivocale.app.data.ShareTargetManager] iterates the registry's
- *    descriptors for component enable/disable and reads the descriptor's
- *    model-path flow for the has-model check (neither site had a GGUF
- *    target, so nothing literal needed preserving)
- *  - [com.antivocale.app.ui.viewmodel.LogsViewModel] (TASK-325): the
- *    re-transcribe picker's model-presence filter reads the descriptor's
- *    model-path flow (the old hand-built id->path map was lookup-only, so
- *    the picker order, driven by the backend manager, is unchanged)
+ * Dispatch-site status (the sherpa-onnx consolidation removed the bookkeeping
+ * [ExtractionService.ModelType] enum; all sites now key on backend-id strings):
+ *  - [com.antivocale.app.data.ActiveModelRepository] — descriptor's model-path
+ *    flow + display-name derivation; GGUF and unknown ids keep their legacy
+ *    fallbacks locally (ggufModelPath / generic modelPath)
+ *  - [com.antivocale.app.transcription.TranscriptionOrchestrator] — backend
+ *    load keys on the [backendId]; its calibration display-name derivation is a
+ *    string-keyed when (BACKEND_ID constants) that keeps its own dir-name
+ *    semantics (see TranscriptionOrchestratorTest)
+ *  - the share-target sites ([ShareReceiverActivity].backendIdForAlias via
+ *    byShareAlias, [ShareTargetManager] component sync + has-model check)
+ *  - [com.antivocale.app.ui.viewmodel.LogsViewModel] (re-transcribe picker)
  *  - [com.antivocale.app.ui.viewmodel.SettingsViewModel].loadCurrentModel
- *    (indirectly via TASK-258: it keeps no parallel mapping of its own but
- *    collects [com.antivocale.app.data.ActiveModelRepository]'s
- *    activeModelFlow, which dispatches through this registry since TASK-321)
- *  - [com.antivocale.app.ui.viewmodel.ModelViewModel] (TASK-324: the
- *    file-validity check in loadSavedModelPath keys on the descriptor's
- *    modelType, mirroring the orchestrator, with the GGUF literal matched
- *    first; its benchmark-config when in startBenchmark still keys on
- *    backend-id strings, which selects inference configuration rather than
- *    backend metadata)
+ *    (via ActiveModelRepository's activeModelFlow)
+ *  - [com.antivocale.app.ui.viewmodel.ModelViewModel] (generic catalog layer)
+ *  - [com.antivocale.app.service.ExtractionService] (downloads keyed by entry id)
  *
- * Remaining sites, deliberately (not migration targets):
- *  - [com.antivocale.app.service.ExtractionService]: assessed in TASK-322,
- *    the ModelType enum stays as the persistence/bookkeeping scheme and the
- *    dispatch carries no registry data, so nothing to migrate there
- *  - [com.antivocale.app.di.TranscriptionModule] (Hilt @IntoSet DI
- *    registration): assembling the backend set is a different concern from
- *    metadata dispatch (this registry describes backends, the multibinding
- *    instantiates them)
- *  - [com.antivocale.app.data.PreferencesManager] / PreferencesManagerImpl
- *    (per-backend xxxModelPath flow + save/clear): this interface IS the
- *    data source the descriptors delegate to ([BackendDescriptor.modelPathFlow],
- *    [BackendDescriptor.saveModelPath], [BackendDescriptor.clearModelPath]
- *    all take a PreferencesManager), so migrating it onto the registry would
- *    be circular
- *  - AndroidManifest.xml (share-target activity-alias) + strings
- *    (share_target_*): the android:name attributes stay literal strings by
- *    necessity (the manifest cannot reference registry values); their values
- *    are pinned by BackendRegistryTest
- *
- * Not registered: the disabled GGUF backend (`gemma4_gguf`,
- * [ExtractionService.ModelType.GEMMA4_GGUF]). It has no BACKEND_ID constant
- * and its manager is disabled (see the commented-out provider in
- * [com.antivocale.app.di.TranscriptionModule]); follow-up: give it a
- * BACKEND_ID and a descriptor if it is ever re-enabled.
+ * Deliberately not registered: the disabled GGUF backend (`gemma4_gguf`). It
+ * has no BACKEND_ID constant and its manager is disabled (see the commented-out
+ * provider in [com.antivocale.app.di.TranscriptionModule]); follow-up: give it
+ * a BACKEND_ID and a descriptor if it is ever re-enabled.
  */
 @Singleton
 class BackendRegistry @Inject constructor(
@@ -172,71 +127,60 @@ class BackendRegistry @Inject constructor(
 ) {
 
     /** The six enabled static backends in canonical order (default backend first). */
-    private val staticBackends: List<BackendDescriptor> = listOf(
-        BackendDescriptor(
-            backendId = SherpaOnnxBackend.BACKEND_ID,
-            modelType = ExtractionService.ModelType.PARAKEET,
-            shareAlias = "com.antivocale.app.ShareParakeet",
-            displayNameResId = R.string.parakeet_name,
-            modelPathFlow = { it.parakeetModelPath },
-            saveModelPath = { prefs, path -> prefs.saveParakeetModelPath(path) },
-            clearModelPath = { it.clearParakeetModelPath() },
-        ),
-        BackendDescriptor(
-            backendId = WhisperBackend.BACKEND_ID,
-            modelType = ExtractionService.ModelType.WHISPER,
-            shareAlias = "com.antivocale.app.ShareWhisper",
+    private val staticBackends: List<BackendDescriptor> by lazy {
+        buildList {
+            for (entryId in BuiltInBackendIds.ALL) {
+                add(catalogDescriptor(entryId))
+            }
+            add(llmDescriptor())
+        }
+    }
+
+    /**
+     * The five sherpa-onnx backends are built from their bundled catalog entries so
+     * the registry cannot drift from the catalog: the share alias, the streaming
+     * flag (catalog `runtime`), the fixed display-name resource (the catalog
+     * `display` resource-key resolved via [CatalogStringKeys]) and the
+     * path-derived variant title (the catalog variant titles) all come from the
+     * entry. The saved-path preference is the generic keyed accessor
+     * ([PreferencesManager.sherpaModelPath]).
+     *
+     * Lazy because the registry is constructed before
+     * [com.antivocale.app.BridgeApplication] calls BundledCatalog.attach(); the
+     * catalog is only read on the first [backends] access, which in the app always
+     * happens after attach.
+     */
+    private fun catalogDescriptor(entryId: String): BackendDescriptor {
+        val entry = requireNotNull(BundledCatalog.byId(entryId)) {
+            "catalog missing entry '$entryId' for backend registry"
+        }
+        return BackendDescriptor(
+            backendId = entry.id,
+            shareAlias = entry.shareAlias,
+            isStreaming = entry.isStreaming,
+            displayNameResId = when {
+                entry.hasExplicitDisplay && entry.display is CatalogDisplay.Resource ->
+                    CatalogStringKeys.resolve(entry.display.key)
+                else -> null
+            },
             deriveDisplayName = { context, path ->
-                WhisperModelManager.validateModelDirectory(File(path))
-                    ?.variant
-                    ?.let { context.getString(it.titleResId) }
+                SherpaModelManager.of(entry.id).detectVariant(File(path).name)
+                    ?.let { variantName -> context.getString(CatalogVariantUi.of(entry.id, variantName).titleResId) }
                     ?: File(path).name
             },
-            modelPathFlow = { it.whisperModelPath },
-            saveModelPath = { prefs, path -> prefs.saveWhisperModelPath(path) },
-            clearModelPath = { it.clearWhisperModelPath() },
-        ),
-        BackendDescriptor(
-            backendId = Qwen3AsrBackend.BACKEND_ID,
-            modelType = ExtractionService.ModelType.QWEN3_ASR,
-            shareAlias = "com.antivocale.app.ShareQwen3",
-            deriveDisplayName = { context, path ->
-                Qwen3AsrModelManager.detectVariant(File(path).name)
-                    ?.let { context.getString(it.titleResId) }
-                    ?: File(path).name
-            },
-            modelPathFlow = { it.qwen3AsrModelPath },
-            saveModelPath = { prefs, path -> prefs.saveQwen3AsrModelPath(path) },
-            clearModelPath = { it.clearQwen3AsrModelPath() },
-        ),
-        BackendDescriptor(
-            backendId = NemotronStreamingBackend.BACKEND_ID,
-            modelType = ExtractionService.ModelType.NEMOTRON,
-            shareAlias = "com.antivocale.app.ShareNemotron",
-            isStreaming = true,
-            displayNameResId = R.string.nemotron_name,
-            modelPathFlow = { it.nemotronModelPath },
-            saveModelPath = { prefs, path -> prefs.saveNemotronModelPath(path) },
-            clearModelPath = { it.clearNemotronModelPath() },
-        ),
-        BackendDescriptor(
-            backendId = GigaAmBackend.BACKEND_ID,
-            modelType = ExtractionService.ModelType.GIGAAM,
-            shareAlias = "com.antivocale.app.ShareGigaam",
-            displayNameResId = R.string.gigaam_name,
-            modelPathFlow = { it.gigaamModelPath },
-            saveModelPath = { prefs, path -> prefs.saveGigaAmModelPath(path) },
-            clearModelPath = { it.clearGigaAmModelPath() },
-        ),
-        BackendDescriptor(
-            backendId = LlmTranscriptionBackend.BACKEND_ID,
-            modelType = ExtractionService.ModelType.GEMMA,
-            shareAlias = "com.antivocale.app.ShareGemma",
-            // The LLM backend stores its model path in the generic preference.
-            modelPathFlow = { it.modelPath },
-            saveModelPath = { prefs, path -> prefs.saveModelPath(path) },
-            clearModelPath = { it.clearModelPath() },
-        ),
+            modelPathFlow = { it.sherpaModelPath(entry.id) },
+            saveModelPath = { prefs, path -> prefs.saveSherpaModelPath(entry.id, path) },
+            clearModelPath = { it.clearSherpaModelPath(entry.id) },
+        )
+    }
+
+    private fun llmDescriptor(): BackendDescriptor = BackendDescriptor(
+        backendId = LlmTranscriptionBackend.BACKEND_ID,
+        shareAlias = "com.antivocale.app.ShareGemma",
+        // The LLM backend stores its model path in the generic preference.
+        modelPathFlow = { it.modelPath },
+        saveModelPath = { prefs, path -> prefs.saveModelPath(path) },
+        clearModelPath = { it.clearModelPath() },
     )
 
     /** Static backends first (canonical order), then one descriptor per valid external record. */
@@ -251,7 +195,6 @@ class BackendRegistry @Inject constructor(
      */
     private fun descriptorFor(record: ExternalModelRecord): BackendDescriptor = BackendDescriptor(
         backendId = record.backendId,
-        modelType = ExtractionService.ModelType.EXTERNAL,
         shareAlias = "",  // spec: the ShareExternal family alias is synced separately
         deriveDisplayName = { _, _ -> record.displayName },
         // The store (not the registry) owns the records JSON: the path flow derives
@@ -272,14 +215,6 @@ class BackendRegistry @Inject constructor(
     /** Returns the descriptor for [backendId], or null if unknown (including null/blank). */
     fun byBackendId(backendId: String?): BackendDescriptor? =
         backendId?.let { id -> backends.firstOrNull { it.backendId == id } }
-
-    /**
-     * Returns the descriptor for [modelType], or null if none is registered
-     * (GEMMA4_GGUF). The mapping is 1:N for [ExtractionService.ModelType.EXTERNAL]:
-     * several external records share it, and the first one wins.
-     */
-    fun byModelType(modelType: ExtractionService.ModelType): BackendDescriptor? =
-        backends.firstOrNull { it.modelType == modelType }
 
     /**
      * Returns the descriptor for a share-target [alias], or null if unknown
