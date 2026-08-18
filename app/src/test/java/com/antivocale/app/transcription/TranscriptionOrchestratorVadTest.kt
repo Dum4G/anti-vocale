@@ -32,7 +32,7 @@ class TranscriptionOrchestratorVadTest : TranscriptionOrchestratorTestBase() {
         every { preferencesManager.threadCount } returns flowOf(4)
         every { preferencesManager.defaultPrompt } returns flowOf("")
         every { preferencesManager.keepAliveTimeout } returns flowOf(5)
-        every { preferencesManager.whisperModelPath } returns flowOf("/models/whisper")
+        every { preferencesManager.sherpaModelPath("whisper") } returns flowOf("/models/whisper")
         every { preferencesManager.progressiveTranscription } returns flowOf(true)
         every { preferencesManager.inferenceProvider } returns flowOf("auto")
         every { preferencesManager.transcriptionLanguage } returns flowOf("it")

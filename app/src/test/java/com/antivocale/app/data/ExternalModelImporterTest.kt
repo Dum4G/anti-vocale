@@ -250,6 +250,19 @@ class ExternalModelImporterTest {
     private fun sparseLengthBiggerThanFreeSpace(anchor: File): Long =
         anchor.usableSpace + (1L shl 30)
 
+    /**
+     * Creates a sparse file of [length] bytes. Java's RandomAccessFile.setLength does
+     * not create sparse files on Windows (it zero-fills, so a length beyond the free
+     * space throws IOException); there the pre-flight tests are skipped.
+     */
+    private fun createSparse(file: File, length: Long) {
+        try {
+            java.io.RandomAccessFile(file, "rw").use { it.setLength(length) }
+        } catch (e: java.io.IOException) {
+            org.junit.Assume.assumeTrue("sparse files unsupported on this platform", false)
+        }
+    }
+
     @Test
     fun `disk pre-flight totals include the sidecar size`() = runTest {
         val smallRoot = tmp.newFolder("tiny-root-sidecar")
@@ -258,9 +271,7 @@ class ExternalModelImporterTest {
         // A sparse sidecar whose length alone exceeds the free space: the
         // pre-flight must count it, otherwise the import would proceed and then
         // explode while copying gigabytes that were never accounted for.
-        java.io.RandomAccessFile(File(src, "some_encoder_int8.onnx.data"), "rw").use {
-            it.setLength(sparseLengthBiggerThanFreeSpace(src))
-        }
+        createSparse(File(src, "some_encoder_int8.onnx.data"), sparseLengthBiggerThanFreeSpace(src))
 
         val result = runCatching { tightImporter.importFromDirectory(src) }
 
@@ -332,7 +343,7 @@ class ExternalModelImporterTest {
         val src = tmp.newFolder("huge")
         val huge = File(src, "encoder.onnx")
         // Length only, no allocation: the pre-flight reads lengths, RandomAccessFile sets them sparsely.
-        java.io.RandomAccessFile(huge, "rw").use { it.setLength(sparseLengthBiggerThanFreeSpace(src)) }
+        createSparse(huge, sparseLengthBiggerThanFreeSpace(src))
         File(src, "decoder.onnx").writeBytes(ByteArray(4))
         File(src, "joiner.onnx").writeBytes(ByteArray(4))
         File(src, "tokens.txt").writeText("x")

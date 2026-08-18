@@ -8,7 +8,7 @@ import com.antivocale.app.data.download.DownloadConfig
 import com.antivocale.app.data.download.HashVerifier
 import com.antivocale.app.data.download.ResumeDownloadHelper
 import com.antivocale.app.transcription.ModelFamilySupport
-import com.antivocale.app.transcription.SherpaOnnxBackend
+import com.antivocale.app.transcription.SherpaBackend
 import java.io.File
 import java.io.InputStream
 import java.security.MessageDigest
@@ -414,7 +414,7 @@ class ExternalModelImporter(
         // model_type key; only the VALUE discriminates them).
         val support = ModelFamilySupport.forFamily(family)
         val metadataFile = File(targetDir, support.metadataFileRole())
-        val (missingMeta, metadataValue) = SherpaOnnxBackend.missingOnnxMetadataAndValue(
+        val (missingMeta, metadataValue) = SherpaBackend.missingOnnxMetadataAndValue(
             metadataFile, support.metadataKeys(modelType), support.valueMetadataKey())
         if (missingMeta.isNotEmpty()) {
             throw IllegalArgumentException(
@@ -536,7 +536,7 @@ internal class SidecarReferenceScanner {
         for (marker in ExternalModelImporter.SIDECAR_MARKERS) {
             var from = 0
             while (true) {
-                val at = SherpaOnnxBackend.indexOfSubsequence(buf, marker, from, total)
+                val at = SherpaBackend.indexOfSubsequence(buf, marker, from, total)
                 if (at < 0) break
                 var start = at
                 while (start > 0 && isFileNameByte(buf[start - 1])) start--

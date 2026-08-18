@@ -160,6 +160,14 @@
     <string name="gigaam_downloaded">%1$s downloaded successfully</string>
     <string name="gigaam_deleted">%1$s deleted</string>
 
+    <!-- Generic catalog section (catalog-driven sherpa-onnx models) -->
+    <string name="catalog_model_downloaded">%1$s downloaded successfully</string>
+    <string name="catalog_model_deleted">%1$s deleted</string>
+    <string name="catalog_download_confirm_title">Download %1$s?</string>
+    <string name="catalog_download_confirm_message">This will download ~%1$dMB.</string>
+    <string name="catalog_extract_confirm_title">Extract %1$s?</string>
+    <string name="catalog_extract_confirm_message">The model file is already downloaded. This will extract it for use.</string>
+
     <!-- Download status -->
     <string name="download_status_downloading">Downloading…</string>
     <string name="download_status_extracting">Extracting %1$s…</string>
@@ -773,8 +781,10 @@
     <string name="model_info_notes_qwen3">Broadest language coverage. Note: truncates audio longer than 30 seconds. ARM64 devices only.</string>
     <string name="model_info_best_for_parakeet">Fastest transcription (17.6x faster than Whisper, 5.4%% WER)</string>
     <string name="model_info_notes_parakeet">No audio length limit. VAD not needed. Best for users who prioritize speed.</string>
-    <string name="model_info_best_for_gigaam">Best Russian accuracy on-device</string>
-    <string name="model_info_notes_gigaam">Russian only. Native punctuation and capitalization.</string>
+<string name="model_info_best_for_gigaam">Best Russian accuracy on-device</string>
+<string name="model_info_notes_gigaam">Russian only. Native punctuation and capitalization.</string>
+<string name="model_info_best_for_nemotron">Streaming transcription for long audio</string>
+<string name="model_info_notes_nemotron">Low-latency streaming transducer. Multilingual auto-detect with a per-stream language option.</string>
     <string name="model_info_best_for_gemma">Multimodal LLM for text + audio tasks</string>
     <string name="model_info_notes_gemma">Not optimized for pure ASR. Use for advanced features like audio understanding combined with text generation.</string>
     <string name="model_info_benchmark_wer">Word Error Rate (Italian): %.1f%%</string>
@@ -794,9 +804,9 @@
     <string name="share_target_external">Anti-Vocale (External)</string>
     <string name="external_none_imported">No external models imported</string>
     <string name="external_section_title">External models</string>
-    <string name="external_import_folder">Select folder</string>
     <string name="model_advanced_section">Advanced</string>
     <string name="model_advanced_description">Manually import model files</string>
+    <string name="external_import_folder">Select folder</string>
     <string name="external_import_url">Import from URL</string>
     <string name="external_url_hint">HuggingFace repo or catalog-entry JSON URL</string>
     <string name="external_url_dialog_title">Import external model</string>

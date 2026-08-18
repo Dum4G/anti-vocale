@@ -7,133 +7,140 @@ import org.junit.Test
 
 class TranscriptionBackendContractsTest {
 
-    // --- SherpaOnnxBackend ---
+    // The whole sherpa-onnx family shares one generic [SherpaBackend]; the
+    // per-model backends are gone, so the contract is pinned per catalog entry.
+
+    private fun parakeet() = SherpaBackend(BuiltInBackendIds.PARAKEET)
+    private fun whisper() = SherpaBackend(BuiltInBackendIds.WHISPER)
+    private fun qwen3() = SherpaBackend(BuiltInBackendIds.QWEN3_ASR)
+
+    // --- SherpaBackend (Parakeet) ---
 
     @Test
-    fun `SherpaOnnxBackend has correct id`() {
-        assertEquals("sherpa-onnx", SherpaOnnxBackend().id)
+    fun `parakeet has correct id`() {
+        assertEquals("sherpa-onnx", parakeet().id)
     }
 
     @Test
-    fun `SherpaOnnxBackend has non-empty display name`() {
-        assertTrue(SherpaOnnxBackend().displayName.isNotBlank())
+    fun `parakeet has non-empty display name`() {
+        assertTrue(parakeet().displayName.isNotBlank())
     }
 
     @Test
-    fun `SherpaOnnxBackend supports audio`() {
-        assertTrue(SherpaOnnxBackend().supportsAudio)
+    fun `parakeet supports audio`() {
+        assertTrue(parakeet().supportsAudio)
     }
 
     @Test
-    fun `SherpaOnnxBackend does not support text`() {
-        assertFalse(SherpaOnnxBackend().supportsText)
+    fun `parakeet does not support text`() {
+        assertFalse(parakeet().supportsText)
     }
 
     @Test
-    fun `SherpaOnnxBackend is not ready before init`() {
-        assertFalse(SherpaOnnxBackend().isReady())
+    fun `parakeet is not ready before init`() {
+        assertFalse(parakeet().isReady())
     }
 
     @Test
-    fun `SherpaOnnxBackend isAudioSupported matches supportsAudio`() {
-        val backend = SherpaOnnxBackend()
+    fun `parakeet isAudioSupported matches supportsAudio`() {
+        val backend = parakeet()
         assertEquals(backend.supportsAudio, backend.isAudioSupported())
     }
 
     @Test
-    fun `SherpaOnnxBackend unload is safe without init`() {
-        SherpaOnnxBackend().unload() // should not throw
+    fun `parakeet unload is safe without init`() {
+        parakeet().unload() // should not throw
     }
 
     @Test
-    fun `SherpaOnnxBackend model path is null before init`() {
-        assertNull(SherpaOnnxBackend().getModelPath())
+    fun `parakeet model path is null before init`() {
+        assertNull(parakeet().getModelPath())
     }
 
     @Test
-    fun `SherpaOnnxBackend maxChunkDurationSeconds is null (no chunking limit)`() {
-        assertNull(SherpaOnnxBackend().maxChunkDurationSeconds)
+    fun `parakeet maxChunkDurationSeconds is null (no chunking limit)`() {
+        assertNull(parakeet().maxChunkDurationSeconds)
     }
 
-    // --- WhisperBackend ---
+    // --- SherpaBackend (Whisper) ---
 
     @Test
-    fun `WhisperBackend has correct id`() {
-        assertEquals("whisper", WhisperBackend().id)
-    }
-
-    @Test
-    fun `WhisperBackend has non-empty display name`() {
-        assertTrue(WhisperBackend().displayName.isNotBlank())
+    fun `whisper has correct id`() {
+        assertEquals("whisper", whisper().id)
     }
 
     @Test
-    fun `WhisperBackend supports audio`() {
-        assertTrue(WhisperBackend().supportsAudio)
+    fun `whisper has non-empty display name`() {
+        assertTrue(whisper().displayName.isNotBlank())
     }
 
     @Test
-    fun `WhisperBackend does not support text`() {
-        assertFalse(WhisperBackend().supportsText)
+    fun `whisper supports audio`() {
+        assertTrue(whisper().supportsAudio)
     }
 
     @Test
-    fun `WhisperBackend isAudioSupported matches supportsAudio`() {
-        val backend = WhisperBackend()
+    fun `whisper does not support text`() {
+        assertFalse(whisper().supportsText)
+    }
+
+    @Test
+    fun `whisper isAudioSupported matches supportsAudio`() {
+        val backend = whisper()
         assertEquals(backend.supportsAudio, backend.isAudioSupported())
     }
 
     @Test
-    fun `WhisperBackend unload is safe without init`() {
-        WhisperBackend().unload() // should not throw
+    fun `whisper unload is safe without init`() {
+        whisper().unload() // should not throw
     }
 
     @Test
-    fun `WhisperBackend model path is null before init`() {
-        assertNull(WhisperBackend().getModelPath())
+    fun `whisper model path is null before init`() {
+        assertNull(whisper().getModelPath())
     }
 
-    // --- Qwen3AsrBackend ---
+    // --- SherpaBackend (Qwen3-ASR) ---
 
     @Test
-    fun `Qwen3AsrBackend has correct id`() {
-        assertEquals("qwen3-asr", Qwen3AsrBackend().id)
-    }
-
-    @Test
-    fun `Qwen3AsrBackend has non-empty display name`() {
-        assertTrue(Qwen3AsrBackend().displayName.isNotBlank())
+    fun `qwen3-asr has correct id`() {
+        assertEquals("qwen3-asr", qwen3().id)
     }
 
     @Test
-    fun `Qwen3AsrBackend supports audio`() {
-        assertTrue(Qwen3AsrBackend().supportsAudio)
+    fun `qwen3-asr has non-empty display name`() {
+        assertTrue(qwen3().displayName.isNotBlank())
     }
 
     @Test
-    fun `Qwen3AsrBackend does not support text`() {
-        assertFalse(Qwen3AsrBackend().supportsText)
+    fun `qwen3-asr supports audio`() {
+        assertTrue(qwen3().supportsAudio)
     }
 
     @Test
-    fun `Qwen3AsrBackend is not ready before init`() {
-        assertFalse(Qwen3AsrBackend().isReady())
+    fun `qwen3-asr does not support text`() {
+        assertFalse(qwen3().supportsText)
     }
 
     @Test
-    fun `Qwen3AsrBackend isAudioSupported matches supportsAudio`() {
-        val backend = Qwen3AsrBackend()
+    fun `qwen3-asr is not ready before init`() {
+        assertFalse(qwen3().isReady())
+    }
+
+    @Test
+    fun `qwen3-asr isAudioSupported matches supportsAudio`() {
+        val backend = qwen3()
         assertEquals(backend.supportsAudio, backend.isAudioSupported())
     }
 
     @Test
-    fun `Qwen3AsrBackend unload is safe without init`() {
-        Qwen3AsrBackend().unload() // should not throw
+    fun `qwen3-asr unload is safe without init`() {
+        qwen3().unload() // should not throw
     }
 
     @Test
-    fun `Qwen3AsrBackend model path is null before init`() {
-        assertNull(Qwen3AsrBackend().getModelPath())
+    fun `qwen3-asr model path is null before init`() {
+        assertNull(qwen3().getModelPath())
     }
 
     // --- LlmTranscriptionBackend ---
@@ -156,9 +163,9 @@ class TranscriptionBackendContractsTest {
     fun `all backend IDs are unique`() {
         val llm = mockk<LlmManager>(relaxed = true)
         val ids = listOf(
-            SherpaOnnxBackend().id,
-            WhisperBackend().id,
-            Qwen3AsrBackend().id,
+            parakeet().id,
+            whisper().id,
+            qwen3().id,
             LlmTranscriptionBackend(llm).id
         )
         assertEquals("All backend IDs must be unique", ids.size, ids.toSet().size)

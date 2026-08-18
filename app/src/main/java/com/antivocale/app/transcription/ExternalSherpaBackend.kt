@@ -79,7 +79,7 @@ class ExternalSherpaBackend @Inject constructor() : TranscriptionBackend {
             // Family validation shared with the importer (single definition):
             // [ModelFamilySupport.metadataKeys] plus value-aware discriminators.
             val metadataFile = File(dir, support.metadataFileRole())
-            val (missingMeta, metadataValue) = SherpaOnnxBackend.missingOnnxMetadataAndValue(
+            val (missingMeta, metadataValue) = SherpaBackend.missingOnnxMetadataAndValue(
                 metadataFile, support.metadataKeys(record.modelType), support.valueMetadataKey())
             if (missingMeta.isNotEmpty()) {
                 Log.e(TAG, "${support.metadataFileRole()} missing required ONNX metadata: $missingMeta")

@@ -6,6 +6,7 @@ import android.content.pm.PackageManager
 import androidx.test.core.app.ApplicationProvider
 import com.antivocale.app.transcription.BackendRegistry
 import com.antivocale.app.transcription.emptyRecordsProvider
+import com.antivocale.app.transcription.seedCatalogForTest
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -40,6 +41,7 @@ class ShareTargetManagerExternalTest {
         familyAlias = ComponentName(context, "com.antivocale.app.ShareExternal")
         fake = FakePreferencesManager()
         store = ExternalModelStore(fake)
+        seedCatalogForTest()
         val registry = BackendRegistry(store, emptyRecordsProvider())
         manager = ShareTargetManager(context, fake, registry, store)
     }

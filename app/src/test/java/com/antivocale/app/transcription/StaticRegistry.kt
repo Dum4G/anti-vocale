@@ -20,7 +20,10 @@ fun emptyRecordsProvider(): ExternalModelRecordsProvider =
  * reuse it. Tests that exercise dynamic external descriptors seed their own
  * provider (see BackendRegistryTest).
  */
-fun staticRegistry(): BackendRegistry = BackendRegistry(
-    ExternalModelStore(FakePreferencesManager()),
-    emptyRecordsProvider(),
-)
+fun staticRegistry(): BackendRegistry {
+    seedCatalogForTest()
+    return BackendRegistry(
+        ExternalModelStore(FakePreferencesManager()),
+        emptyRecordsProvider(),
+    )
+}

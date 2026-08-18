@@ -2,9 +2,11 @@ package com.antivocale.app.ui.viewmodel
 
 import android.app.Application
 import android.content.Context
+import com.antivocale.app.R
 import com.antivocale.app.data.ActiveModelRepository
 import com.antivocale.app.data.FakePreferencesManager
 import com.antivocale.app.transcription.staticRegistry
+import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -55,7 +57,15 @@ class SettingsViewModelActiveModelTest {
             backendManager = mockk(relaxed = true),
             llmManager = mockk(relaxed = true),
             shareTargetManager = mockk(relaxed = true),
-            activeModelRepository = ActiveModelRepository(fakePrefs, mockk<Context>(relaxed = true), staticRegistry()),
+            // getString is stubbed so the fixed catalog display name (whisper_title)
+            // resolves to a distinguishable value instead of a relaxed-mock empty string.
+            activeModelRepository = ActiveModelRepository(
+                fakePrefs,
+                mockk<Context>(relaxed = true) {
+                    every { getString(any()) } answers { "str:${args[0]}" }
+                },
+                staticRegistry(),
+            ),
         )
     }
 
@@ -70,14 +80,14 @@ class SettingsViewModelActiveModelTest {
      * via loadCurrentModel(), drain the dispatcher, and assert the UiState
      * mirrors the ActiveModel emission.
      *
-     * The path does not point at a real whisper model directory, so the
-     * repository's name derivation falls back to the last path segment
-     * (File(path).name) and no Context resource is involved.
+     * The path does not point at a real whisper model directory. Whisper has a
+     * fixed catalog display name (whisper_title), so the repository's name
+     * derivation is the localized title, not the last path segment.
      */
     @Test
     fun `loadCurrentModel mirrors whisper backend and saved model path in uiState`() = runTest {
         fakePrefs._transcriptionBackend.value = "whisper"
-        fakePrefs._whisperModelPath.value = "/models/whisper-test"
+        fakePrefs._sherpaModelPath("whisper").value = "/models/whisper-test"
 
         viewModel.loadCurrentModel()
         runCurrent()
@@ -85,14 +95,14 @@ class SettingsViewModelActiveModelTest {
         val state = viewModel.uiState.value
         assertEquals("whisper", state.transcriptionBackend)
         assertEquals("/models/whisper-test", state.currentModelPath)
-        assertEquals("whisper-test", state.currentModelName)
+        assertEquals("str:${R.string.whisper_title}", state.currentModelName)
     }
 
     @Test
     fun `backend switch mid-collection updates state reactively`() = runTest {
         // Collector running on the initial backend with a saved model path.
         fakePrefs._transcriptionBackend.value = "whisper"
-        fakePrefs._whisperModelPath.value = "/models/whisper-initial"
+        fakePrefs._sherpaModelPath("whisper").value = "/models/whisper-initial"
         viewModel.loadCurrentModel()
         runCurrent()
 

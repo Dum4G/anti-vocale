@@ -1,10 +1,31 @@
 package com.antivocale.app.transcription
 
 import com.antivocale.app.data.ModelDownloader
+import java.io.File
 import org.junit.Assert.*
+import org.junit.Before
 import org.junit.Test
 
 class LanguageFilterTest {
+
+    private fun whisperVariants(): List<CatalogVariantUi> = CatalogVariantUi.forEntry(BuiltInBackendIds.WHISPER)
+    private fun qwen3Variant(): CatalogVariantUi = CatalogVariantUi.of(BuiltInBackendIds.QWEN3_ASR)
+
+    @Before
+    fun setUp() {
+        // Variants resolve through BundledCatalog; seed it from the real asset so no
+        // Android assets are needed here.
+        val moduleRelative = File("src/main/assets/models_catalog.json")
+        val rootRelative = File("app/src/main/assets/models_catalog.json")
+        val asset = when {
+            moduleRelative.exists() -> moduleRelative
+            rootRelative.exists() -> rootRelative
+            else -> throw IllegalStateException(
+                "Cannot locate models_catalog.json from ${File(".").absolutePath}")
+        }
+        com.antivocale.app.data.catalog.BundledCatalog.seed(
+            com.antivocale.app.data.catalog.ModelCatalogJson.parseCatalog(asset.readText()))
+    }
 
     // ==================== Language metadata ====================
 
@@ -40,14 +61,11 @@ class LanguageFilterTest {
 
     @Test
     fun `Whisper multilingual variants support many languages`() {
-        val multilingualVariants = listOf(
-            WhisperModelManager.Variant.SMALL,
-            WhisperModelManager.Variant.TURBO,
-            WhisperModelManager.Variant.MEDIUM
-        )
+        val multilingualVariants = whisperVariants().filter { it.variantName != "distil-large-v3-it" }
+        assertTrue(multilingualVariants.isNotEmpty())
         multilingualVariants.forEach { variant ->
             assertEquals(
-                "Expected Whisper multilingual for ${variant.name}",
+                "Expected Whisper multilingual for ${variant.variantName}",
                 Language.WHISPER_MULTILINGUAL,
                 variant.supportedLanguageCodes
             )
@@ -57,17 +75,19 @@ class LanguageFilterTest {
 
     @Test
     fun `Whisper Distil Italian only supports Italian`() {
-        assertEquals(setOf("it"), WhisperModelManager.Variant.DISTIL_LARGE_V3.supportedLanguageCodes)
+        val distil = whisperVariants().first { it.variantName == "distil-large-v3-it" }
+        assertEquals(setOf("it"), distil.supportedLanguageCodes)
     }
 
     @Test
     fun `Whisper multilingual supports Italian`() {
-        assertTrue(WhisperModelManager.Variant.TURBO.supportedLanguageCodes.contains("it"))
+        val turbo = whisperVariants().first { it.variantName == "turbo" }
+        assertTrue(turbo.supportedLanguageCodes.contains("it"))
     }
 
     @Test
     fun `Whisper multilingual supports common European languages`() {
-        val codes = WhisperModelManager.Variant.TURBO.supportedLanguageCodes
+        val codes = whisperVariants().first { it.variantName == "turbo" }.supportedLanguageCodes
         assertTrue("en" in codes)
         assertTrue("de" in codes)
         assertTrue("fr" in codes)
@@ -82,12 +102,12 @@ class LanguageFilterTest {
 
     @Test
     fun `Qwen3-ASR has non-empty language set`() {
-        assertTrue(Qwen3AsrModelManager.Variant.QWEN3_ASR_0_6B.supportedLanguageCodes.size >= 50)
+        assertTrue(qwen3Variant().supportedLanguageCodes.size >= 50)
     }
 
     @Test
     fun `Qwen3-ASR supports English and Chinese`() {
-        val codes = Qwen3AsrModelManager.Variant.QWEN3_ASR_0_6B.supportedLanguageCodes
+        val codes = qwen3Variant().supportedLanguageCodes
         assertTrue("en" in codes)
         assertTrue("zh" in codes)
     }
@@ -132,36 +152,36 @@ class LanguageFilterTest {
     @Test
     fun `filtering by Italian hides Distil but shows multilingual Whisper`() {
         val languageCode = "it"
-        val visibleWhisper = WhisperModelManager.Variant.entries.filter {
+        val visibleWhisper = whisperVariants().filter {
             languageCode in it.supportedLanguageCodes
         }
         assertEquals(4, visibleWhisper.size)
-        assertTrue(visibleWhisper.contains(WhisperModelManager.Variant.SMALL))
-        assertTrue(visibleWhisper.contains(WhisperModelManager.Variant.TURBO))
-        assertTrue(visibleWhisper.contains(WhisperModelManager.Variant.MEDIUM))
-        assertTrue(visibleWhisper.contains(WhisperModelManager.Variant.DISTIL_LARGE_V3))
+        assertTrue(visibleWhisper.any { it.variantName == "small" })
+        assertTrue(visibleWhisper.any { it.variantName == "turbo" })
+        assertTrue(visibleWhisper.any { it.variantName == "medium" })
+        assertTrue(visibleWhisper.any { it.variantName == "distil-large-v3-it" })
     }
 
     @Test
     fun `filtering by English hides Distil Italian`() {
         val languageCode = "en"
-        val visibleWhisper = WhisperModelManager.Variant.entries.filter {
+        val visibleWhisper = whisperVariants().filter {
             languageCode in it.supportedLanguageCodes
         }
         assertEquals(3, visibleWhisper.size)
-        assertFalse(visibleWhisper.contains(WhisperModelManager.Variant.DISTIL_LARGE_V3))
+        assertFalse(visibleWhisper.any { it.variantName == "distil-large-v3-it" })
     }
 
     @Test
     fun `filtering by null shows all variants`() {
-        val visibleWhisper = WhisperModelManager.Variant.entries
+        val visibleWhisper = whisperVariants()
         assertEquals(4, visibleWhisper.size)
     }
 
     @Test
     fun `filtering by Thai shows Qwen3-ASR`() {
         val languageCode = "th"
-        assertTrue(languageCode in Qwen3AsrModelManager.Variant.QWEN3_ASR_0_6B.supportedLanguageCodes)
+        assertTrue(languageCode in qwen3Variant().supportedLanguageCodes)
     }
 
     @Test
@@ -204,27 +224,27 @@ class LanguageFilterTest {
     @Test
     fun `filtering by null shows all Whisper variants`() {
         val visible = filterVariants(
-            WhisperModelManager.Variant.entries, null
+            whisperVariants(), null
         ) { it.supportedLanguageCodes }
-        assertEquals(WhisperModelManager.Variant.entries, visible)
+        assertEquals(whisperVariants(), visible)
     }
 
     @Test
     fun `filtering by Italian shows 4 Whisper variants including Distil`() {
         val visible = filterVariants(
-            WhisperModelManager.Variant.entries, "it"
+            whisperVariants(), "it"
         ) { it.supportedLanguageCodes }
         assertEquals(4, visible.size)
-        assertTrue(visible.any { it == WhisperModelManager.Variant.DISTIL_LARGE_V3 })
+        assertTrue(visible.any { it.variantName == "distil-large-v3-it" })
     }
 
     @Test
     fun `filtering by English shows 3 Whisper variants excluding Distil`() {
         val visible = filterVariants(
-            WhisperModelManager.Variant.entries, "en"
+            whisperVariants(), "en"
         ) { it.supportedLanguageCodes }
         assertEquals(3, visible.size)
-        assertFalse(visible.any { it == WhisperModelManager.Variant.DISTIL_LARGE_V3 })
+        assertFalse(visible.any { it.variantName == "distil-large-v3-it" })
     }
 
     @Test
@@ -237,7 +257,7 @@ class LanguageFilterTest {
         assertFalse(code in Language.PARAKEET)
 
         val visibleWhisper = filterVariants(
-            WhisperModelManager.Variant.entries, code
+            whisperVariants(), code
         ) { it.supportedLanguageCodes }
         assertTrue(visibleWhisper.isEmpty())
 
@@ -257,13 +277,13 @@ class LanguageFilterTest {
         assertTrue(code in Language.GEMMA)
 
         val visibleWhisper = filterVariants(
-            WhisperModelManager.Variant.entries, code
+            whisperVariants(), code
         ) { it.supportedLanguageCodes }
         // Whisper multilingual may or may not have Thai — check Distil doesn't
-        assertFalse(visibleWhisper.any { it == WhisperModelManager.Variant.DISTIL_LARGE_V3 })
+        assertFalse(visibleWhisper.any { it.variantName == "distil-large-v3-it" })
 
         val visibleQwen = filterVariants(
-            Qwen3AsrModelManager.Variant.entries, code
+            CatalogVariantUi.forEntry(BuiltInBackendIds.QWEN3_ASR), code
         ) { it.supportedLanguageCodes }
         assertFalse(visibleQwen.isEmpty())
     }
@@ -271,9 +291,9 @@ class LanguageFilterTest {
     @Test
     fun `filtering by null shows all Qwen3 variants`() {
         val visible = filterVariants(
-            Qwen3AsrModelManager.Variant.entries, null
+            CatalogVariantUi.forEntry(BuiltInBackendIds.QWEN3_ASR), null
         ) { it.supportedLanguageCodes }
-        assertEquals(Qwen3AsrModelManager.Variant.entries, visible)
+        assertEquals(CatalogVariantUi.forEntry(BuiltInBackendIds.QWEN3_ASR), visible)
     }
 
     @Test

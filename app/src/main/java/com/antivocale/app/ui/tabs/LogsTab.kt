@@ -168,7 +168,7 @@ fun LogsTab(
             initialValue = emptyList<LogsViewModel.BackendOption>(),
             key1 = retranscribeTarget
         ) {
-            value = viewModel.getAvailableAudioBackendsWithModels()
+            value = viewModel.getAvailableAudioBackendsWithModels(context)
         }
         RetranscribeDialog(
             availableBackends = retranscribeBackends,

@@ -7,7 +7,7 @@ import org.junit.Test
 import java.nio.file.Files
 
 /**
- * Unit tests for [SherpaOnnxBackend.missingOnnxMetadata] and [containsSubsequence].
+ * Unit tests for [SherpaBackend.missingOnnxMetadata] and [containsSubsequence].
  *
  * These are the pre-native validation functions that prevent silent crashes
  * (sherpa-onnx exit(255)) when encoder ONNX metadata is missing.
@@ -26,21 +26,21 @@ class OnnxMetadataValidationTest {
     fun `containsSubsequence finds key at start`() {
         val haystack = "vocab_size=8192".toByteArray()
         val needle = "vocab_size".toByteArray()
-        assertTrue(SherpaOnnxBackend.containsSubsequence(haystack, needle))
+        assertTrue(SherpaBackend.containsSubsequence(haystack, needle))
     }
 
     @Test
     fun `containsSubsequence finds key at end`() {
         val haystack = "padding_stuff_here_vocab_size".toByteArray()
         val needle = "vocab_size".toByteArray()
-        assertTrue(SherpaOnnxBackend.containsSubsequence(haystack, needle))
+        assertTrue(SherpaBackend.containsSubsequence(haystack, needle))
     }
 
     @Test
     fun `containsSubsequence returns false for absent key`() {
         val haystack = "nothing_relevant_here".toByteArray()
         val needle = "vocab_size".toByteArray()
-        assertFalse(SherpaOnnxBackend.containsSubsequence(haystack, needle))
+        assertFalse(SherpaBackend.containsSubsequence(haystack, needle))
     }
 
     @Test
@@ -48,35 +48,35 @@ class OnnxMetadataValidationTest {
         val haystack = "data".toByteArray()
         val needle = ByteArray(0)
         // Empty needle: matches at position 0 (vacuously true)
-        assertTrue(SherpaOnnxBackend.containsSubsequence(haystack, needle))
+        assertTrue(SherpaBackend.containsSubsequence(haystack, needle))
     }
 
     @Test
     fun `containsSubsequence handles needle longer than haystack`() {
         val haystack = "ab".toByteArray()
         val needle = "abcdef".toByteArray()
-        assertFalse(SherpaOnnxBackend.containsSubsequence(haystack, needle))
+        assertFalse(SherpaBackend.containsSubsequence(haystack, needle))
     }
 
     @Test
     fun `containsSubsequence handles empty haystack`() {
         val haystack = ByteArray(0)
         val needle = "vocab_size".toByteArray()
-        assertFalse(SherpaOnnxBackend.containsSubsequence(haystack, needle))
+        assertFalse(SherpaBackend.containsSubsequence(haystack, needle))
     }
 
     @Test
     fun `containsSubsequence finds needle in middle`() {
         val haystack = byteArrayOf(1, 2, 3, 4, 5)
         val needle = byteArrayOf(3, 4)
-        assertTrue(SherpaOnnxBackend.containsSubsequence(haystack, needle))
+        assertTrue(SherpaBackend.containsSubsequence(haystack, needle))
     }
 
     // ---- missingOnnxMetadata against real encoder fixtures (production code path) ----
 
     @Test
     fun `Stock Parakeet encoder has no missing metadata`() {
-        val missing = SherpaOnnxBackend.missingOnnxMetadata(
+        val missing = SherpaBackend.missingOnnxMetadata(
             fixtureToFile("parakeet_stock_tail.bin"),
             listOf("vocab_size", "subsampling", "model_type")
         )
@@ -86,7 +86,7 @@ class OnnxMetadataValidationTest {
 
     @Test
     fun `broken SmoothQuant encoder reports all metadata missing`() {
-        val missing = SherpaOnnxBackend.missingOnnxMetadata(
+        val missing = SherpaBackend.missingOnnxMetadata(
             fixtureToFile("smoothquant_broken_tail.bin"),
             listOf("vocab_size", "subsampling", "model_type")
         )
@@ -98,7 +98,7 @@ class OnnxMetadataValidationTest {
 
     @Test
     fun `missingOnnxMetadata returns all keys for missing file`() {
-        val missing = SherpaOnnxBackend.missingOnnxMetadata(
+        val missing = SherpaBackend.missingOnnxMetadata(
             Files.createTempFile("nonexistent", ".bin").toFile().apply { delete() },
             listOf("vocab_size")
         )
@@ -108,7 +108,7 @@ class OnnxMetadataValidationTest {
     @Test
     fun `missingOnnxMetadata returns all keys for empty file`() {
         val emptyFile = Files.createTempFile("empty", ".bin").toFile()
-        val missing = SherpaOnnxBackend.missingOnnxMetadata(
+        val missing = SherpaBackend.missingOnnxMetadata(
             emptyFile,
             listOf("vocab_size")
         )
@@ -121,7 +121,7 @@ class OnnxMetadataValidationTest {
         val file = Files.createTempFile("partial", ".bin").toFile().apply {
             writeText("some_data vocab_size=8192 more_data")
         }
-        val missing = SherpaOnnxBackend.missingOnnxMetadata(
+        val missing = SherpaBackend.missingOnnxMetadata(
             file,
             listOf("vocab_size", "subsampling")
         )
@@ -132,7 +132,7 @@ class OnnxMetadataValidationTest {
 
     @Test
     fun `missingOnnxMetadataKeys returns all keys for empty buffer`() {
-        val missing = SherpaOnnxBackend.missingOnnxMetadataKeys(
+        val missing = SherpaBackend.missingOnnxMetadataKeys(
             ByteArray(0),
             listOf("vocab_size")
         )
@@ -142,7 +142,7 @@ class OnnxMetadataValidationTest {
     @Test
     fun `missingOnnxMetadataKeys returns only truly-missing keys`() {
         val data = "some_data vocab_size=8192 more_data".toByteArray()
-        val missing = SherpaOnnxBackend.missingOnnxMetadataKeys(
+        val missing = SherpaBackend.missingOnnxMetadataKeys(
             data,
             listOf("vocab_size", "subsampling")
         )
@@ -157,13 +157,13 @@ class OnnxMetadataValidationTest {
     fun `onnxMetadataValue reads the real NeMo model_type from the stock fixture`() {
         // Ground truth inspected in the fixture bytes:
         // "model_type" 0x12 0x12 "EncDecRNNTBPEModel"
-        val value = SherpaOnnxBackend.onnxMetadataValue(fixtureToFile("parakeet_stock_tail.bin"), "model_type")
+        val value = SherpaBackend.onnxMetadataValue(fixtureToFile("parakeet_stock_tail.bin"), "model_type")
         assertEquals("EncDecRNNTBPEModel", value)
     }
 
     @Test
     fun `onnxMetadataValue returns null for a missing key`() {
-        val value = SherpaOnnxBackend.onnxMetadataValue(fixtureToFile("smoothquant_broken_tail.bin"), "model_type")
+        val value = SherpaBackend.onnxMetadataValue(fixtureToFile("smoothquant_broken_tail.bin"), "model_type")
         assertEquals(null, value)
     }
 
@@ -173,7 +173,7 @@ class OnnxMetadataValidationTest {
         val value = "v".repeat(200)
         val data = "model_type".toByteArray() +
             byteArrayOf(0x12, 0xC8.toByte(), 0x01) + value.toByteArray()
-        assertEquals(value, SherpaOnnxBackend.onnxMetadataValueBytes(data, "model_type"))
+        assertEquals(value, SherpaBackend.onnxMetadataValueBytes(data, "model_type"))
     }
 
     @Test
@@ -182,7 +182,7 @@ class OnnxMetadataValidationTest {
         // must keep scanning and find the real entry later in the buffer.
         val data = "junk model_type junk".toByteArray() +
             "model_type".toByteArray() + byteArrayOf(0x12, 0x03) + "abc".toByteArray()
-        assertEquals("abc", SherpaOnnxBackend.onnxMetadataValueBytes(data, "model_type"))
+        assertEquals("abc", SherpaBackend.onnxMetadataValueBytes(data, "model_type"))
     }
 
     private fun fixtureToFile(name: String): java.io.File {

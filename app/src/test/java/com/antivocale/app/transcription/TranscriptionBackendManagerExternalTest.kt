@@ -56,7 +56,7 @@ class TranscriptionBackendManagerExternalTest {
         languages = listOf("ru"),
         source = ExternalModelSource.LOCAL,
         sourceUrl = null,
-        files = SherpaOnnxBackend.REQUIRED_MODEL_FILES.associateWith { FilePin("00", verified = true) },
+        files = SherpaBackend.REQUIRED_MODEL_FILES.associateWith { FilePin("00", verified = true) },
         sizeBytes = 1L,
         importedAt = 0L,
     )

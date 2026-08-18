@@ -150,10 +150,10 @@ object TransducerSupport : ModelFamilySupport {
     override val family: ModelFamily = ModelFamily.TRANSDUCER
 
     override fun requiredRoles(): List<String> = listOf(
-        SherpaOnnxBackend.CANONICAL_ENCODER,
-        SherpaOnnxBackend.CANONICAL_DECODER,
-        SherpaOnnxBackend.CANONICAL_JOINER,
-        SherpaOnnxBackend.CANONICAL_TOKENS,
+        SherpaBackend.CANONICAL_ENCODER,
+        SherpaBackend.CANONICAL_DECODER,
+        SherpaBackend.CANONICAL_JOINER,
+        SherpaBackend.CANONICAL_TOKENS,
     )
 
     override fun buildCopyPlan(files: List<String>): Map<String, String>? {
@@ -172,26 +172,26 @@ object TransducerSupport : ModelFamilySupport {
             avoid = { it.contains("ctc", ignoreCase = true) },
         ) ?: return null
         return linkedMapOf(
-            SherpaOnnxBackend.CANONICAL_ENCODER to encoder,
-            SherpaOnnxBackend.CANONICAL_DECODER to decoder,
-            SherpaOnnxBackend.CANONICAL_JOINER to joiner,
-            SherpaOnnxBackend.CANONICAL_TOKENS to tokens,
+            SherpaBackend.CANONICAL_ENCODER to encoder,
+            SherpaBackend.CANONICAL_DECODER to decoder,
+            SherpaBackend.CANONICAL_JOINER to joiner,
+            SherpaBackend.CANONICAL_TOKENS to tokens,
         )
     }
 
-    override fun metadataFileRole(): String = SherpaOnnxBackend.CANONICAL_ENCODER
+    override fun metadataFileRole(): String = SherpaBackend.CANONICAL_ENCODER
 
     override fun metadataKeys(modelType: String): List<String> =
-        SherpaOnnxBackend.requiredTransducerMetadataKeys(modelType)
+        SherpaBackend.requiredTransducerMetadataKeys(modelType)
 
     override fun buildModelConfig(record: ExternalModelRecord, numThreads: Int, provider: String): OfflineModelConfig =
         OfflineModelConfig(
             transducer = OfflineTransducerModelConfig(
-                encoder = "${record.dir}/${SherpaOnnxBackend.CANONICAL_ENCODER}",
-                decoder = "${record.dir}/${SherpaOnnxBackend.CANONICAL_DECODER}",
-                joiner = "${record.dir}/${SherpaOnnxBackend.CANONICAL_JOINER}"
+                encoder = "${record.dir}/${SherpaBackend.CANONICAL_ENCODER}",
+                decoder = "${record.dir}/${SherpaBackend.CANONICAL_DECODER}",
+                joiner = "${record.dir}/${SherpaBackend.CANONICAL_JOINER}"
             ),
-            tokens = "${record.dir}/${SherpaOnnxBackend.CANONICAL_TOKENS}",
+            tokens = "${record.dir}/${SherpaBackend.CANONICAL_TOKENS}",
             modelType = record.modelType,
             numThreads = numThreads,
             debug = false,
@@ -228,9 +228,9 @@ object WhisperSupport : ModelFamilySupport {
     override val family: ModelFamily = ModelFamily.WHISPER
 
     override fun requiredRoles(): List<String> = listOf(
-        SherpaOnnxBackend.CANONICAL_ENCODER,
-        SherpaOnnxBackend.CANONICAL_DECODER,
-        SherpaOnnxBackend.CANONICAL_TOKENS,
+        SherpaBackend.CANONICAL_ENCODER,
+        SherpaBackend.CANONICAL_DECODER,
+        SherpaBackend.CANONICAL_TOKENS,
     )
 
     override fun buildCopyPlan(files: List<String>): Map<String, String>? {
@@ -259,13 +259,13 @@ object WhisperSupport : ModelFamilySupport {
             avoid = ::isTransducerHinted,
         ) ?: return null
         return linkedMapOf(
-            SherpaOnnxBackend.CANONICAL_ENCODER to encoder,
-            SherpaOnnxBackend.CANONICAL_DECODER to decoder,
-            SherpaOnnxBackend.CANONICAL_TOKENS to tokens,
+            SherpaBackend.CANONICAL_ENCODER to encoder,
+            SherpaBackend.CANONICAL_DECODER to decoder,
+            SherpaBackend.CANONICAL_TOKENS to tokens,
         )
     }
 
-    override fun metadataFileRole(): String = SherpaOnnxBackend.CANONICAL_ENCODER
+    override fun metadataFileRole(): String = SherpaBackend.CANONICAL_ENCODER
 
     override fun metadataKeys(modelType: String): List<String> = listOf("model_type")
 
@@ -289,8 +289,8 @@ object WhisperSupport : ModelFamilySupport {
         val task = record.options[ModelFamilySupport.OPTION_WHISPER_TASK] ?: "transcribe"
         return OfflineModelConfig(
             whisper = OfflineWhisperModelConfig(
-                encoder = "${record.dir}/${SherpaOnnxBackend.CANONICAL_ENCODER}",
-                decoder = "${record.dir}/${SherpaOnnxBackend.CANONICAL_DECODER}",
+                encoder = "${record.dir}/${SherpaBackend.CANONICAL_ENCODER}",
+                decoder = "${record.dir}/${SherpaBackend.CANONICAL_DECODER}",
                 language = language,
                 task = task,
             ),
@@ -333,8 +333,8 @@ object CtcSupport : ModelFamilySupport {
     override val family: ModelFamily = ModelFamily.CTC
 
     override fun requiredRoles(): List<String> = listOf(
-        SherpaOnnxBackend.CANONICAL_ENCODER,
-        SherpaOnnxBackend.CANONICAL_TOKENS,
+        SherpaBackend.CANONICAL_ENCODER,
+        SherpaBackend.CANONICAL_TOKENS,
     )
 
     override fun buildCopyPlan(files: List<String>): Map<String, String>? {
@@ -376,21 +376,21 @@ object CtcSupport : ModelFamilySupport {
             avoid = { it.contains("rnnt", ignoreCase = true) },
         ) ?: return null
         return linkedMapOf(
-            SherpaOnnxBackend.CANONICAL_ENCODER to encoder,
-            SherpaOnnxBackend.CANONICAL_TOKENS to tokens,
+            SherpaBackend.CANONICAL_ENCODER to encoder,
+            SherpaBackend.CANONICAL_TOKENS to tokens,
         )
     }
 
-    override fun metadataFileRole(): String = SherpaOnnxBackend.CANONICAL_ENCODER
+    override fun metadataFileRole(): String = SherpaBackend.CANONICAL_ENCODER
 
     override fun metadataKeys(modelType: String): List<String> = emptyList()
 
     override fun buildModelConfig(record: ExternalModelRecord, numThreads: Int, provider: String): OfflineModelConfig {
-        val encoderPath = "${record.dir}/${SherpaOnnxBackend.CANONICAL_ENCODER}"
+        val encoderPath = "${record.dir}/${SherpaBackend.CANONICAL_ENCODER}"
         return when (record.modelType) {
             "nemo_ctc" -> OfflineModelConfig(
                 nemo = OfflineNemoEncDecCtcModelConfig(model = encoderPath),
-                tokens = "${record.dir}/${SherpaOnnxBackend.CANONICAL_TOKENS}",
+                tokens = "${record.dir}/${SherpaBackend.CANONICAL_TOKENS}",
                 modelType = "nemo_ctc",
                 numThreads = numThreads,
                 debug = false,
@@ -398,7 +398,7 @@ object CtcSupport : ModelFamilySupport {
             )
             "zipformer_ctc" -> OfflineModelConfig(
                 zipformerCtc = OfflineZipformerCtcModelConfig(model = encoderPath),
-                tokens = "${record.dir}/${SherpaOnnxBackend.CANONICAL_TOKENS}",
+                tokens = "${record.dir}/${SherpaBackend.CANONICAL_TOKENS}",
                 modelType = "zipformer_ctc",
                 numThreads = numThreads,
                 debug = false,
@@ -434,7 +434,7 @@ object SenseVoiceSupport : ModelFamilySupport {
 
     override val family: ModelFamily = ModelFamily.SENSE_VOICE
 
-    override fun requiredRoles(): List<String> = listOf(CANONICAL_MODEL, SherpaOnnxBackend.CANONICAL_TOKENS)
+    override fun requiredRoles(): List<String> = listOf(CANONICAL_MODEL, SherpaBackend.CANONICAL_TOKENS)
 
     override fun buildCopyPlan(files: List<String>): Map<String, String>? {
         val model = files.firstOrNull { f ->
@@ -449,7 +449,7 @@ object SenseVoiceSupport : ModelFamilySupport {
         val tokens = pickTokens(files) ?: return null
         return linkedMapOf(
             CANONICAL_MODEL to model,
-            SherpaOnnxBackend.CANONICAL_TOKENS to tokens,
+            SherpaBackend.CANONICAL_TOKENS to tokens,
         )
     }
 
@@ -467,7 +467,7 @@ object SenseVoiceSupport : ModelFamilySupport {
                 language = language,
                 useInverseTextNormalization = itn,
             ),
-            tokens = "${record.dir}/${SherpaOnnxBackend.CANONICAL_TOKENS}",
+            tokens = "${record.dir}/${SherpaBackend.CANONICAL_TOKENS}",
             modelType = "sense_voice",
             numThreads = numThreads,
             debug = false,

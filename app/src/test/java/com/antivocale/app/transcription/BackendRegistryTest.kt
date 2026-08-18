@@ -3,7 +3,6 @@ package com.antivocale.app.transcription
 import android.content.Context
 import com.antivocale.app.R
 import com.antivocale.app.data.FakePreferencesManager
-import com.antivocale.app.service.ExtractionService
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -14,7 +13,6 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertNotNull
 import org.junit.Test
 import java.io.File
-import kotlin.reflect.KProperty1
 
 /**
  * TDD red-phase test for [BackendRegistry] (TASK-254).
@@ -22,7 +20,6 @@ import kotlin.reflect.KProperty1
  * Contract pinned by this test:
  *   data class BackendDescriptor(
  *       val backendId: String,
- *       val modelType: ExtractionService.ModelType,
  *       val shareAlias: String,
  *       val isStreaming: Boolean,
  *       val displayNameResId: Int?,
@@ -37,15 +34,12 @@ import kotlin.reflect.KProperty1
  *   ) {
  *       val backends: List<BackendDescriptor>
  *       fun byBackendId(backendId: String?): BackendDescriptor?
- *       fun byModelType(modelType: ExtractionService.ModelType): BackendDescriptor?
  *       fun byShareAlias(alias: String?): BackendDescriptor?
  *   }
  *
- * The registry is metadata plumbing only: no consumer is migrated in TASK-254,
- * so these tests pin the identifier mappings (BACKEND_ID <-> ModelType <->
- * ShareReceiverActivity ALIAS_*), the per-backend PreferencesManager members,
- * and the display-name derivation, exactly as the dispatch sites hardcode them
- * today. Migration follow-ups can then assert behavior-parity against this.
+ * The old bookkeeping [ExtractionService.ModelType] enum is gone (consolidation):
+ * sherpa-onnx dispatch keys on the backend-id string everywhere, so there is no
+ * byModelType lookup to pin.
  *
  * Share aliases below are pinned against the manifest activity-alias literals
  * (the registry is the single source since TASK-323: ShareReceiverActivity
@@ -63,23 +57,28 @@ class BackendRegistryTest {
 
     /** The six enabled backends, in canonical order (default backend first). */
     private val expectedIds = listOf(
-        SherpaOnnxBackend.BACKEND_ID,
-        WhisperBackend.BACKEND_ID,
-        Qwen3AsrBackend.BACKEND_ID,
-        NemotronStreamingBackend.BACKEND_ID,
-        GigaAmBackend.BACKEND_ID,
+        BuiltInBackendIds.PARAKEET,
+        BuiltInBackendIds.WHISPER,
+        BuiltInBackendIds.QWEN3_ASR,
+        BuiltInBackendIds.NEMOTRON,
+        BuiltInBackendIds.GIGAAM,
         LlmTranscriptionBackend.BACKEND_ID,
     )
 
     /** backendId -> the FakePreferencesManager backing flow its accessors must use. */
-    private val expectedPrefFlows: Map<String, KProperty1<FakePreferencesManager, MutableStateFlow<String?>>> = mapOf(
-        SherpaOnnxBackend.BACKEND_ID to FakePreferencesManager::_parakeetModelPath,
-        WhisperBackend.BACKEND_ID to FakePreferencesManager::_whisperModelPath,
-        Qwen3AsrBackend.BACKEND_ID to FakePreferencesManager::_qwen3AsrModelPath,
-        NemotronStreamingBackend.BACKEND_ID to FakePreferencesManager::_nemotronModelPath,
-        GigaAmBackend.BACKEND_ID to FakePreferencesManager::_gigaamModelPath,
+    private val expectedPrefFlows: Map<String, (FakePreferencesManager) -> MutableStateFlow<String?>> = mapOf(
+        BuiltInBackendIds.PARAKEET to { it._sherpaModelPath(BuiltInBackendIds.PARAKEET) },
+        BuiltInBackendIds.WHISPER to { it._sherpaModelPath(BuiltInBackendIds.WHISPER) },
+        BuiltInBackendIds.QWEN3_ASR to { it._sherpaModelPath(BuiltInBackendIds.QWEN3_ASR) },
+        BuiltInBackendIds.NEMOTRON to { it._sherpaModelPath(BuiltInBackendIds.NEMOTRON) },
+        BuiltInBackendIds.GIGAAM to { it._sherpaModelPath(BuiltInBackendIds.GIGAAM) },
         LlmTranscriptionBackend.BACKEND_ID to FakePreferencesManager::_modelPath,
     )
+
+    // The static descriptors are built from the bundled catalog (lazily on first
+    // access), so every test that touches the registry needs it seeded.
+    @org.junit.Before
+    fun seedCatalog() = seedCatalogForTest()
 
     @Test
     fun `static six backend ids, dynamic externals counted separately`() {
@@ -95,35 +94,6 @@ class BackendRegistryTest {
             val found = registry.byBackendId(descriptor.backendId)
             assertEquals("byBackendId(${descriptor.backendId}) must return the registered descriptor", descriptor, found)
         }
-    }
-
-    @Test
-    fun `lookup by ModelType round-trips to the registered descriptor`() {
-        for (descriptor in registry.backends) {
-            val found = registry.byModelType(descriptor.modelType)
-            assertEquals("byModelType(${descriptor.modelType}) must return the registered descriptor", descriptor, found)
-        }
-    }
-
-    @Test
-    fun `every active ModelType except GEMMA4_GGUF maps to a descriptor`() {
-        // GEMMA4_GGUF is the disabled GGUF backend: no BACKEND_ID constant and its
-        // manager is disabled (TranscriptionModule), so the registry skips it.
-        // EXTERNAL maps only through dynamic descriptors: an empty provider derives
-        // none by design, so it is excluded here and pinned separately below.
-        val mapped = ExtractionService.ModelType.entries -
-            ExtractionService.ModelType.GEMMA4_GGUF -
-            ExtractionService.ModelType.EXTERNAL
-        assertEquals(6, mapped.size)
-        for (modelType in mapped) {
-            assertNotNull("ModelType.$modelType must resolve to a descriptor", registry.byModelType(modelType))
-        }
-        assertNull(registry.byModelType(ExtractionService.ModelType.GEMMA4_GGUF))
-        assertNull("empty provider derives no EXTERNAL descriptor", registry.byModelType(ExtractionService.ModelType.EXTERNAL))
-        assertNotNull(
-            "provider holding a record derives the EXTERNAL descriptor",
-            BackendRegistry(store, providerWith(externalRecord())).byModelType(ExtractionService.ModelType.EXTERNAL),
-        )
     }
 
     @Test
@@ -160,10 +130,9 @@ class BackendRegistryTest {
 
     @Test
     fun `descriptor identifiers are mutually consistent`() {
-        // The three identifier schemes must agree: looking up by any key and
-        // re-reading the other two keys yields the same triple everywhere.
+        // The two identifier schemes must agree: looking up by one key and
+        // re-reading the other yields the same pair everywhere.
         for (descriptor in registry.backends) {
-            assertEquals(descriptor.backendId, registry.byModelType(descriptor.modelType)?.backendId)
             assertEquals(descriptor.backendId, registry.byShareAlias(descriptor.shareAlias)?.backendId)
         }
     }
@@ -176,29 +145,29 @@ class BackendRegistryTest {
 
             val sentinel = "/models/$backendId"
             descriptor.saveModelPath(fake, sentinel)
-            assertEquals("$backendId save must hit its own preference", sentinel, expectedFlow.get(fake).value)
+            assertEquals("$backendId save must hit its own preference", sentinel, expectedFlow(fake).value)
 
             // No cross-talk: every other backend's model-path flow is still null.
             for (other in expectedPrefFlows.values) {
                 if (other != expectedFlow) {
-                    assertNull("$backendId save must not touch other preferences", other.get(fake).value)
+                    assertNull("$backendId save must not touch other preferences", other(fake).value)
                 }
             }
 
             assertEquals(sentinel, descriptor.modelPathFlow(fake).first())
 
             descriptor.clearModelPath(fake)
-            assertNull("$backendId clear must reset its own preference", expectedFlow.get(fake).value)
+            assertNull("$backendId clear must reset its own preference", expectedFlow(fake).value)
         }
     }
 
     @Test
-    fun `parakeet, nemotron and gigaam expose dedicated display-name resources, others derive from path`() {
-        assertEquals(R.string.parakeet_name, registry.byBackendId(SherpaOnnxBackend.BACKEND_ID)?.displayNameResId)
-        assertEquals(R.string.nemotron_name, registry.byBackendId(NemotronStreamingBackend.BACKEND_ID)?.displayNameResId)
-        assertEquals(R.string.gigaam_name, registry.byBackendId(GigaAmBackend.BACKEND_ID)?.displayNameResId)
-        assertNull(registry.byBackendId(WhisperBackend.BACKEND_ID)?.displayNameResId)
-        assertNull(registry.byBackendId(Qwen3AsrBackend.BACKEND_ID)?.displayNameResId)
+    fun `all five catalog backends expose dedicated display-name resources, llm derives from path`() {
+        assertEquals(R.string.parakeet_name, registry.byBackendId(BuiltInBackendIds.PARAKEET)?.displayNameResId)
+        assertEquals(R.string.whisper_title, registry.byBackendId(BuiltInBackendIds.WHISPER)?.displayNameResId)
+        assertEquals(R.string.qwen3_asr_title, registry.byBackendId(BuiltInBackendIds.QWEN3_ASR)?.displayNameResId)
+        assertEquals(R.string.nemotron_name, registry.byBackendId(BuiltInBackendIds.NEMOTRON)?.displayNameResId)
+        assertEquals(R.string.gigaam_name, registry.byBackendId(BuiltInBackendIds.GIGAAM)?.displayNameResId)
         assertNull(registry.byBackendId(LlmTranscriptionBackend.BACKEND_ID)?.displayNameResId)
     }
 
@@ -210,12 +179,12 @@ class BackendRegistryTest {
     }
 
     @Test
-    fun `qwen3 display-name derivation resolves the variant title via Qwen3AsrModelManager`() {
+    fun `qwen3 display-name derivation resolves the variant title via the catalog`() {
         val context = mockk<Context>()
         every { context.getString(R.string.qwen3_asr_0_6b_title) } returns "Qwen3-ASR 0.6B"
-        val descriptor = registry.byBackendId(Qwen3AsrBackend.BACKEND_ID)!!
+        val descriptor = registry.byBackendId(BuiltInBackendIds.QWEN3_ASR)!!
 
-        // Directory name carries the 0.6b marker the model manager detects.
+        // Directory name carries the 0.6b marker the catalog variant detects.
         assertEquals(
             "Qwen3-ASR 0.6B",
             descriptor.deriveDisplayName(context, "/data/models/qwen3-asr-0.6b"),
@@ -230,7 +199,7 @@ class BackendRegistryTest {
     @Test
     fun `whisper display-name derivation falls back to the file name for an unrecognized directory`() {
         val context = mockk<Context>(relaxed = true)
-        val descriptor = registry.byBackendId(WhisperBackend.BACKEND_ID)!!
+        val descriptor = registry.byBackendId(BuiltInBackendIds.WHISPER)!!
         // Not a real model directory on disk, so validateModelDirectory returns null.
         assertEquals(
             File("/models/whisper-foreign-dir").name,
@@ -241,7 +210,7 @@ class BackendRegistryTest {
     @Test
     fun `only nemotron is a streaming backend`() {
         val streaming = registry.backends.filter { it.isStreaming }.map { it.backendId }
-        assertEquals(listOf(NemotronStreamingBackend.BACKEND_ID), streaming)
+        assertEquals(listOf(BuiltInBackendIds.NEMOTRON), streaming)
     }
 
     // ---- dynamic external descriptors (spec v2a) ----
@@ -268,8 +237,7 @@ class BackendRegistryTest {
 
         val descriptor = registry.byBackendId("external:a1b2c3d4e5f6")
         assertNotNull(descriptor)
-        assertEquals(ExtractionService.ModelType.EXTERNAL, descriptor!!.modelType)
-        assertEquals("", descriptor.shareAlias)
+        assertEquals("", descriptor!!.shareAlias)
         assertEquals("GigaAM v3", descriptor.deriveDisplayName(mockk(), "/anywhere"))
     }
 

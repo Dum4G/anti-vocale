@@ -164,8 +164,8 @@ class ModelUiStateTest {
     }
 
     @Test
-    fun `WhisperUiState defaults with empty variantDownloadStates`() {
-        val state = ModelViewModel.WhisperUiState()
+    fun `ModelEntryUiState defaults with empty variantDownloadStates`() {
+        val state = ModelViewModel.ModelEntryUiState()
 
         assertTrue(state.variantDownloadStates.isEmpty())
         assertFalse(state.isAnyDownloading)
@@ -173,8 +173,8 @@ class ModelUiStateTest {
 
     @Test
     fun `isAnyDownloading is true when any variant is downloading`() {
-        val variant = mockWhisperVariant("SMALL")
-        val state = ModelViewModel.WhisperUiState(
+        val variant = "small"
+        val state = ModelViewModel.ModelEntryUiState(
             variantDownloadStates = mapOf(
                 variant to ModelViewModel.VariantDownloadState(isDownloading = true, downloadProgress = 0.5f)
             )
@@ -185,9 +185,9 @@ class ModelUiStateTest {
 
     @Test
     fun `isAnyDownloading is false when no variants are downloading`() {
-        val state = ModelViewModel.WhisperUiState(
+        val state = ModelViewModel.ModelEntryUiState(
             variantDownloadStates = mapOf(
-                mockWhisperVariant("SMALL") to ModelViewModel.VariantDownloadState(isDownloading = false)
+                "small" to ModelViewModel.VariantDownloadState(isDownloading = false)
             )
         )
 
@@ -196,11 +196,11 @@ class ModelUiStateTest {
 
     @Test
     fun `downloading variant A does not affect variant B state`() {
-        val variantA = mockWhisperVariant("SMALL")
-        val variantB = mockWhisperVariant("TURBO")
+        val variantA = "small"
+        val variantB = "turbo"
 
         // Start download on A
-        val state = ModelViewModel.WhisperUiState(
+        val state = ModelViewModel.ModelEntryUiState(
             variantDownloadStates = mapOf(
                 variantA to ModelViewModel.VariantDownloadState(
                     isDownloading = true,
@@ -218,18 +218,18 @@ class ModelUiStateTest {
 
     @Test
     fun `updating variant A progress does not overwrite variant B progress`() {
-        val variantA = mockWhisperVariant("SMALL")
-        val variantB = mockWhisperVariant("TURBO")
+        val variantA = "small"
+        val variantB = "turbo"
 
         // Both downloading simultaneously
-        var state = ModelViewModel.WhisperUiState(
+        var state = ModelViewModel.ModelEntryUiState(
             variantDownloadStates = mapOf(
                 variantA to ModelViewModel.VariantDownloadState(isDownloading = true, downloadProgress = 0.2f),
                 variantB to ModelViewModel.VariantDownloadState(isDownloading = true, downloadProgress = 0.7f)
             )
         )
 
-        // Update A's progress (simulates what handleServiceProgressWhisper does)
+        // Update A's progress (simulates what handleServiceProgress does)
         state = state.copy(
             variantDownloadStates = state.variantDownloadStates + (variantA to
                 state.variantDownloadStates[variantA]!!.copy(downloadProgress = 0.25f))
@@ -242,18 +242,18 @@ class ModelUiStateTest {
 
     @Test
     fun `cancelling variant A does not affect variant B state`() {
-        val variantA = mockWhisperVariant("SMALL")
-        val variantB = mockWhisperVariant("TURBO")
+        val variantA = "small"
+        val variantB = "turbo"
 
         // Both downloading
-        var state = ModelViewModel.WhisperUiState(
+        var state = ModelViewModel.ModelEntryUiState(
             variantDownloadStates = mapOf(
                 variantA to ModelViewModel.VariantDownloadState(isDownloading = true, downloadProgress = 0.5f),
                 variantB to ModelViewModel.VariantDownloadState(isDownloading = true, downloadProgress = 0.3f)
             )
         )
 
-        // Cancel A (simulates what cancelWhisperDownload does: remove from map)
+        // Cancel A (simulates what cancelDownload does: remove from map)
         state = state.copy(variantDownloadStates = state.variantDownloadStates - variantA)
 
         assertNull("Variant A should be removed", state.variantDownloadStates[variantA])
@@ -265,10 +265,10 @@ class ModelUiStateTest {
 
     @Test
     fun `error on variant A does not leak to variant B`() {
-        val variantA = mockWhisperVariant("SMALL")
-        val variantB = mockWhisperVariant("TURBO")
+        val variantA = "small"
+        val variantB = "turbo"
 
-        var state = ModelViewModel.WhisperUiState(
+        var state = ModelViewModel.ModelEntryUiState(
             variantDownloadStates = mapOf(
                 variantA to ModelViewModel.VariantDownloadState(isDownloading = true, downloadProgress = 0.5f),
                 variantB to ModelViewModel.VariantDownloadState(isDownloading = true, downloadProgress = 0.3f)
@@ -290,14 +290,14 @@ class ModelUiStateTest {
 
     @Test
     fun `completing variant A removes it from download states while B continues`() {
-        val variantA = mockWhisperVariant("SMALL")
-        val variantB = mockWhisperVariant("TURBO")
+        val variantA = "small"
+        val variantB = "turbo"
 
         // Both downloading, A completes
-        val state = ModelViewModel.WhisperUiState(
+        val state = ModelViewModel.ModelEntryUiState(
             downloadedVariants = setOf(variantA),
             variantDownloadStates = mapOf(
-                // A removed from map on completion (as handleServiceProgressWhisper does)
+                // A removed from map on completion (as handleServiceProgress does)
                 variantB to ModelViewModel.VariantDownloadState(isDownloading = true, downloadProgress = 0.8f)
             )
         )
@@ -308,10 +308,10 @@ class ModelUiStateTest {
     }
 
     @Test
-    fun `Qwen3AsrUiState per-variant isolation works the same way`() {
-        val variant = mockQwen3AsrVariant()
+    fun `Qwen3 per-variant isolation works the same way`() {
+        val variant = "0.6b-int8"
 
-        val state = ModelViewModel.Qwen3AsrUiState(
+        val state = ModelViewModel.ModelEntryUiState(
             variantDownloadStates = mapOf(
                 variant to ModelViewModel.VariantDownloadState(isDownloading = true, downloadProgress = 0.6f)
             )
@@ -319,26 +319,6 @@ class ModelUiStateTest {
 
         assertTrue(state.isAnyDownloading)
         assertEquals(0.6f, state.variantDownloadStates[variant]!!.downloadProgress, 0.001f)
-    }
-
-    // ── Helper to create mock Whisper variants ─────────────────────
-
-    /**
-     * Creates a minimal mock of WhisperModelManager.Variant for testing.
-     * Since Variant is an enum, we use a real entry. The `name` parameter
-     * is unused — we always pick SMALL as a representative.
-     */
-    private fun mockWhisperVariant(name: String = "SMALL"): com.antivocale.app.transcription.WhisperModelManager.Variant {
-        // We can't construct arbitrary enum values, so pick based on name
-        return try {
-            com.antivocale.app.transcription.WhisperModelManager.Variant.valueOf(name)
-        } catch (_: IllegalArgumentException) {
-            com.antivocale.app.transcription.WhisperModelManager.Variant.SMALL
-        }
-    }
-
-    private fun mockQwen3AsrVariant(): com.antivocale.app.transcription.Qwen3AsrModelManager.Variant {
-        return com.antivocale.app.transcription.Qwen3AsrModelManager.Variant.QWEN3_ASR_0_6B
     }
 
 }

@@ -4,7 +4,9 @@ import com.antivocale.app.data.ExternalModelStore
 import com.antivocale.app.data.FakePreferencesManager
 import com.antivocale.app.transcription.BackendRegistry
 import com.antivocale.app.transcription.emptyRecordsProvider
+import com.antivocale.app.transcription.seedCatalogForTest
 import org.junit.Assert.*
+import org.junit.Before
 import org.junit.Test
 
 class ShareReceiverActivityAliasTest {
@@ -14,6 +16,10 @@ class ShareReceiverActivityAliasTest {
         ExternalModelStore(FakePreferencesManager(), dirExists = { true }),
         emptyRecordsProvider(),
     )
+
+    // Static descriptors read the bundled catalog lazily; seed it before use.
+    @Before
+    fun seedCatalog() = seedCatalogForTest()
 
     @Test
     fun `parakeet alias maps to sherpa-onnx backend`() {

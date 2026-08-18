@@ -185,7 +185,7 @@ class ModelFamilySupportTest {
         nemoEncoder.writeBytes("model_type".toByteArray() +
             byteArrayOf(0x12, 0x12) + "EncDecRNNTBPEModel".toByteArray())
         try {
-            support.validateImportedModel(SherpaOnnxBackend.onnxMetadataValue(nemoEncoder, "model_type"))
+            support.validateImportedModel(SherpaBackend.onnxMetadataValue(nemoEncoder, "model_type"))
             throw AssertionError("expected IllegalArgumentException for a non-whisper model_type value")
         } catch (e: IllegalArgumentException) {
             // expected
@@ -195,13 +195,13 @@ class ModelFamilySupportTest {
         whisperEncoder.deleteOnExit()
         whisperEncoder.writeBytes("model_type".toByteArray() +
             byteArrayOf(0x12, 0x0c) + "whisper-base".toByteArray())
-        support.validateImportedModel(SherpaOnnxBackend.onnxMetadataValue(whisperEncoder, "model_type"))
+        support.validateImportedModel(SherpaBackend.onnxMetadataValue(whisperEncoder, "model_type"))
 
         // Missing key stays with the key-presence chain: no value, no verdict.
         val bare = java.io.File.createTempFile("bare", ".onnx")
         bare.deleteOnExit()
         bare.writeBytes("vocab_size".toByteArray() + byteArrayOf(0x12, 0x02) + "42".toByteArray())
-        support.validateImportedModel(SherpaOnnxBackend.onnxMetadataValue(bare, "model_type"))
+        support.validateImportedModel(SherpaBackend.onnxMetadataValue(bare, "model_type"))
     }
 
     @Test

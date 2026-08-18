@@ -297,7 +297,7 @@ class SherpaOnnxModelDownloader<V>(
 /**
  * Configuration that captures all model-specific behavior for a sherpa-onnx backend.
  *
- * @param V The variant enum type (e.g. WhisperModelManager.Variant)
+ * @param V The variant key type (e.g. a catalog variant name)
  * @param tag Logcat tag for this backend
  * @param modelDirNames Map from variant to HuggingFace repo / directory name
  * @param hfFileNames Map from variant to list of files to download

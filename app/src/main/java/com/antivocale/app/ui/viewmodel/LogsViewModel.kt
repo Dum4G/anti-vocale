@@ -1,5 +1,6 @@
 package com.antivocale.app.ui.viewmodel
 
+import android.content.Context
 import android.content.Intent
 import android.widget.Toast
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -16,7 +17,7 @@ import com.antivocale.app.data.PreferencesManager
 import com.antivocale.app.receiver.TaskerRequestReceiver
 import com.antivocale.app.service.InferenceService
 import com.antivocale.app.transcription.BackendRegistry
-import com.antivocale.app.transcription.SherpaOnnxBackend
+import com.antivocale.app.transcription.BuiltInBackendIds
 import com.antivocale.app.transcription.TranscriptionBackendManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -247,7 +248,7 @@ class LogsViewModel @Inject constructor(
         preferencesManager.vadEnabled,
         preferencesManager.vadAdvisoryDismissed
     ) { backendId, vadEnabled, dismissed ->
-        backendId == SherpaOnnxBackend.BACKEND_ID && vadEnabled && !dismissed
+        backendId == BuiltInBackendIds.PARAKEET && vadEnabled && !dismissed
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
     fun dismissVadAdvisory() {
@@ -274,7 +275,7 @@ class LogsViewModel @Inject constructor(
         val isCurrentBackend: Boolean
     )
 
-    suspend fun getAvailableAudioBackendsWithModels(): List<BackendOption> {
+    suspend fun getAvailableAudioBackendsWithModels(context: Context): List<BackendOption> {
         val currentBackendId = transcriptionBackendManager.activeBackendId.first()
         val backends = transcriptionBackendManager.getAvailableBackends()
             .filter { it.supportsAudio }
@@ -288,10 +289,27 @@ class LogsViewModel @Inject constructor(
             .map { backend ->
                 BackendOption(
                     backendId = backend.id,
-                    displayName = backend.displayName,
+                    displayName = displayNameFor(backend.id, context),
                     isCurrentBackend = backend.id == currentBackendId
                 )
             }
+    }
+
+    /**
+     * Derives a user-visible backend label through the registry descriptor display-name
+     * contract (fixed localized resource, else path-derived variant title), falling back
+     * to the backend's own [com.antivocale.app.transcription.TranscriptionBackend.displayName]
+     * for ids the registry does not know. Raw backend ids ("sherpa-onnx",
+     * "nemotron-streaming") must never reach the picker (the "missed one dispatch site"
+     * bug class): every display label routes through the registry.
+     */
+    private suspend fun displayNameFor(backendId: String, context: Context): String {
+        val descriptor = backendRegistry.byBackendId(backendId) ?: return backendId
+        val path = descriptor.modelPathFlow(preferencesManager).first()
+        return when {
+            descriptor.displayNameResId != null -> context.getString(descriptor.displayNameResId)
+            else -> descriptor.deriveDisplayName(context, path ?: "")
+        }
     }
 
     fun reTranscribeWithBackend(

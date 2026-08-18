@@ -191,12 +191,8 @@ AudioPreprocessor (16kHz mono WAV, 30s chunks)
     |
     v
 TranscriptionOrchestrator
-    |--- SherpaOnnxBackend (Parakeet TDT)
-    |--- WhisperBackend (Whisper models)
-    |--- Qwen3AsrBackend (Qwen3-ASR)
-    |--- GigaAmBackend (GigaAM v3, Russian)
-    |--- NemotronStreamingBackend (Nemotron 3.5, OnlineRecognizer)
-    |--- ExternalSherpaBackend (user-imported models)
+    |--- SherpaBackend (one engine; bundled catalog entries: Parakeet TDT, Whisper, Qwen3-ASR, GigaAM v3, Nemotron 3.5 streaming)
+    |--- ExternalSherpaBackend (user-imported models: Transducer/Whisper/CTC/SenseVoice)
     |--- LlmTranscriptionBackend (Gemma via LiteRT-LM)
     |
     v
