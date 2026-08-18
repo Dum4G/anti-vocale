@@ -100,6 +100,9 @@ A single-model manifest with integrity pins. This is how third parties share a m
 
 Host the JSON anywhere reachable (GitHub gist, HF repo, personal site); share the URL.
 
+To have a model curated for everyone (bundled into the app, or listed in the
+import dialog's autocomplete catalog), see [model-integration.md](model-integration.md).
+
 ## Family selector
 
 The dropdown above the import buttons sets the model family (see the table above). Below it, a conditional options panel: Whisper gets an optional language field, SenseVoice an optional language plus an inverse-text-normalization switch, CTC a subtype selector (`nemo_ctc` / `zipformer_ctc`). The languages field applies to all families.

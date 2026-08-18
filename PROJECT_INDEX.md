@@ -56,11 +56,12 @@ ASR backend abstraction and orchestration. Key interfaces and classes:
 - `TranscriptionBackend` — Interface for all ASR backends
 - `TranscriptionOrchestrator` — Coordinates backend selection, VAD, and result delivery
 - `TranscriptionBackendManager` — Registers/loads available backends
-- `SherpaOnnxBackend` — sherpa-onnx based (Whisper + Parakeet models)
-- `WhisperBackend` / `WhisperModelManager` — Whisper-specific via sherpa-onnx
-- `Qwen3AsrBackend` / `Qwen3AsrModelManager` — Qwen3 ASR via sherpa-onnx
-- `Gemma4GgufBackend` / `Gemma4GgufModelManager` — Gemma 4 via GGUF/LlamaCpp
-- `ParakeetModelManager` — NVIDIA Parakeet models via sherpa-onnx
+- `SherpaBackend` — one sherpa-onnx engine; every built-in model (Parakeet TDT, Whisper, Qwen3-ASR, GigaAM v3, Nemotron 3.5) is a bundled catalog entry (`assets/models_catalog.json`)
+- `SherpaModelManager` / `SherpaModelDownloader` — per-entry discovery/validation + HF/download
+- `ExternalSherpaBackend` — user-imported external models (Transducer/Whisper/CTC/SenseVoice families)
+- `ModelFamilySupport` — per-family copy plans, metadata validation, sherpa config for external imports
+- `BackendRegistry` / `BuiltInBackendIds` — static + dynamic descriptors, canonical ids
+- `LlmTranscriptionBackend` — Gemma via LiteRT-LM
 - `InferenceProvider` — Enum of available inference providers
 - `Language` / `LanguageFilter` — Language selection and filtering
 
@@ -77,6 +78,10 @@ ASR backend abstraction and orchestration. Key interfaces and classes:
 - `ModelDownloader` — Downloads and verifies model files
 - `ShareTargetManager` — Dynamic share target configuration
 - `TranscriptionCalibrator` — Auto-selects best backend per language
+- `ExternalModelStore` / `ExternalModelImporter` — user-imported model records + folder/URL/entry-JSON pipeline
+- `ExternalCatalog` / `HuggingFaceRepoListing` — bundled index + HF repo/entry-JSON parsing
+- `catalog/` (`ModelCatalog`, `BundledModelCatalog`, `BundledCatalog`, `CatalogModelDownloader`) — catalog-driven built-in models
+- `download/` (`CatalogModelDownloader`, `SherpaOnnxModelDownloader`, resume/verify helpers) — download infrastructure
 
 ### ui/ (23 files)
 - `MainScreen.kt` — Tab navigation (Model, Logs, Settings)

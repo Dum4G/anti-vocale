@@ -24,14 +24,11 @@ Android application written in Kotlin for transcribing voice messages locally on
 
 - `app/src/main/java/com/antivocale/app/` — Main source
   - `transcription/` — Transcription backends + model managers:
-    - `SherpaOnnxBackend` (Parakeet TDT — SmoothQuant recommended + Stock int8 fallback, via OfflineRecognizer)
-    - `WhisperBackend` (Whisper Distil-IT/Small/Turbo/Medium, via OfflineRecognizer)
-    - `Qwen3AsrBackend` (Qwen3-ASR 0.6B, via OfflineRecognizer)
-    - `NemotronStreamingBackend` (Nemotron 3.5 multilingual, via OnlineRecognizer — the only streaming backend)
-    - `GigaAmBackend` (GigaAM v3 Russian, via OfflineRecognizer; HF mirror `pantinor/gigaam-v3`, SHA-256 pinned)
-    - `ExternalSherpaBackend` (user-imported external models, via OfflineRecognizer; dynamic BackendRegistry descriptors, `external:` prefix routing; ShareExternal family alias with chooser)
+    - `SherpaBackend` (ONE sherpa-onnx engine; all built-in models are bundled-catalog entries: Parakeet TDT via OfflineRecognizer, Whisper via OfflineRecognizer, Qwen3-ASR via OfflineRecognizer, Nemotron 3.5 via OnlineRecognizer — the only streaming backend, GigaAM v3 Russian via OfflineRecognizer; per-entry `SherpaModelManager`/`SherpaModelDownloader` handle discovery + download)
+    - `ExternalSherpaBackend` (user-imported external models, via OfflineRecognizer; dynamic BackendRegistry descriptors, `external:` prefix routing; ShareExternal family alias with chooser; families: Transducer/Whisper/CTC/SenseVoice)
+    - `ModelFamilySupport` (per-family copy plans, metadata validation, sherpa config shared by external imports)
     - `LlmTranscriptionBackend` (Gemma via LiteRT-LM)
-    - Each backend has a `*ModelManager` (discovery/validation) + `*Downloader` (HF download). `OrphanedModelDirCleaner` reclaims stranded old-version dirs at startup.
+    - `OrphanedModelDirCleaner` reclaims stranded old-version dirs at startup.
   - `ui/` — Compose UI screens and view models
   - `receiver/` — Broadcast receivers + share-target aliases (ShareReceiverActivity)
   - `data/` — Preferences, ShareTargetManager, download infrastructure
@@ -65,7 +62,7 @@ Android application written in Kotlin for transcribing voice messages locally on
 
 ## External-Models Platform (v2a)
 
-User-imported sherpa-onnx transducer models as first-class backends. Key components:
+User-imported sherpa-onnx models (Transducer / Whisper / CTC / SenseVoice families) as first-class backends. Key components:
 - `ExternalModelStore` (`data/`): JSON-serialized records in one DataStore key; single source of truth
 - `ExternalModelRecordsProvider`: StateFlow seam for the registry's synchronous `backends` getter
 - `BackendRegistry`: composes static descriptors + dynamic external descriptors (`external:<id>` prefix)
