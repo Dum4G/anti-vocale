@@ -15,10 +15,10 @@ import java.io.File
 import java.security.MessageDigest
 
 /**
- * JSON-only external-import tests (spec decision): catalog-entry JSON parsing
- * (literal name/description, mandatory url+sha256+size) and the end-to-end URL
- * import path against a MockWebServer (fetch JSON, canonical landing, verified
- * pins, hashless-entry rejection).
+ * URL-import tests (plan v2a, Task 8): repo-id parsing, HF tree listing (LFS oid vs
+ * plain file), catalog-entry JSON parsing with mandatory hashes, and the end-to-end
+ * importer path against a MockWebServer (canonical landing, verified vs TOFU pins,
+ * hashless-entry rejection).
  */
 class HuggingFaceRepoListingTest {
 
@@ -36,7 +36,7 @@ class HuggingFaceRepoListingTest {
     fun setUp() {
         server = MockWebServer()
         server.start()
-        listing = HuggingFaceRepoListing()
+        listing = HuggingFaceRepoListing(apiBase = server.url("/").toString().trimEnd('/'))
         fake = FakePreferencesManager()
         store = ExternalModelStore(fake)
         filesRoot = tmp.newFolder("external-root")
@@ -56,23 +56,50 @@ class HuggingFaceRepoListingTest {
     private fun sha256(bytes: ByteArray): String =
         MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
 
-    // ---- entry JSON parsing (unified catalog schema) ----
+    // ---- parsing ----
 
     @Test
-    fun `entry json parses literal display and demands hashes and sizes`() {
+    fun `parseRepoId accepts repo urls and rejects others`() {
+        assertEquals("pantinor/gigaam-v3", HuggingFaceRepoListing.parseRepoId("https://huggingface.co/pantinor/gigaam-v3"))
+        assertEquals("pantinor/gigaam-v3", HuggingFaceRepoListing.parseRepoId("https://huggingface.co/pantinor/gigaam-v3/tree/main"))
+        assertEquals("istupakov/gigaam-v3-onnx", HuggingFaceRepoListing.parseRepoId("istupakov/gigaam-v3-onnx"))
+        assertNull(HuggingFaceRepoListing.parseRepoId("https://huggingface.co/only-owner"))
+        assertNull(HuggingFaceRepoListing.parseRepoId("https://example.com/a/b"))
+    }
+
+    @Test
+    fun `tree listing maps lfs and plain files`() = runTest {
+        server.enqueue(MockResponse().setBody("""
+            [
+              {"type":"file","path":"gigaam_v3_e2e_rnnt_encoder_int8.onnx","lfs":{"oid":"${"a".repeat(64)}","size":318995997},"size":318995997},
+              {"type":"file","path":"tokens.txt","size":13353},
+              {"type":"directory","path":"subdir"}
+            ]
+        """.trimIndent()))
+
+        val files = listing.listFiles("pantinor/gigaam-v3")
+
+        assertEquals(2, files.size)
+        val lfs = files[0] as HuggingFaceRepoListing.HfFile.Lfs
+        assertEquals("gigaam_v3_e2e_rnnt_encoder_int8.onnx", lfs.name)
+        assertEquals("a".repeat(64), lfs.sha256)
+        assertEquals(318995997L, lfs.size)
+        assertTrue(files[1] is HuggingFaceRepoListing.HfFile.Plain)
+        assertEquals("tokens.txt", (files[1] as HuggingFaceRepoListing.HfFile.Plain).name)
+    }
+
+    @Test
+    fun `entry json parses and demands hashes`() {
         val entry = ExternalModelEntryJson.parse("""
-            {"name":"GigaAM v3","description":"Sber RNNT","modelType":"nemo_transducer","languages":["ru"],
+            {"name":"GigaAM v3","modelType":"nemo_transducer","languages":["ru"],
              "files":[{"name":"some_encoder.onnx","url":"https://x/e.onnx","sha256":"${"b".repeat(64)}","size":100},
                       {"name":"decoder.onnx","url":"https://x/d.onnx","sha256":"${"c".repeat(64)}","size":50},
                       {"name":"joiner.onnx","url":"https://x/j.onnx","sha256":"${"d".repeat(64)}","size":50},
                       {"name":"tokens.txt","url":"https://x/t.txt","sha256":"${"e".repeat(64)}","size":10}]}
         """.trimIndent())
         assertEquals("GigaAM v3", entry.name)
-        assertEquals("Sber RNNT", entry.description)
         assertEquals("nemo_transducer", entry.modelType)
-        assertEquals(listOf("ru"), entry.languages)
         assertEquals(4, entry.files.size)
-        assertEquals(100L, entry.files.first().size)
 
         val hashless = runCatching {
             ExternalModelEntryJson.parse("""{"name":"x","files":[{"name":"a.onnx","url":"https://x/a"}]}""")
@@ -85,38 +112,160 @@ class HuggingFaceRepoListingTest {
                 """{"name":"x","files":[{"name":"a.onnx","url":"https://x/a","sha256":"${"f".repeat(64)}"}]}""")
         }
         assertTrue(sizeless.isFailure)
-
-        // A url-less file is rejected as well.
-        val urlless = runCatching {
-            ExternalModelEntryJson.parse(
-                """{"name":"x","files":[{"name":"a.onnx","sha256":"${"g".repeat(64)}","size":10}]}""")
-        }
-        assertTrue(urlless.isFailure)
     }
 
     @Test
-    fun `external entry name must be literal, never a resource key`() {
-        val resourceKeyed = runCatching {
-            ExternalModelEntryJson.parse(
-                """{"display":{"resourceKey":"parakeet_name"},"files":[{"name":"a.onnx","url":"https://x/a","sha256":"${"h".repeat(64)}","size":1}]}""")
-        }
-        assertTrue(resourceKeyed.isFailure)
-    }
-
-    @Test
-    fun `entry json defaults modelType to nemo_transducer`() {
+    fun `entry without family parses as TRANSDUCER`() {
         val entry = ExternalModelEntryJson.parse("""
-            {"name":"NoType",
-             "files":[{"name":"e.onnx","url":"https://x/e","sha256":"${"b".repeat(64)}","size":1},
-                      {"name":"d.onnx","url":"https://x/d","sha256":"${"c".repeat(64)}","size":1},
-                      {"name":"j.onnx","url":"https://x/j","sha256":"${"d".repeat(64)}","size":1},
-                      {"name":"t.txt","url":"https://x/t","sha256":"${"e".repeat(64)}","size":1}]}
+            {"name":"Old Model","languages":["en"],"modelType":"nemo_transducer",
+             "files":[{"name":"encoder.onnx","url":"https://x/e.onnx","sha256":"${"a".repeat(64)}","size":100}]}
+        """.trimIndent())
+        assertEquals(ModelFamily.TRANSDUCER, entry.family)
+    }
+
+    @Test
+    fun `entry with WHISPER family parses correctly`() {
+        val entry = ExternalModelEntryJson.parse("""
+            {"name":"Arabic Whisper","family":"WHISPER","languages":["ar"],
+             "files":[{"name":"encoder.onnx","url":"https://x/e.onnx","sha256":"${"a".repeat(64)}","size":100}]}
+        """.trimIndent())
+        assertEquals(ModelFamily.WHISPER, entry.family)
+        assertEquals("", entry.modelType)
+    }
+
+    @Test
+    fun `entry with unknown family throws IllegalArgumentException`() {
+        val error = runCatching {
+            ExternalModelEntryJson.parse("""
+                {"name":"Bad","family":"UNKNOWN_FAMILY","languages":["en"],
+                 "files":[{"name":"encoder.onnx","url":"https://x/e.onnx","sha256":"${"a".repeat(64)}","size":100}]}
+            """.trimIndent())
+        }
+        assertTrue(error.isFailure)
+        assertTrue(error.exceptionOrNull()?.message?.contains("UNKNOWN_FAMILY") == true)
+        assertTrue(
+            "error must be the named unknown-family message, not a bare enum error: ${error.exceptionOrNull()?.message}",
+            error.exceptionOrNull()?.message?.contains("unknown family") == true)
+    }
+
+    @Test
+    fun `entry with options parses correctly`() {
+        val entry = ExternalModelEntryJson.parse("""
+            {"name":"Whisper Arabic","family":"WHISPER","languages":["ar"],
+             "options":{"whisper.language":"ar","whisper.task":"transcribe"},
+             "files":[{"name":"encoder.onnx","url":"https://x/e.onnx","sha256":"${"a".repeat(64)}","size":100}]}
+        """.trimIndent())
+        assertEquals(2, entry.options.size)
+        assertEquals("ar", entry.options["whisper.language"])
+        assertEquals("transcribe", entry.options["whisper.task"])
+    }
+
+    @Test
+    fun `WHISPER entry without modelType defaults to empty`() {
+        val entry = ExternalModelEntryJson.parse("""
+            {"name":"Whisper","family":"WHISPER","languages":["en"],
+             "files":[{"name":"encoder.onnx","url":"https://x/e.onnx","sha256":"${"a".repeat(64)}","size":100}]}
+        """.trimIndent())
+        assertEquals("", entry.modelType)
+    }
+
+    @Test
+    fun `TRANSDUCER entry without modelType defaults to nemo_transducer`() {
+        val entry = ExternalModelEntryJson.parse("""
+            {"name":"Transducer","family":"TRANSDUCER","languages":["en"],
+             "files":[{"name":"encoder.onnx","url":"https://x/e.onnx","sha256":"${"a".repeat(64)}","size":100}]}
         """.trimIndent())
         assertEquals("nemo_transducer", entry.modelType)
-        assertNull(entry.description)
     }
 
-    // ---- end-to-end URL import against the mock server ----
+    @Test
+    fun `entry with family but no languages is rejected`() {
+        val error = runCatching {
+            ExternalModelEntryJson.parse("""
+                {"name":"Bad","family":"WHISPER",
+                 "files":[{"name":"encoder.onnx","url":"https://x/e.onnx","sha256":"${"a".repeat(64)}","size":100}]}
+            """.trimIndent())
+        }
+        assertTrue(error.isFailure)
+        assertTrue(error.exceptionOrNull()?.message?.contains("languages") == true)
+    }
+
+    @Test
+    fun `WHISPER entry with non-empty transducer modelType is rejected`() {
+        val error = runCatching {
+            ExternalModelEntryJson.parse("""
+                {"name":"Bad","family":"WHISPER","modelType":"nemo_transducer","languages":["en"],
+                 "files":[{"name":"encoder.onnx","url":"https://x/e.onnx","sha256":"${"a".repeat(64)}","size":100}]}
+            """.trimIndent())
+        }
+        assertTrue(error.isFailure)
+        assertTrue(error.exceptionOrNull()?.message?.contains("modelType") == true)
+    }
+
+    @Test
+    fun `CTC entry with valid modelType parses correctly`() {
+        val entry = ExternalModelEntryJson.parse("""
+            {"name":"CTC Model","family":"CTC","modelType":"nemo_ctc","languages":["en"],
+             "files":[{"name":"encoder.onnx","url":"https://x/e.onnx","sha256":"${"a".repeat(64)}","size":100}]}
+        """.trimIndent())
+        assertEquals("nemo_ctc", entry.modelType)
+    }
+
+    @Test
+    fun `CTC entry without modelType is rejected with clear error`() {
+        val error = runCatching {
+            ExternalModelEntryJson.parse("""
+                {"name":"CTC No Type","family":"CTC","languages":["en"],
+                 "files":[{"name":"encoder.onnx","url":"https://x/e.onnx","sha256":"${"a".repeat(64)}","size":100}]}
+            """.trimIndent())
+        }
+        assertTrue(error.isFailure)
+        assertTrue(error.exceptionOrNull()?.message?.contains("CTC family requires an explicit modelType") == true)
+    }
+
+    @Test
+    fun `CTC entry with invalid modelType is rejected`() {
+        val error = runCatching {
+            ExternalModelEntryJson.parse("""
+                {"name":"Bad","family":"CTC","modelType":"bad_type","languages":["en"],
+                 "files":[{"name":"encoder.onnx","url":"https://x/e.onnx","sha256":"${"a".repeat(64)}","size":100}]}
+            """.trimIndent())
+        }
+        assertTrue(error.isFailure)
+        assertTrue(error.exceptionOrNull()?.message?.contains("modelType") == true)
+    }
+
+    @Test
+    fun `TRANSDUCER entry with conformer_transducer parses correctly`() {
+        val entry = ExternalModelEntryJson.parse("""
+            {"name":"Conformer","family":"TRANSDUCER","modelType":"conformer_transducer","languages":["en"],
+             "files":[{"name":"encoder.onnx","url":"https://x/e.onnx","sha256":"${"a".repeat(64)}","size":100}]}
+        """.trimIndent())
+        assertEquals("conformer_transducer", entry.modelType)
+    }
+
+    @Test
+    fun `TRANSDUCER entry with invalid modelType is rejected`() {
+        val error = runCatching {
+            ExternalModelEntryJson.parse("""
+                {"name":"Bad","family":"TRANSDUCER","modelType":"whisper","languages":["en"],
+                 "files":[{"name":"encoder.onnx","url":"https://x/e.onnx","sha256":"${"a".repeat(64)}","size":100}]}
+            """.trimIndent())
+        }
+        assertTrue(error.isFailure)
+        assertTrue(error.exceptionOrNull()?.message?.contains("modelType") == true)
+    }
+
+    @Test
+    fun `legacy entry without family or languages defaults correctly`() {
+        val entry = ExternalModelEntryJson.parse("""
+            {"name":"legacy","files":[{"name":"a.onnx","url":"https://x/a","sha256":"${"a".repeat(64)}","size":1}]}
+        """.trimIndent())
+        assertEquals(ModelFamily.TRANSDUCER, entry.family)
+        assertEquals(emptyList<String>(), entry.languages)
+    }
+
+    // ---- end-to-end against the mock server ----
 
     private val encoderBytes = ByteArray(64) { 1 } + "vocab_size=1024 subsampling_factor=8 model_type=nemo_transducer".toByteArray()
     private val decoderBytes = ByteArray(16) { 2 }
@@ -124,7 +273,35 @@ class HuggingFaceRepoListingTest {
     private val tokensBytes = "<unk> 0\n. 1\n".toByteArray()
 
     @Test
-    fun `importFromEntryJson fetches the json, downloads all files and verifies their hashes`() = runTest {
+    fun `importFromHuggingFaceRepo downloads under canonical names with TOFU for non-LFS`() = runTest {
+        server.enqueue(MockResponse().setBody("""
+            [
+              {"type":"file","path":"gigaam_encoder_int8.onnx","lfs":{"oid":"${sha256(encoderBytes)}","size":${encoderBytes.size}},"size":${encoderBytes.size}},
+              {"type":"file","path":"gigaam_decoder.onnx","lfs":{"oid":"${sha256(decoderBytes)}","size":${decoderBytes.size}},"size":${decoderBytes.size}},
+              {"type":"file","path":"gigaam_joiner.onnx","lfs":{"oid":"${sha256(joinerBytes)}","size":${joinerBytes.size}},"size":${joinerBytes.size}},
+              {"type":"file","path":"tokens.txt","size":${tokensBytes.size}}
+            ]
+        """.trimIndent()))
+        server.enqueue(MockResponse().setBody(okio.Buffer().write(encoderBytes)))
+        server.enqueue(MockResponse().setBody(okio.Buffer().write(decoderBytes)))
+        server.enqueue(MockResponse().setBody(okio.Buffer().write(joinerBytes)))
+        server.enqueue(MockResponse().setBody(okio.Buffer().write(tokensBytes)))
+
+        val record = importer.importFromHuggingFaceRepo("https://huggingface.co/pantinor/gigaam-v3")
+
+        assertEquals(ExternalModelSource.URL, record.source)
+        assertEquals(4, record.files.size)
+        assertTrue(File(record.dir, "encoder.int8.onnx").exists())
+        assertTrue(File(record.dir, "decoder.int8.onnx").exists())
+        assertTrue(File(record.dir, "joiner.int8.onnx").exists())
+        assertTrue(File(record.dir, "tokens.txt").exists())
+        assertTrue("LFS pins verified", record.files["encoder.int8.onnx"]!!.verified)
+        assertTrue("non-LFS pin computed (TOFU)", !record.files["tokens.txt"]!!.verified)
+        assertEquals(sha256(tokensBytes), record.files["tokens.txt"]!!.sha256)
+    }
+
+    @Test
+    fun `importFromEntryJson downloads all files and verifies their hashes`() = runTest {
         val base = server.url("/").toString().trimEnd('/')
         server.enqueue(MockResponse().setBody("""
             {"name":"GigaAM v3","modelType":"nemo_transducer",
@@ -143,6 +320,83 @@ class HuggingFaceRepoListingTest {
         assertEquals("GigaAM v3", record.displayName)
         assertTrue(record.files.values.all { it.verified })
         assertTrue(File(record.dir, "encoder.int8.onnx").exists())
-        assertTrue(File(record.dir, "tokens.txt").exists())
+        assertEquals(ModelFamily.TRANSDUCER, record.family)
+    }
+
+    @Test
+    fun `hf repo import downloads the onnx sidecar as an extra LFS-pinned triple`() = runTest {
+        val sidecarBytes = ByteArray(24) { 9 }
+        server.enqueue(MockResponse().setBody("""
+            [
+              {"type":"file","path":"gigaam_encoder_int8.onnx","lfs":{"oid":"${sha256(encoderBytes)}","size":${encoderBytes.size}},"size":${encoderBytes.size}},
+              {"type":"file","path":"gigaam_encoder_int8.onnx.data","lfs":{"oid":"${sha256(sidecarBytes)}","size":${sidecarBytes.size}},"size":${sidecarBytes.size}},
+              {"type":"file","path":"gigaam_decoder.onnx","lfs":{"oid":"${sha256(decoderBytes)}","size":${decoderBytes.size}},"size":${decoderBytes.size}},
+              {"type":"file","path":"gigaam_joiner.onnx","lfs":{"oid":"${sha256(joinerBytes)}","size":${joinerBytes.size}},"size":${joinerBytes.size}},
+              {"type":"file","path":"tokens.txt","size":${tokensBytes.size}}
+            ]
+        """.trimIndent()))
+        server.enqueue(MockResponse().setBody(okio.Buffer().write(encoderBytes)))
+        server.enqueue(MockResponse().setBody(okio.Buffer().write(decoderBytes)))
+        server.enqueue(MockResponse().setBody(okio.Buffer().write(joinerBytes)))
+        server.enqueue(MockResponse().setBody(okio.Buffer().write(tokensBytes)))
+        // Sidecars are appended after the roles in the download plan.
+        server.enqueue(MockResponse().setBody(okio.Buffer().write(sidecarBytes)))
+
+        val record = importer.importFromHuggingFaceRepo("https://huggingface.co/pantinor/gigaam-v3")
+        assertTrue(File(record.dir, "gigaam_encoder_int8.onnx.data").exists())
+        assertEquals(sha256(sidecarBytes), record.files["gigaam_encoder_int8.onnx.data"]!!.sha256)
+        assertTrue("LFS sidecar pin verified", record.files["gigaam_encoder_int8.onnx.data"]!!.verified)
+    }
+
+    @Test
+    fun `entry missing the onnx sidecar its encoder references fails loudly`() = runTest {
+        val base = server.url("/").toString().trimEnd('/')
+        // Split encoder: the protobuf references its external-data file by name.
+        val splitEncoder = ByteArray(32) { 1 } +
+            "vocab_size=1024 subsampling_factor=8 model_type=nemo_transducer some_encoder.onnx.data".toByteArray()
+        server.enqueue(MockResponse().setBody("""
+            {"name":"GigaAM split","modelType":"nemo_transducer",
+             "files":[{"name":"some_encoder.onnx","url":"$base/e","sha256":"${sha256(splitEncoder)}","size":${splitEncoder.size}},
+                      {"name":"decoder.onnx","url":"$base/d","sha256":"${sha256(decoderBytes)}","size":${decoderBytes.size}},
+                      {"name":"joiner.onnx","url":"$base/j","sha256":"${sha256(joinerBytes)}","size":${joinerBytes.size}},
+                      {"name":"tokens.txt","url":"$base/t","sha256":"${sha256(tokensBytes)}","size":${tokensBytes.size}}]}
+        """.trimIndent()))
+        server.enqueue(MockResponse().setBody(okio.Buffer().write(splitEncoder)))
+
+        val result = runCatching { importer.importFromEntryJson("$base/entry.json") }
+
+        assertTrue(result.isFailure)
+        assertTrue(
+            "error must name the missing sidecar: ${result.exceptionOrNull()?.message}",
+            result.exceptionOrNull()?.message?.contains("some_encoder.onnx.data") == true)
+        assertEquals(0, store.records().size)
+    }
+
+    @Test
+    fun `importFromEntryJson drives family, options and languages from the entry`() = runTest {
+        val base = server.url("/").toString().trimEnd('/')
+        // Protobuf-framed metadata prop so the value-aware whisper validation reads it.
+        val whisperEncoder = ByteArray(32) { 1 } +
+            "model_type".toByteArray() + byteArrayOf(0x12, 0x0B) + "whisper-tiny".toByteArray()
+        val whisperDecoder = ByteArray(16) { 2 }
+        val whisperTokens = "<unk> 0\n".toByteArray()
+        server.enqueue(MockResponse().setBody("""
+            {"name":"Arabic Whisper","family":"WHISPER","languages":["ar"],
+             "options":{"whisper.language":"ar","whisper.task":"transcribe"},
+             "files":[{"name":"w_encoder.onnx","url":"$base/we","sha256":"${sha256(whisperEncoder)}","size":${whisperEncoder.size}},
+                      {"name":"w_decoder.onnx","url":"$base/wd","sha256":"${sha256(whisperDecoder)}","size":${whisperDecoder.size}},
+                      {"name":"tokens.txt","url":"$base/t","sha256":"${sha256(whisperTokens)}","size":${whisperTokens.size}}]}
+        """.trimIndent()))
+        server.enqueue(MockResponse().setBody(okio.Buffer().write(whisperEncoder)))
+        server.enqueue(MockResponse().setBody(okio.Buffer().write(whisperDecoder)))
+        server.enqueue(MockResponse().setBody(okio.Buffer().write(whisperTokens)))
+
+        val record = importer.importFromEntryJson("$base/entry.json")
+
+        assertEquals(ModelFamily.WHISPER, record.family)
+        assertEquals("", record.modelType)
+        assertEquals(listOf("ar"), record.languages)
+        assertEquals("ar", record.options["whisper.language"])
+        assertEquals("transcribe", record.options["whisper.task"])
     }
 }

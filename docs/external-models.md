@@ -1,12 +1,29 @@
 # External Models
 
-Anti-Vocale supports importing user-provided sherpa-onnx transducer models alongside the built-in backends. This document describes the import formats and how to share models with other users.
+Anti-Vocale supports importing user-provided sherpa-onnx models alongside the built-in backends. Four model families are supported: Transducer, Whisper, CTC, and SenseVoice. This document describes the import formats and how to share models with other users.
+
+## Model families
+
+The family selector above the import buttons picks the architecture; expected files, the record's `modelType`, and family options per family:
+
+| Family | Expected files | Record `modelType` | Options |
+|---|---|---|---|
+| Transducer (NeMo/Zipformer) | `encoder` + `decoder` + `joiner`/`joint` + tokens `.onnx`/`.txt` | `nemo_transducer` (default), `""` (zipformer), `conformer_transducer` | none |
+| Whisper | `encoder` + `decoder` + tokens | `""` | `whisper.language` (optional; blank = auto, falls back to the record's first language) |
+| CTC | `encoder` + tokens | `nemo_ctc` or `zipformer_ctc` (explicit, no default) | none |
+| SenseVoice | `model` + tokens | `""` | `sensevoice.language` (optional), `sensevoice.itn` (`true`/`false`) |
+
+Exact file names don't matter; roles are matched by keyword (CTC prefers `ctc`-hinted candidates, Transducer prefers `rnnt`-hinted tokens). A joiner/joint file in the candidate pool is rejected for Whisper and CTC as a transducer signature, so a wrong family fails at import time instead of crashing at transcription.
+
+**ONNX split files**: any sibling `<file>.onnx.data` (or `.onnx.weights`) external-data sidecar of a planned `.onnx` file is imported too, keeping its source base name so the ONNX runtime resolves it by co-location. Catalog entries list sidecars as separate `files` entries.
+
+The optional languages field (comma or space separated codes, all families) is stored on the record; for Whisper it also doubles as the default language when no explicit option is set.
 
 ## Import sources
 
 ### 1. Folder import (SAF)
 
-Pick a directory containing the four required files (exact names don't matter, roles are matched by keyword):
+Pick a directory containing the family's files (exact names don't matter, roles are matched by keyword):
 
 | Role | Matches | Example |
 |---|---|---|
@@ -71,8 +88,10 @@ A single-model manifest with integrity pins. This is how third parties share a m
 | Field | Required | Description |
 |---|---|---|
 | `name` | yes | Display name shown in the Model tab |
-| `modelType` | no (default `nemo_transducer`) | sherpa architecture: `nemo_transducer`, `""` (zipformer), or `conformer_transducer` |
-| `languages` | no | ISO codes for display (`["ru"]`) |
+| `family` | no (default `TRANSDUCER`) | one of `TRANSDUCER`, `WHISPER`, `CTC`, `SENSE_VOICE`; unknown values are rejected |
+| `modelType` | no (family-aware default) | `nemo_transducer` for TRANSDUCER without the field, `""` for WHISPER/SENSE_VOICE; CTC requires `nemo_ctc` or `zipformer_ctc` |
+| `languages` | yes for new entries (`family` present) | normalized ISO codes (`["ar"]`); doubles as the Whisper default language |
+| `options` | no | flat map of family options (`{"whisper.language": "ar"}`) |
 | `files` | yes | Array, one entry per file |
 | `files[].name` | yes | Source file name (role-matched by keyword) |
 | `files[].url` | yes | Direct download URL (must support HTTP Range for resume) |
@@ -81,22 +100,20 @@ A single-model manifest with integrity pins. This is how third parties share a m
 
 Host the JSON anywhere reachable (GitHub gist, HF repo, personal site); share the URL.
 
-## Architecture selector
+## Family selector
 
-The dropdown above the import buttons sets the sherpa `modelType`:
+The dropdown above the import buttons sets the model family (see the table above). Below it, a conditional options panel: Whisper gets an optional language field, SenseVoice an optional language plus an inverse-text-normalization switch, CTC a subtype selector (`nemo_ctc` / `zipformer_ctc`). The languages field applies to all families.
 
-- **NeMo transducer** (default): covers GigaAM, Parakeet, most NVIDIA NeMo exports. Requires `vocab_size`, `subsampling_factor`, `model_type` metadata in the encoder ONNX.
-- **Zipformer transducer**: for zipformer-family models. Requires only `vocab_size`.
-- **Conformer transducer**: for conformer-family exports.
+The URL import dialog also offers autocomplete suggestions from a small bundled catalog (searchable by name or language code, e.g. "ar" or "arabic"); tapping a suggestion fills the URL and the family.
 
-A wrong choice fails cleanly at import time (metadata validation) or at first transcription (native crash with no error). If the latter happens, delete and re-import with the other architecture selected.
+A wrong family fails cleanly at import time (metadata validation or the structural discriminators) or at first transcription (native crash with no error). If the latter happens, delete and re-import with the other family selected.
 
 ## Verification
 
 Every import is verified:
 
-- All four files present and complete before registration
-- Encoder ONNX metadata checked against the selected architecture's requirements
+- All family files (plus any `.onnx.data` sidecars) present and complete before registration
+- Metadata file (per family) checked against the selected family's requirements
 - SHA-256 pins verified on download (or computed trust-on-first-use for HF plain files)
 - Disk space pre-flight before any download or copy
 

@@ -104,21 +104,49 @@ class SherpaBackend(
             requiredKeys: List<String>,
             maxScanBytes: Long = ONNX_METADATA_SCAN_LIMIT
         ): List<String> {
-            if (!file.exists() || file.length() == 0L) return requiredKeys
+            // Treat unreadable as "all metadata missing" so the caller shows a clear
+            // ModelLoadError instead of letting an IOException propagate uncaught.
+            val data = readTail(file, maxScanBytes) ?: return requiredKeys
+            return missingOnnxMetadataKeys(data, requiredKeys)
+        }
+
+        /**
+         * Key-presence check plus one value lookup in a SINGLE tail read: returns the
+         * missing required keys together with the value of [valueKey] (null when
+         * [valueKey] is null, or when the key/file is absent or unreadable). Serves
+         * callers that run both [missingOnnxMetadata] and [onnxMetadataValue] on the
+         * same file (importer registration, external engine init) without reading the
+         * 2MB tail twice.
+         */
+        fun missingOnnxMetadataAndValue(
+            file: File,
+            requiredKeys: List<String>,
+            valueKey: String?,
+            maxScanBytes: Long = ONNX_METADATA_SCAN_LIMIT
+        ): Pair<List<String>, String?> {
+            val data = readTail(file, maxScanBytes) ?: return requiredKeys to null
+            val value = valueKey?.let { onnxMetadataValueBytes(data, it) }
+            return missingOnnxMetadataKeys(data, requiredKeys) to value
+        }
+
+        /**
+         * Reads the last [maxScanBytes] of [file]. Null when the file is empty/missing
+         * or unreadable (the sentinel each caller picks for its own error handling).
+         */
+        private fun readTail(file: File, maxScanBytes: Long): ByteArray? {
+            if (!file.exists() || file.length() == 0L) return null
             val fileSize = file.length()
             val scanStart = maxOf(0L, fileSize - maxScanBytes)
             val data = ByteArray((fileSize - scanStart).toInt())
-            try {
+            return try {
                 java.io.RandomAccessFile(file, "r").use { raf ->
                     raf.seek(scanStart)
                     raf.readFully(data)
                 }
+                data
             } catch (e: java.io.IOException) {
-                // Treat unreadable as "all metadata missing" so the caller shows a clear
-                // ModelLoadError instead of letting an IOException propagate uncaught.
-                return requiredKeys
+                null
             }
-            return missingOnnxMetadataKeys(data, requiredKeys)
         }
 
         /**
@@ -134,18 +162,90 @@ class SherpaBackend(
             }
         }
 
-        /** Returns true if [haystack] contains [needle] as a contiguous byte subsequence. */
+        /**
+         * Returns the VALUE of metadata prop [key] in [file], or null when absent/unreadable.
+         *
+         * ONNX metadata_props are protobuf StringStringEntryProto pairs (field 1 = key,
+         * field 2 = value, both length-prefixed). The scan reads the file tail once (same
+         * window as [missingOnnxMetadata]), locates the key bytes, and parses the following
+         * length-delimited value (tag 0x12 + varint length). Key occurrences not followed by
+         * a value tag are skipped, so stray key text cannot fool the parser.
+         */
+        fun onnxMetadataValue(
+            file: File,
+            key: String,
+            maxScanBytes: Long = ONNX_METADATA_SCAN_LIMIT
+        ): String? {
+            val data = readTail(file, maxScanBytes) ?: return null
+            return onnxMetadataValueBytes(data, key)
+        }
+
+        /** Pure (no I/O) value parser behind [onnxMetadataValue], unit-testable directly. */
+        @JvmStatic
         @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
-        internal fun containsSubsequence(haystack: ByteArray, needle: ByteArray): Boolean {
-            val lastStart = haystack.size - needle.size
-            if (lastStart < 0) return false
-            for (i in 0..lastStart) {
+        internal fun onnxMetadataValueBytes(data: ByteArray, key: String): String? {
+            val needle = key.toByteArray(Charsets.UTF_8)
+            if (needle.isEmpty()) return null
+            var i = indexOfSubsequence(data, needle)
+            while (i >= 0) {
+                val p = parseLengthPrefixedValue(data, i + needle.size)
+                if (p != null) return p
+                i = indexOfSubsequence(data, needle, fromIndex = i + 1)
+            }
+            return null
+        }
+
+        /**
+         * Parses a protobuf length-delimited field value at [start]: tag 0x12 (field 2,
+         * wire type 2), varint length, then that many UTF-8 bytes. Null when [start] does
+         * not hold that shape (the key occurrence is not a metadata entry).
+         */
+        private fun parseLengthPrefixedValue(data: ByteArray, start: Int): String? {
+            if (start >= data.size || data[start] != 0x12.toByte()) return null
+            var p = start + 1
+            var len = 0L
+            var shift = 0
+            while (p < data.size) {
+                val b = data[p++].toInt() and 0xFF
+                len = len or ((b and 0x7F).toLong() shl shift)
+                if (b and 0x80 == 0) break
+                shift += 7
+                if (shift > 35) return null
+            }
+            if (len < 1 || len > data.size - p) return null
+            return String(data, p, len.toInt(), Charsets.UTF_8)
+        }
+
+        /**
+         * Index of the first occurrence of [needle] as a contiguous byte subsequence of
+         * [haystack][0..[length]) at or after [fromIndex], -1 when absent. The single
+         * byte-scanner definition: the metadata checks here and the importer's
+         * split-ONNX sidecar scan both express their loops through it. [length] allows
+         * scanning a prefix of a larger reused buffer.
+         */
+        @JvmStatic
+        @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+        internal fun indexOfSubsequence(
+            haystack: ByteArray,
+            needle: ByteArray,
+            fromIndex: Int = 0,
+            length: Int = haystack.size,
+        ): Int {
+            val lastStart = length - needle.size
+            var i = maxOf(fromIndex, 0)
+            while (i <= lastStart) {
                 var j = 0
                 while (j < needle.size && haystack[i + j] == needle[j]) j++
-                if (j == needle.size) return true
+                if (j == needle.size) return i
+                i++
             }
-            return false
+            return -1
         }
+
+        /** Returns true if [haystack] contains [needle] as a contiguous byte subsequence. */
+        @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+        internal fun containsSubsequence(haystack: ByteArray, needle: ByteArray): Boolean =
+            indexOfSubsequence(haystack, needle) >= 0
 
         /**
          * The file roles of a catalog [variant] resolved FROM THE CATALOG FILE NAMES

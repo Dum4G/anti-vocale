@@ -3,6 +3,7 @@ package com.antivocale.app.ui.tabs
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -30,12 +31,16 @@ import com.antivocale.app.R
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.antivocale.app.data.ModelDownloader
+import com.antivocale.app.data.ExternalCatalog
+import com.antivocale.app.data.ExternalModelRecord
+import com.antivocale.app.data.ModelFamily
 import com.antivocale.app.data.catalog.CatalogDisplay
 import com.antivocale.app.data.catalog.CatalogEntry
 import com.antivocale.app.data.catalog.CatalogStringKeys
 import com.antivocale.app.data.download.DownloadState
 import com.antivocale.app.service.InferenceService
 import com.antivocale.app.transcription.CatalogVariantUi
+import com.antivocale.app.transcription.ModelFamilySupport
 import com.antivocale.app.transcription.ModelInfoProvider
 import com.antivocale.app.transcription.ModelVariant
 import com.antivocale.app.transcription.SherpaModelDownloader
@@ -80,6 +85,26 @@ fun ModelTab(
 
     var modelInfoVariant by remember { mutableStateOf<ModelVariant?>(null) }
     var externalToDelete by remember { mutableStateOf<com.antivocale.app.data.ExternalModelRecord?>(null) }
+    // Shared family selection + import options for both import paths (folder and URL).
+    var externalImport by remember { mutableStateOf(ExternalImportUiState()) }
+
+    // Folder picker launcher for external-model imports (OpenDocumentTree; SAF copy in the VM).
+    val externalFolderPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocumentTree()
+    ) { uri ->
+        uri?.let {
+            context.contentResolver.takePersistableUriPermission(
+                it,
+                android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+            )
+            viewModel.importExternalFromFolder(
+                context, it, externalImport.family,
+                ctcModelType = externalImport.ctcModelType,
+                options = externalImport.options(),
+                languages = externalImport.languageCodes(),
+            )
+        }
+    }
 
     // Snackbar host state for displaying errors
     val snackbarHostState = remember { SnackbarHostState() }
@@ -433,6 +458,9 @@ fun ModelTab(
                 ExternalModelsSection(
                     viewModel = viewModel,
                     activeBackendId = activeBackendId,
+                    folderPicker = { externalFolderPicker.launch(null) },
+                    selection = externalImport,
+                    onSelectionChange = { externalImport = it },
                     onDeleteRequest = { externalToDelete = it }
                 )
             }
@@ -799,23 +827,82 @@ private fun CatalogModelSection(
 // ==================== External models section (v2a) ====================
 
 /**
- * Imported external models: one card per record plus the two JSON-only import
- * actions (paste text / URL). The standing notices (single-pass risk,
- * wrong-family crash) ride along every card.
+ * Family selection + conditional options for external-model imports. One immutable
+ * holder so both import paths (folder and URL) share a single selection state.
+ */
+internal data class ExternalImportUiState(
+    val family: ModelFamily = ModelFamily.TRANSDUCER,
+    val ctcModelType: String = "nemo_ctc",
+    val languages: String = "",
+    val whisperLanguage: String = "",
+    val sensevoiceLanguage: String = "",
+    val sensevoiceItn: Boolean = false,
+) {
+    /** Family-specific importer options; blank optional fields are omitted. */
+    fun options(): Map<String, String> = when (family) {
+        ModelFamily.WHISPER ->
+            if (whisperLanguage.isBlank()) emptyMap()
+            else mapOf(ModelFamilySupport.OPTION_WHISPER_LANGUAGE to whisperLanguage.trim())
+        ModelFamily.SENSE_VOICE -> buildMap {
+            if (sensevoiceLanguage.isNotBlank()) {
+                put(ModelFamilySupport.OPTION_SENSEVOICE_LANGUAGE, sensevoiceLanguage.trim())
+            }
+            put(ModelFamilySupport.OPTION_SENSEVOICE_ITN, sensevoiceItn.toString())
+        }
+        else -> emptyMap()
+    }
+
+    /** Comma/space separated language codes for the importer's languages parameter. */
+    fun languageCodes(): List<String> =
+        languages.split(',', ' ', ';').map { it.trim() }.filter { it.isNotEmpty() }
+}
+
+/**
+ * Imported external models: one card per record plus the two import actions and the
+ * shared family selector with its conditional options panel. The two standing notices
+ * (single-pass risk, wrong-family crash) ride along every card.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ExternalModelsSection(
     viewModel: ModelViewModel,
     activeBackendId: String,
-    onDeleteRequest: (com.antivocale.app.data.ExternalModelRecord) -> Unit,
+    folderPicker: () -> Unit,
+    selection: ExternalImportUiState,
+    onSelectionChange: (ExternalImportUiState) -> Unit,
+    onDeleteRequest: (ExternalModelRecord) -> Unit,
 ) {
     val records by viewModel.externalModels.collectAsState()
     val importState by viewModel.externalImportState.collectAsState()
+    val context = LocalContext.current
     var urlDialogOpen by remember { mutableStateOf(false) }
     var urlText by remember { mutableStateOf("") }
-    var pasteDialogOpen by remember { mutableStateOf(false) }
-    var pasteText by remember { mutableStateOf("") }
+    var dropdownExpanded by remember { mutableStateOf(false) }
+    var ctcExpanded by remember { mutableStateOf(false) }
+
+    // Bundled catalog index for the URL-dialog autocomplete (search by name or
+    // language), parsed lazily on the first dialog open instead of on every
+    // Models-tab composition. A read failure degrades to no suggestions, never
+    // a crash.
+    var catalogEntries by remember { mutableStateOf<List<ExternalCatalog.CatalogEntry>>(emptyList()) }
+    LaunchedEffect(urlDialogOpen) {
+        if (urlDialogOpen && catalogEntries.isEmpty()) {
+            catalogEntries = runCatching {
+                context.assets.open("external-catalog/index.json").use {
+                    it.readBytes().decodeToString()
+                }.let(ExternalCatalog::parseIndex)
+            }.getOrDefault(emptyList())
+        }
+    }
+
+    val familyOptions = remember {
+        listOf(
+            Triple(ModelFamily.TRANSDUCER, R.string.external_family_transducer, R.string.external_family_transducer_help),
+            Triple(ModelFamily.WHISPER, R.string.external_family_whisper, R.string.external_family_whisper_help),
+            Triple(ModelFamily.CTC, R.string.external_family_ctc, R.string.external_family_ctc_help),
+            Triple(ModelFamily.SENSE_VOICE, R.string.external_family_sense_voice, R.string.external_family_sense_voice_help),
+        )
+    }
 
     // Outer section Card matching the curated sections (GigaAM, Nemotron):
     // surfaceVariant background, header with icon + title + description, 16dp padding.
@@ -842,15 +929,133 @@ private fun ExternalModelsSection(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // JSON-only import (spec decision): the entry JSON declares everything
-            // (name, description, modelType, languages, files) — no shared selector.
+            // Family selector visible for BOTH import paths (folder and URL). Each
+            // entry carries a help line listing the expected files, mirroring the
+            // label + description pattern of the advanced-section button.
+            ExposedDropdownMenuBox(
+                expanded = dropdownExpanded,
+                onExpandedChange = { dropdownExpanded = it },
+                modifier = Modifier.padding(bottom = 8.dp)
+            ) {
+                OutlinedTextField(
+                    value = stringResource(familyOptions.first { it.first == selection.family }.second),
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text(stringResource(R.string.external_family)) },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = dropdownExpanded) },
+                    modifier = Modifier.fillMaxWidth().menuAnchor()
+                )
+                ExposedDropdownMenu(expanded = dropdownExpanded, onDismissRequest = { dropdownExpanded = false }) {
+                    familyOptions.forEach { (value, labelRes, helpRes) ->
+                        DropdownMenuItem(
+                            text = {
+                                Column {
+                                    Text(stringResource(labelRes))
+                                    Text(
+                                        stringResource(helpRes),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            },
+                            onClick = {
+                                onSelectionChange(selection.copy(family = value))
+                                dropdownExpanded = false
+                            }
+                        )
+                    }
+                }
+            }
+
+            // Conditional options panel below the selector.
+            when (selection.family) {
+                ModelFamily.WHISPER -> OutlinedTextField(
+                    value = selection.whisperLanguage,
+                    onValueChange = { onSelectionChange(selection.copy(whisperLanguage = it)) },
+                    label = { Text(stringResource(R.string.external_option_language)) },
+                    placeholder = { Text(stringResource(R.string.external_option_language_hint)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+                )
+                ModelFamily.SENSE_VOICE -> {
+                    OutlinedTextField(
+                        value = selection.sensevoiceLanguage,
+                        onValueChange = { onSelectionChange(selection.copy(sensevoiceLanguage = it)) },
+                        label = { Text(stringResource(R.string.external_option_language)) },
+                        placeholder = { Text(stringResource(R.string.external_option_language_hint)) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            stringResource(R.string.external_option_itn),
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Switch(
+                            checked = selection.sensevoiceItn,
+                            onCheckedChange = { onSelectionChange(selection.copy(sensevoiceItn = it)) }
+                        )
+                    }
+                }
+                ModelFamily.CTC -> ExposedDropdownMenuBox(
+                    expanded = ctcExpanded,
+                    onExpandedChange = { ctcExpanded = it },
+                    modifier = Modifier.padding(bottom = 8.dp)
+                ) {
+                    OutlinedTextField(
+                        value = if (selection.ctcModelType == "zipformer_ctc")
+                            stringResource(R.string.external_ctc_subtype_zipformer)
+                        else stringResource(R.string.external_ctc_subtype_nemo),
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text(stringResource(R.string.external_ctc_subtype)) },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = ctcExpanded) },
+                        modifier = Modifier.fillMaxWidth().menuAnchor()
+                    )
+                    ExposedDropdownMenu(expanded = ctcExpanded, onDismissRequest = { ctcExpanded = false }) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.external_ctc_subtype_nemo)) },
+                            onClick = {
+                                onSelectionChange(selection.copy(ctcModelType = "nemo_ctc"))
+                                ctcExpanded = false
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.external_ctc_subtype_zipformer)) },
+                            onClick = {
+                                onSelectionChange(selection.copy(ctcModelType = "zipformer_ctc"))
+                                ctcExpanded = false
+                            }
+                        )
+                    }
+                }
+                else -> {}
+            }
+
+            // Languages field for ALL families: stored on the record and used as the
+            // Whisper default language when no explicit option is set.
+            OutlinedTextField(
+                value = selection.languages,
+                onValueChange = { onSelectionChange(selection.copy(languages = it)) },
+                label = { Text(stringResource(R.string.external_languages)) },
+                placeholder = { Text(stringResource(R.string.external_languages_hint)) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+            )
+
             Row(modifier = Modifier.fillMaxWidth()) {
             Button(
-                onClick = { pasteDialogOpen = true },
+                onClick = folderPicker,
                 enabled = importState !is ModelViewModel.ExternalImportState.Importing,
                 modifier = Modifier.weight(1f)
             ) {
-                Text(stringResource(R.string.external_import_json))
+                Icon(Icons.Default.FolderOpen, contentDescription = null)
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(stringResource(R.string.external_import_folder))
             }
             Spacer(modifier = Modifier.width(8.dp))
             OutlinedButton(
@@ -912,56 +1117,59 @@ private fun ExternalModelsSection(
         }
     }
 
-    if (pasteDialogOpen) {
-        androidx.compose.material3.AlertDialog(
-            onDismissRequest = { pasteDialogOpen = false },
-            title = { Text(stringResource(R.string.external_json_dialog_title)) },
-            text = {
-                OutlinedTextField(
-                    value = pasteText,
-                    onValueChange = { pasteText = it },
-                    placeholder = { Text(stringResource(R.string.external_json_hint)) },
-                    minLines = 6,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            },
-            confirmButton = {
-                androidx.compose.material3.TextButton(
-                    onClick = {
-                        pasteDialogOpen = false
-                        if (pasteText.isNotBlank()) {
-                            viewModel.importExternalFromJsonText(pasteText.trim())
-                        }
-                    }
-                ) { Text(stringResource(R.string.external_import)) }
-            },
-            dismissButton = {
-                androidx.compose.material3.TextButton(onClick = { pasteDialogOpen = false }) {
-                    Text(stringResource(android.R.string.cancel))
-                }
-            }
-        )
-    }
-
     if (urlDialogOpen) {
         androidx.compose.material3.AlertDialog(
             onDismissRequest = { urlDialogOpen = false },
             title = { Text(stringResource(R.string.external_url_dialog_title)) },
             text = {
-                OutlinedTextField(
-                    value = urlText,
-                    onValueChange = { urlText = it },
-                    placeholder = { Text(stringResource(R.string.external_url_hint)) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                Column {
+                    OutlinedTextField(
+                        value = urlText,
+                        onValueChange = { urlText = it },
+                        placeholder = { Text(stringResource(R.string.external_url_hint)) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    // Catalog autocomplete: suggestions filtered by the typed text
+                    // over name + languages, filling URL and family on tap. Hidden
+                    // once the text looks like a URL being typed or pasted.
+                    if (!urlText.startsWith("http")) {
+                        ExternalCatalog
+                            .filter(catalogEntries, urlText)
+                            .forEach { entry ->
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            urlText = entry.entryUrl
+                                            onSelectionChange(selection.copy(family = entry.family))
+                                        }
+                                        .padding(vertical = 8.dp)
+                                ) {
+                                    Text(entry.name, style = MaterialTheme.typography.bodyMedium)
+                                    Text(
+                                        entry.languages.joinToString(", "),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                    }
+                    // Architecture selector is in the section above (visible for both
+                    // import paths), not duplicated here.
+                }
             },
             confirmButton = {
                 androidx.compose.material3.TextButton(
                     onClick = {
                         urlDialogOpen = false
                         if (urlText.isNotBlank()) {
-                            viewModel.importExternalFromUrl(urlText.trim())
+                            viewModel.importExternalFromUrl(
+                                urlText.trim(), selection.family,
+                                ctcModelType = selection.ctcModelType,
+                                options = selection.options(),
+                                languages = selection.languageCodes(),
+                            )
                         }
                     }
                 ) { Text(stringResource(R.string.external_import)) }
@@ -1009,20 +1217,12 @@ private fun ExternalModelCard(
                     Column {
                         Text(record.displayName, style = MaterialTheme.typography.titleMedium)
                         Text(
-                            record.modelType.ifBlank { "zipformer" } +
+                            record.typeLabel +
                                 " · " + com.antivocale.app.util.formatFileSize(record.sizeBytes) +
                                 if (record.languages.isEmpty()) "" else " · " + record.languages.joinToString(", "),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        record.description?.takeIf { it.isNotBlank() }?.let { desc ->
-                            Text(
-                                desc,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(top = 4.dp)
-                            )
-                        }
                     }
                 }
                 if (isActive) {

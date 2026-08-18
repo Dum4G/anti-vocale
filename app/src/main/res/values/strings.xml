@@ -804,13 +804,11 @@
     <string name="share_target_external">Anti-Vocale (External)</string>
     <string name="external_none_imported">No external models imported</string>
     <string name="external_section_title">External models</string>
-    <string name="external_import_json">Paste JSON</string>
-    <string name="external_json_dialog_title">Import external model (JSON)</string>
-    <string name="external_json_hint">Paste the model\'s catalog-entry JSON</string>
     <string name="model_advanced_section">Advanced</string>
     <string name="model_advanced_description">Manually import model files</string>
+    <string name="external_import_folder">Select folder</string>
     <string name="external_import_url">Import from URL</string>
-    <string name="external_url_hint">URL of a catalog-entry JSON (ends in .json)</string>
+    <string name="external_url_hint">HuggingFace repo or catalog-entry JSON URL</string>
     <string name="external_url_dialog_title">Import external model</string>
     <string name="external_import">Import</string>
     <string name="external_importing">Importing model…</string>
@@ -818,8 +816,25 @@
     <string name="external_imported">Imported %1$s</string>
     <string name="external_delete_confirm">Delete external model %1$s?</string>
     <string name="external_deleted">%1$s deleted</string>
+    <string name="external_family">Model family</string>
+    <string name="external_family_transducer">Transducer (NeMo/Zipformer)</string>
+    <string name="external_family_transducer_help">Expects encoder + decoder + joiner + tokens files</string>
+    <string name="external_family_whisper">Whisper</string>
+    <string name="external_family_whisper_help">Expects encoder + decoder + tokens files</string>
+    <string name="external_family_ctc">CTC</string>
+    <string name="external_family_ctc_help">Expects encoder + tokens files</string>
+    <string name="external_family_sense_voice">SenseVoice</string>
+    <string name="external_family_sense_voice_help">Expects model + tokens files</string>
+    <string name="external_option_language">Language (optional)</string>
+    <string name="external_option_language_hint">e.g. ar, en, it (blank = auto)</string>
+    <string name="external_option_itn">Inverse text normalization</string>
+    <string name="external_ctc_subtype">CTC subtype</string>
+    <string name="external_ctc_subtype_nemo">NeMo CTC</string>
+    <string name="external_ctc_subtype_zipformer">Zipformer CTC</string>
+    <string name="external_languages">Languages (optional)</string>
+    <string name="external_languages_hint">comma or space separated, e.g. ar, en</string>
     <string name="external_notice_single_pass">Single-pass transcription: very long audio may fail with large models. Trim the audio or use a smaller model.</string>
-    <string name="external_notice_family">If transcription crashes with no error, the model\'s declared architecture may be wrong: fix the JSON\'s modelType and re-import.</string>
+    <string name="external_notice_family">If transcription crashes with no error, the architecture may be wrong: delete and re-import the model with a different architecture selected.</string>
 
     <!-- Advanced sharing settings -->
     <string name="share_targets_title">Share Targets</string>

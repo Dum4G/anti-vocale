@@ -100,4 +100,44 @@ class ExternalModelStoreTest {
         val decoded = ExternalModelListJson.decode(raw)
         assertEquals(listOf(rec), decoded)
     }
+
+    @Test
+    fun `legacy record without options decodes with emptyMap`() = runTest {
+        val raw = """[{"id":"aaa","displayName":"Old","dir":"/old","family":"TRANSDUCER","modelType":"nemo_transducer","languages":["en"],"source":"LOCAL","sourceUrl":null,"files":{"encoder.onnx":{"sha256":"abc1234567890123456789012345678901234567890123456789012345678901","verified":true}},"sizeBytes":100,"importedAt":1000}]"""
+        val decoded = ExternalModelListJson.decode(raw)
+        assertEquals(1, decoded.size)
+        assertEquals(emptyMap<String, String>(), decoded.single().options)
+    }
+
+    @Test
+    fun `record with explicit null options decodes with emptyMap`() = runTest {
+        // Test null-tolerance: "options":null should decode to emptyMap, not throw
+        val raw = """[{"id":"bbb","displayName":"Null Options","dir":"/null","family":"TRANSDUCER","modelType":"nemo_transducer","languages":["en"],"source":"LOCAL","sourceUrl":null,"options":null,"files":{"encoder.onnx":{"sha256":"def4567890123456789012345678901234567890123456789012345678901234","verified":true}},"sizeBytes":100,"importedAt":2000}]"""
+        val decoded = ExternalModelListJson.decode(raw)
+        assertEquals(1, decoded.size)
+        assertEquals(emptyMap<String, String>(), decoded.single().options)
+    }
+
+    @Test
+    fun `record with options round-trips encode and decode`() = runTest {
+        val rec = record().copy(options = mapOf("whisper.language" to "ar"))
+        val json = rec.toJson().toString()
+        val decoded = ExternalModelRecord.fromJson(org.json.JSONObject(json))
+        assertEquals(mapOf("whisper.language" to "ar"), decoded!!.options)
+    }
+
+    @Test
+    fun `typeLabel falls back to the family name when modelType is blank`() {
+        // WHISPER/SENSE_VOICE records carry a blank modelType by design; the card
+        // must not render them as "zipformer" (bug seen on device, TASK-331).
+        val whisper = record().copy(family = ModelFamily.WHISPER, modelType = "", languages = emptyList())
+        assertEquals("whisper", whisper.typeLabel)
+
+        val senseVoice = record().copy(family = ModelFamily.SENSE_VOICE, modelType = "")
+        assertEquals("sense_voice", senseVoice.typeLabel)
+
+        // Explicit modelTypes always win.
+        assertEquals("nemo_transducer", record().typeLabel)
+        assertEquals("zipformer_ctc", record().copy(family = ModelFamily.CTC, modelType = "zipformer_ctc").typeLabel)
+    }
 }

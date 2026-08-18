@@ -13,9 +13,10 @@ import com.antivocale.app.BuildConfig
 import com.antivocale.app.data.ModelDownloader
 import com.antivocale.app.data.PreferencesManager
 import com.antivocale.app.data.ShareTargetManager
-import com.antivocale.app.data.ExternalModelImporter
+import com.antivocale.app.data.ExternalModelImportOperations
 import com.antivocale.app.data.ExternalModelRecord
 import com.antivocale.app.data.ExternalModelStore
+import com.antivocale.app.data.ModelFamily
 import com.antivocale.app.transcription.BackendRegistry
 import com.antivocale.app.transcription.BuiltInBackendIds
 import com.antivocale.app.transcription.CatalogVariantUi
@@ -67,7 +68,7 @@ class ModelViewModel @Inject constructor(
     @ApplicationContext private val ctx: Context,
     private val backendRegistry: BackendRegistry,
     private val externalModelStore: ExternalModelStore,
-    private val externalModelImporter: ExternalModelImporter,
+    private val externalModelImporter: ExternalModelImportOperations,
 ) : ViewModel() {
 
     val tokenState = tokenManager.tokenState
@@ -1267,13 +1268,44 @@ class ModelViewModel @Inject constructor(
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000),
                 PreferencesManager.DEFAULT_TRANSCRIPTION_BACKEND)
 
-    /** URL import: a HuggingFace repo URL or a catalog-entry JSON URL. */
-    fun importExternalFromUrl(url: String) =
-        runExternalImport("External URL") { externalModelImporter.importFromUrl(url) }
+    /**
+     * Folder import (SAF): the primary v2a entry. modelType is NOT passed for
+     * non-CTC families: the importer's family-aware resolveModelType governs
+     * (a stale UI string persisted on a non-transducer record is the bug that
+     * rule prevents). CTC has no safe default, so its subtype is explicit.
+     */
+    fun importExternalFromFolder(
+        context: Context,
+        treeUri: Uri,
+        family: ModelFamily,
+        ctcModelType: String = "nemo_ctc",
+        options: Map<String, String> = emptyMap(),
+        languages: List<String> = emptyList(),
+    ) = runExternalImport("External folder") {
+        externalModelImporter.importFromTreeUri(
+            context, treeUri,
+            modelType = ctcModelType(family, ctcModelType),
+            family = family, options = options, languages = languages)
+    }
 
-    /** JSON paste import: an entry JSON document. */
-    fun importExternalFromJsonText(text: String) =
-        runExternalImport("External JSON") { externalModelImporter.importFromEntryJsonText(text) }
+    /** URL import: a HuggingFace repo URL or a catalog-entry JSON URL. */
+    fun importExternalFromUrl(
+        url: String,
+        family: ModelFamily,
+        ctcModelType: String = "nemo_ctc",
+        options: Map<String, String> = emptyMap(),
+        languages: List<String> = emptyList(),
+    ) = runExternalImport("External URL") {
+        externalModelImporter.importFromUrl(
+            url,
+            modelType = ctcModelType(family, ctcModelType),
+            family = family, options = options, languages = languages)
+    }
+
+    /** Only CTC takes an explicit modelType (it selects the sherpa config subtype);
+     *  every other family passes null so the importer default applies. */
+    private fun ctcModelType(family: ModelFamily, ctcModelType: String): String? =
+        if (family == ModelFamily.CTC) ctcModelType else null
 
     /** Shared import scaffolding: progress state, IO dispatching, and the failure tail. */
     private fun runExternalImport(label: String, block: suspend () -> ExternalModelRecord) {

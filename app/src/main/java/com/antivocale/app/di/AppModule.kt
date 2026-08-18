@@ -75,7 +75,7 @@ object AppModule {
         store: ExternalModelStore,
         @ApplicationContext context: Context,
         okHttpClient: OkHttpClient,
-    ): ExternalModelImporter =
+    ): com.antivocale.app.data.ExternalModelImportOperations =
         ExternalModelImporter(
             store = store,
             filesRoot = { java.io.File(context.filesDir, "models/external") },

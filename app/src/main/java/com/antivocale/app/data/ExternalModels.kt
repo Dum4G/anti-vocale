@@ -4,9 +4,30 @@ import android.util.Log
 import org.json.JSONArray
 import org.json.JSONObject
 
-enum class ModelFamily { TRANSDUCER }  // CTC, PARAFORMER, SENSE_VOICE, WHISPER arrive in v2b
+enum class ModelFamily { TRANSDUCER, WHISPER, CTC, SENSE_VOICE }
 
 enum class ExternalModelSource { LOCAL, URL, CATALOG }
+
+/**
+ * Internal helper: parse a JSONObject from a JSON object, returning emptyMap if absent or null.
+ * Used by both ExternalModelRecord.fromJson and ExternalModelEntryJson.parse.
+ */
+internal fun JSONObject.optStringMap(key: String): Map<String, String> {
+    val obj = optJSONObject(key) ?: return emptyMap()
+    return buildMap {
+        for (k in obj.keys()) {
+            put(k, obj.getString(k))
+        }
+    }
+}
+
+/**
+ * String elements of a JSONArray as a List (empty-mapping tolerant, like
+ * [optStringMap]). Single definition for the catalog index and entry-JSON
+ * language arrays.
+ */
+internal fun JSONArray.optStringList(): List<String> =
+    buildList { for (i in 0 until length()) add(optString(i)) }
 
 data class FilePin(val sha256: String, val verified: Boolean)
 
@@ -22,23 +43,27 @@ data class ExternalModelRecord(
     val files: Map<String, FilePin>,
     val sizeBytes: Long,
     val importedAt: Long,
-    /**
-     * Optional free-form description straight from the user's catalog-entry JSON
-     * (spec decision: external model descriptions/UI strings load from the JSON
-     * regardless of the device language — never localized).
-     */
-    val description: String? = null,
+    val options: Map<String, String> = emptyMap(),
 ) {
     val backendId: String get() = BACKEND_ID_PREFIX + id
+
+    /**
+     * Human-facing type label for cards. WHISPER and SENSE_VOICE records carry a
+     * blank modelType by design; the label falls back to the family name so a
+     * whisper import is never shown as "zipformer".
+     */
+    val typeLabel: String get() = modelType.ifBlank { family.name.lowercase() }
 
     fun toJson(): JSONObject = JSONObject().apply {
         put("id", id); put("displayName", displayName); put("dir", dir)
         put("family", family.name); put("modelType", modelType)
         put("languages", JSONArray(languages)); put("source", source.name)
         put("sourceUrl", sourceUrl ?: JSONObject.NULL)
-        put("description", description ?: JSONObject.NULL)
         put("files", JSONObject().apply { files.forEach { (n, p) -> put(n, JSONObject().put("sha256", p.sha256).put("verified", p.verified)) } })
         put("sizeBytes", sizeBytes); put("importedAt", importedAt)
+        val optsJson = JSONObject()
+        options.forEach { (k, v) -> optsJson.put(k, v) }
+        put("options", optsJson)
     }
 
     companion object {
@@ -66,7 +91,7 @@ data class ExternalModelRecord(
                 source = ExternalModelSource.valueOf(o.getString("source")),
                 sourceUrl = if (o.isNull("sourceUrl")) null else o.getString("sourceUrl"),
                 files = files, sizeBytes = o.getLong("sizeBytes"), importedAt = o.getLong("importedAt"),
-                description = if (o.has("description") && !o.isNull("description")) o.getString("description") else null,
+                options = o.optStringMap("options"),
             )
         } catch (e: Exception) {
             Log.w(TAG, "Malformed ExternalModelRecord; whole list will be rejected", e)
