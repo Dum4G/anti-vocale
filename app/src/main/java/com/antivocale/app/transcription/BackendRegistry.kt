@@ -1,5 +1,6 @@
 package com.antivocale.app.transcription
 
+import com.antivocale.app.R
 import android.content.Context
 import com.antivocale.app.data.ExternalModelRecord
 import com.antivocale.app.data.ExternalModelRecordsProvider
@@ -177,6 +178,9 @@ class BackendRegistry @Inject constructor(
     private fun llmDescriptor(): BackendDescriptor = BackendDescriptor(
         backendId = LlmTranscriptionBackend.BACKEND_ID,
         shareAlias = "com.antivocale.app.ShareGemma",
+        // Fixed localized label for parity with the other static backends: without
+        // it, path-derived labels leak file names into the retranscribe picker.
+        displayNameResId = R.string.llm_backend_name,
         // The LLM backend stores its model path in the generic preference.
         modelPathFlow = { it.modelPath },
         saveModelPath = { prefs, path -> prefs.saveModelPath(path) },

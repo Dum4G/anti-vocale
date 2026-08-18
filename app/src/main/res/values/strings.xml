@@ -28,6 +28,7 @@
 
     <!-- ViewModel status messages -->
     <string name="parakeet_name">Parakeet TDT</string>
+    <string name="llm_backend_name">Gemma (LiteRT-LM)</string>
     <string name="backend_model_ready">%1$s ready</string>
     <string name="backend_model_not_found">%1$s model not found</string>
     <string name="saved_model_found">Saved model found</string>

@@ -1,4 +1,4 @@
-﻿package com.antivocale.app.data
+package com.antivocale.app.data
 
 import android.content.Context
 import androidx.datastore.core.DataStore

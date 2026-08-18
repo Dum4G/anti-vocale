@@ -79,4 +79,22 @@ class LogsViewModelRetranscribeNamesTest {
         assertEquals(listOf("sherpa-onnx") , options.map { it.backendId })
         assertEquals(listOf("Parakeet TDT"), options.map { it.displayName })
     }
+
+    @Test
+    fun `gemma entry shows its fixed localized name not a path-derived label`() = runTest {
+        // The LLM descriptor is the only static one without a catalog display:
+        // parity with main requires the fixed "Gemma (LiteRT-LM)" label, not the
+        // path-derived fallback (review nit 2, PR #28).
+        every { manager.activeBackendId } returns MutableStateFlow("llm")
+        every { preferences.modelPath } returns flowOf("/data/models/gemma-4-e2b")
+        every { manager.getAvailableBackends() } returns listOf(mockk<com.antivocale.app.transcription.LlmTranscriptionBackend>(relaxed = true) {
+            every { id } returns "llm"
+            every { supportsAudio } returns true
+            every { displayName } returns "llm"
+        })
+
+        val options = viewModel.getAvailableAudioBackendsWithModels(context)
+
+        assertEquals(listOf("Gemma (LiteRT-LM)"), options.map { it.displayName })
+    }
 }
