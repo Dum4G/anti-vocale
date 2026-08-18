@@ -103,6 +103,10 @@ Host the JSON anywhere reachable (GitHub gist, HF repo, personal site); share th
 To have a model curated for everyone (bundled into the app, or listed in the
 import dialog's autocomplete catalog), see [model-integration.md](model-integration.md).
 
+### Mirrored upstreams (test catalog)
+
+The `docs/test-catalog/*.json` fixtures for the OpenVoiceOS NVIDIA conformer-transducer models point at the mirror [pantinor/ovos-conformer-mirrors](https://huggingface.co/pantinor/ovos-conformer-mirrors), not at the upstream OpenVoiceOS repos. The upstream exports cannot be used directly: their encoders carry no k2-fsa metadata (sherpa-onnx exits 255 with `No model_type in the metadata!`) and the prediction/joint networks ship as one combined `decoder_joint-model.int8.onnx` graph, while sherpa's `nemo_transducer` loader requires separate decoder and joiner files. The mirror keeps the weights byte-identical, injects the metadata sherpa requires (`model_type=nemo_transducer`, `vocab_size`, `subsampling_factor=4`, `normalize_type=per_feature`, `pred_rnn_layers`, `pred_hidden`), and splits the combined graph into `decoder-model.onnx` + `joiner-model.onnx` at the prediction-network output tensor. The mirror README documents the full provenance.
+
 ## Family selector
 
 The dropdown above the import buttons sets the model family (see the table above). Below it, a conditional options panel: Whisper gets an optional language field, SenseVoice an optional language plus an inverse-text-normalization switch, CTC a subtype selector (`nemo_ctc` / `zipformer_ctc`). The languages field applies to all families.

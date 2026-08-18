@@ -1,23 +1,31 @@
 {
-  "name": "Spanish Conformer (OpenVoiceOS)",
-  "modelType": "conformer_transducer",
-  "languages": ["es"],
+  "name": "Spanish Conformer (OpenVoiceOS mirror)",
+  "modelType": "nemo_transducer",
+  "languages": [
+    "es"
+  ],
   "files": [
     {
       "name": "encoder-model.int8.onnx",
-      "url": "https://huggingface.co/OpenVoiceOS/nvidia-es-conformer-transducer-large-onnx/resolve/main/encoder-model.int8.onnx",
-      "sha256": "97bc82e58823e536284cb0de746170d3ff0dfafa10f97bb51db0756ad72a65f8",
-      "size": 137420853
+      "url": "https://huggingface.co/pantinor/ovos-conformer-mirrors/resolve/main/es/encoder-model.int8.onnx",
+      "sha256": "2d67a1998189eaf2f6145ad73c01bb3d360b85e3997f033fe39662e9ad48add2",
+      "size": 137421350
     },
     {
-      "name": "decoder_joint-model.int8.onnx",
-      "url": "https://huggingface.co/OpenVoiceOS/nvidia-es-conformer-transducer-large-onnx/resolve/main/decoder_joint-model.int8.onnx",
-      "sha256": "6352b3cec00a5d62dfca6fbe547d53aa7c3293dd8d11823c884f0f9a65428597",
-      "size": 4214216
+      "name": "decoder-model.onnx",
+      "url": "https://huggingface.co/pantinor/ovos-conformer-mirrors/resolve/main/es/decoder-model.onnx",
+      "sha256": "c8cf0e7423adbf81b13228dd795afac1f4ecd7ee9cb405de4916336114e95d00",
+      "size": 3383505
+    },
+    {
+      "name": "joiner-model.onnx",
+      "url": "https://huggingface.co/pantinor/ovos-conformer-mirrors/resolve/main/es/joiner-model.onnx",
+      "sha256": "9c8256cb9bcf881c85fce82c13547cbd181b1fa8350adacffca29c08da221b47",
+      "size": 833475
     },
     {
       "name": "vocab.txt",
-      "url": "https://huggingface.co/OpenVoiceOS/nvidia-es-conformer-transducer-large-onnx/resolve/main/vocab.txt",
+      "url": "https://huggingface.co/pantinor/ovos-conformer-mirrors/resolve/main/es/vocab.txt",
       "sha256": "d214843d6225ab0ad17a0f1108a5ddced7b63086b68dae093095d1f53389ded8",
       "size": 907
     }
