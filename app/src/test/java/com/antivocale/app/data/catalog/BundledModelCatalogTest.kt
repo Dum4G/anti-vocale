@@ -100,7 +100,6 @@ class BundledModelCatalogTest {
         assertTrue(nemotron.isStreaming)
         assertEquals("", nemotron.modelType)
         assertTrue(nemotron.flags.languageOption)
-        assertEquals(1120L, nemotron.flags.chunkMs)
         assertEquals(1.5, nemotron.flags.tailPadSeconds, 0.0)
         assertEquals("nemotron-3.5-asr-streaming-0.6b-1120ms-int8", nemotron.defaultVariant.dirName)
         assertEquals(640L, nemotron.defaultVariant.estimatedSizeMB)

@@ -138,7 +138,6 @@
       "storageDir": "nemotron",
       "flags": {
         "languageOption": true,
-        "chunkMs": 1120,
         "tailPadSeconds": 1.5,
         "metaKeys": ["vocab_size"]
       },

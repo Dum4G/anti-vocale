@@ -213,16 +213,14 @@ class ModelCatalogTest {
     @Test
     fun `flags parse every field with defaults`() {
         val entry = ModelCatalogJson.parseEntry("""
-            {"name":"M","flags":{"ensureParentDirs":true,"tailPadSeconds":1.5,"languageOption":true,"chunkMs":1120,"metaKeys":["a","b"],"sidecarSize":false,"skipMetadataCheck":true,"whisperTailPaddings":1000,"blankPenalty":1.0,"maxNewTokens":2048,"chunkDurationSeconds":30},"files":[
+            {"name":"M","flags":{"ensureParentDirs":true,"tailPadSeconds":1.5,"languageOption":true,"metaKeys":["a","b"],"skipMetadataCheck":true,"whisperTailPaddings":1000,"blankPenalty":1.0,"maxNewTokens":2048,"chunkDurationSeconds":30},"files":[
               {"name":"e.onnx","url":"https://x/e","sha256":"${"a".repeat(64)}","size":1}]}
         """.trimIndent())
         val flags = entry.flags
         assertTrue(flags.ensureParentDirs)
         assertEquals(1.5, flags.tailPadSeconds, 0.0)
         assertTrue(flags.languageOption)
-        assertEquals(1120L, flags.chunkMs)
         assertEquals(listOf("a", "b"), flags.metaKeys)
-        assertEquals(false, flags.sidecarSize)
         assertEquals(null, flags.defaultVariant)
         assertTrue(flags.skipMetadataCheck)
         assertEquals(1000, flags.whisperTailPaddings)
@@ -232,6 +230,17 @@ class ModelCatalogTest {
 
         val defaults = ModelCatalogJson.parseEntry("""{"name":"D","files":[{"name":"e.onnx","url":"https://x/e","sha256":"${"a".repeat(64)}","size":1}]}""").flags
         assertEquals(CatalogFlags(), defaults)
+    }
+
+    @Test
+    fun `flag keys the engine does not consume are rejected at parse time`() {
+        // Dead flags (e.g. chunkMs, sidecarSize) must fail parse so they cannot
+        // re-enter the catalog silently and be stored-but-ignored.
+        val unknown = """{"name":"M","flags":{"chunkMs":1120},"files":[{"name":"e.onnx","url":"https://x/e","sha256":"${"a".repeat(64)}","size":1}]}"""
+        assertTrue(runCatching { ModelCatalogJson.parseEntry(unknown) }.isFailure)
+
+        val unknownBuiltIn = """{"schemaVersion":1,"models":[{"id":"x","runtime":"offline","modelType":"nemo_transducer","family":"TRANSDUCER","display":{"resourceKey":"parakeet_name"},"flags":{"sidecarSize":true},"variants":[{"name":"v","dirName":"d","estimatedSizeMB":1,"source":{"kind":"url","template":"https://x/{file}"},"files":["a.onnx","b.onnx","c.onnx","t.txt"]}]}]}"""
+        assertTrue(runCatching { ModelCatalogJson.parseCatalog(unknownBuiltIn) }.isFailure)
     }
 
     @Test

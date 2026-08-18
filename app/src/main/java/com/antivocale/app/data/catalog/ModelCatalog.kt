@@ -30,6 +30,25 @@ object ModelCatalogJson {
     private const val HF_BASE_URL = "https://huggingface.co"
 
     /**
+     * Flag keys the engine actually consumes, by field of [CatalogFlags]. A key not
+     * in this set is a dead flag — parse-time rejection (rather than silent dropping)
+     * keeps dead flags from re-entering the catalog unnoticed.
+     */
+    private val CONSUMED_FLAG_KEYS = setOf(
+        "defaultVariant",
+        "ensureParentDirs",
+        "tailPadSeconds",
+        "languageOption",
+        "passLanguage",
+        "metaKeys",
+        "skipMetadataCheck",
+        "whisperTailPaddings",
+        "blankPenalty",
+        "maxNewTokens",
+        "chunkDurationSeconds",
+    )
+
+    /**
      * Parses the bundled catalog document (array of entries). Entries are the
      * full built-in shape ([CatalogEntry.id] and [CatalogEntry.variants] are
      * required).
@@ -209,15 +228,19 @@ object ModelCatalogJson {
 
     private fun parseFlags(o: JSONObject?): CatalogFlags {
         if (o == null) return CatalogFlags()
+        // Fail-fast on any flag the engine does not consume: a dead flag must never
+        // re-enter the catalog silently (it would be parsed, stored, and ignored).
+        val unknown = o.keys().asSequence().filterNot { it in CONSUMED_FLAG_KEYS }.toList()
+        require(unknown.isEmpty()) {
+            "catalog flags must only contain engine-consumed keys, found: ${unknown.joinToString()}"
+        }
         return CatalogFlags(
             defaultVariant = o.optString("defaultVariant", "").ifBlank { null },
             ensureParentDirs = o.optBoolean("ensureParentDirs", false),
             tailPadSeconds = o.optDouble("tailPadSeconds", 0.0),
             languageOption = o.optBoolean("languageOption", false),
             passLanguage = o.optBoolean("passLanguage", false),
-            chunkMs = o.optLong("chunkMs", 0L),
             metaKeys = optStringList(o, "metaKeys"),
-            sidecarSize = o.optBoolean("sidecarSize", true),
             skipMetadataCheck = o.optBoolean("skipMetadataCheck", false),
             whisperTailPaddings = o.optInt("whisperTailPaddings", 0),
             blankPenalty = o.optDouble("blankPenalty", 0.0),
@@ -326,12 +349,8 @@ data class CatalogFlags(
      * "" (let the model detect); a concrete code is passed through.
      */
     val passLanguage: Boolean = false,
-    /** Streaming chunk length in milliseconds (Nemotron 1120ms). */
-    val chunkMs: Long = 0,
     /** ONNX metadata keys required on the encoder; default = vocab_size (+ nemo keys for nemo_transducer). */
     val metaKeys: List<String> = emptyList(),
-    /** Manage the `.size` resume sidecar next to each file. */
-    val sidecarSize: Boolean = true,
     /** Skip the pre-native ONNX metadata scan (Whisper models carry no vocab_size metadata). */
     val skipMetadataCheck: Boolean = false,
     /** Whisper's native tailPaddings decode param, in 10ms units (e.g. 1000 = 10s). */
