@@ -107,6 +107,97 @@ import dialog's autocomplete catalog), see [model-integration.md](model-integrat
 
 The `docs/test-catalog/*.json` fixtures for the OpenVoiceOS NVIDIA conformer-transducer models point at the mirror [pantinor/ovos-conformer-mirrors](https://huggingface.co/pantinor/ovos-conformer-mirrors), not at the upstream OpenVoiceOS repos. The upstream exports cannot be used directly: their encoders carry no k2-fsa metadata (sherpa-onnx exits 255 with `No model_type in the metadata!`) and the prediction/joint networks ship as one combined `decoder_joint-model.int8.onnx` graph, while sherpa's `nemo_transducer` loader requires separate decoder and joiner files. The mirror keeps the weights byte-identical, injects the metadata sherpa requires (`model_type=nemo_transducer`, `vocab_size`, `subsampling_factor=4`, `normalize_type=per_feature`, `pred_rnn_layers`, `pred_hidden`), and splits the combined graph into `decoder-model.onnx` + `joiner-model.onnx` at the prediction-network output tensor. The mirror README documents the full provenance.
 
+## Massaging custom models (field guide)
+
+Random ONNX exports of good ASR models usually do NOT import as-is: sherpa-onnx has
+hard requirements that many publisher repos do not satisfy. Everything below was
+verified empirically against sherpa-onnx 1.13.x (desktop harness in `eval/`); use it
+as a checklist before reporting an import failure.
+
+### 1. The loader decides by metadata, not by file names
+
+sherpa-onnx picks its model loader from the `model_type` string inside the ENCODER's
+ONNX `metadata_props`. A missing `model_type` aborts the process (`No model_type in
+the metadata!`, exit 255) regardless of what the config says. If your export has no
+k2-fsa metadata at all (common for HuggingFace optimum exports), you must inject it
+with the `onnx` Python package:
+
+```python
+import onnx
+m = onnx.load("encoder-model.int8.onnx", load_external_data=False)
+entry = m.metadata_props.add()
+entry.key, entry.value = "model_type", "nemo_transducer"   # or "" for icefall-style
+onnx.save(m, "encoder-model.int8.onnx", save_as_external_data=True,
+          location="encoder-model.int8.onnx.data")
+```
+
+Per-family required keys (the app validates these at import time):
+
+| model_type / family | Required encoder metadata |
+|---|---|
+| `nemo_transducer` | `vocab_size`, `subsampling_factor`, `model_type` |
+| icefall transducer (`""` / zipformer) | `vocab_size`, `model_type` |
+| `whisper` | `model_type` whose value starts with `whisper` (value-checked, not just key-present) |
+| `nemo_ctc` / `zipformer_ctc` (CTC family) | none (structural discriminators only) |
+
+Note `vocab_size` is the vocab file line count MINUS one (sherpa adds the blank).
+`subsampling_factor` comes from the original training config (the NVIDIA conformers
+use 4, not the more common 8: check the source repo's `config.json`).
+For NeMo models also set `normalize_type=per_feature`, otherwise transcripts come
+out EMPTY even though the model loads fine.
+
+### 2. Combined decoder_joint graphs must be split
+
+NeMo transducer exports often ship decoder and joint as ONE `decoder_joint-*.onnx`
+graph. sherpa's `nemo_transducer` loader creates three separate sessions, so the
+combined graph cannot be used. Split it at the prediction-network output tensor
+with `onnx.utils.extract_model` (weights stay identical, this is a pure graph cut):
+
+```python
+from onnx.utils import extract_model
+extract_model("decoder_joint.onnx", "decoder.onnx",
+              ["...decoder inputs..."], ["/joint/Transpose_1_output_0"])
+extract_model("decoder_joint.onnx", "joiner.onnx",
+              ["/joint/Transpose_1_output_0", "..."], ["...joiner outputs..."])
+```
+
+The exact tensor names differ per export: inspect the graph (`netron` or
+`onnx.load` + print node outputs) and cut at the boundary between the prediction
+network and the joint network.
+
+### 3. Exports that can never work (know when to stop)
+
+- **optimum/HuggingFace whisper exports** (`encoder_model.onnx` +
+  `decoder_model_merged.onnx` with `past_key_values` inputs and a fixed 3000-frame
+  mel input): sherpa's whisper loader has a different decoder signature. Injecting
+  metadata is not enough; the decoder graph itself is incompatible. A re-export
+  with k2-fsa tooling is required (see the mirrors below for the pattern).
+- **MMS 1B-all**: the graph has 290 per-language adapter inputs injected at runtime
+  by the `onnx-asr` loader; sherpa has no adapter API. Unusable as-is.
+
+### 4. Tokens file formats differ per architecture
+
+- sherpa whisper: `base64(token) id` per line (NOT plain tokens).
+- transducer/CTC: plain token text per line or `token id`.
+The conversion from a publisher's `vocab.json` is a few lines of Python; a worked
+example lives in [pantinor/whisper-arabic-dialectal-tokens](https://huggingface.co/pantinor/whisper-arabic-dialectal-tokens).
+
+### 5. The mirror pattern
+
+When an upstream export needs any of the massaging above, host the fixed files in a
+public mirror (HF repo) and point your entry JSON at the mirror with fresh sha256
+pins, documenting provenance and exactly what was changed. Working examples:
+
+- [pantinor/ovos-conformer-mirrors](https://huggingface.co/pantinor/ovos-conformer-mirrors):
+  metadata injection + graph split, six languages, transcripts verified.
+- [pantinor/whisper-arabic-dialectal-tokens](https://huggingface.co/pantinor/whisper-arabic-dialectal-tokens):
+  vocab.json to sherpa tokens conversion.
+
+Always verify the massaged model actually LOADS AND TRANSCRIBES with sherpa-onnx on
+desktop before publishing the entry (see `eval/multifamily_probe.py` for a harness);
+the app's import validation cannot prove a model transcribes, only that it is
+structurally loadable.
+
 ## Family selector
 
 The dropdown above the import buttons sets the model family (see the table above). Below it, a conditional options panel: Whisper gets an optional language field, SenseVoice an optional language plus an inverse-text-normalization switch, CTC a subtype selector (`nemo_ctc` / `zipformer_ctc`). The languages field applies to all families.
