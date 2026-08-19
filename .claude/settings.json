@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash scripts/check-sherpa-sync.sh 2>/dev/null || echo 'WARNING: sherpa version out of sync (see .sherpa-version, scripts/fetch-sherpa-aar.sh, app/build.gradle.kts SRCLIB PIN)'",
+            "timeout": 3000
+          }
+        ]
+      }
+    ]
+  }
+}
