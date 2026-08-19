@@ -48,6 +48,15 @@ class TranscriptionErrorMappingTest {
     }
 
     @Test
+    fun `ExternalModelUnavailable maps to error_model_unavailable string`() {
+        // TASK-342: a dangling external backend must NOT surface as the generic
+        // "model may be corrupt" ModelLoadError message.
+        val error = TranscriptionException.ExternalModelUnavailable("external:gone")
+        val msg = TranscriptionOrchestrator.userFacingErrorMessage(context, error)
+        assertEquals(context.getString(R.string.error_model_unavailable), msg)
+    }
+
+    @Test
     fun `NoTranscriptionProduced maps to generic transcription_failed string`() {
         val error = TranscriptionException.NoTranscriptionProduced()
         val msg = TranscriptionOrchestrator.userFacingErrorMessage(context, error)

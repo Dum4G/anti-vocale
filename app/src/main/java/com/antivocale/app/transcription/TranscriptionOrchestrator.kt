@@ -59,7 +59,9 @@ class TranscriptionOrchestrator @Inject constructor(
         private const val GGUF_BACKEND_ID = "gemma4_gguf"
 
         internal fun isNoModelConfiguredError(error: Throwable): Boolean {
-            return error is TranscriptionException.NotInitialized
+            return error is TranscriptionException.NotInitialized ||
+                // A dangling external id is the same UX class: no usable model configured.
+                error is TranscriptionException.ExternalModelUnavailable
         }
 
         /**
@@ -78,6 +80,10 @@ class TranscriptionOrchestrator @Inject constructor(
                     context.getString(R.string.error_native)
                 is TranscriptionException.NotInitialized ->
                     context.getString(R.string.error_not_initialized)
+                is TranscriptionException.ExternalModelUnavailable ->
+                    // A dangling external: id must not read as the generic corrupt-model
+                    // message; the user just needs to pick another model (TASK-342).
+                    context.getString(R.string.error_model_unavailable)
                 is TranscriptionException.NoTranscriptionProduced ->
                     context.getString(R.string.transcription_failed)
                 else -> context.getString(R.string.transcription_failed)
@@ -328,8 +334,8 @@ class TranscriptionOrchestrator @Inject constructor(
             // as the former ModelType-keyed when did.
             // External ids are intercepted BEFORE the registry lookup for a behavioral
             // reason, not a registry gap: a prefix-matched id whose record is gone must
-            // fail fast with NotInitialized instead of falling through to the LLM
-            // loader (pinned by the unknown-external-id override test).
+            // fail fast with ExternalModelUnavailable instead of falling through to the
+            // LLM loader (pinned by the unknown-external-id override test).
             val loadResult = if (preferredBackendId.startsWith(ExternalModelRecord.BACKEND_ID_PREFIX)) {
                 loadExternalBackend(context, preferredBackendId)
             } else when (preferredBackendId) {
@@ -506,7 +512,7 @@ class TranscriptionOrchestrator @Inject constructor(
         val record = externalModelStore.byId(backendId.removePrefix(ExternalModelRecord.BACKEND_ID_PREFIX))
             ?: run {
                 Log.w(TAG, "no external model record for $backendId")
-                return Result.failure(TranscriptionException.NotInitialized())
+                return Result.failure(TranscriptionException.ExternalModelUnavailable(backendId))
             }
         return configureBackend(
             backendId = record.backendId,

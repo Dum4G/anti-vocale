@@ -55,6 +55,16 @@ class BridgeApplication : Application(), Configuration.Provider {
                 preferencesManager.saveExternalMigrationDone(false)
             }
         }
+        // Also before syncAll: a persisted external backend id whose record is gone
+        // (deleted through another path, files vanished) must fall back to the default
+        // backend, or every transcription request fails on an unloadable id (TASK-342).
+        runCatching {
+            kotlinx.coroutines.runBlocking {
+                com.antivocale.app.data.DanglingBackendCleaner(preferencesManager, externalModelStore).cleanIfNeeded()
+            }
+        }.onFailure { e ->
+            android.util.Log.e("BridgeApplication", "Dangling-backend cleanup failed (will retry on next launch)", e)
+        }
         shareTargetManager.syncAll()
         migrateLanguagePreference()
         installGlobalExceptionHandler()

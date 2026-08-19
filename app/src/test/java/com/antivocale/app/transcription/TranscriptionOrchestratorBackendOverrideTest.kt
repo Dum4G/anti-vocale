@@ -294,7 +294,7 @@ class TranscriptionOrchestratorBackendOverrideTest : TranscriptionOrchestratorTe
     }
 
     @Test
-    fun `backend override with unknown external id fails with NotInitialized even when preference is valid`() = runTest {
+    fun `backend override with unknown external id fails with ExternalModelUnavailable even when preference is valid`() = runTest {
         val dir = createTempModelDir("external-valid")
         val record = externalRecord(id = "valid999", dir = dir.absolutePath)
         fakeStore.add(record)
@@ -325,8 +325,8 @@ class TranscriptionOrchestratorBackendOverrideTest : TranscriptionOrchestratorTe
         assertTrue(result.isFailure)
         val error = result.exceptionOrNull()
         assertTrue(
-            "Expected NotInitialized but got: ${error?.javaClass?.simpleName}: ${error?.message}",
-            error is TranscriptionException.NotInitialized
+            "Expected ExternalModelUnavailable but got: ${error?.javaClass?.simpleName}: ${error?.message}",
+            error is TranscriptionException.ExternalModelUnavailable
         )
         coVerify(exactly = 0) { backendManager.setActiveBackend(any(), any(), any()) }
     }

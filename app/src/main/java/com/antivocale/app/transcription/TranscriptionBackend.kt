@@ -166,6 +166,10 @@ sealed class TranscriptionException(message: String, cause: Throwable? = null) :
     /** The device had too little free memory to load the model (pre-flight block). */
     class InsufficientMemory(detail: String) :
         TranscriptionException("Insufficient memory: $detail")
+
+    /** The persisted external model record is gone or its files vanished (TASK-342). */
+    class ExternalModelUnavailable(backendId: String) :
+        TranscriptionException("External model no longer available: $backendId")
 }
 
 /**

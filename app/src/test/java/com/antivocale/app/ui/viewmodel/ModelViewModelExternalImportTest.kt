@@ -6,6 +6,7 @@ import com.antivocale.app.data.ActiveModelRepository
 import com.antivocale.app.data.ExternalModelImportOperations
 import com.antivocale.app.data.ExternalModelRecord
 import com.antivocale.app.data.ExternalModelSource
+import com.antivocale.app.data.PreferencesManager
 import com.antivocale.app.data.FakePreferencesManager
 import com.antivocale.app.data.ModelFamily
 import com.antivocale.app.transcription.staticRegistry
@@ -173,6 +174,31 @@ class ModelViewModelExternalImportTest {
         assertEquals(ModelFamily.CTC, call.family)
         assertEquals(emptyMap<String, String>(), call.options)
         assertEquals(emptyList<String>(), call.languages)
+    }
+
+    @Test
+    fun `deleting the active external model resets the backend preference to default`() = runTest {
+        // Same store instance the ViewModel was built with in setup? It was built with
+        // its own ExternalModelStore(fakePrefs) in setup; replicate that here for seeding.
+        val store = com.antivocale.app.data.ExternalModelStore(fakePrefs)
+        val dir = Files.createTempDirectory("ext-delete").toFile()
+        val record = sampleRecord().copy(id = "active-ext", dir = dir.absolutePath)
+        store.add(record)
+
+        viewModel.useExternalModel(record)
+        runCurrent()
+        assertEquals(record.backendId, fakePrefs._transcriptionBackend.value)
+
+        viewModel.deleteExternalModel(record)
+        // deleteExternalModel launches on Dispatchers.IO (real dispatcher): poll the
+        // preference until the reset lands or the deadline expires.
+        val deadline = System.currentTimeMillis() + 5_000
+        while (fakePrefs._transcriptionBackend.value == record.backendId &&
+            System.currentTimeMillis() < deadline) {
+            Thread.sleep(20)
+        }
+        assertEquals(PreferencesManager.DEFAULT_TRANSCRIPTION_BACKEND, fakePrefs._transcriptionBackend.value)
+        dir.deleteRecursively()
     }
 
     /** runExternalImport launches on Dispatchers.IO (a real dispatcher in JVM tests):
