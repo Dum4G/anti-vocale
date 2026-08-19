@@ -1150,9 +1150,12 @@ class ModelViewModel @Inject constructor(
         viewModelScope.launch {
             val context = ctx
             val downloader = SherpaModelDownloader.of(entryId)
+            // The catalog-state fallback is STALE (populated by an earlier scan), so its
+            // path is disk-checked here; the first two resolutions read the disk fresh
+            // and must stay free of extra IO (B2, TASK-342 device verification).
             val modelPath = downloader.getModelPath(context, variantName)
                 ?: SherpaModelManager.of(entryId).resolveActiveModelPath(context)
-                ?: _catalogStates.value[entryId]?.modelPath
+                ?: _catalogStates.value[entryId]?.modelPath?.takeIf { File(it).exists() }
             if (modelPath != null) {
                 preferencesManager.saveSherpaModelPath(entryId, modelPath)
                 preferencesManager.saveTranscriptionBackend(entryId)

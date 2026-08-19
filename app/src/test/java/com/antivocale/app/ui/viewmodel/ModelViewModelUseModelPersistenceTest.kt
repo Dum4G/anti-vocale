@@ -166,6 +166,44 @@ class ModelViewModelUseModelPersistenceTest {
     }
 
     @Test
+    fun `useModel with stale catalog modelPath whose dir vanished does not select a missing model`() = runTest {
+        dataStore.edit { it[backendKey] = "external:gone-id" }
+        prefs.initialize()
+        runCurrent()
+
+        // Seed a stale catalog state the way a completed download does: refresh the
+        // entry while the dir exists, then delete the dir behind the ViewModel's back
+        // (device scenario: files removed outside the app between scans).
+        val dir = whisperSmallDir()
+        viewModel.refreshCatalogEntries()
+        val deadline = System.currentTimeMillis() + 5_000
+        while (viewModel.catalogStates.value["whisper"]?.modelPath == null &&
+            System.currentTimeMillis() < deadline) {
+            Thread.sleep(20)
+            runCurrent()
+        }
+        assertEquals(dir.absolutePath, viewModel.catalogStates.value["whisper"]?.modelPath)
+        dir.deleteRecursively()
+
+        val events = mutableListOf<ModelViewModel.SnackbarEvent>()
+        val collector = launch { viewModel.snackbarEvent.collect { events.add(it) } }
+        viewModel.useModel("whisper", "small")
+        runCurrent()
+
+        assertTrue(
+            "Expected a missing-files snackbar event, got: $events",
+            events.any {
+                it is ModelViewModel.SnackbarEvent.Message &&
+                    it.text.startsWith("str:${R.string.model_use_missing_files}")
+            }
+        )
+        // The stale path must not be persisted as the active selection.
+        assertEquals("external:gone-id", dataStore.data.first()[backendKey])
+        assertEquals(null, dataStore.data.first()[sherpaWhisperKey])
+        collector.cancel()
+    }
+
+    @Test
     fun `useModel with no valid model directory is loud instead of a silent no-op`() = runTest {
         dataStore.edit { it[backendKey] = "external:gone-id" }
         prefs.initialize()
