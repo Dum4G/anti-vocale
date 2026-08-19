@@ -71,7 +71,6 @@
     <string name="logs_no_entries_selected">कोई एंट्री नहीं चुनी गई</string>
     <string name="logs_cleared">सभी लॉग साफ़ कर दिए गए</string>
     <string name="logs_entry_deleted">लॉग एंट्री मिटाई गई</string>
-    <string name="logs_entries_deleted">%d एंट्री मिटाई गईं</string>
     <string name="logs_undo">पूर्ववत करें</string>
     <string name="logs_cancel">रद्द करें</string>
     <string name="logs_confirm">पुष्टि करें</string>
@@ -234,7 +233,6 @@
     <string name="processing_queue_item">%2$d में से %1$d प्रोसेस हो रहा है…</string>
     <string name="processing_queue_item_audio">ऑडियो प्रोसेस हो रहा है (%2$d में से %1$d)…</string>
     <string name="processing_queue_chunk">हिस्सा %1$d/%2$d प्रोसेस हो रहा है (%4$d में से %3$d)…</string>
-    <string name="queued_count">%1$d क़तार में</string>
     <string name="generating_text">टेक्स्ट जवाब बन रहा है…</string>
 
     <!-- Model Tab - Download section -->
@@ -363,7 +361,6 @@
     <string name="timeout_description">निष्क्रियता की एक अवधि के बाद मॉडल अपने आप अनलोड हो जाता है ताकि मेमोरी खाली हो। ज़रूरत पर मॉडल अपने आप फिर लोड हो जाता है।</string>
     <string name="timeout_1_minute">1 मिनट</string>
     <string name="timeout_1_hour">1 घंटा</string>
-    <string name="timeout_minutes">%1$d मिनट</string>
 
     <!-- Settings Tab - Thread Count -->
     <string name="thread_count_title">इन्फ़रेंस थ्रेड</string>
@@ -588,7 +585,6 @@
     <string name="performance_stats_subtitle">आपके डिवाइस से असली ट्रांसक्रिप्शन की गति</string>
     <string name="performance_stats_empty">अभी कोई डेटा नहीं। आँकड़े देखने के लिए कुछ ऑडियो ट्रांसक्राइब करें।</string>
     <string name="performance_stats_speed">%1$.0fms/s</string>
-    <string name="performance_stats_samples_count">%1$d सैंपल</string>
     <string name="performance_stats_fastest_badge">सबसे तेज़</string>
     <string name="performance_stats_clear">आँकड़े रीसेट करें</string>
     <string name="performance_stats_clear_confirm">सारा प्रदर्शन डेटा रीसेट करें?</string>
@@ -772,7 +768,6 @@
     <string name="model_info_section_recommendations">सिफ़ारिशें</string>
     <string name="model_info_section_technical">तकनीकी विवरण</string>
     <string name="model_info_section_performance">प्रदर्शन सुझाव</string>
-    <string name="model_info_languages_count">%d भाषाएं</string>
     <string name="model_info_no_languages">भाषा समर्थन अज्ञात</string>
     <string name="model_info_architecture">आर्किटेक्चर</string>
     <string name="model_info_arch_encoder_decoder">एनकोडर-डिकोडर (Whisper)</string>
@@ -782,7 +777,6 @@
     <string name="model_info_model_size">मॉडल का साइज़</string>
     <string name="model_info_max_audio">अधिकतम ऑडियो लंबाई</string>
     <string name="model_info_max_audio_unlimited">असीमित</string>
-    <string name="model_info_max_audio_seconds">%d सेकंड</string>
     <string name="model_info_quantization">क्वांटाइज़ेशन</string>
     <string name="model_info_recommended_threads">अनुशंसित थ्रेड</string>
     <string name="model_info_threads_range">%1$d – %2$d</string>
@@ -865,7 +859,6 @@
     <!-- Conversation Grouping -->
     <string name="conversation_grouping_title">बातचीत से समूह बनाएं</string>
     <string name="conversation_grouping_description">स्रोत ऐप (WhatsApp, Telegram आदि) के अनुसार ट्रांसक्रिप्शन सिकुड़ने वाले सेक्शन में समूहबद्ध दिखाएं।</string>
-    <string name="conversation_group_count">%1$d मैसेज</string>
     <string name="conversation_group_unknown">अन्य</string>
 
     <!-- Re-transcribe -->
@@ -887,4 +880,32 @@
     <string name="action_transcribe_audio">ऑडियो ट्रांसक्राइब करें</string>
     <string name="subtitle_fallback_status">सबटाइटल निकाले नहीं जा सके, ऑडियो ट्रांसक्राइब हो रहा है</string>
     <string name="subtitle_choice_notification_text">आपके चुनाव का इंतज़ार…</string>
+    <plurals name="logs_entries_deleted">
+        <item quantity="one">%d प्रविष्टि मिटाई गई</item>
+        <item quantity="other">%d प्रविष्टियां मिटाई गईं</item>
+    </plurals>
+    <plurals name="queued_count">
+        <item quantity="one">%1$d क़तार में</item>
+        <item quantity="other">%1$d क़तार में</item>
+    </plurals>
+    <plurals name="timeout_minutes">
+        <item quantity="one">%1$d मिनट</item>
+        <item quantity="other">%1$d मिनट</item>
+    </plurals>
+    <plurals name="performance_stats_samples_count">
+        <item quantity="one">%1$d नमूना</item>
+        <item quantity="other">%1$d नमूने</item>
+    </plurals>
+    <plurals name="model_info_languages_count">
+        <item quantity="one">%d भाषा</item>
+        <item quantity="other">%d भाषाएं</item>
+    </plurals>
+    <plurals name="model_info_max_audio_seconds">
+        <item quantity="one">%d सेकंड</item>
+        <item quantity="other">%d सेकंड</item>
+    </plurals>
+    <plurals name="conversation_group_count">
+        <item quantity="one">%1$d संदेश</item>
+        <item quantity="other">%1$d संदेश</item>
+    </plurals>
 </resources>

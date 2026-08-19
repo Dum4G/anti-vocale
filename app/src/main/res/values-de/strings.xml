@@ -72,7 +72,6 @@
     <string name="logs_cleared">Alle Einträge gelöscht</string>
     <string name="logs_entry_deleted">Eintrag gelöscht</string>
     <!-- review: plural-shaped string; German has no plural forms in <string>, reads fine -->
-    <string name="logs_entries_deleted">%d Einträge gelöscht</string>
     <string name="logs_undo">Rückgängig</string>
     <string name="logs_cancel">Abbrechen</string>
     <string name="logs_confirm">Bestätigen</string>
@@ -237,7 +236,6 @@
     <string name="processing_queue_item">%1$d von %2$d wird verarbeitet…</string>
     <string name="processing_queue_item_audio">Audio wird verarbeitet (%1$d von %2$d)…</string>
     <string name="processing_queue_chunk">Chunk %1$d/%2$d wird verarbeitet (%3$d von %4$d)…</string>
-    <string name="queued_count">%1$d in der Warteschlange</string>
     <string name="generating_text">Textantwort wird erstellt…</string>
 
     <!-- Model Tab - Download section -->
@@ -367,7 +365,6 @@
     <string name="timeout_1_minute">1 Minute</string>
     <string name="timeout_1_hour">1 Stunde</string>
     <!-- review: plural-shaped; fine for most values but reads odd for singular counts -->
-    <string name="timeout_minutes">%1$d Minuten</string>
 
     <!-- Settings Tab - Thread Count -->
     <string name="thread_count_title">Inferenz-Threads</string>
@@ -597,7 +594,6 @@
     <string name="performance_stats_empty">Noch keine Daten. Transscribiere etwas Audio, um Statistiken zu sehen.</string>
     <string name="performance_stats_speed">%1$.0f ms/s</string>
     <!-- review: plural-shaped; reads odd at 1 sample -->
-    <string name="performance_stats_samples_count">%1$d Stichproben</string>
     <string name="performance_stats_fastest_badge">Am schnellsten</string>
     <string name="performance_stats_clear">Statistiken zurücksetzen</string>
     <string name="performance_stats_clear_confirm">Alle Leistungsdaten zurücksetzen?</string>
@@ -782,7 +778,6 @@
     <string name="model_info_section_recommendations">Empfehlungen</string>
     <string name="model_info_section_technical">Technische Details</string>
     <string name="model_info_section_performance">Leistungstipps</string>
-    <string name="model_info_languages_count">%d Sprachen</string>
     <string name="model_info_no_languages">Sprachunterstützung unbekannt</string>
     <string name="model_info_architecture">Architektur</string>
     <string name="model_info_arch_encoder_decoder">Encoder-Decoder (Whisper)</string>
@@ -792,7 +787,6 @@
     <string name="model_info_model_size">Modellgröße</string>
     <string name="model_info_max_audio">Maximale Audiolänge</string>
     <string name="model_info_max_audio_unlimited">Unbegrenzt</string>
-    <string name="model_info_max_audio_seconds">%d Sekunden</string>
     <string name="model_info_quantization">Quantisierung</string>
     <string name="model_info_recommended_threads">Empfohlene Threads</string>
     <string name="model_info_threads_range">%1$d – %2$d</string>
@@ -876,7 +870,6 @@
     <string name="conversation_grouping_title">Nach Unterhaltung gruppieren</string>
     <string name="conversation_grouping_description">Gruppiert Transkriptionen nach Quell-App (WhatsApp, Telegram usw.) in einklappbaren Abschnitten.</string>
     <!-- review: plural-shaped -->
-    <string name="conversation_group_count">%1$d Nachrichten</string>
     <string name="conversation_group_unknown">Andere</string>
 
     <!-- Re-transcribe -->
@@ -898,4 +891,32 @@
     <string name="action_transcribe_audio">Audio transskribieren</string>
     <string name="subtitle_fallback_status">Untertitel konnten nicht extrahiert werden, Audio wird transskribiert</string>
     <string name="subtitle_choice_notification_text">Warte auf deine Auswahl…</string>
+    <plurals name="logs_entries_deleted">
+        <item quantity="one">%d Eintrag gelöscht</item>
+        <item quantity="other">%d Einträge gelöscht</item>
+    </plurals>
+    <plurals name="queued_count">
+        <item quantity="one">%1$d in der Warteschlange</item>
+        <item quantity="other">%1$d in der Warteschlange</item>
+    </plurals>
+    <plurals name="timeout_minutes">
+        <item quantity="one">%1$d Minute</item>
+        <item quantity="other">%1$d Minuten</item>
+    </plurals>
+    <plurals name="performance_stats_samples_count">
+        <item quantity="one">%1$d Stichprobe</item>
+        <item quantity="other">%1$d Stichproben</item>
+    </plurals>
+    <plurals name="model_info_languages_count">
+        <item quantity="one">%d Sprache</item>
+        <item quantity="other">%d Sprachen</item>
+    </plurals>
+    <plurals name="model_info_max_audio_seconds">
+        <item quantity="one">%d Sekunde</item>
+        <item quantity="other">%d Sekunden</item>
+    </plurals>
+    <plurals name="conversation_group_count">
+        <item quantity="one">%1$d Nachricht</item>
+        <item quantity="other">%1$d Nachrichten</item>
+    </plurals>
 </resources>

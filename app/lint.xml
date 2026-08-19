@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<lint>
+    <!-- LiteRT-LM 0.13.1 is compiled with Kotlin 2.3.0 metadata while the project
+         uses Kotlin 2.1.0; R8/lint cannot parse its kotlin_module. This is a
+         third-party dependency issue, not a code defect. Tracked for upgrade
+         when the project moves to Kotlin 2.3.x. -->
+    <issue id="LintError">
+        <ignore path="**/litertlm**" />
+    </issue>
+</lint>
