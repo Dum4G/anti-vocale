@@ -21,6 +21,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -153,8 +154,9 @@ fun PerformanceStatsDialog(
                                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                                 ) {
                                     Text(
-                                        text = stringResource(
-                                            R.string.performance_stats_samples_count,
+                                        text = pluralStringResource(
+                                            R.plurals.performance_stats_samples_count,
+                                            profile.sampleCount,
                                             profile.sampleCount
                                         ),
                                         style = MaterialTheme.typography.labelSmall,

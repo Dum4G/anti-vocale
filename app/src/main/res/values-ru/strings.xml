@@ -1,0 +1,930 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Anti-Vocale</string>
+
+    <!-- Tab names -->
+    <string name="model_tab">Модель</string>
+    <string name="logs_tab">Журнал</string>
+    <string name="settings_tab">Настройки</string>
+
+    <!-- Model selection -->
+    <string name="select_model">Выбрать файл модели</string>
+    <string name="select_model_from_device">Выбрать файл</string>
+
+    <!-- Custom transducer model (sideload) -->
+    <string name="load_model">Загрузить модель</string>
+    <string name="unload_model">Выгрузить модель</string>
+
+    <!-- Model status -->
+    <string name="model_status">Статус: %1$s</string>
+    <string name="model_path">Путь: %1$s</string>
+    <string name="no_model_selected">Модель не выбрана</string>
+    <string name="status_ready">Готово</string>
+    <string name="status_loading">Загрузка модели…</string>
+    <string name="status_error">Ошибка</string>
+    <string name="status_unloaded">Выгружена</string>
+    <string name="status_model_selected">Модель выбрана</string>
+    <string name="status_no_model">Нет модели</string>
+
+    <!-- ViewModel status messages -->
+    <string name="parakeet_name">Parakeet TDT</string>
+    <string name="llm_backend_name">Gemma (LiteRT-LM)</string>
+    <!-- review: gender agreement assumes модель (feminine); for masculine model names this reads wrong. Consider "%1$s: готово". -->
+    <string name="backend_model_ready">%1$s готова</string>
+    <string name="backend_model_not_found">Модель %1$s не найдена</string>
+    <string name="saved_model_found">Сохранённая модель найдена</string>
+    <string name="saved_model_not_found">Сохранённая модель не найдена</string>
+    <string name="model_selected">Выбрана модель: %1$s</string>
+    <string name="model_copy_failed">Не удалось скопировать файл модели</string>
+    <string name="model_file_not_found">Файл модели не найден: %1$s</string>
+    <string name="model_loading">Загрузка модели в память…</string>
+    <string name="model_ready_inference">Модель готова к работе</string>
+    <string name="model_load_failed">Ошибка загрузки: %1$s</string>
+    <string name="device_incompatible_title">Устройство не поддерживается</string>
+    <string name="device_incompatible_arch">Для работы приложения требуется устройство с ARM64. Оно не будет работать на эмуляторах и устройствах x86.</string>
+    <string name="device_incompatible_ram">На этом устройстве недостаточно памяти для запуска локальных ИИ-моделей (требуется минимум 4 ГБ ОЗУ).</string>
+    <string name="model_unloaded">Модель выгружена</string>
+    <string name="model_auto_unloaded">Модель выгружена из-за неактивности</string>
+    <string name="model_externally_loaded">Модель готова (загружена извне)</string>
+    <string name="model_deleted_status">Модель удалена</string>
+    <string name="downloaded_model_selected">Выбрана загруженная модель</string>
+
+    <!-- Settings error messages -->
+    <string name="error_save_settings">Не удалось сохранить настройки</string>
+    <string name="error_save_language">Не удалось сохранить языковые настройки</string>
+    <string name="error_save_theme">Не удалось сохранить настройки темы</string>
+    <string name="error_token_empty">Токен не может быть пустым</string>
+    <string name="error_auth_cancelled">Вход отменён</string>
+
+    <!-- Logs -->
+    <string name="logs_empty">Пока нет запросов</string>
+    <string name="request_text">Текстовый запрос</string>
+    <string name="request_audio">Аудиозапрос</string>
+    <string name="logs_recent_requests">Недавние запросы (%1$d)</string>
+    <string name="logs_clear">Очистить</string>
+    <string name="logs_delete_entry">Удалить запись</string>
+    <string name="logs_delete_confirmation">Удалить эту запись журнала?</string>
+    <string name="logs_delete_selected">Удалить выбранное</string>
+    <string name="logs_clear_confirmation">Очистить весь журнал? Это действие нельзя отменить.</string>
+    <string name="logs_select_all">Выбрать все</string>
+    <string name="logs_deselect_all">Снять выделение</string>
+    <string name="logs_entries_selected">Выбрано: %d</string>
+    <string name="logs_no_entries_selected">Ничего не выбрано</string>
+    <string name="logs_cleared">Журнал очищен</string>
+    <string name="logs_entry_deleted">Запись удалена</string>
+    <plurals name="logs_entries_deleted">
+        <item quantity="one">%d запись удалена</item>
+        <item quantity="few">%d записи удалены</item>
+        <item quantity="many">%d записей удалено</item>
+        <item quantity="other">%d записей удалено</item>
+    </plurals>
+    <string name="logs_undo">Отменить</string>
+    <string name="logs_cancel">Отмена</string>
+    <string name="logs_confirm">Подтвердить</string>
+    <string name="logs_empty_hint">Поделитесь голосовым сообщением из WhatsApp, Telegram или другого приложения, и транскрипции появятся здесь</string>
+    <string name="logs_prompt_label">Запрос:</string>
+    <string name="logs_result_label">Результат:</string>
+    <string name="logs_error_label">Ошибка:</string>
+    <string name="logs_task_id">ID задачи: %1$s</string>
+    <string name="logs_unknown_error">Неизвестная ошибка</string>
+    <string name="logs_transcription_cancelled">Транскрипция отменена</string>
+    <string name="logs_search_placeholder">Поиск транскрипций…</string>
+    <string name="logs_search_no_results">Подходящих транскрипций нет</string>
+    <string name="logs_search_no_results_hint">Попробуйте другой поисковый запрос</string>
+    <string name="voice_message_duration">голосовое сообщение</string>
+    <string name="source_was_video">Источник: видеофайл</string>
+    <string name="processed_in">Обработано за %1$s</string>
+    <string name="today">Сегодня</string>
+    <string name="yesterday">Вчера</string>
+    <string name="time_seconds_ago">%1$d с назад</string>
+    <string name="time_minutes_ago">%1$d мин назад</string>
+    <string name="time_hours_ago">%1$d ч назад</string>
+
+    <!-- Model descriptions -->
+    <string name="model_desc_gemma_4_e2b">2,6 ГБ · мультимодальная (текст + аудио), новейшее поколение, лучше всего подходит для большинства устройств</string>
+    <string name="model_desc_gemma_4_e4b">3,7 ГБ · мультимодальная (текст + аудио), новейшее поколение, более высокое качество</string>
+    <string name="model_desc_gemma_3n_e2b">3,3 ГБ · мультимодальная (текст + аудио), лучше всего подходит для большинства устройств</string>
+    <string name="model_desc_gemma_3n_e4b">4,2 ГБ · мультимодальная (текст + аудио), более высокое качество</string>
+
+    <!-- Parakeet model -->
+    <string name="parakeet_title">Parakeet TDT</string>
+    <string name="parakeet_description">25 языков • Быстрая • Рекомендуется</string>
+    <string name="parakeet_download">Скачать Parakeet TDT</string>
+    <string name="parakeet_download_confirm_title">Скачать Parakeet TDT?</string>
+    <string name="parakeet_download_confirm_message">Будет загружено ~%1$d МБ. Parakeet быстрее Gemma, но менее точна при транскрипции.</string>
+    <string name="parakeet_smoothquant_title">Parakeet TDT (SmoothQuant)</string>
+    <string name="parakeet_smoothquant_description">~862 МБ • 25 языков • Рекомендуется</string>
+    <string name="parakeet_stock_title">Parakeet TDT (Stock int8)</string>
+    <string name="parakeet_stock_description">~464 МБ • 25 языков • Более лёгкий запасной вариант</string>
+
+    <!-- Whisper model -->
+    <string name="whisper_title">Whisper</string>
+    <string name="whisper_description">Многоязычное распознавание речи</string>
+    <string name="whisper_small_title">Whisper Small</string>
+    <string name="whisper_small_description">~358 МБ • Ниже точность, особенно на зашумлённом аудио • Только для слабых устройств</string>
+    <string name="whisper_turbo_title">Whisper Turbo</string>
+    <string name="whisper_turbo_description">~988 МБ • Качество почти как у large-v3 • Сбалансированная многоязычная</string>
+    <string name="whisper_medium_title">Whisper Medium</string>
+    <string name="whisper_medium_description">~903 МБ • Хорошая точность • Многоязычная</string>
+    <string name="whisper_distil_large_v3_title">Distil Italian</string>
+    <string name="whisper_distil_large_v3_description">~939 МБ • 2 слоя декодера • Самая быстрая • Оптимизирована для итальянского</string>
+    <string name="whisper_download">Скачать Whisper</string>
+    <string name="whisper_download_confirm_title">Скачать %1$s?</string>
+    <string name="whisper_download_confirm_message">Будет загружено ~%1$d МБ. Whisper обеспечивает отличную поддержку многих языков с правильной пунктуацией.</string>
+    <string name="whisper_extract_confirm_title">Извлечь %1$s?</string>
+    <string name="whisper_extract_confirm_message">Файл модели уже загружен. Сейчас он будет извлечён для использования.</string>
+
+    <!-- Qwen3-ASR model -->
+    <string name="qwen3_asr_title">Qwen3-ASR (52 языка)</string>
+    <string name="qwen3_asr_description">52 языка • Низкая точность для итальянского</string>
+    <string name="qwen3_asr_0_6b_title">Qwen3-ASR 0.6B</string>
+    <string name="qwen3_asr_0_6b_description">~938 МБ • 52 языка • Низкая точность для итальянского</string>
+    <string name="qwen3_asr_download_confirm_title">Скачать %1$s?</string>
+    <string name="qwen3_asr_download_confirm_message">Будет загружено ~%1$d МБ. Qwen3-ASR поддерживает 52 языка с невысокой точностью для итальянского.</string>
+    <string name="qwen3_asr_download">Скачать Qwen3-ASR</string>
+    <string name="qwen3_asr_delete_message">Удалить модель Qwen3-ASR?</string>
+    <string name="qwen3_asr_downloaded">%1$s успешно загружена</string>
+    <string name="qwen3_asr_deleted">%1$s удалена</string>
+
+    <!-- Nemotron 3.5 streaming model -->
+    <string name="nemotron_name">Nemotron 3.5</string>
+    <string name="nemotron_title">Nemotron 3.5 (потоковая)</string>
+    <string name="nemotron_description">Потоковый транссудер • Экспериментальное качество для итальянского</string>
+    <string name="nemotron_download_confirm_title">Скачать %1$s?</string>
+    <string name="nemotron_download_confirm_message">Будет загружено ~%1$d МБ. Nemotron 3.5, многоязычная потоковая модель распознавания речи.</string>
+    <string name="nemotron_download">Скачать Nemotron</string>
+    <string name="nemotron_delete_message">Удалить модель Nemotron 3.5?</string>
+    <string name="nemotron_downloaded">%1$s успешно загружена</string>
+    <string name="nemotron_deleted">%1$s удалена</string>
+
+    <!-- GigaAM v3 model (flagship Russian model) -->
+    <string name="gigaam_title">GigaAM v3</string>
+    <string name="gigaam_description">Распознавание русской речи • ~326 МБ • Сбербанк (MIT)</string>
+    <string name="gigaam_name">GigaAM v3</string>
+    <string name="gigaam_download_confirm_title">Скачать GigaAM v3?</string>
+    <string name="gigaam_download_confirm_message">Будет загружено ~%1$d МБ. GigaAM v3, модель распознавания речи только для русского языка от Сбербанка с высокой точностью для русского.</string>
+    <string name="gigaam_download">Скачать GigaAM</string>
+    <string name="gigaam_downloaded">%1$s успешно загружена</string>
+    <string name="gigaam_deleted">%1$s удалена</string>
+
+    <!-- Generic catalog section (catalog-driven sherpa-onnx models) -->
+    <string name="catalog_model_downloaded">%1$s успешно загружена</string>
+    <string name="catalog_model_deleted">%1$s удалена</string>
+    <string name="catalog_download_confirm_title">Скачать %1$s?</string>
+    <string name="catalog_download_confirm_message">Будет загружено ~%1$d МБ.</string>
+    <string name="catalog_extract_confirm_title">Извлечь %1$s?</string>
+    <string name="catalog_extract_confirm_message">Файл модели уже загружен. Сейчас он будет извлечён для использования.</string>
+
+    <!-- Download status -->
+    <string name="download_status_downloading">Загрузка…</string>
+    <string name="download_status_extracting">Извлечение %1$s…</string>
+    <string name="download_status_extracting_files">Извлечение файлов…</string>
+    <string name="download_status_copying_file">Копирование %1$s…</string>
+    <string name="download_status_copying_files">Копирование файлов…</string>
+    <string name="download_status_connecting">Подключение…</string>
+    <string name="download_status_file_progress">%1$d/%2$d</string>
+    <string name="download_status_checking_access">Проверка доступа…</string>
+    <string name="download_status_retrying">Повторная попытка (%1$d/%2$d)…</string>
+    <string name="download_status_resuming">Возобновление загрузки…</string>
+    <string name="model_requires_auth">Для этой модели требуется аккаунт HuggingFace</string>
+
+    <!-- Download rate/ETA/partial -->
+    <string name="download_rate">%1$s/с</string>
+    <string name="download_eta">Осталось: %1$s</string>
+    <string name="download_eta_less_than_minute">Осталось менее 1 мин</string>
+    <string name="download_partial">Загрузка прервана на %1$d%% (%2$s / %3$s)</string>
+    <string name="download_resume">Возобновить загрузку</string>
+    <string name="download_clear_partial">Очистить</string>
+    <string name="download_partial_detected">Обнаружена незавершённая загрузка</string>
+    <string name="gemma_download_confirm_title">Скачать %1$s?</string>
+    <string name="gemma_download_confirm_message">Будет загружено ~%1$d МБ. Модели Gemma, это полноценные LLM с расширенными возможностями, но они занимают больше памяти.</string>
+
+    <!-- Transcription -->
+    <string name="share_transcription">Поделиться</string>
+    <string name="copy_transcription">Скопировать в буфер обмена</string>
+    <string name="copied_to_clipboard">Скопировано в буфер обмена</string>
+    <string name="audio_received_for_transcription">Аудио получено для транскрипции</string>
+    <string name="transcription_complete">Транскрипция завершена</string>
+    <string name="transcription_partial">Транскрипция неполная (не удалось обработать фрагментов: %1$d)</string>
+    <string name="transcription_partial_chip">Неполная</string>
+    <string name="transcription_failed">Не удалось выполнить транскрипцию</string>
+    <string name="error_model_load">Файл модели может быть повреждён или иметь неверный формат. Попробуйте скачать его заново на вкладке «Модель».</string>
+    <string name="error_native">Во время транскрипции произошла внутренняя ошибка. Если это повторяется, попробуйте другую модель.</string>
+    <string name="error_not_initialized">Модель не загружена. Откройте вкладку «Модель», чтобы скачать или выбрать модель.</string>
+    <string name="error_model_unavailable">Выбранная модель больше недоступна. Откройте вкладку «Модель» и выберите другую.</string>
+    <string name="native_crash_model_warning">Приложение неожиданно закрылось во время последней транскрипции. Если это произошло при загрузке модели, файл может быть повреждён. Попробуйте скачать его заново на вкладке «Модель».</string>
+    <string name="oom_crash_title">Приложение закрыто из-за нехватки памяти</string>
+    <string name="oom_crash_warning">Приложение было закрыто, так как на устройстве заканчивалась память. Закройте другие приложения или используйте модель меньшего размера перед новой транскрипцией.</string>
+    <string name="native_crash_title">Приложение неожиданно закрылось</string>
+    <string name="native_crash_go_to_model">Перейти на вкладку «Модель»</string>
+    <string name="model_load_low_memory">Недостаточно свободной памяти для этой модели (доступно %1$s, требуется около %2$s). Закройте другие приложения или используйте модель меньшего размера. Можно также включить «Принудительная загрузка модели» в настройках, чтобы попытаться всё равно.</string>
+    <string name="force_model_load">Принудительная загрузка модели</string>
+    <string name="force_model_load_desc">Загружать модель, даже если памяти кажется недостаточно. На устройствах с малым объёмом ОЗУ приложение может закрываться.</string>
+    <string name="copy">Копировать</string>
+    <string name="share">Поделиться</string>
+    <string name="char_counter">%1$d из %2$d символов</string>
+    <string name="page_counter">Страница %1$d из %2$d</string>
+    <string name="detected_language">Определён: %1$s</string>
+    <string name="confidence_low">Низкая уверенность</string>
+    <string name="no_audio_file">Аудиофайл не получен</string>
+    <string name="failed_to_process_audio">Не удалось обработать аудиофайл</string>
+    <string name="unsupported_audio_format">Поддерживаются голосовые сообщения из мессенджеров; формат .%1$s не поддерживается.</string>
+    <string name="unknown_audio_format">Не удалось определить формат аудио. Поделитесь аудио из мессенджера.</string>
+    <string name="transcription_started">Транскрипция начата…</string>
+    <string name="processing_segment_progress">Сегмент %1$d из %2$d…</string>
+    <string name="progressive_initial">Подготовка предварительных фрагментов; полный текст будет доступен по завершении</string>
+    <string name="added_to_queue">Добавлено в очередь…</string>
+    <string name="processing_chunk">Обработка фрагмента %1$d/%2$d…</string>
+    <string name="processing_audio">Обработка аудио…</string>
+    <string name="processing_request">Обработка запроса %1$s…</string>
+    <string name="processing_queue_item">Обработка %1$d из %2$d…</string>
+    <string name="processing_queue_item_audio">Обработка аудио (%1$d из %2$d)…</string>
+    <string name="processing_queue_chunk">Обработка фрагмента %1$d/%2$d (%3$d из %4$d)…</string>
+    <plurals name="queued_count">
+        <item quantity="one">В очереди: %1$d</item>
+        <item quantity="few">В очереди: %1$d</item>
+        <item quantity="many">В очереди: %1$d</item>
+        <item quantity="other">В очереди: %1$d</item>
+    </plurals>
+    <string name="generating_text">Генерация текстового ответа…</string>
+
+    <!-- Model Tab - Download section -->
+    <string name="download_models">Модели Gemma</string>
+    <string name="gemma_advanced_features_description">Полноценные мультимодальные LLM с расширенными возможностями: транскрипция, преобразование и обогащение текста.</string>
+    <string name="requires_huggingface_token">Требуется токен HuggingFace.</string>
+    <string name="add_in_settings">Добавить в настройках</string>
+    <string name="recommended">Рекомендуется</string>
+    <string name="best_italian_badge">Лучший для итальянского</string>
+    <string name="downloading">Загрузка…</string>
+    <string name="connecting_to_huggingface">Подключение к HuggingFace…</string>
+    <string name="cancel_download">Отменить загрузку</string>
+    <string name="cancel_extract">Отменить извлечение</string>
+    <string name="extract_model">Извлечь</string>
+    <string name="use_model">Использовать модель</string>
+    <string name="active_badge">Активна</string>
+    <string name="model_selected_message">Выбрано: %1$s</string>
+    <string name="model_use_missing_files">Файлы модели %1$s отсутствуют или неполные. Скачайте этот вариант заново на вкладке «Модель».</string>
+    <string name="delete">Удалить</string>
+    <string name="download">Скачать</string>
+    <string name="model_update_button">Обновить</string>
+    <string name="gemma_update_confirm_title">Обновить %1$s</string>
+    <string name="gemma_update_confirm_message">Доступна более быстрая версия со спекулятивным декодированием. Скачать заново (~%1$d МБ)?</string>
+    <string name="view">Показать</string>
+
+    <!-- Model Tab - Info labels -->
+    <string name="label_filename">Имя файла</string>
+    <string name="label_supports_audio">Поддержка аудио</string>
+    <string name="label_yes_multimodal">Да (мультимодальная)</string>
+    <string name="label_no_text_only">Нет (только текст)</string>
+    <string name="label_huggingface">HuggingFace</string>
+    <string name="label_ai_gallery_name">Имя в AI Gallery</string>
+    <string name="show_less">Показать меньше</string>
+    <string name="show_more">Показать больше</string>
+
+    <!-- Model Tab - Delete dialog -->
+    <string name="dialog_delete_title">Удалить модель?</string>
+    <string name="dialog_delete_message">«%1$s» будет безвозвратно удалена с устройства. Позже её можно скачать снова.</string>
+    <string name="action_delete">Удалить</string>
+    <string name="action_cancel">Отмена</string>
+    <!-- Chunk navigation in the in-progress notification (TASK-242) -->
+    <string name="chunk_nav_prev">◀</string>
+    <string name="chunk_nav_next">▶</string>
+    <string name="chunk_nav_live">Последний</string>
+    <string name="chunk_nav_pinned_subtext">Фрагмент %1$d из %2$d · в реальном времени %3$d из %2$d</string>
+    <string name="chunk_nav_live_subtext">В реальном времени · фрагмент %1$d из %2$d</string>
+    <string name="chunk_nav_empty">Нет текста для этого фрагмента</string>
+
+    <!-- Settings Tab - Section Titles -->
+    <!-- review: "Транскрипция" chosen over "расшифровка" per AOSP-canonical glossary; flag for reviewer. -->
+    <string name="settings_section_transcription">Транскрипция</string>
+    <string name="settings_section_appearance">Оформление</string>
+    <string name="settings_section_advanced">Дополнительно</string>
+    <string name="settings_section_feedback">Обратная связь и о приложении</string>
+    <string name="settings_feedback_send_title">Отправить отзыв / Сообщить о проблеме</string>
+    <string name="settings_feedback_send_description">Открывает почтовое приложение с заранее заполненными данными</string>
+    <string name="settings_feedback_translation_title">Сообщить о неверном переводе</string>
+    <string name="settings_feedback_translation_description">Сообщает нам язык, который используется в приложении</string>
+    <string name="settings_feedback_source_title">Исходный код</string>
+    <string name="settings_feedback_license_title">Лицензия</string>
+    <string name="settings_feedback_license_value">Apache 2.0</string>
+    <string name="settings_feedback_privacy_note">Ничего не отправляется без вашего действия; это письмо отправляет ваше почтовое приложение.</string>
+    <string name="settings_feedback_address_copied">Почтовое приложение не найдено. Адрес скопирован в буфер обмена: %1$s</string>
+    <string name="settings_feedback_body_version">Версия приложения</string>
+    <string name="settings_feedback_body_android">Android</string>
+    <string name="settings_feedback_body_device">Устройство</string>
+    <string name="settings_feedback_body_locale">Язык</string>
+    <string name="settings_feedback_body_model">Активная модель</string>
+    <string name="settings_feedback_body_your_message">Ваше сообщение:</string>
+    <string name="settings_feedback_body_note">При желании вы можете удалить технические сведения выше.</string>
+    <string name="oauth_connected">OAuth подключён</string>
+
+    <!-- Settings Tab - Model status -->
+    <string name="model_loaded">Модель загружена</string>
+    <string name="model_not_loaded">Модель выгружена (загружается автоматически по мере необходимости)</string>
+    <string name="auto_unload_in">Автовыгрузка через: %1$d мин %2$d с</string>
+    <string name="load_model_from_tab">Модель загружается автоматически при необходимости. Выгрузка экономит память.</string>
+
+    <!-- Settings Tab - Active Model -->
+    <string name="active_model">Активная модель</string>
+    <string name="no_model_selected_error">Модель не выбрана</string>
+    <string name="available_models">Доступные модели:</string>
+    <string name="no_models_found">Модели не найдены. Скачайте модель или добавьте её на вкладке «Модель».</string>
+    <string name="manage_models">Управление моделями</string>
+    <string name="source_hf">HF</string>
+    <string name="source_gallery">Gallery</string>
+
+    <!-- Settings Tab - HuggingFace Authentication -->
+    <string name="huggingface_auth">Авторизация в HuggingFace</string>
+    <string name="huggingface_auth_description">Нужна только для скачивания моделей из HuggingFace от вашего имени. Локальные модели работают без авторизации.</string>
+    <string name="setup_guide">Инструкция по настройке</string>
+    <string name="setup_step1">1. Нажмите «Войти через HuggingFace» ниже</string>
+    <string name="setup_step2">2. Войдите в аккаунт HuggingFace</string>
+    <string name="setup_step3">3. Разрешите доступ приложению</string>
+    <string name="setup_step4">4. Вы будете автоматически возвращены обратно</string>
+    <string name="token_valid">Токен действителен</string>
+    <string name="username_label">Имя пользователя: %1$s</string>
+    <string name="token_label">Токен: %1$s</string>
+    <string name="expires_label">Действует до: %1$s</string>
+    <string name="expired">Истёк</string>
+    <string name="login_with_huggingface">Войти через HuggingFace</string>
+    <string name="oauth_login_description">Быстрый вход через браузер. Если вы уже вошли в HuggingFace в Chrome, вы будете мгновенно возвращены обратно.</string>
+    <string name="create_account_link">Нет аккаунта? Создайте его на huggingface.co</string>
+    <string name="authenticating">Вход в HuggingFace…</string>
+    <string name="logged_in_as">Вы вошли как %1$s</string>
+    <string name="logout">Выйти</string>
+    <string name="clear_token">Очистить токен</string>
+
+    <!-- Settings Tab - Manual Token -->
+    <string name="advanced_manual_token">Дополнительно: ручной ввод токена</string>
+    <string name="hide_advanced">Скрыть раздел ручного ввода токена</string>
+    <string name="manual_token_scope_info">Для токенов, введённых вручную, требуется область доступа «read» для скачивания моделей.</string>
+    <string name="huggingface_token_label">Токен HuggingFace</string>
+    <string name="token_placeholder">hf_…</string>
+    <string name="paste_from_clipboard">Вставить из буфера обмена</string>
+    <string name="show_token">Показать токен</string>
+    <string name="hide_token">Скрыть токен</string>
+    <string name="create_token">Создать токен</string>
+    <string name="get_token">Получить токен</string>
+    <string name="retry">Повторить попытку</string>
+    <string name="validating">Проверка…</string>
+    <string name="validate_and_save">Проверить и сохранить</string>
+    <string name="validating_token">Проверка токена…</string>
+
+    <!-- Settings Tab - Timeout -->
+    <string name="auto_unload_timeout">Тайм-аут автовыгрузки</string>
+    <string name="timeout_description">Автоматически выгружать модель после периода неактивности, чтобы освободить память. Модель будет автоматически загружена снова при необходимости.</string>
+    <string name="timeout_1_minute">1 минута</string>
+    <string name="timeout_1_hour">1 час</string>
+    <plurals name="timeout_minutes">
+        <item quantity="one">%1$d минута</item>
+        <item quantity="few">%1$d минуты</item>
+        <item quantity="many">%1$d минут</item>
+        <item quantity="other">%1$d минут</item>
+    </plurals>
+
+    <!-- Settings Tab - Thread Count -->
+    <string name="thread_count_title">Потоки вывода</string>
+    <string name="thread_count_description">Количество потоков процессора для транскрипции и определения голосовой активности. Большие значения сильнее нагружают процессор, но могут ускорить обработку.</string>
+    <string name="thread_count_auto">%1$d (определено автоматически)</string>
+    <string name="thread_count_value">%1$d</string>
+
+    <string name="inference_provider_title">Провайдер вывода</string>
+    <string name="inference_provider_description">Бэкенд выполнения вывода ONNX. NNAPI может использовать NPU/GPU устройства, но для некоторых моделей работает медленнее процессора.</string>
+    <string name="inference_provider_auto">Авто (CPU)</string>
+    <string name="inference_provider_nnapi">NNAPI (аппаратное ускорение)</string>
+    <string name="inference_provider_cpu">Только CPU</string>
+
+    <string name="saving">Сохранение…</string>
+    <string name="settings_saved">Настройки сохранены</string>
+    <string name="save">Сохранить</string>
+
+    <!-- Settings Tab - Auto-Copy -->
+    <string name="auto_copy_title">Автокопирование транскрипции</string>
+    <string name="auto_copy_description">Автоматически копировать результаты транскрипции в буфер обмена. Вы по-прежнему можете скопировать вручную из уведомления.</string>
+
+    <!-- Settings Tab - Output Folder -->
+    <string name="output_folder_title">Сохранять транскрипции в папку</string>
+    <string name="output_folder_description">Автоматически сохранять каждую транскрипцию как файл .txt в выбранную вами папку (например, папку Drive или Syncthing).</string>
+    <string name="output_folder_choose">Выбрать папку</string>
+    <string name="output_folder_clear">Очистить папку</string>
+
+    <!-- Settings Tab - VAD -->
+    <string name="vad_title">Удаление тишины (VAD)</string>
+    <string name="vad_description">Удалять беззвучные участки из голосовых сообщений перед транскрипцией. Сокращает время обработки и повышает точность.</string>
+    <string name="progressive_title">Прогрессивный показ</string>
+    <string name="progressive_description">Показывать текст транскрипции по мере завершения каждого речевого сегмента, не дожидаясь полного результата.</string>
+
+    <!-- Settings Tab - Default Prompt -->
+    <string name="default_prompt_title">Запрос для транскрипции по умолчанию</string>
+    <string name="default_prompt_description">Этот запрос будет использоваться при транскрипции аудио. Оставьте пустым, чтобы использовать системный запрос по умолчанию.</string>
+    <string name="default_prompt_placeholder">например: Расшифруй эту речь:</string>
+    <string name="default_prompt_chars">%1$d / 500</string>
+    <string name="default_prompt_compatibility_info">Применяется только к LLM-моделям (Gemma). Модели Whisper и Parakeet игнорируют эту настройку.</string>
+    <string name="current_default_prompt_label">Сейчас используется:</string>
+    <string name="default_system_prompt">Расшифруй эту речь:</string>
+    <string name="builtin_default_prompt">Расшифруй эту речь: (встроенный по умолчанию)</string>
+    <string name="example_prompts_title">Примеры запросов</string>
+    <string name="example_prompts_description">Нажмите на запрос, чтобы использовать его</string>
+    <!-- review: prompts are sent to the LLM; used the imperative "ты"-style wording typical for LLM prompts. Review for tone. -->
+    <string name="example_prompt_transcribe">Точно расшифруй это аудио, сохраняя исходный язык.</string>
+    <string name="example_prompt_summarize">Расшифруй и кратко перечисли основные мысли этого аудиосообщения.</string>
+    <string name="example_prompt_formal">Расшифруй это аудио в официальном, аккуратном стиле. Убери слова-паразиты и ложные начала.</string>
+    <string name="example_prompt_translate_en">Расшифруй и переведи это аудио на английский язык.</string>
+    <string name="example_prompt_translate_it">Trascrivi e traduci questo audio in italiano.</string>
+    <string name="example_prompt_notes">Расшифруй это аудио и оформи в виде маркированного списка.</string>
+    <string name="prompt_applied">Запрос применён</string>
+
+    <!-- Settings Tab - Preload Info -->
+    <string name="preload_title">Автозагрузка и предзагрузка</string>
+    <string name="preload_description">Модель автоматически загружается при получении запроса, если её нет в памяти. Также можно загрузить модель принудительно:</string>
+    <string name="via_tasker">Через Tasker:</string>
+    <string name="via_adb">Через ADB:</string>
+
+    <!-- Settings Tab - Language -->
+    <string name="language_title">Язык</string>
+    <string name="language_description">Выберите язык интерфейса приложения.</string>
+    <string name="language_system">Как в системе</string>
+    <string name="language_english">English</string>
+    <string name="language_italian">Italiano</string>
+
+    <!-- Settings Tab - Transcription Language -->
+    <string name="transcription_language_title">Язык транскрипции</string>
+    <string name="transcription_language_auto">Определять автоматически</string>
+    <string name="transcription_language_description">Выберите язык для транскрипции аудио. Выбор конкретного языка пропускает определение и ускоряет работу.</string>
+    <string name="transcription_language_note">Применяется только к моделям Whisper. Модель Distil Italian всегда использует итальянский. Остальные бэкенды (Gemma, Parakeet, Qwen3-ASR) определяют язык автоматически.</string>
+
+    <!-- Settings Tab - Theme -->
+    <string name="theme_title">Тема</string>
+    <string name="theme_description">Выберите цветовую тему приложения.</string>
+    <string name="theme_mode_title">Режим темы</string>
+    <string name="theme_mode_description">Следовать системной настройке или принудительно включить тёмную или светлую тему.</string>
+    <string name="theme_default">По умолчанию (индиго)</string>
+    <string name="theme_whatsapp">WhatsApp</string>
+    <string name="theme_telegram">Telegram</string>
+
+    <!-- Per-App Settings -->
+    <string name="per_app_settings_title">Настройки по приложениям</string>
+    <string name="per_app_settings_description">Настройте поведение уведомлений для каждого приложения</string>
+    <string name="per_app_settings_info">Нажмите на приложение, чтобы настроить поведение уведомлений при передаче аудио из этого приложения.</string>
+    <string name="per_app_settings_loading">Загрузка настроек…</string>
+    <string name="per_app_settings_manually_added">Добавлено вручную</string>
+    <string name="per_app_settings_add_app">Добавить приложение</string>
+    <string name="per_app_settings_search">Поиск приложений…</string>
+    <string name="per_app_settings_no_apps">Приложения не найдены</string>
+    <string name="per_app_settings_no_matching_apps">Подходящих приложений нет</string>
+    <string name="per_app_settings_using_defaults">Используются значения по умолчанию</string>
+    <string name="per_app_settings_auto_copy_on">Автокопирование включено</string>
+    <string name="per_app_settings_auto_copy_off">Автокопирование выключено</string>
+    <string name="per_app_settings_share_on">Кнопка «Поделиться» включена</string>
+    <string name="per_app_settings_share_off">Кнопка «Поделиться» выключена</string>
+    <string name="per_app_settings_sound">Звук: %1$s</string>
+    <string name="per_app_settings_dialog_title">Настройки для %1$s</string>
+    <string name="per_app_settings_auto_copy_title">Автокопирование транскрипции</string>
+    <string name="per_app_settings_auto_copy_description">Автоматически копировать транскрипцию в буфер обмена</string>
+    <string name="per_app_settings_show_share_title">Показывать кнопку «Поделиться»</string>
+    <string name="per_app_settings_show_share_description">Показывать кнопку «Поделиться» в уведомлении</string>
+    <string name="per_app_settings_notification_sound">Звук уведомления</string>
+    <string name="per_app_settings_sound_label">Звук</string>
+    <string name="per_app_settings_close">Закрыть</string>
+    <string name="per_app_settings_sound_default">По умолчанию</string>
+    <string name="per_app_settings_sound_silent">Без звука</string>
+    <string name="per_app_settings_sound_chime">Перезвон</string>
+    <string name="per_app_settings_sound_bell">Колокольчик</string>
+    <string name="per_app_settings_quick_share_back_title">Быстрый ответ</string>
+    <string name="per_app_settings_quick_share_back_description">Отправка транскрипций обратно в это приложение одним нажатием</string>
+
+    <!-- Per-App Reset -->
+    <string name="per_app_settings_reset_all">Сбросить всё до значений по умолчанию</string>
+    <string name="per_app_settings_reset_all_confirm_title">Сбросить все настройки?</string>
+    <string name="per_app_settings_reset_all_confirm_message">Настройки уведомлений для всех приложений будут восстановлены до значений по умолчанию.</string>
+    <string name="per_app_settings_reset_app">Сбросить до значений по умолчанию</string>
+    <string name="per_app_settings_reset_app_confirm_title">Сбросить настройки для %1$s?</string>
+    <string name="per_app_settings_reset_app_confirm_message">Настройки уведомлений для этого приложения будут восстановлены до значений по умолчанию.</string>
+    <string name="per_app_settings_reset_done">Настройки восстановлены до значений по умолчанию</string>
+
+    <!-- Per-App Onboarding Tooltip -->
+    <string name="per_app_onboarding_title">Настройте поведение для каждого приложения</string>
+    <string name="per_app_onboarding_message">Нажмите на любое приложение, чтобы настроить автокопирование, действия «Поделиться» и звуки уведомлений именно для него.</string>
+    <string name="per_app_onboarding_got_it">Понятно</string>
+
+    <!-- VAD Advisory (shown in Log tab when Parakeet is active with VAD enabled) -->
+    <string name="vad_advisory_title">VAD не нужен с Parakeet</string>
+    <string name="vad_advisory_description">Удаление тишины увеличивает время обработки, не улучшая результат для этой модели. Его можно отключить в настройках.</string>
+    <string name="vad_advisory_dismiss">Понятно</string>
+
+    <!-- Share Back -->
+    <string name="share_back">Быстрый ответ</string>
+    <string name="share_back_description">Отправить транскрипцию обратно в исходное приложение</string>
+    <string name="send_to_app">Отправить в %1$s</string>
+
+    <!-- Notification Channels -->
+    <string name="notification_channel_extraction">Скачивание модели</string>
+    <string name="notification_channel_extraction_description">Скачивает и распаковывает ML-модели в фоновом режиме</string>
+    <string name="notification_downloading_progress">Загрузка… %1$d%%</string>
+    <string name="notification_extracting_progress">Извлечение файлов… %1$d/%2$d</string>
+    <string name="notification_copying_progress">Копирование файлов… %1$d/%2$d</string>
+    <string name="notification_extracting_hint">Это может занять более 5 минут</string>
+    <string name="notification_download_complete">Загрузка завершена</string>
+    <string name="notification_channel_inference">Служба транскрипции</string>
+    <string name="notification_channel_inference_description">Фоновая обработка транскрипции аудио</string>
+    <string name="notification_channel_result">Результат транскрипции</string>
+    <string name="notification_channel_result_description">Уведомление о завершении транскрипции</string>
+    <string name="notification_cancelling">Отмена…</string>
+
+    <!-- No-model notification -->
+    <string name="notification_no_model_title">Нет модели транскрипции</string>
+    <string name="notification_no_model_message">Откройте приложение, чтобы скачать модель транскрипции</string>
+    <string name="notification_no_model_action">Открыть приложение</string>
+
+    <!-- Tasker fallback notification -->
+    <string name="notification_channel_tasker_fallback">Автоматизация Tasker</string>
+    <string name="notification_channel_tasker_fallback_description">Нажмите, чтобы начать транскрипцию при запуске из фонового режима</string>
+    <string name="tasker_fallback_notification_text">Нажмите, чтобы начать транскрипцию</string>
+
+    <!-- Dismiss -->
+    <string name="dismiss">Отклонить</string>
+
+    <!-- Download completion messages -->
+    <string name="parakeet_downloaded">Модель Parakeet успешно загружена</string>
+    <string name="whisper_downloaded">%1$s успешно загружена</string>
+    <string name="parakeet_deleted">Модель Parakeet удалена</string>
+    <string name="whisper_deleted">%1$s удалена</string>
+
+    <!-- Speed comparison -->
+    <string name="speed_comparison_title">Сравнение скорости</string>
+    <string name="speed_comparison_subtitle">Относительная производительность на типичных голосовых сообщениях (CPU)</string>
+    <string name="speed_comparison_header_model">Модель</string>
+    <string name="speed_comparison_header_size">Размер</string>
+    <string name="speed_comparison_header_speed">Скорость</string>
+    <string name="speed_comparison_header_quality">Качество для итальянского</string>
+    <string name="speed_comparison_small_name">Whisper Small</string>
+    <string name="speed_comparison_small_size">~358MB</string>
+    <string name="speed_comparison_small_speed">1.0x</string>
+    <string name="speed_comparison_small_quality">Среднее</string>
+    <string name="speed_comparison_turbo_name">Whisper Turbo</string>
+    <string name="speed_comparison_turbo_size">~988MB</string>
+    <string name="speed_comparison_turbo_speed">1.3x</string>
+    <string name="speed_comparison_turbo_quality">Хорошее</string>
+    <string name="speed_comparison_medium_name">Whisper Medium</string>
+    <string name="speed_comparison_medium_size">~903MB</string>
+    <string name="speed_comparison_medium_speed">0.5x</string>
+    <string name="speed_comparison_medium_quality">Хорошее</string>
+    <string name="speed_comparison_distil_it_name">Distil Italian</string>
+    <string name="speed_comparison_distil_it_size">~939MB</string>
+    <string name="speed_comparison_distil_it_speed">~1.8x</string>
+    <string name="speed_comparison_distil_it_quality">Лучший для итальянского</string>
+    <string name="speed_comparison_distil_it_note">Лучший для итальянского</string>
+    <string name="speed_comparison_parakeet_name">Parakeet TDT</string>
+    <string name="speed_comparison_parakeet_size">~464MB</string>
+    <string name="speed_comparison_parakeet_speed">~17x</string>
+    <string name="speed_comparison_parakeet_quality">Очень хорошее</string>
+    <string name="speed_comparison_parakeet_note">Рекомендуется</string>
+    <string name="speed_comparison_qwen3_name">Qwen3-ASR</string>
+    <string name="speed_comparison_qwen3_size">~938MB</string>
+    <string name="speed_comparison_qwen3_speed">~2x</string>
+    <string name="speed_comparison_qwen3_quality">52 языка, нестабильное</string>
+    <string name="speed_comparison_gigaam_name">GigaAM v3</string>
+    <string name="speed_comparison_gigaam_size">~326MB</string>
+    <string name="speed_comparison_gigaam_speed">Быстрая</string>
+    <string name="speed_comparison_gigaam_quality">Только русский</string>
+    <string name="speed_comparison_nemotron_name">Nemotron 3.5</string>
+    <string name="speed_comparison_nemotron_size">~600MB</string>
+    <string name="speed_comparison_nemotron_speed">Потоковая</string>
+    <string name="speed_comparison_nemotron_quality">Экспериментальная</string>
+    <string name="fastest_badge">Самая быстрая</string>
+    <string name="coming_soon_badge">Скоро</string>
+
+    <!-- Transcription ETA -->
+    <string name="transcription_eta_calibrating">Калибровка скорости…</string>
+    <string name="transcription_eta_seconds">Осталось ~%1$d с</string>
+    <string name="transcription_eta_minutes">Осталось ~%1$d мин %2$d с</string>
+    <string name="transcription_eta_hours">Осталось ~%1$d ч %2$d мин</string>
+    <string name="transcription_eta_estimating">Расчёт… осталось ~%1$d мин %2$d с</string>
+
+    <!-- Performance Stats -->
+    <string name="performance_stats_title">Статистика производительности</string>
+    <string name="performance_stats_subtitle">Реальная скорость транскрипции на вашем устройстве</string>
+    <string name="performance_stats_empty">Пока нет данных. Расшифруйте немного аудио, чтобы увидеть статистику.</string>
+    <string name="performance_stats_speed">%1$.0f мс/с</string>
+    <!-- review: "замер" chosen for "sample" (measurement); "образец" is the literal alternative. -->
+    <plurals name="performance_stats_samples_count">
+        <item quantity="one">%1$d замер</item>
+        <item quantity="few">%1$d замера</item>
+        <item quantity="many">%1$d замеров</item>
+        <item quantity="other">%1$d замеров</item>
+    </plurals>
+    <string name="performance_stats_fastest_badge">Самая быстрая</string>
+    <string name="performance_stats_clear">Сбросить статистику</string>
+    <string name="performance_stats_clear_confirm">Сбросить все данные о производительности?</string>
+    <string name="performance_stats_just_now">Только что</string>
+    <string name="performance_stats_minutes_ago">%1$d мин назад</string>
+    <string name="performance_stats_hours_ago">%1$d ч назад</string>
+    <string name="performance_stats_days_ago">%1$d дн назад</string>
+    <string name="performance_stats_total_audio">Всего обработано аудио: %1$s</string>
+
+    <!-- Transcription active protection -->
+    <string name="dialog_transcription_active_title">Идёт транскрипция</string>
+    <string name="dialog_delete_active_model_message">Нельзя удалить «%1$s», пока она используется для транскрипции. Дождитесь окончания транскрипции.</string>
+    <string name="dialog_delete_inactive_model_message">Транскрипция выполняется. Удаление «%1$s» на неё не повлияет, но действуйте с осторожностью.</string>
+    <string name="dialog_switch_model_message">Транскрипция сейчас выполняется. Переключение модели может её прервать. Продолжить?</string>
+    <string name="action_understood">Понятно</string>
+    <string name="action_switch_anyway">Всё равно переключить</string>
+    <string name="warn_reset_stats_during_transcription">Транскрипция выполняется. Сброс статистики сейчас на неё не повлияет, но данные о времени могут быть неполными.</string>
+    <string name="cannot_unload_during_transcription">Нельзя выгрузить: модель используется для активной транскрипции</string>
+    <string name="dialog_unload_title">Выгрузить модель?</string>
+    <string name="dialog_unload_message">Модель «%1$s» будет выгружена из памяти. Она будет автоматически загружена снова при следующей транскрипции.</string>
+    <string name="action_unload">Выгрузить</string>
+
+    <!-- Swipe Action Mode -->
+    <string name="swipe_action_title">Действие при смахивании</string>
+    <string name="swipe_action_description">Выберите, что происходит при смахивании записи журнала влево</string>
+    <string name="swipe_action_reveal">Показать действия</string>
+    <string name="swipe_action_immediate_delete">Сразу удалить</string>
+    <string name="swipe_action_copy_description">Копировать транскрипцию</string>
+    <string name="swipe_action_share_description">Поделиться транскрипцией</string>
+    <string name="swipe_action_delete_description">Удалить запись</string>
+    <string name="swipe_action_copied">Транскрипция скопирована</string>
+
+    <!-- Content descriptions (accessibility) -->
+    <string name="back">Назад</string>
+    <string name="add_app">Добавить приложение</string>
+    <string name="view_settings">Открыть настройки</string>
+    <string name="app_icon">Значок %1$s</string>
+
+    <!-- InferenceService strings -->
+    <string name="error_load_backend">Не удалось загрузить бэкенд: %1$s</string>
+    <string name="error_no_active_backend">Нет активного бэкенда</string>
+    <string name="error_no_file_path">Для аудиозапроса не указан путь к файлу</string>
+    <string name="error_backend_no_audio_support">%1$s не поддерживает транскрипцию аудио. Переключитесь на модель преобразования речи в текст в настройках.</string>
+    <string name="error_no_transcription_produced">Транскрипция не создана</string>
+    <string name="error_no_llm_model">LLM-модель не настроена. Откройте приложение, чтобы скачать модель.</string>
+    <string name="error_no_model_configured">Модель %1$s не настроена. Откройте приложение, чтобы скачать модель.</string>
+    <string name="loading_model">Загрузка модели %1$s…</string>
+    <string name="preprocessing_audio">Предобработка аудио…</string>
+    <string name="clipboard_label_transcription">Транскрипция</string>
+
+    <!-- Settings accessibility -->
+    <string name="open_prompt_settings">Открыть настройки запроса</string>
+    <string name="open_per_app_settings">Открыть настройки по приложениям</string>
+    <string name="open_performance_stats">Открыть статистику производительности</string>
+    <string name="hide_details">Скрыть подробности</string>
+    <string name="show_details">Показать подробности</string>
+    <string name="model_unknown">Неизвестно</string>
+
+    <!-- Picture-in-Picture -->
+    <string name="pip_transcribing">Транскрипция…</string>
+    <string name="pip_waiting">Ожидание транскрипции…</string>
+    <string name="pip_enter_button">PiP</string>
+    <string name="pip_enter_description">Показать в окне «Картинка в картинке»</string>
+
+    <!-- GGUF model descriptions -->
+    <string name="model_title_gemma4_gguf_q4km">Gemma 4 GGUF (Q4_K_M)</string>
+    <string name="model_desc_gemma4_gguf_q4km">4,9 ГБ · Apache 2.0 · Генерация текста через llama.cpp. Лучший баланс качества и размера.</string>
+    <string name="model_title_gemma4_gguf_q5km">Gemma 4 GGUF (Q5_K_M)</string>
+    <string name="model_desc_gemma4_gguf_q5km">5,3 ГБ · Apache 2.0 · Генерация текста более высокого качества через llama.cpp.</string>
+    <string name="model_title_gemma4_gguf_q8">Gemma 4 GGUF (Q8_0)</string>
+    <string name="model_desc_gemma4_gguf_q8">7,4 ГБ · Apache 2.0 · Лучшая генерация текста через llama.cpp. Требуется 8+ ГБ ОЗУ.</string>
+    <string name="model_title_gemma_4_e2b">Gemma 4 E2B</string>
+    <string name="model_title_gemma_4_e4b">Gemma 4 E4B</string>
+    <string name="model_title_gemma_3n_e2b">Gemma 3n E2B</string>
+    <string name="model_title_gemma_3n_e4b">Gemma 3n E4B</string>
+    <string name="backend_gemma4_gguf">Gemma 4 (GGUF)</string>
+    <string name="gguf_inference_unavailable">Для вывода GGUF требуется нативная библиотека llama.cpp. Соберите libllama.so для Android ARM64.</string>
+    <string name="gguf_model_download_error">Не удалось скачать модель GGUF</string>
+
+    <!-- GGUF model download section -->
+    <string name="gguf_title">Gemma 4 GGUF (генерация текста)</string>
+    <string name="gguf_description">Локальная LLM для генерации текста без зависимости от облака. Требуется нативная библиотека llama.cpp.</string>
+    <string name="gguf_unsupported_arch">Не поддерживается на этом устройстве (требуется ARM64).</string>
+    <string name="gguf_download_confirm_title">Скачать %1$s?</string>
+    <string name="gguf_download_confirm_message">Будет загружено ~%1$d МБ. Модели GGUF позволяют генерировать текст локально, без интернета.</string>
+    <string name="gguf_downloaded">%1$s успешно загружена</string>
+    <string name="gguf_delete_message">Удалить %1$s? Будет освобождено ~%2$d МБ памяти.</string>
+    <string name="gguf_deleted">%1$s удалена</string>
+
+    <!-- Language filter -->
+    <!-- review: lang_* names kept in native form per glossary (values-it convention). -->
+    <string name="lang_filter_label">Фильтр по языку</string>
+    <string name="lang_filter_all">Все языки</string>
+    <string name="lang_filter_search">Поиск языка…</string>
+    <string name="lang_filter_no_results">Подходящих языков нет</string>
+    <string name="lang_filter_clear">Очистить поиск</string>
+    <string name="lang_afrikaans">Afrikaans</string>
+    <string name="lang_arabic">العربية</string>
+    <string name="lang_azerbaijani">Azərbaycan</string>
+    <string name="lang_belarusian">Беларуская</string>
+    <string name="lang_bulgarian">Български</string>
+    <string name="lang_bengali">বাংলা</string>
+    <string name="lang_catalan">Català</string>
+    <string name="lang_czech">Čeština</string>
+    <string name="lang_welsh">Cymraeg</string>
+    <string name="lang_danish">Dansk</string>
+    <string name="lang_german">Deutsch</string>
+    <string name="lang_greek">Ελληνικά</string>
+    <string name="lang_english">English</string>
+    <string name="lang_spanish">Español</string>
+    <string name="lang_estonian">Eesti</string>
+    <string name="lang_basque">Euskara</string>
+    <string name="lang_persian">فارسی</string>
+    <string name="lang_finnish">Suomi</string>
+    <string name="lang_french">Français</string>
+    <string name="lang_galician">Galego</string>
+    <string name="lang_hebrew">עברית</string>
+    <string name="lang_hindi">हिन्दी</string>
+    <string name="lang_croatian">Hrvatski</string>
+    <string name="lang_hungarian">Magyar</string>
+    <string name="lang_indonesian">Bahasa Indonesia</string>
+    <string name="lang_italian">Italiano</string>
+    <string name="lang_japanese">日本語</string>
+    <string name="lang_georgian">ქართული</string>
+    <string name="lang_korean">한국어</string>
+    <string name="lang_lithuanian">Lietuvių</string>
+    <string name="lang_latvian">Latviešu</string>
+    <string name="lang_macedonian">Македонски</string>
+    <string name="lang_malay">Bahasa Melayu</string>
+    <string name="lang_dutch">Nederlands</string>
+    <string name="lang_norwegian">Norsk</string>
+    <string name="lang_polish">Polski</string>
+    <string name="lang_portuguese">Português</string>
+    <string name="lang_romanian">Română</string>
+    <string name="lang_russian">Русский</string>
+    <string name="lang_slovak">Slovenčina</string>
+    <string name="lang_slovenian">Slovenščina</string>
+    <string name="lang_albanian">Shqip</string>
+    <string name="lang_serbian">Српски</string>
+    <string name="lang_swedish">Svenska</string>
+    <string name="lang_swahili">Kiswahili</string>
+    <string name="lang_tamil">தமிழ்</string>
+    <string name="lang_thai">ไทย</string>
+    <string name="lang_turkish">Türkçe</string>
+    <string name="lang_ukrainian">Українська</string>
+    <string name="lang_urdu">اردو</string>
+    <string name="lang_uzbek">Oʻzbek</string>
+    <string name="lang_vietnamese">Tiếng Việt</string>
+    <string name="lang_chinese">中文</string>
+
+    <!-- Model Benchmark -->
+    <string name="benchmark_title">Тест %1$s</string>
+    <string name="benchmark_preparing">Подготовка теста…</string>
+    <string name="benchmark_running">Выполнение теста…</string>
+    <string name="benchmark_progress">Выполнено: %1$d%%</string>
+    <string name="benchmark_cancel">Отмена</string>
+    <string name="benchmark_rerun">Запустить снова</string>
+    <string name="benchmark_retry">Повторить попытку</string>
+    <string name="benchmark_speed_label">Скорость</string>
+    <string name="benchmark_speed_value">%1$.1f с/мин аудио</string>
+    <string name="benchmark_time_label">Время вывода</string>
+    <string name="benchmark_time_value">%1$d мс</string>
+    <string name="benchmark_memory_label">Пиковая память</string>
+    <string name="benchmark_memory_value">%1$.0f МБ</string>
+    <string name="benchmark_duration_label">Длительность образца</string>
+    <string name="benchmark_duration_value">%1$.0f с</string>
+    <string name="benchmark_rating_fast">Быстро</string>
+    <string name="benchmark_rating_good">Хорошо</string>
+    <string name="benchmark_rating_moderate">Средне</string>
+    <string name="benchmark_rating_slow">Медленно</string>
+    <string name="benchmark_disclaimer">Результаты могут меняться в зависимости от нагрузки на устройство и температуры.</string>
+    <string name="benchmark_button">Тест</string>
+    <string name="benchmark_cached_result">Последний тест: %1$s</string>
+    <string name="benchmark_provider_label">Провайдер</string>
+    <string name="benchmark_provider_value">%1$s</string>
+    <string name="transcription_interrupted_title">Транскрипция была прервана</string>
+    <string name="action_dismiss">Отклонить</string>
+
+    <!-- Model Info Overlay -->
+    <string name="model_info_title">Информация о модели</string>
+    <string name="model_info_section_languages">Поддерживаемые языки</string>
+    <string name="model_info_section_recommendations">Рекомендации</string>
+    <string name="model_info_section_technical">Технические подробности</string>
+    <string name="model_info_section_performance">Советы по производительности</string>
+    <plurals name="model_info_languages_count">
+        <item quantity="one">%d язык</item>
+        <item quantity="few">%d языка</item>
+        <item quantity="many">%d языков</item>
+        <item quantity="other">%d языков</item>
+    </plurals>
+    <string name="model_info_no_languages">Поддержка языков неизвестна</string>
+    <string name="model_info_architecture">Архитектура</string>
+    <string name="model_info_arch_encoder_decoder">Кодировщик-декодер (Whisper)</string>
+    <string name="model_info_arch_transducer">Транссудер (TDT)</string>
+    <string name="model_info_arch_ctc">CTC (коннекционистская временная классификация)</string>
+    <string name="model_info_arch_llm">Большая языковая модель</string>
+    <string name="model_info_model_size">Размер модели</string>
+    <string name="model_info_max_audio">Максимальная длительность аудио</string>
+    <string name="model_info_max_audio_unlimited">Без ограничений</string>
+    <plurals name="model_info_max_audio_seconds">
+        <item quantity="one">%d секунда</item>
+        <item quantity="few">%d секунды</item>
+        <item quantity="many">%d секунд</item>
+        <item quantity="other">%d секунд</item>
+    </plurals>
+    <string name="model_info_quantization">Квантование</string>
+    <string name="model_info_recommended_threads">Рекомендуемое число потоков</string>
+    <string name="model_info_threads_range">%1$d – %2$d</string>
+    <string name="model_info_arm64_only">Только устройства ARM64</string>
+    <string name="model_info_progressive">Прогрессивная транскрипция</string>
+    <string name="model_info_vad_recommended">Рекомендуется предобработка VAD</string>
+    <string name="model_info_best_for_whisper_small">Компактная многоязычная модель для быстрой проверки</string>
+    <string name="model_info_notes_whisper_small">Хорошая отправная точка. Точность ниже, чем у крупных моделей.</string>
+    <string name="model_info_best_for_whisper_turbo">Сбалансированная многоязычная модель с автоопределением</string>
+    <string name="model_info_notes_whisper_turbo">Качество почти как у large-v3 при умеренной скорости. Подходит для многоязычных пользователей.</string>
+    <string name="model_info_best_for_whisper_medium">Многоязычная модель среднего размера</string>
+    <string name="model_info_notes_whisper_medium">Хороший баланс между точностью и потреблением ресурсов.</string>
+    <string name="model_info_best_for_distil_it">Лучшая точность для итальянского (WER 4.3%%)</string>
+    <string name="model_info_notes_distil_it">Только итальянский. Максимальная точность для итальянских голосовых сообщений. Приоритет: точность, а не скорость.</string>
+    <string name="model_info_best_for_qwen3">Автоопределение для 52 языков</string>
+    <string name="model_info_notes_qwen3">Самое широкое покрытие языков. Внимание: обрезает аудио длиннее 30 секунд. Только устройства ARM64.</string>
+    <string name="model_info_best_for_parakeet">Самая быстрая транскрипция (в 17,6 раза быстрее Whisper, WER 5.4%%)</string>
+    <string name="model_info_notes_parakeet">Без ограничения длительности аудио. VAD не требуется. Лучший выбор для тех, кому важна скорость.</string>
+    <string name="model_info_best_for_gigaam">Лучшая точность для русского языка на устройстве</string>
+    <string name="model_info_notes_gigaam">Только русский. Собственная пунктуация и заглавные буквы.</string>
+    <string name="model_info_best_for_nemotron">Потоковая транскрипция для длинного аудио</string>
+    <string name="model_info_notes_nemotron">Потоковый транссудер с низкой задержкой. Автоопределение языка с возможностью выбора языка для каждого потока.</string>
+    <string name="model_info_best_for_gemma">Мультимодальная LLM для задач с текстом и аудио</string>
+    <string name="model_info_notes_gemma">Не оптимизирована для чистого распознавания речи. Используйте для расширенных возможностей: понимание аудио в сочетании с генерацией текста.</string>
+    <string name="model_info_benchmark_wer">Доля ошибок на словах (итальянский): %.1f%%</string>
+    <string name="model_info_relative_speed">Скорость: %s</string>
+    <string name="model_info_close">Закрыть</string>
+
+    <!-- Skeleton loading -->
+    <string name="skeleton_loading_content_description">Загрузка транскрипции</string>
+
+    <!-- Share target profiles (appear as separate entries in Android share sheet) -->
+    <string name="share_target_parakeet">Anti-Vocale (Parakeet)</string>
+    <string name="share_target_whisper">Anti-Vocale (Whisper)</string>
+    <string name="share_target_qwen3">Anti-Vocale (Qwen3)</string>
+    <string name="share_target_gemma">Anti-Vocale (Gemma)</string>
+    <string name="share_target_nemotron">Anti-Vocale (Nemotron)</string>
+    <string name="share_target_gigaam">Anti-Vocale (GigaAM)</string>
+    <string name="share_target_external">Anti-Vocale (External)</string>
+    <string name="external_none_imported">Внешние модели не импортированы</string>
+    <string name="external_section_title">Внешние модели</string>
+    <string name="model_advanced_section">Дополнительно</string>
+    <string name="model_advanced_description">Импортировать файлы моделей вручную</string>
+    <string name="external_import_folder">Выбрать папку</string>
+    <string name="external_import_url">Импорт по URL</string>
+    <string name="external_url_hint">URL репозитория HuggingFace или JSON-записи каталога</string>
+    <string name="external_url_dialog_title">Импорт внешней модели</string>
+    <string name="external_import">Импортировать</string>
+    <string name="external_importing">Импорт модели…</string>
+    <string name="external_import_failed">Не удалось импортировать: %1$s</string>
+    <string name="external_imported">Импортировано: %1$s</string>
+    <string name="external_delete_confirm">Удалить внешнюю модель %1$s?</string>
+    <string name="external_deleted">%1$s удалена</string>
+    <string name="external_family">Семейство моделей</string>
+    <string name="external_family_transducer">Транссудер (NeMo/Zipformer)</string>
+    <string name="external_family_transducer_help">Ожидаются файлы encoder + decoder + joiner + tokens</string>
+    <string name="external_family_whisper">Whisper</string>
+    <string name="external_family_whisper_help">Ожидаются файлы encoder + decoder + tokens</string>
+    <string name="external_family_ctc">CTC</string>
+    <string name="external_family_ctc_help">Ожидаются файлы encoder + tokens</string>
+    <string name="external_family_sense_voice">SenseVoice</string>
+    <string name="external_family_sense_voice_help">Ожидаются файлы model + tokens</string>
+    <string name="external_option_language">Язык (необязательно)</string>
+    <string name="external_option_language_hint">например ar, en, it (пусто = авто)</string>
+    <string name="external_option_itn">Обратная нормализация текста</string>
+    <string name="external_ctc_subtype">Подтип CTC</string>
+    <string name="external_ctc_subtype_nemo">NeMo CTC</string>
+    <string name="external_ctc_subtype_zipformer">Zipformer CTC</string>
+    <string name="external_languages">Языки (необязательно)</string>
+    <string name="external_languages_hint">через запятую или пробел, например ar, en</string>
+    <string name="external_notice_single_pass">Однопроходная транскрипция: очень длинное аудио может не обработаться крупными моделями. Обрежьте аудио или используйте модель меньшего размера.</string>
+    <string name="external_notice_family">Если транскрипция завершается сбоем без ошибки, возможно, выбрана неверная архитектура: удалите модель и импортируйте её заново с другой архитектурой.</string>
+
+    <!-- Advanced sharing settings -->
+    <string name="share_targets_title">Цели «Поделиться»</string>
+    <string name="share_targets_description">Показывать каждую скачанную модель отдельным пунктом в системном меню «Поделиться». При передаче аудио через конкретную модель она используется временно, только для этой транскрипции.</string>
+    <string name="advanced_sharing_toggle">Показывать модели в меню «Поделиться»</string>
+    <string name="share_targets_models_info">Каждая скачанная модель появится как отдельная цель «Поделиться». Удаление модели убирает её цель.</string>
+
+    <!-- Conversation Grouping -->
+    <string name="conversation_grouping_title">Группировка по беседам</string>
+    <string name="conversation_grouping_description">Группировать транскрипции по исходному приложению (WhatsApp, Telegram и т.д.) в сворачиваемые разделы.</string>
+    <plurals name="conversation_group_count">
+        <item quantity="one">%1$d сообщение</item>
+        <item quantity="few">%1$d сообщения</item>
+        <item quantity="many">%1$d сообщений</item>
+        <item quantity="other">%1$d сообщений</item>
+    </plurals>
+    <string name="conversation_group_unknown">Другое</string>
+
+    <!-- Re-transcribe -->
+    <string name="retranscribe">Повторить попытку</string>
+    <string name="retranscribe_title">Повторная транскрипция с помощью…</string>
+    <string name="retranscribe_subtitle">Выберите модель для повторной транскрипции этого аудио</string>
+    <string name="retranscribe_confirm">Расшифровать</string>
+    <string name="retranscribe_no_models">Модели для аудио не настроены. Сначала скачайте модель на вкладке «Модель».</string>
+    <string name="retranscribe_file_not_found">Аудиофайл больше недоступен</string>
+    <string name="retranscribe_active_badge">Активна</string>
+    <string name="retranscribe_setting_title">Кнопка повторной транскрипции</string>
+    <string name="retranscribe_setting_description">Показывать на аудиотранскрипциях кнопку для повтора другой моделью.</string>
+
+    <!-- Subtitle extraction choice (TASK-228) -->
+    <string name="subtitles_found_title">Найдены субтитры</string>
+    <string name="subtitles_found_text">Использовать встроенные субтитры (%1$s) или расшифровать аудио?</string>
+    <string name="subtitles_language_unknown">неизвестно</string>
+    <string name="action_use_subtitles">Использовать субтитры</string>
+    <string name="action_transcribe_audio">Расшифровать аудио</string>
+    <string name="subtitle_fallback_status">Не удалось извлечь субтитры, расшифровываем аудио</string>
+    <string name="subtitle_choice_notification_text">Ожидание вашего выбора…</string>
+</resources>

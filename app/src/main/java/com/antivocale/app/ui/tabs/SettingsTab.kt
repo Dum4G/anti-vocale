@@ -25,6 +25,7 @@ import androidx.compose.ui.Alignment
 import kotlinx.coroutines.launch
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import com.antivocale.app.R
 import androidx.compose.ui.text.font.FontWeight
@@ -469,13 +470,13 @@ fun SettingsTab(
                         currentValueDisplay = when (currentTimeout) {
                             1 -> stringResource(R.string.timeout_1_minute)
                             60 -> stringResource(R.string.timeout_1_hour)
-                            else -> stringResource(R.string.timeout_minutes, currentTimeout)
+                            else -> pluralStringResource(R.plurals.timeout_minutes, currentTimeout, currentTimeout)
                         },
                         optionDisplay = { minutes ->
                             when (minutes) {
                                 1 -> stringResource(R.string.timeout_1_minute)
                                 60 -> stringResource(R.string.timeout_1_hour)
-                                else -> stringResource(R.string.timeout_minutes, minutes)
+                                else -> pluralStringResource(R.plurals.timeout_minutes, minutes, minutes)
                             }
                         },
                         onOptionSelected = { viewModel.saveKeepAliveTimeout(it) },
