@@ -109,6 +109,29 @@ jobs:
         # No google-services.json or keystore needed (unsigned for F-Droid re-signing).
         run: ./gradlew assembleFdroidRelease
 
+      # Issue #32: tester-friendly APKs with direct download links. Debug
+      # builds are already signed with the standard Android debug keystore
+      # (generated on the fly by Gradle in CI), so they install as-is.
+      # playStoreDebug is preferred (matches what the developer tests), but it
+      # applies the google-services plugin to the .debug-suffixed package,
+      # which the CI google-services.json may not carry a client for; fall
+      # back to the Firebase-free fdroidDebug in that case. Either flavor
+      # produces the same per-ABI split outputs, just under a different
+      # flavor directory (staged to canonical names below).
+      - name: Build per-ABI debug APKs (tester builds)
+        id: debug-apk
+        if: >-
+          github.event_name == 'release' ||
+          (github.event_name == 'workflow_dispatch' && github.event.inputs.tag != '')
+        run: |
+          if ./gradlew assemblePlayStoreDebug; then
+            echo "flavor=playStore" >> "$GITHUB_OUTPUT"
+          else
+            echo "playStoreDebug failed (likely google-services client for com.antivocale.app.debug); falling back to fdroidDebug"
+            ./gradlew assembleFdroidDebug
+            echo "flavor=fdroid" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Build Release AAB
         if: >-
           (github.event_name == 'release' && github.event.action == 'published') ||
@@ -156,6 +179,64 @@ jobs:
           name: release-notes
           path: whats-new/
 
+      # Issue #32 naming contract: the tester APKs are attached under names
+      # DISTINCT from the canonical F-Droid assets (app-fdroid-<abi>-release.apk
+      # and app-fdroid-<abi>-release-unsigned.apk, which the F-Droid recipe's
+      # binary: URLs and reproducibility checks depend on). Only these prefixed
+      # names may be used for tester builds:
+      #   antivocale-debug-<abi>.apk            (debug build, debug-signed by Gradle)
+      #   antivocale-fdroid-testsigned-<abi>.apk (fdroid release build, debug-signed below)
+      # Files are COPIED into test-apks/ before any signing: the outputs dir is
+      # never modified in place, so the unsigned canonical APKs stay byte-clean
+      # for the reproducible-fdroid job.
+      - name: Stage tester APKs under canonical tester names
+        if: >-
+          github.event_name == 'release' ||
+          (github.event_name == 'workflow_dispatch' && github.event.inputs.tag != '')
+        run: |
+          set -eu
+          mkdir -p test-apks
+          # Debug APKs: per-ABI split output (splits.abi applies to every
+          # assemble* variant; see app/build.gradle.kts). Path flavor depends
+          # on the fallback above.
+          DEBUG_FLAVOR=${{ steps.debug-apk.outputs.flavor }}
+          for APK in app/build/outputs/apk/${DEBUG_FLAVOR}/debug/app-${DEBUG_FLAVOR}-*-debug.apk; do
+            ABI=$(basename "$APK" | sed -E "s/^app-${DEBUG_FLAVOR}-(.+)-debug\.apk$/\1/")
+            cp "$APK" "test-apks/antivocale-debug-${ABI}.apk"
+          done
+          ls test-apks/antivocale-debug-*.apk
+          # Fdroid release unsigned copies, to be test-signed next.
+          for ABI in armeabi-v7a arm64-v8a x86_64; do
+            cp "app/build/outputs/apk/fdroid/release/app-fdroid-${ABI}-release-unsigned.apk" \
+               "test-apks/antivocale-fdroid-testsigned-${ABI}.apk"
+          done
+          ls test-apks/
+
+      # Test-sign ONLY the staged copies. A fresh debug keystore is generated
+      # on the fly: a test-signed build needs AN installable signature, not a
+      # stable identity, so per-run keys are fine. SIGNATURE CAVEAT (issue #32):
+      # these APKs are signed with a throwaway debug key, different from both
+      # the Play Store build and the F-Droid build. They will NOT install as an
+      # update over either; they install alongside (or require uninstalling the
+      # store version first). The "testsigned" asset name encodes this.
+      - name: Test-sign staged fdroid APKs with a fresh debug keystore
+        if: >-
+          github.event_name == 'release' ||
+          (github.event_name == 'workflow_dispatch' && github.event.inputs.tag != '')
+        run: |
+          set -eu
+          keytool -genkeypair -keystore debug.keystore -alias androiddebugkey \
+            -storepass android -keypass android -keyalg RSA -keysize 2048 \
+            -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+          # apksigner ships with the runner's Android SDK build-tools.
+          APKSIGNER=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)
+          for ABI in armeabi-v7a arm64-v8a x86_64; do
+            "$APKSIGNER" sign --ks debug.keystore --ks-key-alias androiddebugkey \
+              --ks-pass pass:android --key-pass pass:android \
+              "test-apks/antivocale-fdroid-testsigned-${ABI}.apk"
+            "$APKSIGNER" verify "test-apks/antivocale-fdroid-testsigned-${ABI}.apk"
+          done
+
       - name: Attach APKs to GitHub Release
         if: >-
           (github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && github.event.inputs.tag != ''))
@@ -166,6 +247,24 @@ jobs:
             app/build/outputs/apk/fdroid/release/app-fdroid-armeabi-v7a-release-unsigned.apk
             app/build/outputs/apk/fdroid/release/app-fdroid-arm64-v8a-release-unsigned.apk
             app/build/outputs/apk/fdroid/release/app-fdroid-x86_64-release-unsigned.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Issue #32: direct-download tester APKs (no GitHub login needed, unlike
+      # workflow artifacts). Same trigger conditions as the attach step above.
+      - name: Attach tester APKs to GitHub Release
+        if: >-
+          (github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && github.event.inputs.tag != ''))
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.tag || '' }}
+          files: |
+            test-apks/antivocale-debug-armeabi-v7a.apk
+            test-apks/antivocale-debug-arm64-v8a.apk
+            test-apks/antivocale-debug-x86_64.apk
+            test-apks/antivocale-fdroid-testsigned-armeabi-v7a.apk
+            test-apks/antivocale-fdroid-testsigned-arm64-v8a.apk
+            test-apks/antivocale-fdroid-testsigned-x86_64.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
