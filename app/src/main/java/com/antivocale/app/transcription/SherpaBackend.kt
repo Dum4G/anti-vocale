@@ -698,8 +698,12 @@ class SherpaBackend(
  * written to: callers rely on it staying all zeros.
  */
 internal class TailSilenceBuffer {
-    private var oneSecond: FloatArray? = null
-    private var other: Pair<Int, FloatArray>? = null
+    // @Volatile: transcribeAudio runs with MAX_CONCURRENT_CHUNKS = 2 on the same
+    // backend instance; the lazy slots must be visible across those coroutines.
+    // Contents are never written after allocation (all zeros), so a rare duplicate
+    // allocation during a race is harmless; this just makes the cache airtight.
+    @Volatile private var oneSecond: FloatArray? = null
+    @Volatile private var other: Pair<Int, FloatArray>? = null
 
     fun get(sampleCount: Int): FloatArray {
         if (sampleCount <= 0) return FloatArray(0)

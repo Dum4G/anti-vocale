@@ -24,6 +24,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -75,10 +76,15 @@ class LogsViewModel @Inject constructor(
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
-    val filteredLogs: StateFlow<List<LogEntry>> = combine(logs, _searchQuery) { logs, query ->
-        if (query.isBlank()) logs
-        else logs.filter { it.result.contains(query, ignoreCase = true) }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    // Search hits the DAO (SQL LIKE over FULL history, TASK-340 review note): the
+    // in-memory list is now a bounded window, so filtering it in place would have
+    // silently limited search to the newest 500 entries.
+    val filteredLogs: StateFlow<List<LogEntry>> =
+        _searchQuery.flatMapLatest { query ->
+            if (query.isBlank()) logDao.getAll()
+            else logDao.searchAll(query)
+        }.map { entities -> entities.map { it.toLogEntry() } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     /**
      * The currently active (PENDING) transcription entry.

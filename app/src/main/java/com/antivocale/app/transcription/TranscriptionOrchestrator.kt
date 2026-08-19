@@ -1289,6 +1289,7 @@ class TranscriptionOrchestrator @Inject constructor(
     }
 
     private suspend fun cancelIfPending(taskId: String, errorMessage: String, durationMs: Long) {
+        lastInterimRoomWriteMs.remove(taskId)
         val entity = logDao.getByTaskId(taskId) ?: return
         if (entity.status == LogEntry.Status.PENDING.name) {
             logDao.update(entity.toLogEntry().copy(
