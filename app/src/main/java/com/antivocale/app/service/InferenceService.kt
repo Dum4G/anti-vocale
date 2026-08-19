@@ -387,7 +387,7 @@ class InferenceService : Service(), TranscriptionListener {
             getString(R.string.chunk_nav_live_subtext, live + 1, total)
         }
         val timingText = formatTimingText(latestEtaText, latestDurationSeconds)
-        val queueText = if (latestQueuedCount > 0) getString(R.string.queued_count, latestQueuedCount) else ""
+        val queueText = if (latestQueuedCount > 0) resources.getQuantityString(R.plurals.queued_count, latestQueuedCount, latestQueuedCount) else ""
         // Skip the rebuild + notify when nothing visible changed (e.g. successive 200ms progress
         // ticks while pinned and the ETA string is unchanged). chunkText is included so a retried
         // chunk's improved text refreshes even while pinned on it.
@@ -656,7 +656,7 @@ class InferenceService : Service(), TranscriptionListener {
             builder.setUsesChronometer(true)
         }
 
-        val queueText = if (queuedCount > 0) getString(R.string.queued_count, queuedCount) else ""
+        val queueText = if (queuedCount > 0) resources.getQuantityString(R.plurals.queued_count, queuedCount, queuedCount) else ""
         val timingText = formatTimingText(etaText, durationSeconds)
         joinSubText(queueText, timingText)?.let { builder.setSubText(it) }
 
@@ -666,7 +666,7 @@ class InferenceService : Service(), TranscriptionListener {
     private fun updateNotificationQueueHint(queuedCount: Int) {
         val builder = NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle(getString(R.string.app_name))
-            .setContentText(getString(R.string.queued_count, queuedCount))
+            .setContentText(resources.getQuantityString(R.plurals.queued_count, queuedCount, queuedCount))
             .setSmallIcon(android.R.drawable.ic_menu_manage)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setOngoing(true)

@@ -71,7 +71,10 @@
     <string name="logs_no_entries_selected">Nessuna voce selezionata</string>
     <string name="logs_cleared">Tutti i log cancellati</string>
     <string name="logs_entry_deleted">Voce eliminata</string>
-    <string name="logs_entries_deleted">%d voci eliminate</string>
+    <plurals name="logs_entries_deleted">
+        <item quantity="one">%d voce eliminata</item>
+        <item quantity="other">%d voci eliminate</item>
+    </plurals>
     <string name="logs_undo">Annulla</string>
     <string name="logs_cancel">Annulla</string>
     <string name="logs_confirm">Conferma</string>
@@ -232,7 +235,10 @@
     <string name="processing_queue_item">Elaborazione %1$d di %2$d…</string>
     <string name="processing_queue_item_audio">Elaborazione audio (%1$d di %2$d)…</string>
     <string name="processing_queue_chunk">Elaborazione parte %1$d/%2$d (%3$d di %4$d)…</string>
-    <string name="queued_count">%1$d in coda</string>
+    <plurals name="queued_count">
+        <item quantity="one">%1$d in coda</item>
+        <item quantity="other">%1$d in coda</item>
+    </plurals>
     <string name="generating_text">Generazione risposta testuale…</string>
 
     <!-- Model Tab - Download section -->
@@ -361,7 +367,10 @@
     <string name="timeout_description">Scarica automaticamente il modello dopo un periodo di inattività per liberare memoria. Il modello verrà ricaricato automaticamente quando necessario.</string>
     <string name="timeout_1_minute">1 minuto</string>
     <string name="timeout_1_hour">1 ora</string>
-    <string name="timeout_minutes">%1$d minuti</string>
+    <plurals name="timeout_minutes">
+        <item quantity="one">%1$d minuto</item>
+        <item quantity="other">%1$d minuti</item>
+    </plurals>
 
     <!-- Impostazioni - Thread di Inferenza -->
     <string name="thread_count_title">Thread di Inferenza</string>
@@ -591,7 +600,10 @@
     <string name="performance_stats_subtitle">Velocità di trascrizione reale dal tuo dispositivo</string>
     <string name="performance_stats_empty">Nessun dato ancora. Trascrivi qualche audio per vedere le statistiche.</string>
     <string name="performance_stats_speed">%1$.0fms/s</string>
-    <string name="performance_stats_samples_count">%1$d campioni</string>
+    <plurals name="performance_stats_samples_count">
+        <item quantity="one">%1$d campione</item>
+        <item quantity="other">%1$d campioni</item>
+    </plurals>
     <string name="performance_stats_fastest_badge">Più veloce</string>
     <string name="performance_stats_clear">Resetta statistiche</string>
     <string name="performance_stats_clear_confirm">Resettare tutti i dati delle prestazioni?</string>
@@ -698,7 +710,10 @@
     <string name="model_info_section_recommendations">Raccomandazioni</string>
     <string name="model_info_section_technical">Dettagli tecnici</string>
     <string name="model_info_section_performance">Suggerimenti sulle prestazioni</string>
-    <string name="model_info_languages_count">%d lingue</string>
+    <plurals name="model_info_languages_count">
+        <item quantity="one">%d lingua</item>
+        <item quantity="other">%d lingue</item>
+    </plurals>
     <string name="model_info_no_languages">Supporto lingue sconosciuto</string>
     <string name="model_info_architecture">Architettura</string>
     <string name="model_info_arch_encoder_decoder">Encoder-Decoder (Whisper)</string>
@@ -708,7 +723,10 @@
     <string name="model_info_model_size">Dimensione modello</string>
     <string name="model_info_max_audio">Durata massima audio</string>
     <string name="model_info_max_audio_unlimited">Illimitata</string>
-    <string name="model_info_max_audio_seconds">%d secondi</string>
+    <plurals name="model_info_max_audio_seconds">
+        <item quantity="one">%d secondo</item>
+        <item quantity="other">%d secondi</item>
+    </plurals>
     <string name="model_info_quantization">Quantizzazione</string>
     <string name="model_info_recommended_threads">Thread consigliati</string>
     <string name="model_info_threads_range">%1$d – %2$d</string>
@@ -789,7 +807,10 @@
     <!-- Raggruppamento conversazioni -->
     <string name="conversation_grouping_title">Raggruppa per conversazione</string>
     <string name="conversation_grouping_description">Raggruppa le trascrizioni per app di origine (WhatsApp, Telegram, ecc.) in sezioni comprimibili.</string>
-    <string name="conversation_group_count">%1$d messaggi</string>
+    <plurals name="conversation_group_count">
+        <item quantity="one">%1$d messaggio</item>
+        <item quantity="other">%1$d messaggi</item>
+    </plurals>
     <string name="conversation_group_unknown">Altro</string>
 
     <!-- Ri-trascrizione -->

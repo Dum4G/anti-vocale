@@ -30,6 +30,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -93,7 +94,7 @@ private fun LanguagesSection(languageCodes: Set<String>) {
     SectionHeader(
         icon = { Icon(Icons.Default.Translate, contentDescription = null, modifier = Modifier.size(18.dp)) },
         title = if (languageCodes.isNotEmpty()) {
-            stringResource(R.string.model_info_languages_count, languageCodes.size)
+            pluralStringResource(R.plurals.model_info_languages_count, languageCodes.size, languageCodes.size)
         } else {
             stringResource(R.string.model_info_no_languages)
         }
