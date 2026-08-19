@@ -94,6 +94,16 @@ class TranscriptionOrchestrator @Inject constructor(
     @Volatile
     private var lastPartialSaveMs: Long = 0L
 
+    /** Per-task timestamp of the last interim Room write (throttle, TASK-340 Fix 2b). */
+    private val lastInterimRoomWriteMs = mutableMapOf<String, Long>()
+
+    /**
+     * Clock read ONLY by the interim-write throttle. Injectable so the throttle is
+     * unit-testable; mocking System.currentTimeMillis statically is not viable (mockk
+     * intercepts JVM-internal calls and recurses forever).
+     */
+    internal var throttleClock: () -> Long = System::currentTimeMillis
+
     private val chunkSemaphore = Semaphore(MAX_CONCURRENT_CHUNKS)
 
     /**
@@ -1265,6 +1275,7 @@ class TranscriptionOrchestrator @Inject constructor(
         ).toEntity())
         preferencesManager.clearPartialTranscriptionState()
         lastPartialSaveMs = 0L
+        lastInterimRoomWriteMs.remove(taskId)
     }
 
     private suspend fun logError(taskId: String, errorMessage: String, durationMs: Long = 0) {
@@ -1274,6 +1285,7 @@ class TranscriptionOrchestrator @Inject constructor(
         ).toEntity())
         preferencesManager.clearPartialTranscriptionState()
         lastPartialSaveMs = 0L
+        lastInterimRoomWriteMs.remove(taskId)
     }
 
     private suspend fun cancelIfPending(taskId: String, errorMessage: String, durationMs: Long) {
@@ -1286,10 +1298,19 @@ class TranscriptionOrchestrator @Inject constructor(
     }
 
     private suspend fun updateInterimResult(taskId: String, accumulatedText: String) {
+        // Throttle interim Room writes to the same 5s cadence as the partial-state save
+        // (TASK-340 Fix 2b): every interim partial used to write Room, and each write
+        // re-emitted the whole (bounded) log list through LogsViewModel. The final
+        // result is written unconditionally by logSuccess, so skipping writes inside
+        // the interval cannot lose text; notifications still fire per chunk via the
+        // listener, which is NOT throttled here.
+        val now = throttleClock()
+        if (now - (lastInterimRoomWriteMs[taskId] ?: 0L) < PARTIAL_SAVE_INTERVAL_MS) return
+        lastInterimRoomWriteMs[taskId] = now
+
         val entity = logDao.getByTaskId(taskId) ?: return
         logDao.update(entity.toLogEntry().copy(result = accumulatedText).toEntity())
 
-        val now = System.currentTimeMillis()
         if (now - lastPartialSaveMs >= PARTIAL_SAVE_INTERVAL_MS) {
             lastPartialSaveMs = now
             try {
