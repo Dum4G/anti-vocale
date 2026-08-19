@@ -320,6 +320,14 @@ class SherpaBackend(
     private var isInitialized = false
     private var language: String = "auto"
 
+    /**
+     * Shared tail-pad silence (TASK-340 Fix 1b): chunked transcription used to build a fresh
+     * `samples + FloatArray(tail)` copy per chunk; a second acceptWaveform of this one shared
+     * zero-filled buffer (64KB for 1s at 16kHz) achieves the same final-token flush with no
+     * per-chunk allocation. Never write into the returned array.
+     */
+    private val tailSilence = TailSilenceBuffer()
+
     private val isStreaming: Boolean get() = BundledCatalog.byId(entryId)?.isStreaming == true
 
     override suspend fun initialize(context: Context, config: BackendConfig): Result<Unit> {
@@ -537,17 +545,16 @@ class SherpaBackend(
             try {
                 Log.d(TAG, "Transcribing audio: ${samples.size} samples at ${sampleRate}Hz")
 
+                stream = rec.createStream()
+                stream.acceptWaveform(samples, sampleRate)
                 // Append `tailPadSeconds` (catalog flag) of silence so trailing tokens
                 // finalize correctly (benchmarked ~2% WER improvement on WhatsApp audio).
+                // Second acceptWaveform of one shared zero buffer: no per-chunk copy
+                // (TASK-340 Fix 1b). acceptWaveform appends, so this equals one padded array.
                 val tailPad = entry.flags.tailPadSeconds
-                val padded = if (tailPad > 0) {
-                    samples + FloatArray((sampleRate * tailPad).toInt())
-                } else {
-                    samples
+                if (tailPad > 0) {
+                    stream.acceptWaveform(tailSilence.get((sampleRate * tailPad).toInt()), sampleRate)
                 }
-
-                stream = rec.createStream()
-                stream.acceptWaveform(padded, sampleRate)
                 rec.decode(stream)
 
                 val result = rec.getResult(stream)
@@ -600,12 +607,15 @@ class SherpaBackend(
                 stream = rec.createStream("")
                 // AC #3: condition the multilingual model on the user's language ("auto" = auto-detect).
                 stream.setOption("language", language)
-                // Tail padding: feed a zero-padded copy so the streaming encoder gets a complete
-                // final chunk to flush trailing tokens. Keep the original length for the duration calc.
+                // Tail padding: a second acceptWaveform of one shared zero buffer so the
+                // streaming encoder gets a complete final chunk to flush trailing tokens,
+                // with no per-chunk padded copy (TASK-340 Fix 1b). The original length
+                // stays the basis for the duration calc below.
                 val tailPadSamples = (entry.flags.tailPadSeconds * sampleRate).toInt()
-                val recognizerInput =
-                    if (tailPadSamples > 0) samples.copyOf(samples.size + tailPadSamples) else samples
-                stream.acceptWaveform(recognizerInput, sampleRate)
+                stream.acceptWaveform(samples, sampleRate)
+                if (tailPadSamples > 0) {
+                    stream.acceptWaveform(tailSilence.get(tailPadSamples), sampleRate)
+                }
 
                 // Decode loop: drain the recognizer's internal buffer, emitting the growing
                 // hypothesis after each pass so the UI can render text progressively.
@@ -680,4 +690,28 @@ class SherpaBackend(
     }
 
     override fun getModelPath(): String? = modelDir
+}
+/**
+ * Lazily-allocated, shared all-zero silence buffer for tail padding (TASK-340 Fix 1b).
+ * Sized per request and cached per size; feeding it as a second acceptWaveform call
+ * replaces the per-chunk `samples + silence` full copy. The buffer must never be
+ * written to: callers rely on it staying all zeros.
+ */
+internal class TailSilenceBuffer {
+    private var oneSecond: FloatArray? = null
+    private var other: Pair<Int, FloatArray>? = null
+
+    fun get(sampleCount: Int): FloatArray {
+        if (sampleCount <= 0) return FloatArray(0)
+        if (sampleCount == TAIL_PAD_SECONDS_1 * SAMPLE_RATE_16K) {
+            return oneSecond ?: FloatArray(sampleCount).also { oneSecond = it }
+        }
+        other?.let { (size, buf) -> if (size == sampleCount) return buf }
+        return FloatArray(sampleCount).also { other = sampleCount to it }
+    }
+
+    private companion object {
+        const val SAMPLE_RATE_16K = 16000
+        const val TAIL_PAD_SECONDS_1 = 1
+    }
 }

@@ -5,6 +5,8 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
 import java.io.File
+import kotlin.math.PI
+import kotlin.math.sin
 
 /**
  * Unit tests for AudioPreprocessor.
@@ -192,5 +194,30 @@ class AudioPreprocessorTest {
         //
         // See app/src/androidTest for instrumented tests
         assertTrue("Integration tests require device", true)
+    }
+
+    // ========== mergeAndResample (TASK-340 Fix 1a) ==========
+
+    private val preprocessor = AudioPreprocessor()
+
+    @Test
+    fun `mergeAndResample concatenates chunks in order at target rate`() {
+        val chunks = mutableListOf(
+            floatArrayOf(0.1f, 0.2f, 0.3f),
+            floatArrayOf(0.4f, 0.5f),
+        )
+        val (samples, rate) = preprocessor.mergeAndResample(chunks, 16000)
+        assertEquals(16000, rate)
+        assertTrue(floatArrayOf(0.1f, 0.2f, 0.3f, 0.4f, 0.5f).contentEquals(samples))
+    }
+
+    @Test
+    fun `mergeAndResample resamples non-16k input to 16k`() {
+        // 1 second of a sine at 48kHz: the resampled output must be 16000 samples
+        // at 16kHz, matching the previous inline resample of the merged buffer.
+        val sine = FloatArray(48000) { sin(2.0 * PI * 440.0 * it / 48000.0).toFloat() }
+        val (samples, rate) = preprocessor.mergeAndResample(mutableListOf(sine), 48000)
+        assertEquals(16000, rate)
+        assertEquals(16000, samples.size)
     }
 }

@@ -503,22 +503,12 @@ class AudioPreprocessor @Inject constructor() {
                 decoder.release()
             }
 
-            // Merge chunks into single FloatArray
-            val totalSamples = sampleChunks.sumOf { it.size }
-            val merged = FloatArray(totalSamples)
-            var offset = 0
-            for (chunk in sampleChunks) {
-                System.arraycopy(chunk, 0, merged, offset, chunk.size)
-                offset += chunk.size
-            }
-
-            val (finalSamples, finalRate) = if (inputSampleRate != TARGET_SAMPLE_RATE) {
-                val resampled = resampleFloat(merged, inputSampleRate.toDouble() / TARGET_SAMPLE_RATE)
-                Log.d(TAG, "Resampled ${merged.size} samples ${inputSampleRate}Hz → ${resampled.size} samples ${TARGET_SAMPLE_RATE}Hz")
-                Pair(resampled, TARGET_SAMPLE_RATE)
-            } else {
-                Pair(merged, inputSampleRate)
-            }
+            // Merge + resample in a helper scope so the input-rate chunk list and the
+            // merged input-rate buffer become unreachable as soon as the 16kHz result
+            // exists (TASK-340 Fix 1a): a 5-min 48kHz clip otherwise holds ~2-3
+            // simultaneous copies (~135MB) in the 256MB heap through chunk processing.
+            val (finalSamples, finalRate) = mergeAndResample(sampleChunks, inputSampleRate)
+            sampleChunks.clear()
 
             Log.d(TAG, "Extracted ${finalSamples.size} mono float samples at ${finalRate}Hz")
             return MonoAudioData(samples = finalSamples, sampleRate = finalRate)
@@ -530,6 +520,34 @@ class AudioPreprocessor @Inject constructor() {
             throw PreprocessingError.ConversionFailed(e.message ?: "Unknown error")
         } finally {
             extractor.release()
+        }
+    }
+
+    /**
+     * Merges the decoded input-rate chunks and resamples to 16kHz. Local references to
+     * the chunk list and the merged input-rate buffer are dropped (clear + reassign to an
+     * empty array) before returning, so they are collectable while the caller proceeds
+     * to chunk processing (TASK-340 Fix 1a).
+     */
+    internal fun mergeAndResample(chunks: MutableList<FloatArray>, inputSampleRate: Int): Pair<FloatArray, Int> {
+        var list = chunks
+        val totalSamples = list.sumOf { it.size }
+        var merged = FloatArray(totalSamples)
+        var offset = 0
+        for (chunk in list) {
+            System.arraycopy(chunk, 0, merged, offset, chunk.size)
+            offset += chunk.size
+        }
+        list.clear()
+        list = mutableListOf()
+
+        return if (inputSampleRate != TARGET_SAMPLE_RATE) {
+            val resampled = resampleFloat(merged, inputSampleRate.toDouble() / TARGET_SAMPLE_RATE)
+            Log.d(TAG, "Resampled ${merged.size} samples ${inputSampleRate}Hz → ${resampled.size} samples ${TARGET_SAMPLE_RATE}Hz")
+            merged = FloatArray(0)
+            Pair(resampled, TARGET_SAMPLE_RATE)
+        } else {
+            Pair(merged, inputSampleRate)
         }
     }
 
