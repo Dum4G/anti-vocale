@@ -1169,6 +1169,13 @@ class ModelViewModel @Inject constructor(
 
                 _snackbarEvent.tryEmit(SnackbarEvent.Message(message))
                 llmManager.resetKeepAliveTimer()
+            } else {
+                // No valid model directory resolved: previously a SILENT no-op, which
+                // left the previous backend preference (possibly a dangling external id)
+                // active while the user believed they had switched (TASK-342 defect 1).
+                val displayName = context.getString(CatalogVariantUi.of(entryId, variantName).titleResId)
+                _snackbarEvent.tryEmit(SnackbarEvent.Message(
+                    context.getString(R.string.model_use_missing_files, displayName)))
             }
         }
     }
