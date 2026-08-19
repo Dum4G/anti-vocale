@@ -29,7 +29,6 @@
     <!-- ViewModel status messages -->
     <string name="parakeet_name">Parakeet TDT</string>
     <string name="llm_backend_name">Gemma (LiteRT-LM)</string>
-    <!-- review: gender agreement assumes модель (feminine); for masculine model names this reads wrong. Consider "%1$s: готово". -->
     <string name="backend_model_ready">%1$s готова</string>
     <string name="backend_model_not_found">Модель %1$s не найдена</string>
     <string name="saved_model_found">Сохранённая модель найдена</string>
@@ -295,7 +294,6 @@
     <string name="chunk_nav_empty">Нет текста для этого фрагмента</string>
 
     <!-- Settings Tab - Section Titles -->
-    <!-- review: "Транскрипция" chosen over "расшифровка" per AOSP-canonical glossary; flag for reviewer. -->
     <string name="settings_section_transcription">Транскрипция</string>
     <string name="settings_section_appearance">Оформление</string>
     <string name="settings_section_advanced">Дополнительно</string>
@@ -425,7 +423,6 @@
     <string name="builtin_default_prompt">Расшифруй эту речь: (встроенный по умолчанию)</string>
     <string name="example_prompts_title">Примеры запросов</string>
     <string name="example_prompts_description">Нажмите на запрос, чтобы использовать его</string>
-    <!-- review: prompts are sent to the LLM; used the imperative "ты"-style wording typical for LLM prompts. Review for tone. -->
     <string name="example_prompt_transcribe">Точно расшифруй это аудио, сохраняя исходный язык.</string>
     <string name="example_prompt_summarize">Расшифруй и кратко перечисли основные мысли этого аудиосообщения.</string>
     <string name="example_prompt_formal">Расшифруй это аудио в официальном, аккуратном стиле. Убери слова-паразиты и ложные начала.</string>
@@ -606,7 +603,6 @@
     <string name="performance_stats_subtitle">Реальная скорость транскрипции на вашем устройстве</string>
     <string name="performance_stats_empty">Пока нет данных. Расшифруйте немного аудио, чтобы увидеть статистику.</string>
     <string name="performance_stats_speed">%1$.0f мс/с</string>
-    <!-- review: "замер" chosen for "sample" (measurement); "образец" is the literal alternative. -->
     <plurals name="performance_stats_samples_count">
         <item quantity="one">%1$d замер</item>
         <item quantity="few">%1$d замера</item>
@@ -703,7 +699,6 @@
     <string name="gguf_deleted">%1$s удалена</string>
 
     <!-- Language filter -->
-    <!-- review: lang_* names kept in native form per glossary (values-it convention). -->
     <string name="lang_filter_label">Фильтр по языку</string>
     <string name="lang_filter_all">Все языки</string>
     <string name="lang_filter_search">Поиск языка…</string>
