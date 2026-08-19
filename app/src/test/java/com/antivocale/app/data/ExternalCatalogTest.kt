@@ -92,14 +92,18 @@ class ExternalCatalogTest {
     }
 
     @Test
-    fun `bundled asset index parses and is empty pending a sherpa-compatible entry`() {
-        // The OpenVoiceOS arabic export is NOT sherpa-onnx loadable (optimum decoder
-        // signature, no k2-fsa metadata; device-verified 2026-08-17, TASK-331 Task 15),
-        // so its entry was removed until a converted mirror ships (follow-up task).
-        // The index must still parse; the empty list must not crash the autocomplete.
+    fun `bundled asset index carries the sherpa-compatible arabic mirror entry`() {
+        // The OpenVoiceOS optimum export was replaced by the validated mirror
+        // pantinor/whisper-arabic-dialectal-sherpa (TASK-332: desktop-verified
+        // transcripts on 6 dialectal samples, 2026-08-19). The entry must parse
+        // and surface via both name and language-code search.
         val text = java.io.File("src/main/assets/external-catalog/index.json").readText()
         val entries = ExternalCatalog.parseIndex(text)
-        assertEquals(emptyList<ExternalCatalog.CatalogEntry>(), entries)
-        assertEquals(emptyList<ExternalCatalog.CatalogEntry>(), ExternalCatalog.filter(entries, "arabic"))
+        assertEquals(1, entries.size)
+        val arabic = ExternalCatalog.filter(entries, "arabic")
+        assertEquals(1, arabic.size)
+        val byCode = ExternalCatalog.filter(entries, "ar")
+        assertEquals(arabic, byCode)
+        assertEquals(ModelFamily.WHISPER, arabic[0].family)
     }
 }
