@@ -220,4 +220,65 @@ class AudioPreprocessorTest {
         assertEquals(16000, rate)
         assertEquals(16000, samples.size)
     }
+
+    // ========== mergeVadSegments (TASK-340 Fix 3) ==========
+
+    /** Naive reference merge: grow a group array one segment at a time. */
+    private fun naiveMerge(segments: List<FloatArray>, maxMergeSamples: Int): List<FloatArray> {
+        val out = mutableListOf<FloatArray>()
+        var current = segments.first().clone()
+        for (i in 1 until segments.size) {
+            if (current.size + segments[i].size <= maxMergeSamples) {
+                val combined = FloatArray(current.size + segments[i].size)
+                System.arraycopy(current, 0, combined, 0, current.size)
+                System.arraycopy(segments[i], 0, combined, current.size, segments[i].size)
+                current = combined
+            } else {
+                out.add(current)
+                current = segments[i].clone()
+            }
+        }
+        out.add(current)
+        return out
+    }
+
+    @Test
+    fun `mergeVadSegments matches naive merge across many segments and limits`() {
+        val rng = java.util.Random(42)
+        repeat(50) {
+            val segmentCount = 2 + rng.nextInt(20)
+            val segments = List(segmentCount) { FloatArray(1 + rng.nextInt(500)) { rng.nextFloat() } }
+            val maxMergeSamples = 100 + rng.nextInt(2000)
+            val expected = naiveMerge(segments, maxMergeSamples)
+            val actual = preprocessor.mergeVadSegments(segments, maxMergeSamples)
+            assertEquals("chunk count (max=$maxMergeSamples, sizes=${segments.map { it.size }})",
+                expected.size, actual.size)
+            expected.forEachIndexed { i, exp ->
+                assertTrue("chunk $i content", exp.contentEquals(actual[i]))
+            }
+        }
+    }
+
+    @Test
+    fun `mergeVadSegments single segment returns it unchanged`() {
+        val seg = floatArrayOf(0.5f, -0.5f, 0.25f)
+        val result = preprocessor.mergeVadSegments(listOf(seg), 100)
+        assertEquals(1, result.size)
+        assertTrue(seg.contentEquals(result[0]))
+    }
+
+    @Test
+    fun `mergeVadSegments splits group when adding would exceed limit`() {
+        val a = FloatArray(300) { it.toFloat() }
+        val b = FloatArray(300) { 1000f + it }
+        val result = preprocessor.mergeVadSegments(listOf(a, b), maxMergeSamples = 500)
+        assertEquals(2, result.size)
+        assertTrue(a.contentEquals(result[0]))
+        assertTrue(b.contentEquals(result[1]))
+        // Limit 500 allows 300+300=600? No: 600 > 500, so split. With 600 it merges.
+        val merged = preprocessor.mergeVadSegments(listOf(a, b), maxMergeSamples = 600)
+        assertEquals(1, merged.size)
+        assertEquals(600, merged[0].size)
+        assertTrue(FloatArray(600) { if (it < 300) it.toFloat() else 1000f + (it - 300) }.contentEquals(merged[0]))
+    }
 }

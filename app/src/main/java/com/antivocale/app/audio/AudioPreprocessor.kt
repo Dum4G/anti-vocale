@@ -133,31 +133,20 @@ class AudioPreprocessor @Inject constructor() {
             try {
                 val floatSamples = audioData.samples
                 val vadResult = VadProcessor.detectSpeech(context, floatSamples, vadNumThreads, vadProvider)
-                val segments = vadResult.speechSegments
+                // Local reference-copy so the raw VAD output can be dropped (cleared)
+                // as soon as the merged output exists, freeing it while the caller
+                // proceeds (TASK-340 Fix 3).
+                val segments = vadResult.speechSegments.toMutableList()
 
                 // Multiple segments: merge adjacent ones up to 28s (WhisperX-style).
                 // No overlap = no repetition. Boundaries are on VAD silence gaps.
                 if (segments.size > 1) {
                     val maxMergeSamples = audioData.sampleRate * 28 // 28s, under Whisper's 30s limit
 
-                    val mergedSegments = mutableListOf<FloatArray>()
-                    var current = segments[0].clone()
+                    val mergedSegments = mergeVadSegments(segments, maxMergeSamples)
+                    segments.clear()
 
-                    for (i in 1 until segments.size) {
-                        if (current.size + segments[i].size <= maxMergeSamples) {
-                            // Merge: concatenate audio samples directly
-                            val combined = FloatArray(current.size + segments[i].size)
-                            System.arraycopy(current, 0, combined, 0, current.size)
-                            System.arraycopy(segments[i], 0, combined, current.size, segments[i].size)
-                            current = combined
-                        } else {
-                            mergedSegments.add(current)
-                            current = segments[i].clone()
-                        }
-                    }
-                    mergedSegments.add(current)
-
-                    Log.i(TAG, "VAD progressive: ${segments.size} raw → ${mergedSegments.size} merged segments, " +
+                    Log.i(TAG, "VAD progressive: ${vadResult.speechSegments.size} raw → ${mergedSegments.size} merged segments, " +
                             "${"%.1f".format(vadResult.originalDurationSeconds)}s → " +
                             "${"%.1f".format(vadResult.totalSpeechDurationSeconds)}s speech")
                     return PreprocessingResult(
@@ -177,6 +166,7 @@ class AudioPreprocessor @Inject constructor() {
                     System.arraycopy(seg, 0, merged, offset, seg.size)
                     offset += seg.size
                 }
+                segments.clear()
 
                 val strippedDuration = merged.size.toDouble() / audioData.sampleRate
                 Log.i(TAG, "VAD stripped ${"%.1f".format(vadResult.originalDurationSeconds)}s → " +
@@ -549,6 +539,43 @@ class AudioPreprocessor @Inject constructor() {
         } else {
             Pair(merged, inputSampleRate)
         }
+    }
+
+    /**
+     * Merges adjacent VAD segments up to [maxMergeSamples] per output group
+     * (WhisperX-style: no overlap, boundaries on VAD silence gaps).
+     *
+     * Two-pass per group (sizes, then copy) so each output is a single
+     * allocation instead of an O(N²) chain of intermediate arrays
+     * (TASK-340 Fix 3).
+     */
+    internal fun mergeVadSegments(segments: List<FloatArray>, maxMergeSamples: Int): List<FloatArray> {
+        val merged = mutableListOf<FloatArray>()
+        var start = 0
+        while (start < segments.size) {
+            // Pass 1: find the extent of this group and its total size.
+            var groupSize = segments[start].size
+            var end = start
+            while (end + 1 < segments.size && groupSize + segments[end + 1].size <= maxMergeSamples) {
+                end++
+                groupSize += segments[end].size
+            }
+
+            // Pass 2: one allocation, copy each segment in.
+            if (end == start) {
+                merged.add(segments[start])
+            } else {
+                val combined = FloatArray(groupSize)
+                var offset = 0
+                for (i in start..end) {
+                    System.arraycopy(segments[i], 0, combined, offset, segments[i].size)
+                    offset += segments[i].size
+                }
+                merged.add(combined)
+            }
+            start = end + 1
+        }
+        return merged
     }
 
     private fun validateInputFile(inputPath: String) {
