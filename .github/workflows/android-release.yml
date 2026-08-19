@@ -47,6 +47,9 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
+      - name: Check sherpa version sync (issue #38)
+        run: ./scripts/check-sherpa-sync.sh
+
       - name: Fetch sherpa-onnx AAR
         run: ./scripts/fetch-sherpa-aar.sh
 
