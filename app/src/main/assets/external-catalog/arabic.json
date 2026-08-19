@@ -1,0 +1,27 @@
+{
+  "name": "Whisper Large v3 Turbo Arabic Dialectal (sherpa int8)",
+  "family": "WHISPER",
+  "modelType": "",
+  "languages": ["ar"],
+  "options": {},
+  "files": [
+    {
+      "name": "encoder.int8.onnx",
+      "url": "https://huggingface.co/pantinor/whisper-arabic-dialectal-sherpa/resolve/main/encoder.int8.onnx",
+      "sha256": "b3343d6dca7544bb116f19f1fdef241891c0e158a5cb0fb413129cdf13e81ed1",
+      "size": 658404860
+    },
+    {
+      "name": "decoder.int8.onnx",
+      "url": "https://huggingface.co/pantinor/whisper-arabic-dialectal-sherpa/resolve/main/decoder.int8.onnx",
+      "sha256": "f526295ad1dcc54cf869ea8c6ec26918d3e2d36cdee431824a8b9efe09cf45ab",
+      "size": 427459733
+    },
+    {
+      "name": "tokens.txt",
+      "url": "https://huggingface.co/pantinor/whisper-arabic-dialectal-sherpa/resolve/main/tokens.txt",
+      "sha256": "b34b360dbb493e781e479794586d661700670d65564001f23024971d1f2fa126",
+      "size": 816730
+    }
+  ]
+}

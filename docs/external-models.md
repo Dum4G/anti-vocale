@@ -190,8 +190,14 @@ pins, documenting provenance and exactly what was changed. Working examples:
 
 - [pantinor/ovos-conformer-mirrors](https://huggingface.co/pantinor/ovos-conformer-mirrors):
   metadata injection + graph split, six languages, transcripts verified.
-- [pantinor/whisper-arabic-dialectal-tokens](https://huggingface.co/pantinor/whisper-arabic-dialectal-tokens):
-  vocab.json to sherpa tokens conversion.
+- [pantinor/whisper-arabic-dialectal-sherpa](https://huggingface.co/pantinor/whisper-arabic-dialectal-sherpa):
+  full Arabic dialectal Whisper Turbo (sherpa int8 encoder+decoder, k2-fsa metadata,
+  transcripts verified against the oddadmix samples). The upstream OpenVoiceOS optimum
+  export of the same weights is NOT sherpa-loadable (see TASK-332). Supersedes the earlier
+  tokens-only mirror [pantinor/whisper-arabic-dialectal-tokens](https://huggingface.co/pantinor/whisper-arabic-dialectal-tokens),
+  whose 51,866-line tokens use the gpt2 byte-level-unicode character encoding sherpa does
+  not understand; sherpa whisper models use the 50,257-line raw-byte base64 format
+  (identical to the official csukuangfj turbo tokens).
 
 Always verify the massaged model actually LOADS AND TRANSCRIBES with sherpa-onnx on
 desktop before publishing the entry (see `eval/multifamily_probe.py` for a harness);
