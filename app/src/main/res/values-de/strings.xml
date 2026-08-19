@@ -1,0 +1,901 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Anti-Vocale</string>
+
+    <!-- Tab names -->
+    <string name="model_tab">Modell</string>
+    <string name="logs_tab">Verlauf</string>
+    <string name="settings_tab">Einstellungen</string>
+
+    <!-- Model selection -->
+    <string name="select_model">Modelldatei auswählen</string>
+    <string name="select_model_from_device">Datei auswählen</string>
+
+    <!-- Custom transducer model (sideload) -->
+    <string name="load_model">Modell laden</string>
+    <string name="unload_model">Modell entladen</string>
+
+    <!-- Model status -->
+    <string name="model_status">Status: %1$s</string>
+    <string name="model_path">Pfad: %1$s</string>
+    <string name="no_model_selected">Kein Modell ausgewählt</string>
+    <string name="status_ready">Bereit</string>
+    <string name="status_loading">Modell wird geladen…</string>
+    <string name="status_error">Fehler</string>
+    <string name="status_unloaded">Entladen</string>
+    <string name="status_model_selected">Modell ausgewählt</string>
+    <string name="status_no_model">Kein Modell</string>
+
+    <!-- ViewModel status messages -->
+    <string name="parakeet_name">Parakeet TDT</string>
+    <string name="llm_backend_name">Gemma (LiteRT-LM)</string>
+    <string name="backend_model_ready">%1$s bereit</string>
+    <string name="backend_model_not_found">%1$s-Modell nicht gefunden</string>
+    <string name="saved_model_found">Gespeichertes Modell gefunden</string>
+    <string name="saved_model_not_found">Kein gespeichertes Modell gefunden</string>
+    <string name="model_selected">Modell ausgewählt: %1$s</string>
+    <string name="model_copy_failed">Modelldatei konnte nicht kopiert werden</string>
+    <string name="model_file_not_found">Modelldatei nicht gefunden unter: %1$s</string>
+    <string name="model_loading">Modell wird in den Speicher geladen…</string>
+    <string name="model_ready_inference">Modell bereit für Inferenz</string>
+    <string name="model_load_failed">Laden fehlgeschlagen: %1$s</string>
+    <string name="device_incompatible_title">Nicht unterstütztes Gerät</string>
+    <string name="device_incompatible_arch">Diese App erfordert ein ARM64-Gerät. Sie funktioniert nicht auf Emulatoren oder x86-Geräten.</string>
+    <string name="device_incompatible_ram">Dieses Gerät hat nicht genug Speicher, um KI-Modelle lokal auszuführen (mindestens 4 GB RAM erforderlich).</string>
+    <string name="model_unloaded">Modell entladen</string>
+    <string name="model_auto_unloaded">Modell wegen Inaktivität entladen</string>
+    <string name="model_externally_loaded">Modell bereit (extern geladen)</string>
+    <string name="model_deleted_status">Modell gelöscht</string>
+    <string name="downloaded_model_selected">Heruntergeladenes Modell ausgewählt</string>
+
+    <!-- Settings error messages -->
+    <string name="error_save_settings">Einstellungen konnten nicht gespeichert werden</string>
+    <string name="error_save_language">Spracheinstellung konnte nicht gespeichert werden</string>
+    <string name="error_save_theme">Design-Einstellung konnte nicht gespeichert werden</string>
+    <string name="error_token_empty">Token darf nicht leer sein</string>
+    <string name="error_auth_cancelled">Authentifizierung abgebrochen</string>
+
+    <!-- Logs -->
+    <string name="logs_empty">Noch keine Anfragen</string>
+    <string name="request_text">Textanfrage</string>
+    <string name="request_audio">Audioanfrage</string>
+    <string name="logs_recent_requests">Letzte Anfragen (%1$d)</string>
+    <string name="logs_clear">Leeren</string>
+    <string name="logs_delete_entry">Eintrag löschen</string>
+    <string name="logs_delete_confirmation">Diesen Eintrag löschen?</string>
+    <string name="logs_delete_selected">Ausgewählte löschen</string>
+    <string name="logs_clear_confirmation">Alle Einträge löschen? Dies kann nicht rückgängig gemacht werden.</string>
+    <string name="logs_select_all">Alle auswählen</string>
+    <string name="logs_deselect_all">Auswahl aufheben</string>
+    <string name="logs_entries_selected">%d ausgewählt</string>
+    <string name="logs_no_entries_selected">Keine Einträge ausgewählt</string>
+    <string name="logs_cleared">Alle Einträge gelöscht</string>
+    <string name="logs_entry_deleted">Eintrag gelöscht</string>
+    <!-- review: plural-shaped string; German has no plural forms in <string>, reads fine -->
+    <string name="logs_entries_deleted">%d Einträge gelöscht</string>
+    <string name="logs_undo">Rückgängig</string>
+    <string name="logs_cancel">Abbrechen</string>
+    <string name="logs_confirm">Bestätigen</string>
+    <string name="logs_empty_hint">Teile eine Sprachnachricht aus WhatsApp, Telegram oder einer anderen App, um hier Transkriptionen zu sehen</string>
+    <string name="logs_prompt_label">Prompt:</string>
+    <string name="logs_result_label">Ergebnis:</string>
+    <string name="logs_error_label">Fehler:</string>
+    <string name="logs_task_id">Aufgaben-ID: %1$s</string>
+    <string name="logs_unknown_error">Unbekannter Fehler</string>
+    <string name="logs_transcription_cancelled">Transkription abgebrochen</string>
+    <string name="logs_search_placeholder">Transkriptionen suchen…</string>
+    <string name="logs_search_no_results">Keine passenden Transkriptionen</string>
+    <string name="logs_search_no_results_hint">Versuche einen anderen Suchbegriff</string>
+    <string name="voice_message_duration">Sprachnachricht</string>
+    <string name="source_was_video">Quelle: Videodatei</string>
+    <string name="processed_in">Verarbeitet in %1$s</string>
+    <string name="today">Heute</string>
+    <string name="yesterday">Gestern</string>
+    <string name="time_seconds_ago">vor %1$ds</string>
+    <string name="time_minutes_ago">vor %1$dm</string>
+    <string name="time_hours_ago">vor %1$dh</string>
+
+    <!-- Model descriptions -->
+    <string name="model_desc_gemma_4_e2b">2,6 GB - Multimodal (Text + Audio), neueste Generation, am besten für die meisten Geräte</string>
+    <string name="model_desc_gemma_4_e4b">3,7 GB - Multimodal (Text + Audio), neueste Generation, höhere Qualität</string>
+    <string name="model_desc_gemma_3n_e2b">3,3 GB - Multimodal (Text + Audio), am besten für die meisten Geräte</string>
+    <string name="model_desc_gemma_3n_e4b">4,2 GB - Multimodal (Text + Audio), höhere Qualität</string>
+
+    <!-- Parakeet model -->
+    <string name="parakeet_title">Parakeet TDT</string>
+    <string name="parakeet_description">25 Sprachen • Schnell • Empfohlen</string>
+    <string name="parakeet_download">Parakeet TDT herunterladen</string>
+    <string name="parakeet_download_confirm_title">Parakeet TDT herunterladen?</string>
+    <string name="parakeet_download_confirm_message">Dies lädt etwa %1$d MB herunter. Parakeet ist schneller, aber bei Transkriptionen weniger genau als Gemma.</string>
+    <string name="parakeet_smoothquant_title">Parakeet TDT (SmoothQuant)</string>
+    <string name="parakeet_smoothquant_description">~862 MB • 25 Sprachen • Empfohlen</string>
+    <string name="parakeet_stock_title">Parakeet TDT (Stock int8)</string>
+    <string name="parakeet_stock_description">~464 MB • 25 Sprachen • Leichterer Fallback</string>
+
+    <!-- Whisper model -->
+    <string name="whisper_title">Whisper</string>
+    <string name="whisper_description">Mehrsprachige Spracherkennung</string>
+    <string name="whisper_small_title">Whisper Small</string>
+    <string name="whisper_small_description">~358 MB • Geringere Genauigkeit, besonders bei verrauschtem Audio • Nur für leistungsschwache Geräte</string>
+    <string name="whisper_turbo_title">Whisper Turbo</string>
+    <string name="whisper_turbo_description">~988 MB • Fast large-v3-Qualität • Ausgewogen mehrsprachig</string>
+    <string name="whisper_medium_title">Whisper Medium</string>
+    <string name="whisper_medium_description">~903 MB • Gute Genauigkeit • Mehrsprachig</string>
+    <string name="whisper_distil_large_v3_title">Distil Italian</string>
+    <string name="whisper_distil_large_v3_description">~939 MB • 2 Decoder-Schichten • Am schnellsten • Für Italienisch optimiert</string>
+    <string name="whisper_download">Whisper herunterladen</string>
+    <string name="whisper_download_confirm_title">%1$s herunterladen?</string>
+    <string name="whisper_download_confirm_message">Dies lädt etwa %1$d MB herunter. Whisper bietet ausgezeichnete mehrsprachige Unterstützung mit korrekter Zeichensetzung.</string>
+    <string name="whisper_extract_confirm_title">%1$s entpacken?</string>
+    <string name="whisper_extract_confirm_message">Die Modelldatei ist bereits heruntergeladen. Sie wird jetzt zur Verwendung entpackt.</string>
+
+    <!-- Qwen3-ASR model -->
+    <string name="qwen3_asr_title">Qwen3-ASR (52 Sprachen)</string>
+    <string name="qwen3_asr_description">52 Sprachen • Schwache Genauigkeit für Italienisch</string>
+    <string name="qwen3_asr_0_6b_title">Qwen3-ASR 0.6B</string>
+    <string name="qwen3_asr_0_6b_description">~938 MB • 52 Sprachen • Schwache Genauigkeit für Italienisch</string>
+    <string name="qwen3_asr_download_confirm_title">%1$s herunterladen?</string>
+    <string name="qwen3_asr_download_confirm_message">Dies lädt etwa %1$d MB herunter. Qwen3-ASR unterstützt 52 Sprachen mit schwacher Genauigkeit für Italienisch.</string>
+    <string name="qwen3_asr_download">Qwen3-ASR herunterladen</string>
+    <string name="qwen3_asr_delete_message">Qwen3-ASR-Modell löschen?</string>
+    <string name="qwen3_asr_downloaded">%1$s erfolgreich heruntergeladen</string>
+    <string name="qwen3_asr_deleted">%1$s gelöscht</string>
+
+    <!-- Nemotron 3.5 streaming model -->
+    <string name="nemotron_name">Nemotron 3.5</string>
+    <string name="nemotron_title">Nemotron 3.5 (Streaming)</string>
+    <string name="nemotron_description">Streaming-Transducer • Experimentelle Qualität für Italienisch</string>
+    <string name="nemotron_download_confirm_title">%1$s herunterladen?</string>
+    <string name="nemotron_download_confirm_message">Dies lädt etwa %1$d MB herunter. Nemotron 3.5 ist ein mehrsprachiges Streaming-ASR-Modell.</string>
+    <string name="nemotron_download">Nemotron herunterladen</string>
+    <string name="nemotron_delete_message">Nemotron 3.5-Modell löschen?</string>
+    <string name="nemotron_downloaded">%1$s erfolgreich heruntergeladen</string>
+    <string name="nemotron_deleted">%1$s gelöscht</string>
+
+    <!-- GigaAM v3 model -->
+    <string name="gigaam_title">GigaAM v3</string>
+    <string name="gigaam_description">Russische Spracherkennung • ~326 MB • Sber (MIT)</string>
+    <string name="gigaam_name">GigaAM v3</string>
+    <string name="gigaam_download_confirm_title">GigaAM v3 herunterladen?</string>
+    <string name="gigaam_download_confirm_message">Dies lädt etwa %1$d MB herunter. GigaAM v3 ist ein russischsprachiges ASR-Modell von Sber mit starker Genauigkeit für Russisch.</string>
+    <string name="gigaam_download">GigaAM herunterladen</string>
+    <string name="gigaam_downloaded">%1$s erfolgreich heruntergeladen</string>
+    <string name="gigaam_deleted">%1$s gelöscht</string>
+
+    <!-- Generic catalog section (catalog-driven sherpa-onnx models) -->
+    <string name="catalog_model_downloaded">%1$s erfolgreich heruntergeladen</string>
+    <string name="catalog_model_deleted">%1$s gelöscht</string>
+    <string name="catalog_download_confirm_title">%1$s herunterladen?</string>
+    <string name="catalog_download_confirm_message">Dies lädt etwa %1$d MB herunter.</string>
+    <string name="catalog_extract_confirm_title">%1$s entpacken?</string>
+    <string name="catalog_extract_confirm_message">Die Modelldatei ist bereits heruntergeladen. Sie wird jetzt zur Verwendung entpackt.</string>
+
+    <!-- Download status -->
+    <string name="download_status_downloading">Wird heruntergeladen…</string>
+    <string name="download_status_extracting">%1$s wird entpackt…</string>
+    <string name="download_status_extracting_files">Dateien werden entpackt…</string>
+    <string name="download_status_copying_file">%1$s wird kopiert…</string>
+    <string name="download_status_copying_files">Dateien werden kopiert…</string>
+    <string name="download_status_connecting">Verbindung wird hergestellt…</string>
+    <string name="download_status_file_progress">%1$d/%2$d</string>
+    <string name="download_status_checking_access">Zugriff wird geprüft…</string>
+    <string name="download_status_retrying">Neuer Versuch (%1$d/%2$d)…</string>
+    <string name="download_status_resuming">Download wird fortgesetzt…</string>
+    <string name="model_requires_auth">Dieses Modell erfordert ein HuggingFace-Konto</string>
+
+    <!-- Download rate/ETA/partial -->
+    <string name="download_rate">%1$s/s</string>
+    <string name="download_eta">%1$s verbleibend</string>
+    <string name="download_eta_less_than_minute">Weniger als 1 Min. verbleibend</string>
+    <string name="download_partial">Download bei %1$d %% unterbrochen (%2$s / %3$s)</string>
+    <string name="download_resume">Download fortsetzen</string>
+    <string name="download_clear_partial">Leeren</string>
+    <string name="download_partial_detected">Unvollständiger Download erkannt</string>
+    <string name="gemma_download_confirm_title">%1$s herunterladen?</string>
+    <string name="gemma_download_confirm_message">Dies lädt etwa %1$d MB herunter. Gemma-Modelle sind vollwertige LLMs mit erweiterten Funktionen, belegen aber mehr Speicher.</string>
+
+    <!-- Transcription -->
+    <string name="share_transcription">Teilen</string>
+    <string name="copy_transcription">In die Zwischenablage kopieren</string>
+    <string name="copied_to_clipboard">In die Zwischenablage kopiert</string>
+    <string name="audio_received_for_transcription">Audio zur Transkription empfangen</string>
+    <string name="transcription_complete">Transkription abgeschlossen</string>
+    <!-- review: "chunk(s)" has no clean German singular/plural-neutral form; phrased with plural -->
+    <string name="transcription_partial">Transkription unvollständig (%1$d Segmente fehlgeschlagen)</string>
+    <string name="transcription_partial_chip">Unvollständig</string>
+    <string name="transcription_failed">Transkription fehlgeschlagen</string>
+    <string name="error_model_load">Die Modelldatei ist möglicherweise beschädigt oder hat das falsche Format. Lade sie im Tab \"Modell\" erneut herunter.</string>
+    <string name="error_native">Beim Transkribieren ist ein interner Fehler aufgetreten. Falls das öfter passiert, versuche ein anderes Modell.</string>
+    <string name="error_not_initialized">Kein Modell geladen. Öffne den Tab \"Modell\", um eines herunterzuladen oder auszuwählen.</string>
+    <string name="error_model_unavailable">Das ausgewählte Modell ist nicht mehr verfügbar. Öffne den Tab \"Modell\" und wähle ein anderes.</string>
+    <string name="native_crash_model_warning">Die App wurde während der letzten Transkription unerwartet geschlossen. Falls das beim Laden eines Modells geschah, kann die Datei beschädigt sein. Lade sie im Tab \"Modell\" erneut herunter.</string>
+    <string name="oom_crash_title">App wegen wenig Speicher geschlossen</string>
+    <string name="oom_crash_warning">Die App wurde geschlossen, weil der Gerätespeicher knapp war. Schließe andere Apps oder verwende ein kleineres Modell, bevor du erneut transkribierst.</string>
+    <string name="native_crash_title">App unerwartet geschlossen</string>
+    <string name="native_crash_go_to_model">Zum Tab \"Modell\" gehen</string>
+    <string name="model_load_low_memory">Nicht genug freier Speicher für dieses Modell (%1$s verfügbar, etwa %2$s benötigt). Schließe andere Apps oder verwende ein kleineres Modell. Du kannst auch \"Modellladen erzwingen\" in den Einstellungen aktivieren, um es trotzdem zu versuchen.</string>
+    <string name="force_model_load">Modellladen erzwingen</string>
+    <string name="force_model_load_desc">Das Modell auch dann laden, wenn der Speicher nicht auszureichen scheint. Kann die App auf Geräten mit wenig RAM schließen.</string>
+    <string name="copy">Kopieren</string>
+    <string name="share">Teilen</string>
+    <string name="char_counter">%1$d von %2$d Zeichen</string>
+    <string name="page_counter">Seite %1$d von %2$d</string>
+    <string name="detected_language">Erkannt: %1$s</string>
+    <string name="confidence_low">Geringe Konfidenz</string>
+    <string name="no_audio_file">Keine Audiodatei empfangen</string>
+    <string name="failed_to_process_audio">Audiodatei konnte nicht verarbeitet werden</string>
+    <string name="unsupported_audio_format">Sprachnachrichten aus Messenger-Apps werden unterstützt; .%1$s ist kein unterstütztes Format.</string>
+    <string name="unknown_audio_format">Das Audioformat konnte nicht erkannt werden. Teile das Audio aus einer Messenger-App.</string>
+    <string name="transcription_started">Transkription gestartet…</string>
+    <string name="processing_segment_progress">Segment %1$d von %2$d…</string>
+    <!-- review: EN uses an em-dash here; replaced with comma per project rule -->
+    <string name="progressive_initial">Teilvorschauen werden vorbereitet, der vollständige Text erscheint zum Abschluss</string>
+    <string name="added_to_queue">Zur Warteschlange hinzugefügt…</string>
+    <string name="processing_chunk">Chunk %1$d/%2$d wird verarbeitet…</string>
+    <string name="processing_audio">Audio wird verarbeitet…</string>
+    <string name="processing_request">%1$s-Anfrage wird verarbeitet…</string>
+    <string name="processing_queue_item">%1$d von %2$d wird verarbeitet…</string>
+    <string name="processing_queue_item_audio">Audio wird verarbeitet (%1$d von %2$d)…</string>
+    <string name="processing_queue_chunk">Chunk %1$d/%2$d wird verarbeitet (%3$d von %4$d)…</string>
+    <string name="queued_count">%1$d in der Warteschlange</string>
+    <string name="generating_text">Textantwort wird erstellt…</string>
+
+    <!-- Model Tab - Download section -->
+    <string name="download_models">Gemma-Modelle</string>
+    <string name="gemma_advanced_features_description">Vollwertige multimodale LLMs mit erweiterten Funktionen: Transkription, Textumwandlung und -anreicherung.</string>
+    <string name="requires_huggingface_token">Erfordert einen HuggingFace-Token.</string>
+    <string name="add_in_settings">In den Einstellungen hinzufügen</string>
+    <string name="recommended">Empfohlen</string>
+    <string name="best_italian_badge">Bestes Italienisch</string>
+    <string name="downloading">Wird heruntergeladen…</string>
+    <string name="connecting_to_huggingface">Verbindung mit HuggingFace wird hergestellt…</string>
+    <string name="cancel_download">Download abbrechen</string>
+    <string name="cancel_extract">Entpacken abbrechen</string>
+    <string name="extract_model">Entpacken</string>
+    <string name="use_model">Modell verwenden</string>
+    <string name="active_badge">Aktiv</string>
+    <string name="model_selected_message">%1$s ausgewählt</string>
+    <string name="model_use_missing_files">Die Modelldateien für %1$s fehlen oder sind unvollständig. Lade die Variante im Tab \"Modell\" erneut herunter.</string>
+    <string name="delete">Löschen</string>
+    <string name="download">Herunterladen</string>
+    <string name="model_update_button">Aktualisieren</string>
+    <string name="gemma_update_confirm_title">%1$s aktualisieren</string>
+    <string name="gemma_update_confirm_message">Eine schnellere Version mit spekulativem Decoding ist verfügbar. Erneut herunterladen (ca. %1$d MB)?</string>
+    <string name="view">Anzeigen</string>
+
+    <!-- Model Tab - Info labels -->
+    <string name="label_filename">Dateiname</string>
+    <string name="label_supports_audio">Unterstützt Audio</string>
+    <string name="label_yes_multimodal">Ja (multimodal)</string>
+    <string name="label_no_text_only">Nein (nur Text)</string>
+    <string name="label_huggingface">HuggingFace</string>
+    <string name="label_ai_gallery_name">Name in der KI-Galerie</string>
+    <string name="show_less">Weniger anzeigen</string>
+    <string name="show_more">Mehr anzeigen</string>
+
+    <!-- Model Tab - Delete dialog -->
+    <string name="dialog_delete_title">Modell löschen?</string>
+    <string name="dialog_delete_message">Dadurch wird \'%1$s\' dauerhaft von deinem Gerät entfernt. Du kannst es später erneut herunterladen.</string>
+    <string name="action_delete">Löschen</string>
+    <string name="action_cancel">Abbrechen</string>
+    <!-- Chunk navigation in the in-progress notification (TASK-242) -->
+    <string name="chunk_nav_prev">◀</string>
+    <string name="chunk_nav_next">▶</string>
+    <string name="chunk_nav_live">Neueste</string>
+    <string name="chunk_nav_pinned_subtext">Chunk %1$d von %2$d · live %3$d von %2$d</string>
+    <string name="chunk_nav_live_subtext">Live · Chunk %1$d von %2$d</string>
+    <string name="chunk_nav_empty">Kein Text für diesen Chunk</string>
+
+    <!-- Settings Tab - Section Titles -->
+    <string name="settings_section_transcription">Transkription</string>
+    <string name="settings_section_appearance">Erscheinungsbild</string>
+    <string name="settings_section_advanced">Erweitert</string>
+    <string name="settings_section_feedback">Feedback &amp; Über</string>
+    <string name="settings_feedback_send_title">Feedback senden / Problem melden</string>
+    <string name="settings_feedback_send_description">Öffnet deine E-Mail-App mit den vorausgefüllten Details</string>
+    <string name="settings_feedback_translation_title">Falsche Übersetzung melden</string>
+    <string name="settings_feedback_translation_description">Teilt uns die App-Sprache mit, die du verwendest</string>
+    <string name="settings_feedback_source_title">Quellcode</string>
+    <string name="settings_feedback_license_title">Lizenz</string>
+    <string name="settings_feedback_license_value">Apache 2.0</string>
+    <string name="settings_feedback_privacy_note">Nichts wird ohne deine Aktion gesendet; deine E-Mail-App sendet diese E-Mail.</string>
+    <string name="settings_feedback_address_copied">Keine E-Mail-App gefunden. Adresse in die Zwischenablage kopiert: %1$s</string>
+    <string name="settings_feedback_body_version">App-Version</string>
+    <string name="settings_feedback_body_android">Android</string>
+    <string name="settings_feedback_body_device">Gerät</string>
+    <string name="settings_feedback_body_locale">Sprache</string>
+    <string name="settings_feedback_body_model">Aktives Modell</string>
+    <string name="settings_feedback_body_your_message">Deine Nachricht:</string>
+    <string name="settings_feedback_body_note">Du kannst die technischen Details oben entfernen, wenn du möchtest.</string>
+    <string name="oauth_connected">OAuth verbunden</string>
+
+    <!-- Settings Tab - Model status -->
+    <string name="model_loaded">Modell geladen</string>
+    <string name="model_not_loaded">Modell entladen (lädt automatisch bei Bedarf)</string>
+    <string name="auto_unload_in">Automatisches Entladen in: %1$dm %2$ds</string>
+    <string name="load_model_from_tab">Das Modell lädt automatisch bei Bedarf. Entladen spart Speicher.</string>
+
+    <!-- Settings Tab - Active Model -->
+    <string name="active_model">Aktives Modell</string>
+    <string name="no_model_selected_error">Kein Modell ausgewählt</string>
+    <string name="available_models">Verfügbare Modelle:</string>
+    <string name="no_models_found">Keine Modelle gefunden. Lade ein Modell herunter oder füge eines über den Tab \"Modell\" hinzu.</string>
+    <string name="manage_models">Modelle verwalten</string>
+    <string name="source_hf">HF</string>
+    <string name="source_gallery">Galerie</string>
+
+    <!-- Settings Tab - HuggingFace Authentication -->
+    <string name="huggingface_auth">HuggingFace-Authentifizierung</string>
+    <string name="huggingface_auth_description">Nur nötig, um Modelle in deinem Namen von HuggingFace herunterzuladen. Lokale Modelle funktionieren ohne Authentifizierung.</string>
+    <string name="setup_guide">Einrichtungsanleitung</string>
+    <string name="setup_step1">1. Tippe unten auf \'Mit HuggingFace anmelden\'</string>
+    <string name="setup_step2">2. Melde dich bei deinem HuggingFace-Konto an</string>
+    <string name="setup_step3">3. Autorisiere die App</string>
+    <string name="setup_step4">4. Du wirst automatisch zurückgeleitet</string>
+    <string name="token_valid">Token gültig</string>
+    <string name="username_label">Benutzername: %1$s</string>
+    <string name="token_label">Token: %1$s</string>
+    <string name="expires_label">Läuft ab: %1$s</string>
+    <string name="expired">Abgelaufen</string>
+    <string name="login_with_huggingface">Mit HuggingFace anmelden</string>
+    <string name="oauth_login_description">Schnelle Anmeldung über deinen Browser. Wenn du in Chrome bereits bei HuggingFace angemeldet bist, wirst du sofort zurückgeleitet.</string>
+    <string name="create_account_link">Du hast kein Konto? Erstelle eines auf huggingface.co</string>
+    <string name="authenticating">Authentifizierung mit HuggingFace…</string>
+    <string name="logged_in_as">Angemeldet als %1$s</string>
+    <string name="logout">Abmelden</string>
+    <string name="clear_token">Token entfernen</string>
+
+    <!-- Settings Tab - Manual Token -->
+    <string name="advanced_manual_token">Erweitert: Token manuell eingeben</string>
+    <string name="hide_advanced">Ausblenden: Token manuell eingeben</string>
+    <string name="manual_token_scope_info">Für manuelle Tokens wird der Scope \'read\' benötigt, um Modelle herunterzuladen.</string>
+    <string name="huggingface_token_label">HuggingFace-Token</string>
+    <string name="token_placeholder">hf_…</string>
+    <string name="paste_from_clipboard">Aus der Zwischenablage einfügen</string>
+    <string name="show_token">Token anzeigen</string>
+    <string name="hide_token">Token ausblenden</string>
+    <string name="create_token">Token erstellen</string>
+    <string name="get_token">Token abrufen</string>
+    <string name="retry">Erneut versuchen</string>
+    <string name="validating">Wird überprüft…</string>
+    <string name="validate_and_save">Überprüfen &amp; Speichern</string>
+    <string name="validating_token">Token wird überprüft…</string>
+
+    <!-- Settings Tab - Timeout -->
+    <string name="auto_unload_timeout">Timeout für automatisches Entladen</string>
+    <string name="timeout_description">Entlädt das Modell automatisch nach einer Inaktivitätsphase, um Speicher freizugeben. Das Modell wird bei Bedarf automatisch neu geladen.</string>
+    <string name="timeout_1_minute">1 Minute</string>
+    <string name="timeout_1_hour">1 Stunde</string>
+    <!-- review: plural-shaped; fine for most values but reads odd for singular counts -->
+    <string name="timeout_minutes">%1$d Minuten</string>
+
+    <!-- Settings Tab - Thread Count -->
+    <string name="thread_count_title">Inferenz-Threads</string>
+    <string name="thread_count_description">Anzahl der CPU-Threads für Transkription und Stimmerkennung (VAD). Höhere Werte verbrauchen mehr CPU, können die Verarbeitung aber beschleunigen.</string>
+    <string name="thread_count_auto">%1$d (automatisch erkannt)</string>
+    <string name="thread_count_value">%1$d</string>
+
+    <string name="inference_provider_title">Inferenz-Anbieter</string>
+    <string name="inference_provider_description">Ausführungs-Backend für ONNX-Inferenz. NNAPI kann die NPU/GPU des Geräts nutzen, ist aber bei einigen Modellen langsamer als die CPU.</string>
+    <string name="inference_provider_auto">Automatisch (CPU)</string>
+    <string name="inference_provider_nnapi">NNAPI (Hardwarebeschleunigung)</string>
+    <string name="inference_provider_cpu">Nur CPU</string>
+
+    <string name="saving">Wird gespeichert…</string>
+    <string name="settings_saved">Einstellungen gespeichert</string>
+    <string name="save">Speichern</string>
+
+    <!-- Settings Tab - Auto-Copy -->
+    <string name="auto_copy_title">Transkription automatisch kopieren</string>
+    <string name="auto_copy_description">Kopiert Transkriptionsergebnisse automatisch in die Zwischenablage. Du kannst weiterhin manuell über die Benachrichtigung kopieren.</string>
+
+    <!-- Settings Tab - Output Folder -->
+    <string name="output_folder_title">Transkripte in Ordner speichern</string>
+    <string name="output_folder_description">Speichert jede Transkription automatisch als .txt in einem Ordner deiner Wahl (z. B. einem Drive- oder Syncthing-Ordner).</string>
+    <string name="output_folder_choose">Ordner auswählen</string>
+    <!-- review: "Leeren" is the glossary Clear term; "Ordner entfernen" may fit better here -->
+    <string name="output_folder_clear">Leeren</string>
+
+    <!-- Settings Tab - VAD -->
+    <!-- review: store listing uses "Stille-Entfernung"; heading kept short with VAD in parentheses -->
+    <string name="vad_title">Stille entfernen (VAD)</string>
+    <string name="vad_description">Entfernt stille Abschnitte aus Sprachnachrichten vor der Transkription. Reduziert die Verarbeitungszeit und verbessert die Genauigkeit.</string>
+    <string name="progressive_title">Progressive Anzeige</string>
+    <string name="progressive_description">Zeigt den Transkriptionstext an, sobald ein Sprachsegment fertig ist, statt auf das vollständige Ergebnis zu warten.</string>
+
+    <!-- Settings Tab - Default Prompt -->
+    <string name="default_prompt_title">Standard-Transkriptions-Prompt</string>
+    <string name="default_prompt_description">Dieser Prompt wird beim Transkribieren von Audio verwendet. Leer lassen, um den Systemstandard zu verwenden.</string>
+    <string name="default_prompt_placeholder">z. B. Transscribiere diese Sprache:</string>
+    <string name="default_prompt_chars">%1$d / 500</string>
+    <string name="default_prompt_compatibility_info">Gilt nur für LLM-Modelle (Gemma). Whisper- und Parakeet-Modelle ignorieren diese Einstellung.</string>
+    <string name="current_default_prompt_label">Derzeit verwendet:</string>
+    <string name="default_system_prompt">Transscribiere diese Sprache:</string>
+    <string name="builtin_default_prompt">Transscribiere diese Sprache: (integrierter Standard)</string>
+    <string name="example_prompts_title">Beispiel-Prompts</string>
+    <string name="example_prompts_description">Tippe auf einen Prompt, um ihn zu verwenden</string>
+    <string name="example_prompt_transcribe">Transscribiere dieses Audio genau und in der Originalsprache.</string>
+    <string name="example_prompt_summarize">Transscribiere dieses Audio und fasse die Kernaussagen kurz zusammen.</string>
+    <string name="example_prompt_formal">Transscribiere dieses Audio in einem formellen, klaren Stil. Entferne Füllwörter und falsche Ansätze.</string>
+    <string name="example_prompt_translate_en">Transscribiere und übersetze dieses Audio ins Englische.</string>
+    <!-- review: intentionally left in Italian; it is an example prompt sent to the model for Italian output -->
+    <string name="example_prompt_translate_it">Trascrivi e traduci questo audio in italiano.</string>
+    <string name="example_prompt_notes">Transscribiere dieses Audio und formatiere es als Stichpunkt-Notizen.</string>
+    <string name="prompt_applied">Prompt angewendet</string>
+
+    <!-- Settings Tab - Preload Info -->
+    <string name="preload_title">Automatisches Laden &amp; Vorabladen</string>
+    <string name="preload_description">Das Modell wird automatisch geladen, wenn eine Anfrage eingeht und sich das Modell nicht im Speicher befindet. Du kannst das Modell auch explizit vorab laden:</string>
+    <string name="via_tasker">Über Tasker:</string>
+    <string name="via_adb">Über ADB:</string>
+
+    <!-- Settings Tab - Language -->
+    <string name="language_title">Sprache</string>
+    <string name="language_description">Wähle die Anzeigesprache der App.</string>
+    <string name="language_system">Systemstandard</string>
+    <string name="language_english">English</string>
+    <string name="language_italian">Italiano</string>
+
+    <!-- Settings Tab - Transcription Language -->
+    <string name="transcription_language_title">Transkriptionssprache</string>
+    <string name="transcription_language_auto">Automatisch erkennen</string>
+    <string name="transcription_language_description">Wähle die Sprache für die Audio-Transkription. Eine feste Sprache überspringt die Erkennung und ist schneller.</string>
+    <string name="transcription_language_note">Gilt nur für Whisper-Modelle. Das Distil-Italian-Modell verwendet immer Italienisch. Andere Backends (Gemma, Parakeet, Qwen3-ASR) erkennen automatisch.</string>
+
+    <!-- Settings Tab - Theme -->
+    <string name="theme_title">Design</string>
+    <string name="theme_description">Wähle das Farbdesign der App.</string>
+    <string name="theme_mode_title">Designmodus</string>
+    <string name="theme_mode_description">Folgt der Systemeinstellung oder erzwingt dunkel bzw. hell.</string>
+    <string name="theme_default">Standard (Indigo)</string>
+    <string name="theme_whatsapp">WhatsApp</string>
+    <string name="theme_telegram">Telegram</string>
+
+    <!-- Per-App Settings -->
+    <string name="per_app_settings_title">App-spezifische Einstellungen</string>
+    <string name="per_app_settings_description">Benachrichtigungsverhalten pro App anpassen</string>
+    <string name="per_app_settings_info">Tippe auf eine App, um zu konfigurieren, wie sich Benachrichtigungen verhalten, wenn Audio von dieser App geteilt wird.</string>
+    <string name="per_app_settings_loading">Einstellungen werden geladen…</string>
+    <string name="per_app_settings_manually_added">Manuell hinzugefügt</string>
+    <string name="per_app_settings_add_app">App hinzufügen</string>
+    <string name="per_app_settings_search">Apps suchen…</string>
+    <string name="per_app_settings_no_apps">Keine Apps gefunden</string>
+    <string name="per_app_settings_no_matching_apps">Keine passenden Apps</string>
+    <string name="per_app_settings_using_defaults">Verwendet Standardwerte</string>
+    <string name="per_app_settings_auto_copy_on">Auto-Kopie ein</string>
+    <string name="per_app_settings_auto_copy_off">Auto-Kopie aus</string>
+    <string name="per_app_settings_share_on">Teilen-Schaltfläche ein</string>
+    <string name="per_app_settings_share_off">Teilen-Schaltfläche aus</string>
+    <string name="per_app_settings_sound">Ton: %1$s</string>
+    <string name="per_app_settings_dialog_title">Einstellungen für %1$s</string>
+    <string name="per_app_settings_auto_copy_title">Transkription automatisch kopieren</string>
+    <string name="per_app_settings_auto_copy_description">Transkription automatisch in die Zwischenablage kopieren</string>
+    <string name="per_app_settings_show_share_title">Teilen-Schaltfläche anzeigen</string>
+    <string name="per_app_settings_show_share_description">Teilen-Schaltfläche in der Benachrichtigung anzeigen</string>
+    <string name="per_app_settings_notification_sound">Benachrichtigungston</string>
+    <string name="per_app_settings_sound_label">Ton</string>
+    <string name="per_app_settings_close">Schließen</string>
+    <string name="per_app_settings_sound_default">Standard</string>
+    <string name="per_app_settings_sound_silent">Stumm</string>
+    <string name="per_app_settings_sound_chime">Glockenspiel</string>
+    <string name="per_app_settings_sound_bell">Glocke</string>
+    <!-- review: proper German would be "Zurückteilen"; kept literal "Schnell-Zurückteilen"? final choice below -->
+    <string name="per_app_settings_quick_share_back_title">Schnell-Zurückteilen</string>
+    <string name="per_app_settings_quick_share_back_description">Mit einem Tipp Transkriptionen an diese App zurücksenden</string>
+
+    <!-- Per-App Reset -->
+    <string name="per_app_settings_reset_all">Alles auf Standardwerte zurücksetzen</string>
+    <string name="per_app_settings_reset_all_confirm_title">Alle Einstellungen zurücksetzen?</string>
+    <string name="per_app_settings_reset_all_confirm_message">Benachrichtigungseinstellungen aller Apps werden auf ihre Standardwerte zurückgesetzt.</string>
+    <string name="per_app_settings_reset_app">Auf Standardwerte zurücksetzen</string>
+    <string name="per_app_settings_reset_app_confirm_title">Einstellungen für %1$s zurücksetzen?</string>
+    <string name="per_app_settings_reset_app_confirm_message">Benachrichtigungseinstellungen dieser App werden auf Standardwerte zurückgesetzt.</string>
+    <string name="per_app_settings_reset_done">Einstellungen auf Standardwerte zurückgesetzt</string>
+
+    <!-- Per-App Onboarding Tooltip -->
+    <string name="per_app_onboarding_title">App-spezifisches Verhalten anpassen</string>
+    <string name="per_app_onboarding_message">Tippe auf eine App, um Auto-Kopie, Aktionen zum Teilen und Benachrichtigungstöne speziell für diese App zu konfigurieren.</string>
+    <string name="per_app_onboarding_got_it">Verstanden</string>
+
+    <!-- VAD Advisory (shown in Log tab when Parakeet is active with VAD enabled) -->
+    <string name="vad_advisory_title">VAD ist mit Parakeet nicht nötig</string>
+    <string name="vad_advisory_description">Das Entfernen von Stille bringt für dieses Modell keinen Vorteil, verursacht aber zusätzlichen Aufwand. Du kannst es in den Einstellungen deaktivieren.</string>
+    <string name="vad_advisory_dismiss">Verstanden</string>
+
+    <!-- Share Back -->
+    <string name="share_back">Zurückteilen</string>
+    <string name="share_back_description">Transkription an die Quell-App zurückteilen</string>
+    <string name="send_to_app">An %1$s senden</string>
+
+    <!-- Notification Channels -->
+    <string name="notification_channel_extraction">Modell-Download</string>
+    <string name="notification_channel_extraction_description">Lädt ML-Modelle im Hintergrund herunter und entpackt sie</string>
+    <string name="notification_downloading_progress">Wird heruntergeladen… %1$d%%</string>
+    <string name="notification_extracting_progress">Dateien werden entpackt… %1$d/%2$d</string>
+    <string name="notification_copying_progress">Dateien werden kopiert… %1$d/%2$d</string>
+    <string name="notification_extracting_hint">Dies kann mehr als 5 Minuten dauern</string>
+    <string name="notification_download_complete">Download abgeschlossen</string>
+    <string name="notification_channel_inference">Transkriptionsdienst</string>
+    <string name="notification_channel_inference_description">Audio-Transkription im Hintergrund</string>
+    <string name="notification_channel_result">Transkriptionsergebnis</string>
+    <string name="notification_channel_result_description">Benachrichtigung, wenn die Transkription abgeschlossen ist</string>
+    <string name="notification_cancelling">Wird abgebrochen…</string>
+
+    <!-- No-model notification -->
+    <string name="notification_no_model_title">Kein Transkriptionsmodell</string>
+    <string name="notification_no_model_message">Öffne die App, um ein Transkriptionsmodell herunterzuladen</string>
+    <string name="notification_no_model_action">App öffnen</string>
+
+    <!-- Tasker fallback notification -->
+    <string name="notification_channel_tasker_fallback">Tasker-Automatisierung</string>
+    <string name="notification_channel_tasker_fallback_description">Tippen, um die Transkription bei Auslösung im Hintergrund zu starten</string>
+    <string name="tasker_fallback_notification_text">Tippen, um die Transkription zu starten</string>
+
+    <!-- Dismiss -->
+    <string name="dismiss">Ausblenden</string>
+
+    <!-- Download completion messages -->
+    <string name="parakeet_downloaded">Parakeet-Modell erfolgreich heruntergeladen</string>
+    <string name="whisper_downloaded">%1$s erfolgreich heruntergeladen</string>
+    <string name="parakeet_deleted">Parakeet-Modell gelöscht</string>
+    <string name="whisper_deleted">%1$s gelöscht</string>
+
+    <!-- Speed comparison -->
+    <string name="speed_comparison_title">Geschwindigkeitsvergleich</string>
+    <string name="speed_comparison_subtitle">Relative Leistung bei typischen Sprachnachrichten (CPU)</string>
+    <string name="speed_comparison_header_model">Modell</string>
+    <string name="speed_comparison_header_size">Größe</string>
+    <string name="speed_comparison_header_speed">Geschwindigkeit</string>
+    <string name="speed_comparison_header_quality">Italienisch-Qualität</string>
+    <string name="speed_comparison_small_name">Whisper Small</string>
+    <string name="speed_comparison_small_size">~358MB</string>
+    <string name="speed_comparison_small_speed">1.0x</string>
+    <string name="speed_comparison_small_quality">Ausreichend</string>
+    <string name="speed_comparison_turbo_name">Whisper Turbo</string>
+    <string name="speed_comparison_turbo_size">~988MB</string>
+    <string name="speed_comparison_turbo_speed">1.3x</string>
+    <string name="speed_comparison_turbo_quality">Gut</string>
+    <string name="speed_comparison_medium_name">Whisper Medium</string>
+    <string name="speed_comparison_medium_size">~903MB</string>
+    <string name="speed_comparison_medium_speed">0.5x</string>
+    <string name="speed_comparison_medium_quality">Gut</string>
+    <string name="speed_comparison_distil_it_name">Distil Italian</string>
+    <string name="speed_comparison_distil_it_size">~939MB</string>
+    <string name="speed_comparison_distil_it_speed">~1.8x</string>
+    <string name="speed_comparison_distil_it_quality">Bestes Italienisch</string>
+    <string name="speed_comparison_distil_it_note">Bestes Italienisch</string>
+    <string name="speed_comparison_parakeet_name">Parakeet TDT</string>
+    <string name="speed_comparison_parakeet_size">~464MB</string>
+    <string name="speed_comparison_parakeet_speed">~17x</string>
+    <string name="speed_comparison_parakeet_quality">Sehr gut</string>
+    <string name="speed_comparison_parakeet_note">Empfohlen</string>
+    <string name="speed_comparison_qwen3_name">Qwen3-ASR</string>
+    <string name="speed_comparison_qwen3_size">~938MB</string>
+    <string name="speed_comparison_qwen3_speed">~2x</string>
+    <string name="speed_comparison_qwen3_quality">52 Sprachen, variabel</string>
+    <string name="speed_comparison_gigaam_name">GigaAM v3</string>
+    <string name="speed_comparison_gigaam_size">~326MB</string>
+    <string name="speed_comparison_gigaam_speed">Schnell</string>
+    <string name="speed_comparison_gigaam_quality">Nur Russisch</string>
+    <string name="speed_comparison_nemotron_name">Nemotron 3.5</string>
+    <string name="speed_comparison_nemotron_size">~600MB</string>
+    <string name="speed_comparison_nemotron_speed">Streaming</string>
+    <string name="speed_comparison_nemotron_quality">Experimentell</string>
+    <string name="fastest_badge">Am schnellsten</string>
+    <string name="coming_soon_badge">Demnächst</string>
+
+    <!-- Transcription ETA -->
+    <string name="transcription_eta_calibrating">Geschwindigkeit wird kalibriert…</string>
+    <string name="transcription_eta_seconds">~%1$ds verbleibend</string>
+    <string name="transcription_eta_minutes">~%1$dm %2$ds verbleibend</string>
+    <string name="transcription_eta_hours">~%1$dh %2$dm verbleibend</string>
+    <string name="transcription_eta_estimating">Wird geschätzt… ~%1$dm %2$ds verbleibend</string>
+
+    <!-- Performance Stats -->
+    <string name="performance_stats_title">Leistungsstatistiken</string>
+    <string name="performance_stats_subtitle">Reale Transkriptionsgeschwindigkeit von deinem Gerät</string>
+    <string name="performance_stats_empty">Noch keine Daten. Transscribiere etwas Audio, um Statistiken zu sehen.</string>
+    <string name="performance_stats_speed">%1$.0f ms/s</string>
+    <!-- review: plural-shaped; reads odd at 1 sample -->
+    <string name="performance_stats_samples_count">%1$d Stichproben</string>
+    <string name="performance_stats_fastest_badge">Am schnellsten</string>
+    <string name="performance_stats_clear">Statistiken zurücksetzen</string>
+    <string name="performance_stats_clear_confirm">Alle Leistungsdaten zurücksetzen?</string>
+    <string name="performance_stats_just_now">Gerade eben</string>
+    <string name="performance_stats_minutes_ago">vor %1$dm</string>
+    <string name="performance_stats_hours_ago">vor %1$dh</string>
+    <string name="performance_stats_days_ago">vor %1$dd</string>
+    <string name="performance_stats_total_audio">Gesamt: %1$s Audio verarbeitet</string>
+
+    <!-- Transcription active protection -->
+    <string name="dialog_transcription_active_title">Transkription läuft</string>
+    <string name="dialog_delete_active_model_message">\'%1$s\' kann nicht gelöscht werden, während es für eine Transkription verwendet wird. Bitte warte, bis die Transkription abgeschlossen ist.</string>
+    <string name="dialog_delete_inactive_model_message">Eine Transkription läuft gerade. Das Löschen von \'%1$s\' beeinträchtigt sie nicht, sei aber vorsichtig.</string>
+    <string name="dialog_switch_model_message">Eine Transkription läuft gerade. Ein Modellwechsel kann sie stören. Bist du sicher?</string>
+    <string name="action_understood">Verstanden</string>
+    <string name="action_switch_anyway">Trotzdem wechseln</string>
+    <string name="warn_reset_stats_during_transcription">Eine Transkription läuft gerade. Das Zurücksetzen der Statistiken beeinträchtigt sie nicht, aber die Zeitmessungen können unvollständig sein.</string>
+    <string name="cannot_unload_during_transcription">Entladen nicht möglich: Das Modell wird für eine aktive Transkription verwendet</string>
+    <string name="dialog_unload_title">Modell entladen?</string>
+    <string name="dialog_unload_message">Das Modell \'%1$s\' wird aus dem Speicher entladen. Es wird bei der nächsten Transkription automatisch neu geladen.</string>
+    <string name="action_unload">Entladen</string>
+
+    <!-- Swipe Action Mode -->
+    <string name="swipe_action_title">Wischaktion</string>
+    <string name="swipe_action_description">Wähle, was beim Wischen nach links auf einen Eintrag passiert</string>
+    <string name="swipe_action_reveal">Aktionen anzeigen</string>
+    <string name="swipe_action_immediate_delete">Sofort löschen</string>
+    <string name="swipe_action_copy_description">Transkription kopieren</string>
+    <string name="swipe_action_share_description">Transkription teilen</string>
+    <string name="swipe_action_delete_description">Eintrag löschen</string>
+    <string name="swipe_action_copied">Transkription kopiert</string>
+
+    <!-- Content descriptions (accessibility) -->
+    <string name="back">Zurück</string>
+    <string name="add_app">App hinzufügen</string>
+    <string name="view_settings">Einstellungen anzeigen</string>
+    <string name="app_icon">Symbol %1$s</string>
+
+    <!-- InferenceService strings -->
+    <string name="error_load_backend">Backend konnte nicht geladen werden: %1$s</string>
+    <string name="error_no_active_backend">Kein aktives Backend</string>
+    <string name="error_no_file_path">Kein Dateipfad für die Audioanfrage angegeben</string>
+    <string name="error_backend_no_audio_support">%1$s unterstützt keine Audio-Transkription. Wechsle in den Einstellungen zu einem Spracherkennungsmodell.</string>
+    <string name="error_no_transcription_produced">Keine Transkription erzeugt</string>
+    <string name="error_no_llm_model">Kein LLM-Modell konfiguriert. Öffne die App, um ein Modell herunterzuladen.</string>
+    <string name="error_no_model_configured">Kein %1$s-Modell konfiguriert. Öffne die App, um ein Modell herunterzuladen.</string>
+    <string name="loading_model">%1$s-Modell wird geladen…</string>
+    <string name="preprocessing_audio">Audio wird vorverarbeitet…</string>
+    <string name="clipboard_label_transcription">Transkription</string>
+
+    <!-- Settings accessibility -->
+    <string name="open_prompt_settings">Prompt-Einstellungen öffnen</string>
+    <string name="open_per_app_settings">App-spezifische Einstellungen öffnen</string>
+    <string name="open_performance_stats">Leistungsstatistiken öffnen</string>
+    <string name="hide_details">Details ausblenden</string>
+    <string name="show_details">Details anzeigen</string>
+    <string name="model_unknown">Unbekannt</string>
+
+    <!-- Picture-in-Picture -->
+    <string name="pip_transcribing">Transscribiert…</string>
+    <string name="pip_waiting">Wartet auf Transkription…</string>
+    <string name="pip_enter_button">PiP</string>
+    <string name="pip_enter_description">Im Bild-in-Bild-Fenster anzeigen</string>
+
+    <!-- GGUF model descriptions -->
+    <string name="model_title_gemma4_gguf_q4km">Gemma 4 GGUF (Q4_K_M)</string>
+    <string name="model_desc_gemma4_gguf_q4km">4,9 GB · Apache 2.0 · Textgenerierung über llama.cpp. Bestes Verhältnis von Qualität und Größe.</string>
+    <string name="model_title_gemma4_gguf_q5km">Gemma 4 GGUF (Q5_K_M)</string>
+    <string name="model_desc_gemma4_gguf_q5km">5,3 GB · Apache 2.0 · Höhere Qualität der Textgenerierung über llama.cpp.</string>
+    <string name="model_title_gemma4_gguf_q8">Gemma 4 GGUF (Q8_0)</string>
+    <string name="model_desc_gemma4_gguf_q8">7,4 GB · Apache 2.0 · Beste Qualität der Textgenerierung über llama.cpp. Erfordert 8 GB+ RAM.</string>
+    <string name="model_title_gemma_4_e2b">Gemma 4 E2B</string>
+    <string name="model_title_gemma_4_e4b">Gemma 4 E4B</string>
+    <string name="model_title_gemma_3n_e2b">Gemma 3n E2B</string>
+    <string name="model_title_gemma_3n_e4b">Gemma 3n E4B</string>
+    <string name="backend_gemma4_gguf">Gemma 4 (GGUF)</string>
+    <string name="gguf_inference_unavailable">GGUF-Inferenz erfordert die native llama.cpp-Bibliothek. Baue libllama.so für Android ARM64.</string>
+    <string name="gguf_model_download_error">GGUF-Modell konnte nicht heruntergeladen werden</string>
+
+    <!-- GGUF model download section -->
+    <string name="gguf_title">Gemma 4 GGUF (Textgenerierung)</string>
+    <string name="gguf_description">Lokales LLM für Textgenerierung, ohne Cloud-Abhängigkeit. Erfordert die native llama.cpp-Bibliothek.</string>
+    <string name="gguf_unsupported_arch">Auf diesem Gerät nicht unterstützt (erfordert ARM64).</string>
+    <string name="gguf_download_confirm_title">%1$s herunterladen?</string>
+    <string name="gguf_download_confirm_message">Dies lädt etwa %1$d MB herunter. GGUF-Modelle ermöglichen lokale Textgenerierung ohne Internet.</string>
+    <string name="gguf_downloaded">%1$s erfolgreich heruntergeladen</string>
+    <string name="gguf_delete_message">%1$s löschen? Dies gibt etwa %2$d MB Speicherplatz frei.</string>
+    <string name="gguf_deleted">%1$s gelöscht</string>
+
+    <!-- Language filter -->
+    <!-- review: lang_* kept in native form per glossary note; values-it instead translates them (convention conflict, reviewer to decide) -->
+    <string name="lang_filter_label">Nach Sprache filtern</string>
+    <string name="lang_filter_all">Alle Sprachen</string>
+    <string name="lang_filter_search">Sprache suchen…</string>
+    <string name="lang_filter_no_results">Keine passenden Sprachen</string>
+    <string name="lang_filter_clear">Suche löschen</string>
+    <string name="lang_afrikaans">Afrikaans</string>
+    <string name="lang_arabic">العربية</string>
+    <string name="lang_azerbaijani">Azərbaycanca</string>
+    <string name="lang_belarusian">Беларуская</string>
+    <string name="lang_bulgarian">Български</string>
+    <string name="lang_bengali">বাংলা</string>
+    <string name="lang_catalan">Català</string>
+    <string name="lang_czech">Čeština</string>
+    <string name="lang_welsh">Cymraeg</string>
+    <string name="lang_danish">Dansk</string>
+    <string name="lang_german">Deutsch</string>
+    <string name="lang_greek">Ελληνικά</string>
+    <string name="lang_english">English</string>
+    <string name="lang_spanish">Español</string>
+    <string name="lang_estonian">Eesti</string>
+    <string name="lang_basque">Euskara</string>
+    <string name="lang_persian">فارسی</string>
+    <string name="lang_finnish">Suomi</string>
+    <string name="lang_french">Français</string>
+    <string name="lang_galician">Galego</string>
+    <string name="lang_hebrew">עברית</string>
+    <string name="lang_hindi">हिन्दी</string>
+    <string name="lang_croatian">Hrvatski</string>
+    <string name="lang_hungarian">Magyar</string>
+    <string name="lang_indonesian">Bahasa Indonesia</string>
+    <string name="lang_italian">Italiano</string>
+    <string name="lang_japanese">日本語</string>
+    <string name="lang_georgian">ქართული</string>
+    <string name="lang_korean">한국어</string>
+    <string name="lang_lithuanian">Lietuvių</string>
+    <string name="lang_latvian">Latviešu</string>
+    <string name="lang_macedonian">Македонски</string>
+    <string name="lang_malay">Bahasa Melayu</string>
+    <string name="lang_dutch">Nederlands</string>
+    <string name="lang_norwegian">Norsk</string>
+    <string name="lang_polish">Polski</string>
+    <string name="lang_portuguese">Português</string>
+    <string name="lang_romanian">Română</string>
+    <string name="lang_russian">Русский</string>
+    <string name="lang_slovak">Slovenčina</string>
+    <string name="lang_slovenian">Slovenščina</string>
+    <string name="lang_albanian">Shqip</string>
+    <string name="lang_serbian">Српски</string>
+    <string name="lang_swedish">Svenska</string>
+    <string name="lang_swahili">Kiswahili</string>
+    <string name="lang_tamil">தமிழ்</string>
+    <string name="lang_thai">ไทย</string>
+    <string name="lang_turkish">Türkçe</string>
+    <string name="lang_ukrainian">Українська</string>
+    <string name="lang_urdu">اردو</string>
+    <string name="lang_uzbek">Oʻzbek</string>
+    <string name="lang_vietnamese">Tiếng Việt</string>
+    <string name="lang_chinese">中文</string>
+
+    <!-- Model Benchmark -->
+    <string name="benchmark_title">Benchmark %1$s</string>
+    <string name="benchmark_preparing">Benchmark wird vorbereitet…</string>
+    <string name="benchmark_running">Benchmark läuft…</string>
+    <string name="benchmark_progress">%1$d%% abgeschlossen</string>
+    <string name="benchmark_cancel">Abbrechen</string>
+    <string name="benchmark_rerun">Erneut ausführen</string>
+    <string name="benchmark_retry">Erneut versuchen</string>
+    <string name="benchmark_speed_label">Geschwindigkeit</string>
+    <string name="benchmark_speed_value">%1$.1f s/min Audio</string>
+    <string name="benchmark_time_label">Inferenzzeit</string>
+    <string name="benchmark_time_value">%1$d ms</string>
+    <string name="benchmark_memory_label">Spitzenspeicher</string>
+    <string name="benchmark_memory_value">%1$.0f MB</string>
+    <string name="benchmark_duration_label">Beispieldauer</string>
+    <string name="benchmark_duration_value">%1$.0f s</string>
+    <string name="benchmark_rating_fast">Schnell</string>
+    <string name="benchmark_rating_good">Gut</string>
+    <string name="benchmark_rating_moderate">Mäßig</string>
+    <string name="benchmark_rating_slow">Langsam</string>
+    <string name="benchmark_disclaimer">Ergebnisse können je nach Gerätelast und Temperatur variieren.</string>
+    <string name="benchmark_button">Benchmark</string>
+    <string name="benchmark_cached_result">Letzter Benchmark: %1$s</string>
+    <string name="benchmark_provider_label">Anbieter</string>
+    <string name="benchmark_provider_value">%1$s</string>
+    <string name="transcription_interrupted_title">Transkription wurde unterbrochen</string>
+    <string name="action_dismiss">Ausblenden</string>
+
+    <!-- Model Info Overlay -->
+    <string name="model_info_title">Modellinformationen</string>
+    <string name="model_info_section_languages">Unterstützte Sprachen</string>
+    <string name="model_info_section_recommendations">Empfehlungen</string>
+    <string name="model_info_section_technical">Technische Details</string>
+    <string name="model_info_section_performance">Leistungstipps</string>
+    <string name="model_info_languages_count">%d Sprachen</string>
+    <string name="model_info_no_languages">Sprachunterstützung unbekannt</string>
+    <string name="model_info_architecture">Architektur</string>
+    <string name="model_info_arch_encoder_decoder">Encoder-Decoder (Whisper)</string>
+    <string name="model_info_arch_transducer">Transducer (TDT)</string>
+    <string name="model_info_arch_ctc">CTC (Connectionist Temporal Classification)</string>
+    <string name="model_info_arch_llm">Large Language Model</string>
+    <string name="model_info_model_size">Modellgröße</string>
+    <string name="model_info_max_audio">Maximale Audiolänge</string>
+    <string name="model_info_max_audio_unlimited">Unbegrenzt</string>
+    <string name="model_info_max_audio_seconds">%d Sekunden</string>
+    <string name="model_info_quantization">Quantisierung</string>
+    <string name="model_info_recommended_threads">Empfohlene Threads</string>
+    <string name="model_info_threads_range">%1$d – %2$d</string>
+    <string name="model_info_arm64_only">Nur ARM64-Geräte</string>
+    <string name="model_info_progressive">Progressive Transkription</string>
+    <string name="model_info_vad_recommended">VAD-Vorverarbeitung empfohlen</string>
+    <string name="model_info_best_for_whisper_small">Kompaktes mehrsprachiges Modell zum schnellen Ausprobieren</string>
+    <string name="model_info_notes_whisper_small">Guter Einstieg. Geringere Genauigkeit im Vergleich zu größeren Modellen.</string>
+    <string name="model_info_best_for_whisper_turbo">Ausgewogenes mehrsprachiges ASR mit automatischer Erkennung</string>
+    <string name="model_info_notes_whisper_turbo">Fast large-v3-Qualität bei moderater Geschwindigkeit. Gut für mehrsprachige Nutzer.</string>
+    <string name="model_info_best_for_whisper_medium">Mittelgroßes mehrsprachiges Modell</string>
+    <string name="model_info_notes_whisper_medium">Guter Ausgleich zwischen Genauigkeit und Ressourcenverbrauch.</string>
+    <string name="model_info_best_for_distil_it">Beste Genauigkeit für Italienisch (4,3%% WER)</string>
+    <string name="model_info_notes_distil_it">Nur Italienisch. Höchste Genauigkeit für italienische Sprachnachrichten. Priorisiert Genauigkeit über Geschwindigkeit.</string>
+    <string name="model_info_best_for_qwen3">Automatische Erkennung in 52 Sprachen</string>
+    <string name="model_info_notes_qwen3">Breiteste Sprachabdeckung. Hinweis: schneidet Audio über 30 Sekunden ab. Nur ARM64-Geräte.</string>
+    <string name="model_info_best_for_parakeet">Schnellste Transkription (17,6x schneller als Whisper, 5,4%% WER)</string>
+    <string name="model_info_notes_parakeet">Keine Begrenzung der Audiolänge. VAD nicht nötig. Am besten für Nutzer, denen Geschwindigkeit wichtig ist.</string>
+<string name="model_info_best_for_gigaam">Beste Genauigkeit für Russisch auf dem Gerät</string>
+<string name="model_info_notes_gigaam">Nur Russisch. Natürliche Zeichensetzung und Großschreibung.</string>
+<string name="model_info_best_for_nemotron">Streaming-Transkription für lange Audios</string>
+<string name="model_info_notes_nemotron">Streaming-Transducer mit niedriger Latenz. Mehrsprachige automatische Erkennung mit Sprachoption pro Stream.</string>
+    <string name="model_info_best_for_gemma">Multimodales LLM für Text- + Audio-Aufgaben</string>
+    <string name="model_info_notes_gemma">Nicht für reine Spracherkennung optimiert. Für erweiterte Funktionen wie Audioverständnis kombiniert mit Textgenerierung.</string>
+    <string name="model_info_benchmark_wer">Word Error Rate (Italienisch): %.1f%%</string>
+    <string name="model_info_relative_speed">Geschwindigkeit: %s</string>
+    <string name="model_info_close">Schließen</string>
+
+    <!-- Skeleton loading -->
+    <string name="skeleton_loading_content_description">Transkription wird geladen</string>
+
+    <!-- Share target profiles (appear as separate entries in Android share sheet) -->
+    <string name="share_target_parakeet">Anti-Vocale (Parakeet)</string>
+    <string name="share_target_whisper">Anti-Vocale (Whisper)</string>
+    <string name="share_target_qwen3">Anti-Vocale (Qwen3)</string>
+    <string name="share_target_gemma">Anti-Vocale (Gemma)</string>
+    <string name="share_target_nemotron">Anti-Vocale (Nemotron)</string>
+    <string name="share_target_gigaam">Anti-Vocale (GigaAM)</string>
+    <string name="share_target_external">Anti-Vocale (Extern)</string>
+    <string name="external_none_imported">Keine externen Modelle importiert</string>
+    <string name="external_section_title">Externe Modelle</string>
+    <string name="model_advanced_section">Erweitert</string>
+    <string name="model_advanced_description">Modelldateien manuell importieren</string>
+    <string name="external_import_folder">Ordner auswählen</string>
+    <string name="external_import_url">Von URL importieren</string>
+    <string name="external_url_hint">HuggingFace-Repo oder URL einer Katalog-Eintrag-JSON</string>
+    <string name="external_url_dialog_title">Externes Modell importieren</string>
+    <string name="external_import">Importieren</string>
+    <string name="external_importing">Modell wird importiert…</string>
+    <string name="external_import_failed">Import fehlgeschlagen: %1$s</string>
+    <string name="external_imported">%1$s importiert</string>
+    <string name="external_delete_confirm">Externes Modell %1$s löschen?</string>
+    <string name="external_deleted">%1$s gelöscht</string>
+    <string name="external_family">Modellfamilie</string>
+    <string name="external_family_transducer">Transducer (NeMo/Zipformer)</string>
+    <string name="external_family_transducer_help">Erwartet Dateien für Encoder + Decoder + Joiner + Tokens</string>
+    <string name="external_family_whisper">Whisper</string>
+    <string name="external_family_whisper_help">Erwartet Dateien für Encoder + Decoder + Tokens</string>
+    <string name="external_family_ctc">CTC</string>
+    <string name="external_family_ctc_help">Erwartet Dateien für Encoder + Tokens</string>
+    <string name="external_family_sense_voice">SenseVoice</string>
+    <string name="external_family_sense_voice_help">Erwartet Dateien für Modell + Tokens</string>
+    <string name="external_option_language">Sprache (optional)</string>
+    <string name="external_option_language_hint">z. B. ar, en, it (leer = automatisch)</string>
+    <string name="external_option_itn">Inverse Textnormalisierung</string>
+    <string name="external_ctc_subtype">CTC-Subtyp</string>
+    <string name="external_ctc_subtype_nemo">NeMo CTC</string>
+    <string name="external_ctc_subtype_zipformer">Zipformer CTC</string>
+    <string name="external_languages">Sprachen (optional)</string>
+    <string name="external_languages_hint">durch Komma oder Leerzeichen getrennt, z. B. ar, en</string>
+    <string name="external_notice_single_pass">Transkription in einem Durchgang: Sehr langes Audio kann bei großen Modellen fehlschlagen. Kürze das Audio oder verwende ein kleineres Modell.</string>
+    <string name="external_notice_family">Wenn die Transkription ohne Fehlermeldung abstürzt, kann die Architektur falsch sein: Lösche das Modell und importiere es mit einer anderen Architektur erneut.</string>
+
+    <!-- Advanced sharing settings -->
+    <string name="share_targets_title">Freigabeziele</string>
+    <string name="share_targets_description">Zeigt jedes heruntergeladene Modell als eigene Option im Android-Teilfenster an. Wenn du Audio über ein bestimmtes Modell teilst, wird es nur für diese Transkription vorübergehend verwendet.</string>
+    <string name="advanced_sharing_toggle">Modelle im Teilen-Menü anzeigen</string>
+    <string name="share_targets_models_info">Jedes heruntergeladene Modell erscheint als eigenes Freigabeziel. Beim Löschen eines Modells wird sein Freigabeziel entfernt.</string>
+
+    <!-- Conversation Grouping -->
+    <string name="conversation_grouping_title">Nach Unterhaltung gruppieren</string>
+    <string name="conversation_grouping_description">Gruppiert Transkriptionen nach Quell-App (WhatsApp, Telegram usw.) in einklappbaren Abschnitten.</string>
+    <!-- review: plural-shaped -->
+    <string name="conversation_group_count">%1$d Nachrichten</string>
+    <string name="conversation_group_unknown">Andere</string>
+
+    <!-- Re-transcribe -->
+    <string name="retranscribe">Erneut versuchen</string>
+    <string name="retranscribe_title">Erneut transskribieren mit…</string>
+    <string name="retranscribe_subtitle">Wähle ein Modell, um dieses Audio erneut zu transskribieren</string>
+    <string name="retranscribe_confirm">Transskribieren</string>
+    <string name="retranscribe_no_models">Keine Audio-Modelle konfiguriert. Lade zuerst ein Modell im Tab \"Modell\" herunter.</string>
+    <string name="retranscribe_file_not_found">Audiodatei nicht mehr verfügbar</string>
+    <string name="retranscribe_active_badge">Aktiv</string>
+    <string name="retranscribe_setting_title">Schaltfläche für erneutes Transskribieren</string>
+    <string name="retranscribe_setting_description">Zeigt eine Schaltfläche auf Audio-Transkriptionen, um es mit einem anderen Modell erneut zu versuchen.</string>
+
+    <!-- Subtitle extraction choice (TASK-228) -->
+    <string name="subtitles_found_title">Untertitel gefunden</string>
+    <string name="subtitles_found_text">Eingebettete Untertitel (%1$s) verwenden oder das Audio transskribieren?</string>
+    <string name="subtitles_language_unknown">unbekannt</string>
+    <string name="action_use_subtitles">Untertitel verwenden</string>
+    <string name="action_transcribe_audio">Audio transskribieren</string>
+    <string name="subtitle_fallback_status">Untertitel konnten nicht extrahiert werden, Audio wird transskribiert</string>
+    <string name="subtitle_choice_notification_text">Warte auf deine Auswahl…</string>
+</resources>
