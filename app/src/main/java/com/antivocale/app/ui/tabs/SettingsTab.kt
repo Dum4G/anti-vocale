@@ -12,6 +12,7 @@ import androidx.documentfile.provider.DocumentFile
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -389,7 +390,7 @@ fun SettingsTab(
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { showPromptSettings = true },
+                    .clickable(role = Role.Button) { showPromptSettings = true },
                 shape = MaterialTheme.shapes.medium
             ) {
                 Row(
@@ -865,7 +866,7 @@ fun SettingsTab(
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .clickable { showManualDetails = !showManualDetails },
+                                        .clickable(role = Role.Button) { showManualDetails = !showManualDetails },
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
@@ -1284,7 +1285,7 @@ fun SettingsTab(
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { showPerAppSettings = true },
+                    .clickable(role = Role.Button) { showPerAppSettings = true },
                 shape = MaterialTheme.shapes.medium
             ) {
                 Row(
@@ -1328,7 +1329,7 @@ fun SettingsTab(
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable {
+                    .clickable(role = Role.Button) {
                         perfStatsScope.launch {
                             perfStatsProfiles = viewModel.transcriptionCalibrator.getAllProfiles()
                             showPerfStatsDialog = true
@@ -1461,7 +1462,7 @@ private fun FeedbackSection(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { sendFeedback(translation = false) },
+                        .clickable(role = Role.Button) { sendFeedback(translation = false) },
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -1500,7 +1501,7 @@ private fun FeedbackSection(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { sendFeedback(translation = true) },
+                        .clickable(role = Role.Button) { sendFeedback(translation = true) },
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -1539,7 +1540,7 @@ private fun FeedbackSection(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable {
+                        .clickable(role = Role.Button) {
                             runCatching {
                                 context.startActivity(
                                     Intent(Intent.ACTION_VIEW, Uri.parse(FeedbackHelper.SOURCE_CODE_URL))
