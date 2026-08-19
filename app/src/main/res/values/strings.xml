@@ -437,6 +437,9 @@
     <string name="language_system">System Default</string>
     <string name="language_english">English</string>
     <string name="language_italian">Italiano</string>
+    <string name="language_german">Deutsch</string>
+    <string name="language_russian">Русский</string>
+    <string name="language_hindi">हिन्दी</string>
 
     <!-- Settings Tab - Transcription Language -->
     <string name="transcription_language_title">Transcription Language</string>

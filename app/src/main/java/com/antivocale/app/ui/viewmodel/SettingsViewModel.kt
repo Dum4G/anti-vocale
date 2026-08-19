@@ -74,7 +74,10 @@ class SettingsViewModel @Inject constructor(
     val languageOptions = listOf(
         LanguageOption("system", "System Default"),
         LanguageOption("en", "English"),
-        LanguageOption("it", "Italiano")
+        LanguageOption("it", "Italiano"),
+        LanguageOption("de", "Deutsch"),
+        LanguageOption("ru", "Русский"),
+        LanguageOption("hi", "हिन्दी")
     )
 
     // Transcription language options (reuses LanguageOption)

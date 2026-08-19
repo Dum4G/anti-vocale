@@ -651,6 +651,9 @@ fun SettingsTab(
                             "system" -> stringResource(R.string.language_system)
                             "en" -> stringResource(R.string.language_english)
                             "it" -> stringResource(R.string.language_italian)
+                            "de" -> stringResource(R.string.language_german)
+                            "ru" -> stringResource(R.string.language_russian)
+                            "hi" -> stringResource(R.string.language_hindi)
                             else -> currentLanguage
                         },
                         optionDisplay = { code ->
@@ -658,6 +661,9 @@ fun SettingsTab(
                                 "system" -> stringResource(R.string.language_system)
                                 "en" -> stringResource(R.string.language_english)
                                 "it" -> stringResource(R.string.language_italian)
+                                "de" -> stringResource(R.string.language_german)
+                                "ru" -> stringResource(R.string.language_russian)
+                                "hi" -> stringResource(R.string.language_hindi)
                                 else -> viewModel.languageOptions.find { it.code == code }?.displayName ?: code
                             }
                         },
