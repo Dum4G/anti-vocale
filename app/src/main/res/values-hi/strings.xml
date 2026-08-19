@@ -1,0 +1,890 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Anti-Vocale</string>
+
+    <!-- Tab names -->
+    <string name="model_tab">मॉडल</string>
+    <string name="logs_tab">लॉग</string>
+    <string name="settings_tab">सेटिंग</string>
+
+    <!-- Model selection -->
+    <string name="select_model">मॉडल फ़ाइल चुनें</string>
+    <string name="select_model_from_device">फ़ाइल चुनें</string>
+
+    <!-- Custom transducer model (sideload) -->
+    <string name="load_model">मॉडल लोड करें</string>
+    <string name="unload_model">मॉडल अनलोड करें</string>
+
+    <!-- Model status -->
+    <string name="model_status">स्थिति: %1$s</string>
+    <string name="model_path">पाथ: %1$s</string>
+    <string name="no_model_selected">कोई मॉडल चुना नहीं गया</string>
+    <string name="status_ready">तैयार</string>
+    <string name="status_loading">मॉडल लोड हो रहा है…</string>
+    <string name="status_error">गड़बड़ी</string>
+    <string name="status_unloaded">अनलोड किया गया</string>
+    <string name="status_model_selected">मॉडल चुना गया</string>
+    <string name="status_no_model">कोई मॉडल नहीं</string>
+
+    <!-- ViewModel status messages -->
+    <string name="parakeet_name">Parakeet TDT</string>
+    <string name="llm_backend_name">Gemma (LiteRT-LM)</string>
+    <string name="backend_model_ready">%1$s तैयार</string>
+    <string name="backend_model_not_found">%1$s मॉडल नहीं मिला</string>
+    <string name="saved_model_found">सेव किया गया मॉडल मिला</string>
+    <string name="saved_model_not_found">सेव किया गया मॉडल नहीं मिला</string>
+    <string name="model_selected">मॉडल चुना गया: %1$s</string>
+    <string name="model_copy_failed">मॉडल फ़ाइल कॉपी करने में विफल</string>
+    <string name="model_file_not_found">मॉडल फ़ाइल यहाँ नहीं मिली: %1$s</string>
+    <string name="model_loading">मॉडल मेमोरी में लोड हो रहा है…</string>
+    <string name="model_ready_inference">मॉडल इन्फ़रेंस के लिए तैयार</string>
+    <string name="model_load_failed">लोड विफल: %1$s</string>
+    <string name="device_incompatible_title">असमर्थित डिवाइस</string>
+    <string name="device_incompatible_arch">इस ऐप को ARM64 डिवाइस चाहिए। यह एमुलेटर या x86 डिवाइस पर काम नहीं करेगा।</string>
+    <string name="device_incompatible_ram">इस डिवाइस में ऑन-डिवाइस AI मॉडल चलाने के लिए पर्याप्त मेमोरी नहीं है (कम से कम 4 GB RAM चाहिए)।</string>
+    <string name="model_unloaded">मॉडल अनलोड किया गया</string>
+    <string name="model_auto_unloaded">निष्क्रियता के कारण मॉडल अनलोड किया गया</string>
+    <string name="model_externally_loaded">मॉडल तैयार (बाहरी रूप से लोड)</string>
+    <string name="model_deleted_status">मॉडल मिटाया गया</string>
+    <string name="downloaded_model_selected">डाउनलोड किया गया मॉडल चुना गया</string>
+
+    <!-- Settings error messages -->
+    <string name="error_save_settings">सेटिंग सेव करने में विफल</string>
+    <string name="error_save_language">भाषा की प्राथमिकता सेव करने में विफल</string>
+    <string name="error_save_theme">थीम की प्राथमिकता सेव करने में विफल</string>
+    <string name="error_token_empty">टोकन खाली नहीं हो सकता</string>
+    <string name="error_auth_cancelled">पुष्टीकरण रद्द किया गया</string>
+
+    <!-- Logs -->
+    <string name="logs_empty">अभी कोई अनुरोध नहीं</string>
+    <string name="request_text">टेक्स्ट अनुरोध</string>
+    <string name="request_audio">ऑडियो अनुरोध</string>
+    <string name="logs_recent_requests">हाल के अनुरोध (%1$d)</string>
+    <string name="logs_clear">साफ़ करें</string>
+    <string name="logs_delete_entry">लॉग मिटाएं</string>
+    <string name="logs_delete_confirmation">यह लॉग एंट्री मिटाएं?</string>
+    <string name="logs_delete_selected">चुनी गई एंट्री मिटाएं</string>
+    <string name="logs_clear_confirmation">सभी लॉग साफ़ करें? इसे पूर्ववत नहीं किया जा सकता।</string>
+    <string name="logs_select_all">सभी चुनें</string>
+    <string name="logs_deselect_all">सभी को चुनने से हटाएं</string>
+    <string name="logs_entries_selected">%d चुनी गईं</string>
+    <string name="logs_no_entries_selected">कोई एंट्री नहीं चुनी गई</string>
+    <string name="logs_cleared">सभी लॉग साफ़ कर दिए गए</string>
+    <string name="logs_entry_deleted">लॉग एंट्री मिटाई गई</string>
+    <string name="logs_entries_deleted">%d एंट्री मिटाई गईं</string>
+    <string name="logs_undo">पूर्ववत करें</string>
+    <string name="logs_cancel">रद्द करें</string>
+    <string name="logs_confirm">पुष्टि करें</string>
+    <string name="logs_empty_hint">ट्रांसक्रिप्शन यहाँ देखने के लिए WhatsApp, Telegram या किसी दूसरे ऐप से वॉइस मैसेज शेयर करें</string>
+    <string name="logs_prompt_label">प्रॉम्प्ट:</string>
+    <string name="logs_result_label">नतीजा:</string>
+    <string name="logs_error_label">गड़बड़ी:</string>
+    <string name="logs_task_id">टास्क ID: %1$s</string>
+    <string name="logs_unknown_error">अनजानी गड़बड़ी</string>
+    <string name="logs_transcription_cancelled">ट्रांसक्रिप्शन रद्द किया गया</string>
+    <string name="logs_search_placeholder">ट्रांसक्रिप्शन खोजें…</string>
+    <string name="logs_search_no_results">कोई मिलता-जुलता ट्रांसक्रिप्शन नहीं</string>
+    <string name="logs_search_no_results_hint">कोई दूसरा खोज शब्द आज़माएं</string>
+    <string name="voice_message_duration">वॉइस मैसेज</string>
+    <string name="source_was_video">स्रोत: वीडियो फ़ाइल</string>
+    <string name="processed_in">%1$s में प्रोसेस हुआ</string>
+    <string name="today">आज</string>
+    <string name="yesterday">कल</string>
+    <string name="time_seconds_ago">%1$d सेकंड पहले</string>
+    <string name="time_minutes_ago">%1$d मिनट पहले</string>
+    <string name="time_hours_ago">%1$d घंटे पहले</string>
+
+    <!-- Model descriptions -->
+    <string name="model_desc_gemma_4_e2b">2.6GB - मल्टीमॉडल (टेक्स्ट + ऑडियो), नई पीढ़ी, ज़्यादातर डिवाइस के लिए सबसे बेहतर</string>
+    <string name="model_desc_gemma_4_e4b">3.7GB - मल्टीमॉडल (टेक्स्ट + ऑडियो), नई पीढ़ी, बेहतर क्वालिटी</string>
+    <string name="model_desc_gemma_3n_e2b">3.3GB - मल्टीमॉडल (टेक्स्ट + ऑडियो), ज़्यादातर डिवाइस के लिए सबसे बेहतर</string>
+    <string name="model_desc_gemma_3n_e4b">4.2GB - मल्टीमॉडल (टेक्स्ट + ऑडियो), बेहतर क्वालिटी</string>
+
+    <!-- Parakeet model -->
+    <string name="parakeet_title">Parakeet TDT</string>
+    <string name="parakeet_description">25 भाषाएं • तेज़ • अनुशंसित</string>
+    <string name="parakeet_download">Parakeet TDT डाउनलोड करें</string>
+    <string name="parakeet_download_confirm_title">Parakeet TDT डाउनलोड करें?</string>
+    <string name="parakeet_download_confirm_message">इससे ~%1$dMB डाउनलोड होगा। ट्रांसक्रिप्शन के लिए Parakeet, Gemma से तेज़ लेकिन कम सटीक है।</string>
+    <string name="parakeet_smoothquant_title">Parakeet TDT (SmoothQuant)</string>
+    <string name="parakeet_smoothquant_description">~862MB • 25 भाषाएं • अनुशंसित</string>
+    <string name="parakeet_stock_title">Parakeet TDT (Stock int8)</string>
+    <string name="parakeet_stock_description">~464MB • 25 भाषाएं • हल्का विकल्प</string>
+
+    <!-- Whisper model -->
+    <string name="whisper_title">Whisper</string>
+    <string name="whisper_description">बहुभाषी स्पीच रिकग्निशन</string>
+    <string name="whisper_small_title">Whisper Small</string>
+    <string name="whisper_small_description">~358MB • कम सटीकता, ख़ासकर शोर वाले ऑडियो पर • सिर्फ़ कम शक्ति वाले डिवाइस के लिए</string>
+    <string name="whisper_turbo_title">Whisper Turbo</string>
+    <string name="whisper_turbo_description">~988MB • large-v3 जितनी ही क्वालिटी • संतुलित बहुभाषी</string>
+    <string name="whisper_medium_title">Whisper Medium</string>
+    <string name="whisper_medium_description">~903MB • अच्छी सटीकता • बहुभाषी</string>
+    <string name="whisper_distil_large_v3_title">Distil Italian</string>
+    <string name="whisper_distil_large_v3_description">~939MB • 2 डिकोडर लेयर • सबसे तेज़ • इतालवी के लिए ऑप्टिमाइज़्ड</string>
+    <string name="whisper_download">Whisper डाउनलोड करें</string>
+    <string name="whisper_download_confirm_title">%1$s डाउनलोड करें?</string>
+    <string name="whisper_download_confirm_message">इससे ~%1$dMB डाउनलोड होगा। Whisper ठीक विराम चिह्नों के साथ बेहतरीन बहुभाषी सहायता देता है।</string>
+    <string name="whisper_extract_confirm_title">%1$s निकालें?</string>
+    <string name="whisper_extract_confirm_message">मॉडल फ़ाइल पहले से डाउनलोड है। इससे इसे इस्तेमाल के लिए निकाला जाएगा।</string>
+
+    <!-- Qwen3-ASR model -->
+    <string name="qwen3_asr_title">Qwen3-ASR (52 भाषाएं)</string>
+    <string name="qwen3_asr_description">52 भाषाएं • इतालवी सटीकता कमज़ोर</string>
+    <string name="qwen3_asr_0_6b_title">Qwen3-ASR 0.6B</string>
+    <string name="qwen3_asr_0_6b_description">~938MB • 52 भाषाएं • इतालवी सटीकता कमज़ोर</string>
+    <string name="qwen3_asr_download_confirm_title">%1$s डाउनलोड करें?</string>
+    <string name="qwen3_asr_download_confirm_message">इससे ~%1$dMB डाउनलोड होगा। Qwen3-ASR 52 भाषाओं को सपोर्ट करता है लेकिन इतालवी के लिए सटीकता कम है।</string>
+    <string name="qwen3_asr_download">Qwen3-ASR डाउनलोड करें</string>
+    <string name="qwen3_asr_delete_message">Qwen3-ASR मॉडल मिटाएं?</string>
+    <string name="qwen3_asr_downloaded">%1$s सफलतापूर्वक डाउनलोड हुआ</string>
+    <string name="qwen3_asr_deleted">%1$s मिटाया गया</string>
+
+    <!-- Nemotron 3.5 streaming model -->
+    <string name="nemotron_name">Nemotron 3.5</string>
+    <string name="nemotron_title">Nemotron 3.5 (स्ट्रीमिंग)</string>
+    <string name="nemotron_description">स्ट्रीमिंग ट्रांसड्यूसर • प्रयोगात्मक इतालवी क्वालिटी</string>
+    <string name="nemotron_download_confirm_title">%1$s डाउनलोड करें?</string>
+    <string name="nemotron_download_confirm_message">इससे ~%1$dMB डाउनलोड होगा। Nemotron 3.5 एक स्ट्रीमिंग बहुभाषी ASR मॉडल है।</string>
+    <string name="nemotron_download">Nemotron डाउनलोड करें</string>
+    <string name="nemotron_delete_message">Nemotron 3.5 मॉडल मिटाएं?</string>
+    <string name="nemotron_downloaded">%1$s सफलतापूर्वक डाउनलोड हुआ</string>
+    <string name="nemotron_deleted">%1$s मिटाया गया</string>
+
+    <!-- GigaAM v3 model -->
+    <string name="gigaam_title">GigaAM v3</string>
+    <string name="gigaam_description">रूसी ASR • ~326MB • Sber (MIT)</string>
+    <string name="gigaam_name">GigaAM v3</string>
+    <string name="gigaam_download_confirm_title">GigaAM v3 डाउनलोड करें?</string>
+    <string name="gigaam_download_confirm_message">इससे ~%1$dMB डाउनलोड होगा। GigaAM v3, Sber का सिर्फ़ रूसी भाषा वाला ASR मॉडल है जिसकी रूसी सटीकता मज़बूत है।</string>
+    <string name="gigaam_download">GigaAM डाउनलोड करें</string>
+    <string name="gigaam_downloaded">%1$s सफलतापूर्वक डाउनलोड हुआ</string>
+    <string name="gigaam_deleted">%1$s मिटाया गया</string>
+
+    <!-- Generic catalog section (catalog-driven sherpa-onnx models) -->
+    <string name="catalog_model_downloaded">%1$s सफलतापूर्वक डाउनलोड हुआ</string>
+    <string name="catalog_model_deleted">%1$s मिटाया गया</string>
+    <string name="catalog_download_confirm_title">%1$s डाउनलोड करें?</string>
+    <string name="catalog_download_confirm_message">इससे ~%1$dMB डाउनलोड होगा।</string>
+    <string name="catalog_extract_confirm_title">%1$s निकालें?</string>
+    <string name="catalog_extract_confirm_message">मॉडल फ़ाइल पहले से डाउनलोड है। इससे इसे इस्तेमाल के लिए निकाला जाएगा।</string>
+
+    <!-- Download status -->
+    <string name="download_status_downloading">डाउनलोड हो रहा है…</string>
+    <string name="download_status_extracting">%1$s निकाला जा रहा है…</string>
+    <string name="download_status_extracting_files">फ़ाइलें निकल रही हैं…</string>
+    <string name="download_status_copying_file">%1$s कॉपी हो रहा है…</string>
+    <string name="download_status_copying_files">फ़ाइलें कॉपी हो रही हैं…</string>
+    <string name="download_status_connecting">कनेक्ट हो रहा है…</string>
+    <string name="download_status_file_progress">%1$d/%2$d</string>
+    <string name="download_status_checking_access">ऐक्सेस जाँचा जा रहा है…</string>
+    <string name="download_status_retrying">फिर से कोशिश (%1$d/%2$d)…</string>
+    <string name="download_status_resuming">डाउनलोड फिर शुरू हो रहा है…</string>
+    <string name="model_requires_auth">इस मॉडल के लिए HuggingFace खाता चाहिए</string>
+
+    <!-- Download rate/ETA/partial -->
+    <string name="download_rate">%1$s/s</string>
+    <string name="download_eta">%1$s बाक़ी</string>
+    <string name="download_eta_less_than_minute">1 मिनट से कम बाक़ी</string>
+    <string name="download_partial">डाउनलोड %1$d%% पर बाधित हुआ (%2$s / %3$s)</string>
+    <string name="download_resume">डाउनलोड फिर शुरू करें</string>
+    <string name="download_clear_partial">साफ़ करें</string>
+    <string name="download_partial_detected">अधूरा डाउनलोड मिला</string>
+    <string name="gemma_download_confirm_title">%1$s डाउनलोड करें?</string>
+    <string name="gemma_download_confirm_message">इससे ~%1$dMB डाउनलोड होगा। Gemma मॉडल बेहतर सुविधाओं वाले पूरे LLM हैं लेकिन ज़्यादा स्टोरेज इस्तेमाल करते हैं।</string>
+
+    <!-- Transcription -->
+    <string name="share_transcription">शेयर करें</string>
+    <string name="copy_transcription">क्लिपबोर्ड पर कॉपी करें</string>
+    <string name="copied_to_clipboard">क्लिपबोर्ड पर कॉपी हो गया</string>
+    <string name="audio_received_for_transcription">ट्रांसक्रिप्शन के लिए ऑडियो मिला</string>
+    <string name="transcription_complete">ट्रांसक्रिप्शन पूरा हुआ</string>
+    <string name="transcription_partial">ट्रांसक्रिप्शन अधूरा (%1$d हिस्से विफल)</string>
+    <string name="transcription_partial_chip">अधूरा</string>
+    <string name="transcription_failed">ट्रांसक्रिप्शन विफल</string>
+    <string name="error_model_load">मॉडल फ़ाइल ख़राब या गलत फ़ॉर्मैट की हो सकती है। मॉडल टैब से इसे फिर से डाउनलोड करें।</string>
+    <string name="error_native">ट्रांसक्रिप्शन के दौरान एक अंदरूनी गड़बड़ी हुई। अगर यह बार-बार हो तो कोई दूसरा मॉडल आज़माएं।</string>
+    <string name="error_not_initialized">कोई मॉडल लोड नहीं है। मॉडल टैब खोलकर एक मॉडल डाउनलोड करें या चुनें।</string>
+    <string name="error_model_unavailable">चुना गया मॉडल अब उपलब्ध नहीं है। मॉडल टैब खोलकर कोई दूसरा चुनें।</string>
+    <string name="native_crash_model_warning">पिछले ट्रांसक्रिप्शन के दौरान ऐप अचानक बंद हो गया। अगर यह मॉडल लोड करते समय हुआ था, तो फ़ाइल ख़राब हो सकती है। मॉडल टैब से इसे फिर से डाउनलोड करें।</string>
+    <string name="oom_crash_title">मेमोरी कम होने से ऐप बंद हुआ</string>
+    <string name="oom_crash_warning">डिवाइस की मेमोरी कम होने की वजह से ऐप बंद कर दिया गया। फिर ट्रांसक्राइब करने से पहले दूसरे ऐप बंद करें या कोई छोटा मॉडल इस्तेमाल करें।</string>
+    <string name="native_crash_title">ऐप अचानक बंद हुआ</string>
+    <string name="native_crash_go_to_model">मॉडल टैब पर जाएं</string>
+    <string name="model_load_low_memory">इस मॉडल के लिए ज़रूरी मेमोरी काफ़ी नहीं है (%1$s उपलब्ध, लगभग %2$s चाहिए)। दूसरे ऐप बंद करें या कोई छोटा मॉडल इस्तेमाल करें। फिर भी कोशिश करने के लिए सेटिंग में \\"मॉडल ज़बरदस्ती लोड करें\\" चालू कर सकते हैं।</string>
+    <string name="force_model_load">मॉडल ज़बरदस्ती लोड करें</string>
+    <string name="force_model_load_desc">मेमोरी कम लगने पर भी मॉडल लोड करें। कम RAM वाले डिवाइस पर ऐप बंद हो सकता है।</string>
+    <string name="copy">कॉपी करें</string>
+    <string name="share">शेयर करें</string>
+    <string name="char_counter">%2$d में से %1$d अक्षर</string>
+    <string name="page_counter">%2$d में से %1$d पेज</string>
+    <string name="detected_language">पहचानी गई: %1$s</string>
+    <string name="confidence_low">कम भरोसा</string>
+    <string name="no_audio_file">कोई ऑडियो फ़ाइल नहीं मिली</string>
+    <string name="failed_to_process_audio">ऑडियो फ़ाइल प्रोसेस करने में विफल</string>
+    <string name="unsupported_audio_format">मैसेजिंग ऐप के वॉइस मैसेज समर्थित हैं; .%1$s एक समर्थित फ़ॉर्मैट नहीं है।</string>
+    <string name="unknown_audio_format">ऑडियो फ़ॉर्मैट पहचाना नहीं जा सका। ऑडियो किसी मैसेजिंग ऐप से शेयर करें।</string>
+    <string name="transcription_started">ट्रांसक्रिप्शन शुरू हुआ…</string>
+    <string name="processing_segment_progress">%2$d में से %1$d हिस्सा…</string>
+    <string name="progressive_initial">आंशिक प्रीव्यू तैयार हो रहे हैं; पूरा होने पर पूरा टेक्स्ट मिलेगा</string>
+    <string name="added_to_queue">क़तार में जोड़ा गया…</string>
+    <string name="processing_chunk">%2$d में से %1$d हिस्सा प्रोसेस हो रहा है…</string>
+    <string name="processing_audio">ऑडियो प्रोसेस हो रहा है…</string>
+    <string name="processing_request">%1$s अनुरोध प्रोसेस हो रहा है…</string>
+    <string name="processing_queue_item">%2$d में से %1$d प्रोसेस हो रहा है…</string>
+    <string name="processing_queue_item_audio">ऑडियो प्रोसेस हो रहा है (%2$d में से %1$d)…</string>
+    <string name="processing_queue_chunk">हिस्सा %1$d/%2$d प्रोसेस हो रहा है (%4$d में से %3$d)…</string>
+    <string name="queued_count">%1$d क़तार में</string>
+    <string name="generating_text">टेक्स्ट जवाब बन रहा है…</string>
+
+    <!-- Model Tab - Download section -->
+    <string name="download_models">Gemma मॉडल</string>
+    <string name="gemma_advanced_features_description">बेहतर सुविधाओं वाले पूरे मल्टीमॉडल LLM: ट्रांसक्रिप्शन, टेक्स्ट बदलाव और समृद्धि।</string>
+    <string name="requires_huggingface_token">HuggingFace टोकन चाहिए।</string>
+    <string name="add_in_settings">सेटिंग में जोड़ें</string>
+    <string name="recommended">अनुशंसित</string>
+    <string name="best_italian_badge">सबसे बेहतर इतालवी</string>
+    <string name="downloading">डाउनलोड हो रहा है…</string>
+    <string name="connecting_to_huggingface">HuggingFace से कनेक्ट हो रहा है…</string>
+    <string name="cancel_download">डाउनलोड रद्द करें</string>
+    <string name="cancel_extract">निकालना रद्द करें</string>
+    <string name="extract_model">निकालें</string>
+    <string name="use_model">मॉडल इस्तेमाल करें</string>
+    <string name="active_badge">सक्रिय</string>
+    <string name="model_selected_message">%1$s चुना गया</string>
+    <string name="model_use_missing_files">%1$s की मॉडल फ़ाइलें ग़ायब या अधूरी हैं। मॉडल टैब से उस वैरिएंट को फिर से डाउनलोड करें।</string>
+    <string name="delete">मिटाएं</string>
+    <string name="download">डाउनलोड करें</string>
+    <string name="model_update_button">अपडेट करें</string>
+    <string name="gemma_update_confirm_title">%1$s अपडेट करें</string>
+    <string name="gemma_update_confirm_message">स्पेक्युलेटिव डिकोडिंग वाला तेज़ वर्ज़न उपलब्ध है। फिर से डाउनलोड (~%1$d MB) करें?</string>
+    <string name="view">देखें</string>
+
+    <!-- Model Tab - Info labels -->
+    <string name="label_filename">फ़ाइल का नाम</string>
+    <string name="label_supports_audio">ऑडियो समर्थित</string>
+    <string name="label_yes_multimodal">हां (मल्टीमॉडल)</string>
+    <string name="label_no_text_only">नहीं (सिर्फ़ टेक्स्ट)</string>
+    <string name="label_huggingface">HuggingFace</string>
+    <string name="label_ai_gallery_name">AI Gallery नाम</string>
+    <string name="show_less">कम दिखाएं</string>
+    <string name="show_more">ज़्यादा दिखाएं</string>
+
+    <!-- Model Tab - Delete dialog -->
+    <string name="dialog_delete_title">मॉडल मिटाएं?</string>
+    <string name="dialog_delete_message">इससे \'%1$s\' आपके डिवाइस से हमेशा के लिए हट जाएगा। बाद में आप इसे फिर से डाउनलोड कर सकते हैं।</string>
+    <string name="action_delete">मिटाएं</string>
+    <string name="action_cancel">रद्द करें</string>
+    <!-- Chunk navigation in the in-progress notification (TASK-242) -->
+    <string name="chunk_nav_prev">◀</string>
+    <string name="chunk_nav_next">▶</string>
+    <string name="chunk_nav_live">नवीनतम</string>
+    <string name="chunk_nav_pinned_subtext">%2$d में से %1$d हिस्सा · %2$d में से %3$d लाइव</string>
+    <string name="chunk_nav_live_subtext">लाइव · %2$d में से %1$d हिस्सा</string>
+    <string name="chunk_nav_empty">इस हिस्से का कोई टेक्स्ट नहीं</string>
+
+    <!-- Settings Tab - Section Titles -->
+    <string name="settings_section_transcription">ट्रांसक्रिप्शन</string>
+    <string name="settings_section_appearance">दिखावट</string>
+    <string name="settings_section_advanced">अतिरिक्त सेटिंग</string>
+    <string name="settings_section_feedback">सुझाव और जानकारी</string>
+    <string name="settings_feedback_send_title">सुझाव भेजें / समस्या की रिपोर्ट करें</string>
+    <string name="settings_feedback_send_description">विवरण पहले से भरे हुए आपका मेल ऐप खोलता है</string>
+    <string name="settings_feedback_translation_title">ग़लत अनुवाद की रिपोर्ट करें</string>
+    <string name="settings_feedback_translation_description">हमें बताता है कि आप ऐप की कौन सी भाषा इस्तेमाल कर रहे हैं</string>
+    <string name="settings_feedback_source_title">सोर्स कोड</string>
+    <string name="settings_feedback_license_title">लाइसेंस</string>
+    <string name="settings_feedback_license_value">Apache 2.0</string>
+    <string name="settings_feedback_privacy_note">आपकी कार्रवाई के बिना कुछ नहीं भेजा जाता; यह ईमेल आपका मेल ऐप भेजता है।</string>
+    <string name="settings_feedback_address_copied">कोई मेल ऐप नहीं मिला। पता क्लिपबोर्ड पर कॉपी हुआ: %1$s</string>
+    <string name="settings_feedback_body_version">ऐप वर्ज़न</string>
+    <string name="settings_feedback_body_android">Android</string>
+    <string name="settings_feedback_body_device">डिवाइस</string>
+    <string name="settings_feedback_body_locale">भाषा</string>
+    <string name="settings_feedback_body_model">सक्रिय मॉडल</string>
+    <string name="settings_feedback_body_your_message">आपका मैसेज:</string>
+    <string name="settings_feedback_body_note">चाहें तो ऊपर दिए तकनीकी विवरण हटा सकते हैं।</string>
+    <string name="oauth_connected">OAuth कनेक्टेड</string>
+
+    <!-- Settings Tab - Model status -->
+    <string name="model_loaded">मॉडल लोड है</string>
+    <string name="model_not_loaded">मॉडल अनलोड है (ज़रूरत पर अपने आप लोड होता है)</string>
+    <string name="auto_unload_in">इतने समय में अनलोड: %1$d मिनट %2$d सेकंड</string>
+    <string name="load_model_from_tab">मॉडल ज़रूरत पर अपने आप लोड होता है। अनलोड करने से मेमोरी बचती है।</string>
+
+    <!-- Settings Tab - Active Model -->
+    <string name="active_model">सक्रिय मॉडल</string>
+    <string name="no_model_selected_error">कोई मॉडल चुना नहीं गया</string>
+    <string name="available_models">उपलब्ध मॉडल:</string>
+    <string name="no_models_found">कोई मॉडल नहीं मिला। मॉडल टैब से मॉडल डाउनलोड करें या जोड़ें।</string>
+    <string name="manage_models">मॉडल प्रबंधित करें</string>
+    <string name="source_hf">HF</string>
+    <string name="source_gallery">Gallery</string>
+
+    <!-- Settings Tab - HuggingFace Authentication -->
+    <string name="huggingface_auth">HuggingFace पुष्टीकरण</string>
+    <string name="huggingface_auth_description">सिर्फ़ आपकी ओर से HuggingFace से मॉडल डाउनलोड करने के लिए चाहिए। लोकल मॉडल पुष्टीकरण के बिना काम करते हैं।</string>
+    <string name="setup_guide">सेटअप गाइड</string>
+    <string name="setup_step1">1. नीचे \'HuggingFace से लॉग इन करें\' पर टैप करें</string>
+    <string name="setup_step2">2. अपने HuggingFace खाते में साइन इन करें</string>
+    <string name="setup_step3">3. ऐप को अनुमति दें</string>
+    <string name="setup_step4">4. आप अपने आप वापस भेज दिए जाएंगे</string>
+    <string name="token_valid">टोकन मान्य</string>
+    <string name="username_label">उपयोगकर्ता नाम: %1$s</string>
+    <string name="token_label">टोकन: %1$s</string>
+    <string name="expires_label">समाप्ति: %1$s</string>
+    <string name="expired">समाप्त</string>
+    <string name="login_with_huggingface">HuggingFace से लॉग इन करें</string>
+    <string name="oauth_login_description">अपने ब्राउज़र से तुरंत लॉग इन। अगर आप Chrome में HuggingFace पर पहले से लॉग इन हैं, तो आप तुरंत वापस भेज दिए जाएंगे।</string>
+    <string name="create_account_link">खाता नहीं है? huggingface.co पर बनाएं</string>
+    <string name="authenticating">HuggingFace से पुष्टीकरण हो रहा है…</string>
+    <string name="logged_in_as">%1$s के रूप में लॉग इन हैं</string>
+    <string name="logout">लॉग आउट करें</string>
+    <string name="clear_token">टोकन हटाएं</string>
+
+    <!-- Settings Tab - Manual Token -->
+    <string name="advanced_manual_token">अतिरिक्त: मैन्युअल टोकन इनपुट</string>
+    <string name="hide_advanced">छिपाएं: मैन्युअल टोकन</string>
+    <string name="manual_token_scope_info">मैन्युअल टोकन के लिए मॉडल डाउनलोड करने हेतु \'read\' स्कोप ज़रूरी है।</string>
+    <string name="huggingface_token_label">HuggingFace टोकन</string>
+    <string name="token_placeholder">hf_…</string>
+    <string name="paste_from_clipboard">क्लिपबोर्ड से पेस्ट करें</string>
+    <string name="show_token">टोकन दिखाएं</string>
+    <string name="hide_token">टोकन छिपाएं</string>
+    <string name="create_token">टोकन बनाएं</string>
+    <string name="get_token">टोकन पाएं</string>
+    <string name="retry">फिर से कोशिश करें</string>
+    <string name="validating">जाँच हो रही है…</string>
+    <string name="validate_and_save">जाँचें और सेव करें</string>
+    <string name="validating_token">टोकन की जाँच हो रही है…</string>
+
+    <!-- Settings Tab - Timeout -->
+    <string name="auto_unload_timeout">ऑटो-अनलोड समयसीमा</string>
+    <string name="timeout_description">निष्क्रियता की एक अवधि के बाद मॉडल अपने आप अनलोड हो जाता है ताकि मेमोरी खाली हो। ज़रूरत पर मॉडल अपने आप फिर लोड हो जाता है।</string>
+    <string name="timeout_1_minute">1 मिनट</string>
+    <string name="timeout_1_hour">1 घंटा</string>
+    <string name="timeout_minutes">%1$d मिनट</string>
+
+    <!-- Settings Tab - Thread Count -->
+    <string name="thread_count_title">इन्फ़रेंस थ्रेड</string>
+    <string name="thread_count_description">ट्रांसक्रिप्शन और वॉइस एक्टिविटी डिटेक्शन के लिए इस्तेमाल होने वाले CPU थ्रेड की संख्या। ज़्यादा वैल्यू ज़्यादा CPU इस्तेमाल करती है लेकिन प्रोसेसिंग तेज़ कर सकती है।</string>
+    <string name="thread_count_auto">%1$d (अपने आप पहचाना)</string>
+    <string name="thread_count_value">%1$d</string>
+
+    <string name="inference_provider_title">इन्फ़रेंस प्रोवाइडर</string>
+    <string name="inference_provider_description">ONNX इन्फ़रेंस का एक्ज़िक्यूशन बैकएंड। NNAPI डिवाइस का NPU/GPU इस्तेमाल कर सकता है, लेकिन कुछ मॉडलों के लिए CPU से धीमा हो सकता है।</string>
+    <string name="inference_provider_auto">ऑटो (CPU)</string>
+    <string name="inference_provider_nnapi">NNAPI (हार्डवेयर त्वरण)</string>
+    <string name="inference_provider_cpu">सिर्फ़ CPU</string>
+
+    <string name="saving">सेव हो रहा है…</string>
+    <string name="settings_saved">सेटिंग सेव हुईं</string>
+    <string name="save">सेव करें</string>
+
+    <!-- Settings Tab - Auto-Copy -->
+    <string name="auto_copy_title">ट्रांसक्रिप्शन अपने आप कॉपी करें</string>
+    <string name="auto_copy_description">ट्रांसक्रिप्शन के नतीजे अपने आप क्लिपबोर्ड पर कॉपी होते हैं। आप सूचना से मैन्युअल रूप से भी कॉपी कर सकते हैं।</string>
+
+    <!-- Settings Tab - Output Folder -->
+    <string name="output_folder_title">ट्रांसक्रिप्ट फ़ोल्डर में सेव करें</string>
+    <string name="output_folder_description">हर ट्रांसक्रिप्शन अपने आप आपकी चुनी फ़ोल्डर में .txt के रूप में सेव होगा (जैसे कोई Drive या Syncthing फ़ोल्डर)।</string>
+    <string name="output_folder_choose">फ़ोल्डर चुनें</string>
+    <string name="output_folder_clear">फ़ोल्डर हटाएं</string>
+
+    <!-- Settings Tab - VAD -->
+    <string name="vad_title">मौन हटाएं (VAD)</string>
+    <string name="vad_description">ट्रांसक्रिप्शन से पहले वॉइस मैसेज के ख़ामोश हिस्से हटाएं। प्रोसेसिंग समय घटता है और सटीकता बेहतर होती है।</string>
+    <string name="progressive_title">प्रगतिशील डिस्प्ले</string>
+    <string name="progressive_description">पूरे नतीजे का इंतज़ार किए बिना, हर बोलने वाले हिस्से पूरा होते ही ट्रांसक्रिप्शन टेक्स्ट दिखाएं।</string>
+
+    <!-- Settings Tab - Default Prompt -->
+    <string name="default_prompt_title">डिफ़ॉल्ट ट्रांसक्रिप्शन प्रॉम्प्ट</string>
+    <string name="default_prompt_description">ऑडियो ट्रांसक्राइब करते समय यही प्रॉम्प्ट इस्तेमाल होगा। डिफ़ॉल्ट सिस्टम प्रॉम्प्ट के लिए खाली छोड़ें।</string>
+    <string name="default_prompt_placeholder">जैसे: यह स्पीच ट्रांसक्राइब करें:</string>
+    <string name="default_prompt_chars">%1$d / 500</string>
+    <string name="default_prompt_compatibility_info">सिर्फ़ LLM मॉडल (Gemma) पर लागू। Whisper और Parakeet मॉडल इस सेटिंग को नज़रअंदाज़ करते हैं।</string>
+    <string name="current_default_prompt_label">फ़िलहाल इस्तेमाल हो रहा है:</string>
+    <string name="default_system_prompt">यह स्पीच ट्रांसक्राइब करें:</string>
+    <string name="builtin_default_prompt">यह स्पीच ट्रांसक्राइब करें: (बिल्ट-इन डिफ़ॉल्ट)</string>
+    <string name="example_prompts_title">प्रॉम्प्ट के उदाहरण</string>
+    <string name="example_prompts_description">इस्तेमाल करने के लिए प्रॉम्प्ट पर टैप करें</string>
+    <string name="example_prompt_transcribe">इस ऑडियो को सटीकता से ट्रांसक्राइब करें, मूल भाषा बनाए रखें।</string>
+    <string name="example_prompt_summarize">इस ऑडियो मैसेज को ट्रांसक्राइब करें और इसके मुख्य बिंदुओं का संक्षिप्त सार दें।</string>
+    <string name="example_prompt_formal">इस ऑडियो को औपचारिक, साफ़ शैली में ट्रांसक्राइब करें। भराव शब्द और अधूरी शुरुआतें हटाएं।</string>
+    <string name="example_prompt_translate_en">इस ऑडियो को ट्रांसक्राइब करें और अंग्रेज़ी में अनुवाद करें।</string>
+    <string name="example_prompt_translate_it">Trascrivi e traduci questo audio in italiano.</string>
+    <string name="example_prompt_notes">इस ऑडियो को ट्रांसक्राइब करें और बुलेट-पॉइंट नोट्स के रूप में फ़ॉर्मैट करें।</string>
+    <string name="prompt_applied">प्रॉम्प्ट लागू हुआ</string>
+
+    <!-- Settings Tab - Preload Info -->
+    <string name="preload_title">ऑटो-लोड और प्रीलोड</string>
+    <string name="preload_description">अनुरोध मिलने पर और मॉडल मेमोरी में न होने पर मॉडल अपने आप लोड होगा। आप मॉडल को साफ़ तौर पर प्रीलोड भी कर सकते हैं:</string>
+    <string name="via_tasker">Tasker से:</string>
+    <string name="via_adb">ADB से:</string>
+
+    <!-- Settings Tab - Language -->
+    <string name="language_title">भाषा</string>
+    <string name="language_description">ऐप की दिखाने की भाषा चुनें।</string>
+    <string name="language_system">सिस्टम डिफ़ॉल्ट</string>
+    <string name="language_english">English</string>
+    <string name="language_italian">Italiano</string>
+
+    <!-- Settings Tab - Transcription Language -->
+    <string name="transcription_language_title">ट्रांसक्रिप्शन भाषा</string>
+    <string name="transcription_language_auto">अपने आप पहचानें</string>
+    <string name="transcription_language_description">ऑडियो ट्रांसक्रिप्शन की भाषा चुनें। कोई खास भाषा चुनने पर पहचान छोड़ दी जाती है और काम तेज़ होता है।</string>
+    <string name="transcription_language_note">सिर्फ़ Whisper मॉडल पर लागू। Distil Italian मॉडल हमेशा इतालवी इस्तेमाल करता है। बाक़ी बैकएंड (Gemma, Parakeet, Qwen3-ASR) अपने आप पहचानते हैं।</string>
+
+    <!-- Settings Tab - Theme -->
+    <string name="theme_title">थीम</string>
+    <string name="theme_description">ऐप की रंग थीम चुनें।</string>
+    <string name="theme_mode_title">थीम मोड</string>
+    <string name="theme_mode_description">सिस्टम सेटिंग के साथ चलें, या डार्क या लाइट पर मज़बूर करें।</string>
+    <string name="theme_default">डिफ़ॉल्ट (Indigo)</string>
+    <string name="theme_whatsapp">WhatsApp</string>
+    <string name="theme_telegram">Telegram</string>
+
+    <!-- Per-App Settings -->
+    <string name="per_app_settings_title">प्रति-ऐप सेटिंग</string>
+    <string name="per_app_settings_description">हर ऐप के लिए सूचना का व्यवहार अनुकूलित करें</string>
+    <string name="per_app_settings_info">किसी ऐप पर टैप करके सेट करें कि उस ऐप से ऑडियो शेयर होने पर सूचनाएं कैसे व्यवहार करेंगी।</string>
+    <string name="per_app_settings_loading">प्राथमिकताएं लोड हो रही हैं…</string>
+    <string name="per_app_settings_manually_added">मैन्युअल रूप से जोड़ा गया</string>
+    <string name="per_app_settings_add_app">ऐप जोड़ें</string>
+    <string name="per_app_settings_search">ऐप खोजें…</string>
+    <string name="per_app_settings_no_apps">कोई ऐप नहीं मिला</string>
+    <string name="per_app_settings_no_matching_apps">कोई मिलता-जुलता ऐप नहीं</string>
+    <string name="per_app_settings_using_defaults">डिफ़ॉल्ट इस्तेमाल हो रहे हैं</string>
+    <string name="per_app_settings_auto_copy_on">ऑटो-कॉपी चालू</string>
+    <string name="per_app_settings_auto_copy_off">ऑटो-कॉपी बंद</string>
+    <string name="per_app_settings_share_on">शेयर बटन चालू</string>
+    <string name="per_app_settings_share_off">शेयर बटन बंद</string>
+    <string name="per_app_settings_sound">ध्वनि: %1$s</string>
+    <string name="per_app_settings_dialog_title">%1$s की सेटिंग</string>
+    <string name="per_app_settings_auto_copy_title">ट्रांसक्रिप्शन अपने आप कॉपी करें</string>
+    <string name="per_app_settings_auto_copy_description">ट्रांसक्रिप्शन अपने आप क्लिपबोर्ड पर कॉपी करें</string>
+    <string name="per_app_settings_show_share_title">शेयर बटन दिखाएं</string>
+    <string name="per_app_settings_show_share_description">सूचना में शेयर बटन दिखाएं</string>
+    <string name="per_app_settings_notification_sound">सूचना की ध्वनि</string>
+    <string name="per_app_settings_sound_label">ध्वनि</string>
+    <string name="per_app_settings_close">बंद करें</string>
+    <string name="per_app_settings_sound_default">डिफ़ॉल्ट</string>
+    <string name="per_app_settings_sound_silent">मौन</string>
+    <string name="per_app_settings_sound_chime">छनक</string>
+    <string name="per_app_settings_sound_bell">घंटी</string>
+    <string name="per_app_settings_quick_share_back_title">तुरंत वापस शेयर करें</string>
+    <string name="per_app_settings_quick_share_back_description">एक टैप में ट्रांसक्रिप्शन इस ऐप को वापस भेजें</string>
+
+    <!-- Per-App Reset -->
+    <string name="per_app_settings_reset_all">सब कुछ डिफ़ॉल्ट पर रीसेट करें</string>
+    <string name="per_app_settings_reset_all_confirm_title">सभी सेटिंग रीसेट करें?</string>
+    <string name="per_app_settings_reset_all_confirm_message">सभी ऐप की सूचना प्राथमिकताएं उनके डिफ़ॉल्ट पर लौट आएंगी।</string>
+    <string name="per_app_settings_reset_app">डिफ़ॉल्ट पर रीसेट करें</string>
+    <string name="per_app_settings_reset_app_confirm_title">%1$s की सेटिंग रीसेट करें?</string>
+    <string name="per_app_settings_reset_app_confirm_message">इस ऐप की सूचना प्राथमिकताएं डिफ़ॉल्ट पर लौट आएंगी।</string>
+    <string name="per_app_settings_reset_done">सेटिंग डिफ़ॉल्ट पर लौट आईं</string>
+
+    <!-- Per-App Onboarding Tooltip -->
+    <string name="per_app_onboarding_title">प्रति-ऐप व्यवहार अनुकूलित करें</string>
+    <string name="per_app_onboarding_message">किसी भी ऐप पर टैप करके उस खास ऐप के लिए ऑटो-कॉपी, शेयर की कार्रवाइयां और सूचना ध्वनियां सेट करें।</string>
+    <string name="per_app_onboarding_got_it">समझ गया</string>
+
+    <!-- VAD Advisory (shown in Log tab when Parakeet is active with VAD enabled) -->
+    <string name="vad_advisory_title">Parakeet के साथ VAD ज़रूरी नहीं</string>
+    <string name="vad_advisory_description">इस मॉडल के लिए मौन हटाने से नतीजे बेहतर नहीं होते, बस प्रोसेसिंग बढ़ती है। इसे सेटिंग से बंद कर सकते हैं।</string>
+    <string name="vad_advisory_dismiss">समझ गया</string>
+
+    <!-- Share Back -->
+    <string name="share_back">वापस शेयर करें</string>
+    <string name="share_back_description">ट्रांसक्रिप्शन स्रोत ऐप को वापस शेयर करें</string>
+    <string name="send_to_app">%1$s को भेजें</string>
+
+    <!-- Notification Channels -->
+    <string name="notification_channel_extraction">मॉडल डाउनलोड</string>
+    <string name="notification_channel_extraction_description">बैकग्राउंड में ML मॉडल डाउनलोड और निकालता है</string>
+    <string name="notification_downloading_progress">डाउनलोड हो रहा है… %1$d%%</string>
+    <string name="notification_extracting_progress">फ़ाइलें निकल रही हैं… %1$d/%2$d</string>
+    <string name="notification_copying_progress">फ़ाइलें कॉपी हो रही हैं… %1$d/%2$d</string>
+    <string name="notification_extracting_hint">इसमें 5 मिनट से ज़्यादा समय लग सकता है</string>
+    <string name="notification_download_complete">डाउनलोड पूरा हुआ</string>
+    <string name="notification_channel_inference">ट्रांसक्रिप्शन सेवा</string>
+    <string name="notification_channel_inference_description">बैकग्राउंड में ऑडियो ट्रांसक्रिप्शन प्रोसेसिंग</string>
+    <string name="notification_channel_result">ट्रांसक्रिप्शन का नतीजा</string>
+    <string name="notification_channel_result_description">ट्रांसक्रिप्शन पूरा होने पर सूचना</string>
+    <string name="notification_cancelling">रद्द हो रहा है…</string>
+
+    <!-- No-model notification -->
+    <string name="notification_no_model_title">कोई ट्रांसक्रिप्शन मॉडल नहीं</string>
+    <string name="notification_no_model_message">ट्रांसक्रिप्शन मॉडल डाउनलोड करने के लिए ऐप खोलें</string>
+    <string name="notification_no_model_action">ऐप खोलें</string>
+
+    <!-- Tasker fallback notification -->
+    <string name="notification_channel_tasker_fallback">Tasker ऑटोमेशन</string>
+    <string name="notification_channel_tasker_fallback_description">बैकग्राउंड से ट्रिगर होने पर ट्रांसक्रिप्शन शुरू करने के लिए टैप करें</string>
+    <string name="tasker_fallback_notification_text">ट्रांसक्रिप्शन शुरू करने के लिए टैप करें</string>
+
+    <!-- Dismiss -->
+    <string name="dismiss">खारिज करें</string>
+
+    <!-- Download completion messages -->
+    <string name="parakeet_downloaded">Parakeet मॉडल सफलतापूर्वक डाउनलोड हुआ</string>
+    <string name="whisper_downloaded">%1$s सफलतापूर्वक डाउनलोड हुआ</string>
+    <string name="parakeet_deleted">Parakeet मॉडल मिटाया गया</string>
+    <string name="whisper_deleted">%1$s मिटाया गया</string>
+
+    <!-- Speed comparison -->
+    <string name="speed_comparison_title">गति की तुलना</string>
+    <string name="speed_comparison_subtitle">आम वॉइस मैसेज पर सापेक्ष प्रदर्शन (CPU)</string>
+    <string name="speed_comparison_header_model">मॉडल</string>
+    <string name="speed_comparison_header_size">साइज़</string>
+    <string name="speed_comparison_header_speed">गति</string>
+    <string name="speed_comparison_header_quality">इतालवी क्वालिटी</string>
+    <string name="speed_comparison_small_name">Whisper Small</string>
+    <string name="speed_comparison_small_size">~358MB</string>
+    <string name="speed_comparison_small_speed">1.0x</string>
+    <string name="speed_comparison_small_quality">ठीक-ठाक</string>
+    <string name="speed_comparison_turbo_name">Whisper Turbo</string>
+    <string name="speed_comparison_turbo_size">~988MB</string>
+    <string name="speed_comparison_turbo_speed">1.3x</string>
+    <string name="speed_comparison_turbo_quality">अच्छी</string>
+    <string name="speed_comparison_medium_name">Whisper Medium</string>
+    <string name="speed_comparison_medium_size">~903MB</string>
+    <string name="speed_comparison_medium_speed">0.5x</string>
+    <string name="speed_comparison_medium_quality">अच्छी</string>
+    <string name="speed_comparison_distil_it_name">Distil Italian</string>
+    <string name="speed_comparison_distil_it_size">~939MB</string>
+    <string name="speed_comparison_distil_it_speed">~1.8x</string>
+    <string name="speed_comparison_distil_it_quality">सबसे बेहतर इतालवी</string>
+    <string name="speed_comparison_distil_it_note">सबसे बेहतर इतालवी</string>
+    <string name="speed_comparison_parakeet_name">Parakeet TDT</string>
+    <string name="speed_comparison_parakeet_size">~464MB</string>
+    <string name="speed_comparison_parakeet_speed">~17x</string>
+    <string name="speed_comparison_parakeet_quality">बहुत अच्छी</string>
+    <string name="speed_comparison_parakeet_note">अनुशंसित</string>
+    <string name="speed_comparison_qwen3_name">Qwen3-ASR</string>
+    <string name="speed_comparison_qwen3_size">~938MB</string>
+    <string name="speed_comparison_qwen3_speed">~2x</string>
+    <string name="speed_comparison_qwen3_quality">52 भाषाएं, अनिश्चित</string>
+    <string name="speed_comparison_gigaam_name">GigaAM v3</string>
+    <string name="speed_comparison_gigaam_size">~326MB</string>
+    <string name="speed_comparison_gigaam_speed">तेज़</string>
+    <string name="speed_comparison_gigaam_quality">सिर्फ़ रूसी</string>
+    <string name="speed_comparison_nemotron_name">Nemotron 3.5</string>
+    <string name="speed_comparison_nemotron_size">~600MB</string>
+    <string name="speed_comparison_nemotron_speed">स्ट्रीमिंग</string>
+    <string name="speed_comparison_nemotron_quality">प्रयोगात्मक</string>
+    <string name="fastest_badge">सबसे तेज़</string>
+    <string name="coming_soon_badge">जल्द आ रहा है</string>
+
+    <!-- Transcription ETA -->
+    <string name="transcription_eta_calibrating">गति मापी जा रही है…</string>
+    <string name="transcription_eta_seconds">~%1$d सेकंड बाक़ी</string>
+    <string name="transcription_eta_minutes">~%1$d मिनट %2$d सेकंड बाक़ी</string>
+    <string name="transcription_eta_hours">~%1$d घंटे %2$d मिनट बाक़ी</string>
+    <string name="transcription_eta_estimating">अनुमान लग रहा है… ~%1$d मिनट %2$d सेकंड बाक़ी</string>
+
+    <!-- Performance Stats -->
+    <string name="performance_stats_title">प्रदर्शन आँकड़े</string>
+    <string name="performance_stats_subtitle">आपके डिवाइस से असली ट्रांसक्रिप्शन की गति</string>
+    <string name="performance_stats_empty">अभी कोई डेटा नहीं। आँकड़े देखने के लिए कुछ ऑडियो ट्रांसक्राइब करें।</string>
+    <string name="performance_stats_speed">%1$.0fms/s</string>
+    <string name="performance_stats_samples_count">%1$d सैंपल</string>
+    <string name="performance_stats_fastest_badge">सबसे तेज़</string>
+    <string name="performance_stats_clear">आँकड़े रीसेट करें</string>
+    <string name="performance_stats_clear_confirm">सारा प्रदर्शन डेटा रीसेट करें?</string>
+    <string name="performance_stats_just_now">अभी</string>
+    <string name="performance_stats_minutes_ago">%1$d मिनट पहले</string>
+    <string name="performance_stats_hours_ago">%1$d घंटे पहले</string>
+    <string name="performance_stats_days_ago">%1$d दिन पहले</string>
+    <string name="performance_stats_total_audio">कुल: %1$s ऑडियो प्रोसेस हुआ</string>
+
+    <!-- Transcription active protection -->
+    <string name="dialog_transcription_active_title">ट्रांसक्रिप्शन जारी है</string>
+    <string name="dialog_delete_active_model_message">\'%1$s\' ट्रांसक्रिप्शन में इस्तेमाल हो रहा है, इसे मिटाया नहीं जा सकता। ट्रांसक्रिप्शन पूरा होने का इंतज़ार करें।</string>
+    <string name="dialog_delete_inactive_model_message">एक ट्रांसक्रिप्शन जारी है। \'%1$s\' मिटाने से उस पर असर नहीं पड़ेगा, लेकिन सावधानी से आगे बढ़ें।</string>
+    <string name="dialog_switch_model_message">फ़िलहाल एक ट्रांसक्रिप्शन जारी है। मॉडल बदलने से वह बाधित हो सकता है। क्या आप निश्चित हैं?</string>
+    <string name="action_understood">समझ गया</string>
+    <string name="action_switch_anyway">फिर भी बदलें</string>
+    <string name="warn_reset_stats_during_transcription">एक ट्रांसक्रिप्शन जारी है। अभी आँकड़े रीसेट करने से उस पर असर नहीं पड़ेगा, लेकिन समय का डेटा अधूरा रह सकता है।</string>
+    <string name="cannot_unload_during_transcription">अनलोड नहीं हो सकता: मॉडल सक्रिय ट्रांसक्रिप्शन में इस्तेमाल हो रहा है</string>
+    <string name="dialog_unload_title">मॉडल अनलोड करें?</string>
+    <string name="dialog_unload_message">\'%1$s\' मॉडल मेमोरी से अनलोड होगा। अगले ट्रांसक्रिप्शन पर वह अपने आप फिर लोड हो जाएगा।</string>
+    <string name="action_unload">अनलोड करें</string>
+
+    <!-- Swipe Action Mode -->
+    <string name="swipe_action_title">स्वाइप कार्रवाई</string>
+    <string name="swipe_action_description">चुनें कि लॉग एंट्री पर बाएं स्वाइप करने पर क्या हो</string>
+    <string name="swipe_action_reveal">कार्रवाइयां दिखाएं</string>
+    <string name="swipe_action_immediate_delete">तुरंत मिटाएं</string>
+    <string name="swipe_action_copy_description">ट्रांसक्रिप्शन कॉपी करें</string>
+    <string name="swipe_action_share_description">ट्रांसक्रिप्शन शेयर करें</string>
+    <string name="swipe_action_delete_description">लॉग मिटाएं</string>
+    <string name="swipe_action_copied">ट्रांसक्रिप्शन कॉपी हुआ</string>
+
+    <!-- Content descriptions (accessibility) -->
+    <string name="back">वापस</string>
+    <string name="add_app">ऐप जोड़ें</string>
+    <string name="view_settings">सेटिंग देखें</string>
+    <string name="app_icon">%1$s आइकॉन</string>
+
+    <!-- InferenceService strings -->
+    <string name="error_load_backend">बैकएंड लोड करने में विफल: %1$s</string>
+    <string name="error_no_active_backend">कोई सक्रिय बैकएंड नहीं</string>
+    <string name="error_no_file_path">ऑडियो अनुरोध के लिए फ़ाइल पाथ नहीं दिया गया</string>
+    <string name="error_backend_no_audio_support">%1$s ऑडियो ट्रांसक्रिप्शन सपोर्ट नहीं करता। सेटिंग में किसी स्पीच-टू-टेक्स्ट मॉडल पर स्विच करें।</string>
+    <string name="error_no_transcription_produced">कोई ट्रांसक्रिप्शन नहीं बना</string>
+    <string name="error_no_llm_model">कोई LLM मॉडल सेट नहीं है। मॉडल डाउनलोड करने के लिए ऐप खोलें।</string>
+    <string name="error_no_model_configured">कोई %1$s मॉडल सेट नहीं है। मॉडल डाउनलोड करने के लिए ऐप खोलें।</string>
+    <string name="loading_model">%1$s मॉडल लोड हो रहा है…</string>
+    <string name="preprocessing_audio">ऑडियो प्रीप्रोसेस हो रहा है…</string>
+    <string name="clipboard_label_transcription">ट्रांसक्रिप्शन</string>
+
+    <!-- Settings accessibility -->
+    <string name="open_prompt_settings">प्रॉम्प्ट सेटिंग खोलें</string>
+    <string name="open_per_app_settings">प्रति-ऐप सेटिंग खोलें</string>
+    <string name="open_performance_stats">प्रदर्शन आँकड़े खोलें</string>
+    <string name="hide_details">विवरण छिपाएं</string>
+    <string name="show_details">विवरण दिखाएं</string>
+    <string name="model_unknown">अज्ञात</string>
+
+    <!-- Picture-in-Picture -->
+    <string name="pip_transcribing">ट्रांसक्राइब हो रहा है…</string>
+    <string name="pip_waiting">ट्रांसक्रिप्शन का इंतज़ार…</string>
+    <string name="pip_enter_button">PiP</string>
+    <string name="pip_enter_description">पिक्चर-इन-पिक्चर विंडो में दिखाएं</string>
+
+    <!-- GGUF model descriptions -->
+    <string name="model_title_gemma4_gguf_q4km">Gemma 4 GGUF (Q4_K_M)</string>
+    <string name="model_desc_gemma4_gguf_q4km">4.9 GB · Apache 2.0 · llama.cpp से टेक्स्ट जनरेशन। क्वालिटी और साइज़ का सबसे अच्छा संतुलन।</string>
+    <string name="model_title_gemma4_gguf_q5km">Gemma 4 GGUF (Q5_K_M)</string>
+    <string name="model_desc_gemma4_gguf_q5km">5.3 GB · Apache 2.0 · llama.cpp से बेहतर क्वालिटी वाला टेक्स्ट जनरेशन।</string>
+    <string name="model_title_gemma4_gguf_q8">Gemma 4 GGUF (Q8_0)</string>
+    <string name="model_desc_gemma4_gguf_q8">7.4 GB · Apache 2.0 · llama.cpp से सर्वोच्च क्वालिटी टेक्स्ट जनरेशन। 8GB+ RAM चाहिए।</string>
+    <string name="model_title_gemma_4_e2b">Gemma 4 E2B</string>
+    <string name="model_title_gemma_4_e4b">Gemma 4 E4B</string>
+    <string name="model_title_gemma_3n_e2b">Gemma 3n E2B</string>
+    <string name="model_title_gemma_3n_e4b">Gemma 3n E4B</string>
+    <string name="backend_gemma4_gguf">Gemma 4 (GGUF)</string>
+    <string name="gguf_inference_unavailable">GGUF इन्फ़रेंस के लिए नेटिव llama.cpp लाइब्रेरी चाहिए। Android ARM64 के लिए libllama.so बिल्ड करें।</string>
+    <string name="gguf_model_download_error">GGUF मॉडल डाउनलोड करने में विफल</string>
+
+    <!-- GGUF model download section -->
+    <string name="gguf_title">Gemma 4 GGUF (टेक्स्ट जनरेशन)</string>
+    <string name="gguf_description">टेक्स्ट जनरेशन के लिए ऑन-डिवाइस LLM, किसी क्लाउड पर निर्भरता नहीं। नेटिव llama.cpp लाइब्रेरी चाहिए।</string>
+    <string name="gguf_unsupported_arch">इस डिवाइस पर समर्थित नहीं (ARM64 चाहिए)।</string>
+    <string name="gguf_download_confirm_title">%1$s डाउनलोड करें?</string>
+    <string name="gguf_download_confirm_message">इससे ~%1$dMB डाउनलोड होगा। GGUF मॉडल बिना इंटरनेट के लोकल टेक्स्ट जनरेशन करते हैं।</string>
+    <string name="gguf_downloaded">%1$s सफलतापूर्वक डाउनलोड हुआ</string>
+    <string name="gguf_delete_message">%1$s मिटाएं? इससे ~%2$dMB स्टोरेज खाली होगा।</string>
+    <string name="gguf_deleted">%1$s मिटाया गया</string>
+
+    <!-- Language filter (native language names, kept in native form per glossary) -->
+    <string name="lang_filter_label">भाषा से फ़िल्टर करें</string>
+    <string name="lang_filter_all">सभी भाषाएं</string>
+    <string name="lang_filter_search">भाषा खोजें…</string>
+    <string name="lang_filter_no_results">कोई मिलती-जुलती भाषा नहीं</string>
+    <string name="lang_filter_clear">खोज साफ़ करें</string>
+    <string name="lang_afrikaans">Afrikaans</string>
+    <string name="lang_arabic">العربية</string>
+    <string name="lang_azerbaijani">Azərbaycanca</string>
+    <string name="lang_belarusian">Беларуская</string>
+    <string name="lang_bulgarian">Български</string>
+    <string name="lang_bengali">বাংলা</string>
+    <string name="lang_catalan">Català</string>
+    <string name="lang_czech">Čeština</string>
+    <string name="lang_welsh">Cymraeg</string>
+    <string name="lang_danish">Dansk</string>
+    <string name="lang_german">Deutsch</string>
+    <string name="lang_greek">Ελληνικά</string>
+    <string name="lang_english">English</string>
+    <string name="lang_spanish">Español</string>
+    <string name="lang_estonian">Eesti</string>
+    <string name="lang_basque">Euskara</string>
+    <string name="lang_persian">فارسی</string>
+    <string name="lang_finnish">Suomi</string>
+    <string name="lang_french">Français</string>
+    <string name="lang_galician">Galego</string>
+    <string name="lang_hebrew">עברית</string>
+    <string name="lang_hindi">हिन्दी</string>
+    <string name="lang_croatian">Hrvatski</string>
+    <string name="lang_hungarian">Magyar</string>
+    <string name="lang_indonesian">Bahasa Indonesia</string>
+    <string name="lang_italian">Italiano</string>
+    <string name="lang_japanese">日本語</string>
+    <string name="lang_georgian">ქართული</string>
+    <string name="lang_korean">한국어</string>
+    <string name="lang_lithuanian">Lietuvių</string>
+    <string name="lang_latvian">Latviešu</string>
+    <string name="lang_macedonian">Македонски</string>
+    <string name="lang_malay">Bahasa Melayu</string>
+    <string name="lang_dutch">Nederlands</string>
+    <string name="lang_norwegian">Norsk</string>
+    <string name="lang_polish">Polski</string>
+    <string name="lang_portuguese">Português</string>
+    <string name="lang_romanian">Română</string>
+    <string name="lang_russian">Русский</string>
+    <string name="lang_slovak">Slovenčina</string>
+    <string name="lang_slovenian">Slovenščina</string>
+    <string name="lang_albanian">Shqip</string>
+    <string name="lang_serbian">Српски</string>
+    <string name="lang_swedish">Svenska</string>
+    <string name="lang_swahili">Kiswahili</string>
+    <string name="lang_tamil">தமிழ்</string>
+    <string name="lang_thai">ไทย</string>
+    <string name="lang_turkish">Türkçe</string>
+    <string name="lang_ukrainian">Українська</string>
+    <string name="lang_urdu">اردو</string>
+    <string name="lang_uzbek">Oʻzbekcha</string>
+    <string name="lang_vietnamese">Tiếng Việt</string>
+    <string name="lang_chinese">中文</string>
+
+    <!-- Model Benchmark -->
+    <string name="benchmark_title">%1$s बेंचमार्क</string>
+    <string name="benchmark_preparing">बेंचमार्क की तैयारी…</string>
+    <string name="benchmark_running">बेंचमार्क चल रहा है…</string>
+    <string name="benchmark_progress">%1$d%% पूरा</string>
+    <string name="benchmark_cancel">रद्द करें</string>
+    <string name="benchmark_rerun">फिर चलाएं</string>
+    <string name="benchmark_retry">फिर से कोशिश करें</string>
+    <string name="benchmark_speed_label">गति</string>
+    <string name="benchmark_speed_value">%1$.1f सेकंड/मिनट ऑडियो</string>
+    <string name="benchmark_time_label">इन्फ़रेंस समय</string>
+    <string name="benchmark_time_value">%1$d ms</string>
+    <string name="benchmark_memory_label">पीक मेमोरी</string>
+    <string name="benchmark_memory_value">%1$.0f MB</string>
+    <string name="benchmark_duration_label">सैंपल अवधि</string>
+    <string name="benchmark_duration_value">%1$.0f सेकंड</string>
+    <string name="benchmark_rating_fast">तेज़</string>
+    <string name="benchmark_rating_good">अच्छा</string>
+    <string name="benchmark_rating_moderate">मध्यम</string>
+    <string name="benchmark_rating_slow">धीमा</string>
+    <string name="benchmark_disclaimer">नतीजे डिवाइस के लोड और तापमान के अनुसार बदल सकते हैं।</string>
+    <string name="benchmark_button">बेंचमार्क</string>
+    <string name="benchmark_cached_result">पिछला बेंचमार्क: %1$s</string>
+    <string name="benchmark_provider_label">प्रोवाइडर</string>
+    <string name="benchmark_provider_value">%1$s</string>
+    <string name="transcription_interrupted_title">ट्रांसक्रिप्शन बाधित हुआ</string>
+    <string name="action_dismiss">खारिज करें</string>
+
+    <!-- Model Info Overlay -->
+    <string name="model_info_title">मॉडल की जानकारी</string>
+    <string name="model_info_section_languages">समर्थित भाषाएं</string>
+    <string name="model_info_section_recommendations">सिफ़ारिशें</string>
+    <string name="model_info_section_technical">तकनीकी विवरण</string>
+    <string name="model_info_section_performance">प्रदर्शन सुझाव</string>
+    <string name="model_info_languages_count">%d भाषाएं</string>
+    <string name="model_info_no_languages">भाषा समर्थन अज्ञात</string>
+    <string name="model_info_architecture">आर्किटेक्चर</string>
+    <string name="model_info_arch_encoder_decoder">एनकोडर-डिकोडर (Whisper)</string>
+    <string name="model_info_arch_transducer">ट्रांसड्यूसर (TDT)</string>
+    <string name="model_info_arch_ctc">CTC (कनेक्शनिस्ट टेम्पोरल क्लासिफ़िकेशन)</string>
+    <string name="model_info_arch_llm">लार्ज लैंग्वेज मॉडल</string>
+    <string name="model_info_model_size">मॉडल का साइज़</string>
+    <string name="model_info_max_audio">अधिकतम ऑडियो लंबाई</string>
+    <string name="model_info_max_audio_unlimited">असीमित</string>
+    <string name="model_info_max_audio_seconds">%d सेकंड</string>
+    <string name="model_info_quantization">क्वांटाइज़ेशन</string>
+    <string name="model_info_recommended_threads">अनुशंसित थ्रेड</string>
+    <string name="model_info_threads_range">%1$d – %2$d</string>
+    <string name="model_info_arm64_only">सिर्फ़ ARM64 डिवाइस</string>
+    <string name="model_info_progressive">प्रगतिशील ट्रांसक्रिप्शन</string>
+    <string name="model_info_vad_recommended">VAD प्रीप्रोसेसिंग अनुशंसित</string>
+    <string name="model_info_best_for_whisper_small">तुरंत टेस्ट के लिए कॉम्पैक्ट बहुभाषी मॉडल</string>
+    <string name="model_info_notes_whisper_small">अच्छी शुरुआत। बड़े मॉडलों की तुलना में सटीकता सीमित।</string>
+    <string name="model_info_best_for_whisper_turbo">ऑटो-डिटेक्शन वाला संतुलित बहुभाषी ASR</string>
+    <string name="model_info_notes_whisper_turbo">मध्यम गति पर large-v3 जितनी क्वालिटी। बहुभाषी उपयोगकर्ताओं के लिए अच्छा।</string>
+    <string name="model_info_best_for_whisper_medium">मध्य-साइज़ बहुभाषी मॉडल</string>
+    <string name="model_info_notes_whisper_medium">सटीकता और संसाधन इस्तेमाल का अच्छा संतुलन।</string>
+    <string name="model_info_best_for_distil_it">सबसे बेहतर इतालवी सटीकता (4.3%% WER)</string>
+    <string name="model_info_notes_distil_it">सिर्फ़ इतालवी। इतालवी वॉइस मैसेज के लिए सर्वोच्च सटीकता। गति से ज़्यादा सटीकता मायने रखती है।</string>
+    <string name="model_info_best_for_qwen3">52-भाषा ऑटो-डिटेक्शन</string>
+    <string name="model_info_notes_qwen3">सबसे व्यापक भाषा कवरेज। नोट: 30 सेकंड से लंबा ऑडियो काट देता है। सिर्फ़ ARM64 डिवाइस।</string>
+    <string name="model_info_best_for_parakeet">सबसे तेज़ ट्रांसक्रिप्शन (Whisper से 17.6 गुना तेज़, 5.4%% WER)</string>
+    <string name="model_info_notes_parakeet">ऑडियो लंबाई की कोई सीमा नहीं। VAD ज़रूरी नहीं। गति प्राथमिकता वाले उपयोगकर्ताओं के लिए सबसे बेहतर।</string>
+    <string name="model_info_best_for_gigaam">ऑन-डिवाइस सबसे बेहतर रूसी सटीकता</string>
+    <string name="model_info_notes_gigaam">सिर्फ़ रूसी। नेटिव विराम चिह्न और कैपिटलाइज़ेशन।</string>
+    <string name="model_info_best_for_nemotron">लंबे ऑडियो के लिए स्ट्रीमिंग ट्रांसक्रिप्शन</string>
+    <string name="model_info_notes_nemotron">कम-विलंबता वाला स्ट्रीमिंग ट्रांसड्यूसर। बहुभाषी ऑटो-डिटेक्शन, हर स्ट्रीम की भाषा विकल्प के साथ।</string>
+    <string name="model_info_best_for_gemma">टेक्स्ट + ऑडियो कार्यों के लिए मल्टीमॉडल LLM</string>
+    <string name="model_info_notes_gemma">सिर्फ़ ASR के लिए ऑप्टिमाइज़्ड नहीं। टेक्स्ट जनरेशन के साथ ऑडियो समझ जैसी बेहतर सुविधाओं के लिए इस्तेमाल करें।</string>
+    <string name="model_info_benchmark_wer">वर्ड एरर रेट (इतालवी): %.1f%%</string>
+    <string name="model_info_relative_speed">गति: %s</string>
+    <string name="model_info_close">बंद करें</string>
+
+    <!-- Skeleton loading -->
+    <string name="skeleton_loading_content_description">ट्रांसक्रिप्शन लोड हो रहा है</string>
+
+    <!-- Share target profiles (appear as separate entries in Android share sheet) -->
+    <string name="share_target_parakeet">Anti-Vocale (Parakeet)</string>
+    <string name="share_target_whisper">Anti-Vocale (Whisper)</string>
+    <string name="share_target_qwen3">Anti-Vocale (Qwen3)</string>
+    <string name="share_target_gemma">Anti-Vocale (Gemma)</string>
+    <string name="share_target_nemotron">Anti-Vocale (Nemotron)</string>
+    <string name="share_target_gigaam">Anti-Vocale (GigaAM)</string>
+    <string name="share_target_external">Anti-Vocale (External)</string>
+    <string name="external_none_imported">कोई बाहरी मॉडल इंपोर्ट नहीं हुआ</string>
+    <string name="external_section_title">बाहरी मॉडल</string>
+    <string name="model_advanced_section">अतिरिक्त सेटिंग</string>
+    <string name="model_advanced_description">मॉडल फ़ाइलें मैन्युअल रूप से इंपोर्ट करें</string>
+    <string name="external_import_folder">फ़ोल्डर चुनें</string>
+    <string name="external_import_url">URL से इंपोर्ट करें</string>
+    <string name="external_url_hint">HuggingFace रेपो या कैटलॉग-एंट्री JSON URL</string>
+    <string name="external_url_dialog_title">बाहरी मॉडल इंपोर्ट करें</string>
+    <string name="external_import">इंपोर्ट करें</string>
+    <string name="external_importing">मॉडल इंपोर्ट हो रहा है…</string>
+    <string name="external_import_failed">इंपोर्ट विफल: %1$s</string>
+    <string name="external_imported">%1$s इंपोर्ट हुआ</string>
+    <string name="external_delete_confirm">बाहरी मॉडल %1$s मिटाएं?</string>
+    <string name="external_deleted">%1$s मिटाया गया</string>
+    <string name="external_family">मॉडल फ़ैमिली</string>
+    <string name="external_family_transducer">ट्रांसड्यूसर (NeMo/Zipformer)</string>
+    <string name="external_family_transducer_help">एनकोडर + डिकोडर + जॉइनर + टोकन फ़ाइलें चाहिए</string>
+    <string name="external_family_whisper">Whisper</string>
+    <string name="external_family_whisper_help">एनकोडर + डिकोडर + टोकन फ़ाइलें चाहिए</string>
+    <string name="external_family_ctc">CTC</string>
+    <string name="external_family_ctc_help">एनकोडर + टोकन फ़ाइलें चाहिए</string>
+    <string name="external_family_sense_voice">SenseVoice</string>
+    <string name="external_family_sense_voice_help">मॉडल + टोकन फ़ाइलें चाहिए</string>
+    <string name="external_option_language">भाषा (वैकल्पिक)</string>
+    <string name="external_option_language_hint">जैसे ar, en, it (खाली = ऑटो)</string>
+    <string name="external_option_itn">इनवर्स टेक्स्ट नॉर्मलाइज़ेशन</string>
+    <string name="external_ctc_subtype">CTC सबटाइप</string>
+    <string name="external_ctc_subtype_nemo">NeMo CTC</string>
+    <string name="external_ctc_subtype_zipformer">Zipformer CTC</string>
+    <string name="external_languages">भाषाएं (वैकल्पिक)</string>
+    <string name="external_languages_hint">कॉमा या स्पेस से अलग, जैसे ar, en</string>
+    <string name="external_notice_single_pass">सिंगल-पास ट्रांसक्रिप्शन: बहुत लंबा ऑडियो बड़े मॉडलों से विफल हो सकता है। ऑडियो छोटा करें या छोटा मॉडल इस्तेमाल करें।</string>
+    <string name="external_notice_family">अगर ट्रांसक्रिप्शन बिना गड़बड़ी के क्रैश हो, तो आर्किटेक्चर गलत हो सकता है: मॉडल मिटाकर दूसरा आर्किटेक्चर चुनकर फिर इंपोर्ट करें।</string>
+
+    <!-- Advanced sharing settings -->
+    <string name="share_targets_title">शेयर टारगेट</string>
+    <string name="share_targets_description">हर डाउनलोड किए मॉडल को Android शेयर शीट में अलग विकल्प के रूप में दिखाएं। किसी खास मॉडल से ऑडियो शेयर करने पर वह सिर्फ़ उस ट्रांसक्रिप्शन के लिए अस्थायी रूप से इस्तेमाल होता है।</string>
+    <string name="advanced_sharing_toggle">शेयर शीट में मॉडल दिखाएं</string>
+    <string name="share_targets_models_info">हर डाउनलोड किया मॉडल अलग शेयर टारगेट के रूप में दिखेगा। मॉडल मिटाने पर उसका शेयर टारगेट हट जाता है।</string>
+
+    <!-- Conversation Grouping -->
+    <string name="conversation_grouping_title">बातचीत से समूह बनाएं</string>
+    <string name="conversation_grouping_description">स्रोत ऐप (WhatsApp, Telegram आदि) के अनुसार ट्रांसक्रिप्शन सिकुड़ने वाले सेक्शन में समूहबद्ध दिखाएं।</string>
+    <string name="conversation_group_count">%1$d मैसेज</string>
+    <string name="conversation_group_unknown">अन्य</string>
+
+    <!-- Re-transcribe -->
+    <string name="retranscribe">फिर से कोशिश करें</string>
+    <string name="retranscribe_title">इससे फिर ट्रांसक्राइब करें…</string>
+    <string name="retranscribe_subtitle">इस ऑडियो को फिर ट्रांसक्राइब करने के लिए मॉडल चुनें</string>
+    <string name="retranscribe_confirm">ट्रांसक्राइब करें</string>
+    <string name="retranscribe_no_models">कोई ऑडियो मॉडल सेट नहीं है। पहले मॉडल टैब से मॉडल डाउनलोड करें।</string>
+    <string name="retranscribe_file_not_found">ऑडियो फ़ाइल अब उपलब्ध नहीं</string>
+    <string name="retranscribe_active_badge">सक्रिय</string>
+    <string name="retranscribe_setting_title">फिर-ट्रांसक्राइब बटन</string>
+    <string name="retranscribe_setting_description">ऑडियो ट्रांसक्रिप्शन पर दूसरे मॉडल से फिर कोशिश करने का बटन दिखाएं।</string>
+
+    <!-- Subtitle extraction choice (TASK-228) -->
+    <string name="subtitles_found_title">सबटाइटल मिले</string>
+    <string name="subtitles_found_text">एम्बेडेड सबटाइटल (%1$s) इस्तेमाल करें, या ऑडियो ट्रांसक्राइब करें?</string>
+    <string name="subtitles_language_unknown">अज्ञात</string>
+    <string name="action_use_subtitles">सबटाइटल इस्तेमाल करें</string>
+    <string name="action_transcribe_audio">ऑडियो ट्रांसक्राइब करें</string>
+    <string name="subtitle_fallback_status">सबटाइटल निकाले नहीं जा सके, ऑडियो ट्रांसक्राइब हो रहा है</string>
+    <string name="subtitle_choice_notification_text">आपके चुनाव का इंतज़ार…</string>
+</resources>
