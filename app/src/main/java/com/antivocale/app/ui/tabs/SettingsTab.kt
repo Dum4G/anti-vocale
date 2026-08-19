@@ -401,7 +401,10 @@ fun SettingsTab(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    // Locale-safe: weight lets title/description wrap instead of
+                    // displacing the trailing chevron (TASK-345)
                     Row(
+                        modifier = Modifier.weight(1f),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
@@ -788,7 +791,10 @@ fun SettingsTab(
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
+                                    // Locale-safe: weight lets the label wrap instead of
+                                    // pushing the expand button off-card (TASK-345)
                                     Row(
+                                        modifier = Modifier.weight(1f),
                                         verticalAlignment = Alignment.CenterVertically,
                                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                                     ) {
@@ -983,6 +989,8 @@ fun SettingsTab(
                                             modifier = Modifier.fillMaxWidth(),
                                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                                         ) {
+                                            // Locale-safe: weight(1f) on both buttons so
+                                            // longer labels share the row (TASK-345)
                                             FilledTonalButton(
                                                 onClick = {
                                                     val intent = android.content.Intent(
@@ -990,7 +998,8 @@ fun SettingsTab(
                                                         android.net.Uri.parse(HF_TOKEN_SETTINGS_URL)
                                                     )
                                                     context.startActivity(intent)
-                                                }
+                                                },
+                                                modifier = Modifier.weight(1f)
                                             ) {
                                                 Icon(
                                                     Icons.AutoMirrored.Filled.OpenInNew,
@@ -1002,7 +1011,8 @@ fun SettingsTab(
                                             }
                                             OutlinedButton(
                                                 onClick = { viewModel.validateAndSaveToken() },
-                                                enabled = tokenInput.isNotBlank() && !uiState.isValidatingToken
+                                                enabled = tokenInput.isNotBlank() && !uiState.isValidatingToken,
+                                                modifier = Modifier.weight(1f)
                                             ) {
                                                 Text(stringResource(R.string.retry))
                                             }
@@ -1053,9 +1063,12 @@ fun SettingsTab(
                                             modifier = Modifier.fillMaxWidth(),
                                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                                         ) {
+                                            // Locale-safe: weight(1f) on both buttons so
+                                            // longer labels share the row (TASK-345)
                                             FilledTonalButton(
                                                 onClick = { viewModel.validateAndSaveToken() },
-                                                enabled = tokenInput.isNotBlank() && !uiState.isValidatingToken
+                                                enabled = tokenInput.isNotBlank() && !uiState.isValidatingToken,
+                                                modifier = Modifier.weight(1f)
                                             ) {
                                                 if (uiState.isValidatingToken) {
                                                     CircularProgressIndicator(
@@ -1080,7 +1093,8 @@ fun SettingsTab(
                                                         android.net.Uri.parse(HF_TOKEN_SETTINGS_URL)
                                                     )
                                                     context.startActivity(intent)
-                                                }
+                                                },
+                                                modifier = Modifier.weight(1f)
                                             ) {
                                                 Icon(
                                                     imageVector = Icons.AutoMirrored.Filled.OpenInNew,
@@ -1473,7 +1487,10 @@ private fun FeedbackSection(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    // Locale-safe: weight lets title/description wrap instead of
+                    // displacing the trailing link icon (TASK-345)
                     Row(
+                        modifier = Modifier.weight(1f),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
@@ -1512,7 +1529,10 @@ private fun FeedbackSection(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    // Locale-safe: weight lets title/description wrap instead of
+                    // displacing the trailing link icon (TASK-345)
                     Row(
+                        modifier = Modifier.weight(1f),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
@@ -1603,10 +1623,14 @@ private fun FeedbackSection(
                             fontWeight = FontWeight.Bold
                         )
                     }
+                    // Locale-safe: weighted value wraps under a longer title instead
+                    // of overflowing the row (TASK-345)
                     Text(
                         text = stringResource(R.string.settings_feedback_license_value),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.End,
+                        modifier = Modifier.weight(1f)
                     )
                 }
 

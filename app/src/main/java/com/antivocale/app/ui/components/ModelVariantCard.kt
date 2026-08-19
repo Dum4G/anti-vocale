@@ -336,7 +336,14 @@ internal fun DownloadProgressView(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text(stringResource(R.string.download_status_downloading), style = MaterialTheme.typography.bodySmall)
+                    // Locale-safe: weight + ellipsis keeps the percentage anchored (TASK-345)
+                    Text(
+                        stringResource(R.string.download_status_downloading),
+                        style = MaterialTheme.typography.bodySmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
+                    )
                     Text("${(downloadProgress * 100).toInt()}%", style = MaterialTheme.typography.bodySmall)
                 }
                 LinearProgressIndicator(
@@ -363,9 +370,13 @@ internal fun DownloadProgressView(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
+                        // Locale-safe: weight + ellipsis keeps the byte counter anchored (TASK-345)
                         Text(
                             stringResource(R.string.download_status_extracting, state.fileName.takeIf { it.isNotEmpty() } ?: stringResource(R.string.download_status_file_progress, state.fileIndex, state.totalFiles)),
-                            style = MaterialTheme.typography.bodySmall
+                            style = MaterialTheme.typography.bodySmall,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f)
                         )
                         Text(
                             "${formatFileSize(state.bytesExtracted)} / ${formatFileSize(state.currentFileSize)}",

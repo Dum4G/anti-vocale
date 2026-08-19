@@ -666,7 +666,12 @@ private fun CatalogModelSection(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                // Locale-safe: weight keeps the trailing info button anchored when
+                // longer locales expand the title/description column (TASK-345)
+                Row(
+                    modifier = Modifier.weight(1f),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Icon(
                         imageVector = when {
                             state.downloadedVariants.isNotEmpty() -> Icons.Default.CheckCircle

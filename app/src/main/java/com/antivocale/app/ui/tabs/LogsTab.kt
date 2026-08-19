@@ -384,9 +384,14 @@ fun LogsTab(
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
+                                // Locale-safe: weight + ellipsis keeps the Clear button
+                                // anchored under longer locales (TASK-345)
                                 Text(
                                     text = stringResource(R.string.logs_recent_requests, logs.size),
-                                    style = MaterialTheme.typography.titleSmall
+                                    style = MaterialTheme.typography.titleSmall,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f)
                                 )
                                 TextButton(
                                     onClick = { showClearDialog = true },
@@ -682,7 +687,12 @@ fun LogEntryItem(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // Left: Audio duration with mic icon
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                // Locale-safe: weight keeps the right-hand status/time column
+                // anchored when the source label grows (TASK-345)
+                Row(
+                    modifier = Modifier.weight(1f),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Icon(
                         Icons.Default.Mic,
                         contentDescription = null,
@@ -701,7 +711,10 @@ fun LogEntryItem(
                             text = log.sourcePackageName?.let { AppInfoUtils.getAppName(context, it) }
                                 ?: stringResource(R.string.voice_message_duration),
                             style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            // Locale-safe: ellipsize instead of pushing the timestamp (TASK-345)
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                         if (SharedAudioHandler.isVideoFile(log.filePath)) {
                             Spacer(modifier = Modifier.width(4.dp))
@@ -883,10 +896,15 @@ fun LogEntryItem(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.End
                             ) {
+                                // Locale-safe: weight on each button so three long
+                                // labels share the row instead of overflowing (TASK-345)
                                 // Copy button
-                                TextButton(onClick = {
-                                    copyTranscriptionToClipboard(context, log.result)
-                                }) {
+                                TextButton(
+                                    onClick = {
+                                        copyTranscriptionToClipboard(context, log.result)
+                                    },
+                                    modifier = Modifier.weight(1f)
+                                ) {
                                     Icon(
                                         Icons.Default.ContentCopy,
                                         contentDescription = null,
@@ -896,9 +914,12 @@ fun LogEntryItem(
                                     Text(stringResource(R.string.copy))
                                 }
                                 // Share button
-                                TextButton(onClick = {
-                                    shareTranscription(context, log.result)
-                                }) {
+                                TextButton(
+                                    onClick = {
+                                        shareTranscription(context, log.result)
+                                    },
+                                    modifier = Modifier.weight(1f)
+                                ) {
                                     Icon(
                                         Icons.Default.Share,
                                         contentDescription = null,
@@ -909,7 +930,10 @@ fun LogEntryItem(
                                 }
                                 // Re-transcribe button (audio entries with file)
                                 if (onRetranscribe != null) {
-                                    TextButton(onClick = onRetranscribe) {
+                                    TextButton(
+                                        onClick = onRetranscribe,
+                                        modifier = Modifier.weight(1f)
+                                    ) {
                                         Icon(
                                             Icons.Default.Refresh,
                                             contentDescription = null,
@@ -1243,6 +1267,10 @@ private fun ConversationGroupHeader(
             Text(
                 text = appName.ifBlank { stringResource(R.string.conversation_group_unknown) },
                 style = MaterialTheme.typography.labelMedium,
+                // Locale-safe: ellipsize before the count/timestamp column (TASK-345)
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f, fill = false),
                 color = MaterialTheme.colorScheme.onSecondaryContainer,
                 fontWeight = FontWeight.SemiBold
             )
