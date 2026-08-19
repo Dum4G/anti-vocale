@@ -172,6 +172,9 @@ One command before every tagging and before every workflow dispatch:
 
 ```bash
 scripts/release-preflight.sh --tag vX.Y.Z   # add --offline to skip network checks
+# The preflight checks that .sherpa-version, fetch-sherpa-aar.sh, and the
+# build.gradle.kts SRCLIB PIN comment are in sync, and that the fork recipe's
+# srclib pin matches the commit in .sherpa-version.
 scripts/release-verify.sh vX.Y.Z            # after the signing job completes
 ```
 

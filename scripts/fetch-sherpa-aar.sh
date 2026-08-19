@@ -13,6 +13,8 @@
 set -euo pipefail
 
 SHERPA_ONNX_VERSION="1.13.5"
+# SYNC: when bumping, also update .sherpa-version (repo root) and the
+# SRCLIB PIN comment in app/build.gradle.kts (issue #38).
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"

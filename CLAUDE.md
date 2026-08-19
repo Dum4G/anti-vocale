@@ -36,6 +36,7 @@ Android application written in Kotlin for transcribing voice messages locally on
 - `app/src/playStore/` — playStore-flavor source set: `CrashReporter` (Firebase-backed), `AndroidManifest.xml` (Firebase service suppression)
 - `app/src/fdroid/` — fdroid-flavor source set: `CrashReporter` (logcat-only no-op). Firebase-free build for F-Droid.
 - `app/libs/` — Prebuilt AAR (sherpa-onnx, NOT committed since v1.8.3): run `./scripts/fetch-sherpa-aar.sh` once after cloning, or Gradle fails resolving the runtime classpath
+- `.sherpa-version` — Marker file at the repo root (tag + srclib commit hash of the pinned sherpa-onnx). When bumping the sherpa version, update ALL THREE sync points: this file, `SHERPA_ONNX_VERSION` in `scripts/fetch-sherpa-aar.sh`, and the `SRCLIB PIN` comment in `app/build.gradle.kts`. The F-Droid recipe's `sherpa_onnx` srclib pin must match the commit listed here (issue #38).
 - `docs/` — Build guides, research notes, scout reports
 - `scripts/` — Build/install helpers (`install.sh`)
 - `eval/` — Desktop eval harness (`run_baseline.py`: WER/CER/loops via sherpa-onnx Python; `smoke_nemotron.py`: model validation). Uses `eval/.venv` with sherpa-onnx 1.13.3 Python.
