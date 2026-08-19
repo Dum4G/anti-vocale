@@ -1428,9 +1428,11 @@ private fun FeedbackSection(
     )
 
     fun sendFeedback(translation: Boolean) {
-        val diagnostics = FeedbackHelper.currentDiagnostics(context, activeBackendId, activeModelName)
+        // The in-app language (not the system locale) is what the user wants
+        // reported when flagging a wrong translation.
+        val localeTag = if (currentLanguage.isBlank()) java.util.Locale.getDefault().toLanguageTag() else currentLanguage
+        val diagnostics = FeedbackHelper.currentDiagnostics(context, activeBackendId, activeModelName, localeTag = localeTag)
         if (translation) {
-            val localeTag = java.util.Locale.getDefault().toLanguageTag()
             FeedbackHelper.sendOrCopy(
                 context,
                 FeedbackHelper.translationSubject(localeTag),

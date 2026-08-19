@@ -112,19 +112,21 @@ object FeedbackHelper {
         ).show()
     }
 
-    /** Gathers the diagnostics from the running app; the model fields come from the ViewModel. */
+    /** Gathers the diagnostics from the running app; the model fields come from the ViewModel.
+     *  [localeTag] lets the caller report the IN-APP language rather than the system locale. */
     fun currentDiagnostics(
         context: Context,
         activeBackendId: String?,
-        activeModelName: String?
+        activeModelName: String?,
+        localeTag: String = Locale.getDefault().toLanguageTag(),
     ): Diagnostics {
         val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
         return Diagnostics(
             versionName = packageInfo.versionName ?: "unknown",
-            versionCode = packageInfo.longVersionCode,
+            versionCode = androidx.core.content.pm.PackageInfoCompat.getLongVersionCode(packageInfo),
             androidVersion = "${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})",
             device = "${Build.MANUFACTURER} ${Build.MODEL}".trim(),
-            locale = Locale.getDefault().toLanguageTag(),
+            locale = localeTag,
             activeBackendId = activeBackendId,
             activeModelName = activeModelName
         )
