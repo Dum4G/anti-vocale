@@ -287,6 +287,23 @@
     <string name="settings_section_transcription">Transcription</string>
     <string name="settings_section_appearance">Appearance</string>
     <string name="settings_section_advanced">Advanced</string>
+    <string name="settings_section_feedback">Feedback &amp; About</string>
+    <string name="settings_feedback_send_title">Send feedback / Report a problem</string>
+    <string name="settings_feedback_send_description">Opens your mail app with the details pre-filled</string>
+    <string name="settings_feedback_translation_title">Report a wrong translation</string>
+    <string name="settings_feedback_translation_description">Tells us the app language you are using</string>
+    <string name="settings_feedback_source_title">Source code</string>
+    <string name="settings_feedback_license_title">License</string>
+    <string name="settings_feedback_license_value">Apache 2.0</string>
+    <string name="settings_feedback_privacy_note">Nothing is sent without your action; your mail app sends this email.</string>
+    <string name="settings_feedback_address_copied">No mail app found. Address copied to clipboard: %1$s</string>
+    <string name="settings_feedback_body_version">App version</string>
+    <string name="settings_feedback_body_android">Android</string>
+    <string name="settings_feedback_body_device">Device</string>
+    <string name="settings_feedback_body_locale">Language</string>
+    <string name="settings_feedback_body_model">Active model</string>
+    <string name="settings_feedback_body_your_message">Your message:</string>
+    <string name="settings_feedback_body_note">You can remove the technical details above if you prefer.</string>
     <string name="oauth_connected">OAuth Connected</string>
 
     <!-- Settings Tab - Model status -->

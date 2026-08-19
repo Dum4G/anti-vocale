@@ -51,6 +51,7 @@ import com.antivocale.app.ui.dialogs.PerformanceStatsDialog
 import com.antivocale.app.ui.screens.PerAppSettingsScreen
 import com.antivocale.app.ui.screens.PromptSettingsScreen
 import com.antivocale.app.ui.theme.ThemeType
+import com.antivocale.app.util.FeedbackHelper
 import com.antivocale.app.service.InferenceService
 import com.antivocale.app.ui.viewmodel.SettingsViewModel
 
@@ -1373,6 +1374,13 @@ fun SettingsTab(
             }
         }
 
+        // Feedback & About section (issue #34 / TASK-341)
+        FeedbackSection(
+            activeBackendId = uiState.transcriptionBackend,
+            activeModelName = uiState.currentModelName,
+            currentLanguage = currentLanguage
+        )
+
 
         // Performance Stats Dialog
         if (showPerfStatsDialog) {
@@ -1393,6 +1401,214 @@ fun SettingsTab(
         Spacer(modifier = Modifier.height(32.dp))
     }
     } // End of if-else for showPerAppSettings
+}
+
+/**
+ * Feedback & About section (issue #34 / TASK-341). Mirrors the sibling card pattern
+ * (one Card with title row, description, divider, then rows) used by the HuggingFace
+ * and advanced cards. Mail rows go through [FeedbackHelper.sendOrCopy], which falls
+ * back to copying the address to the clipboard when no mail app is installed.
+ */
+@Composable
+private fun FeedbackSection(
+    activeBackendId: String,
+    activeModelName: String?,
+    currentLanguage: String
+) {
+    val context = LocalContext.current
+
+    val bodyLabels = FeedbackHelper.BodyLabels(
+        version = stringResource(R.string.settings_feedback_body_version),
+        android = stringResource(R.string.settings_feedback_body_android),
+        device = stringResource(R.string.settings_feedback_body_device),
+        locale = stringResource(R.string.settings_feedback_body_locale),
+        model = stringResource(R.string.settings_feedback_body_model),
+        yourMessage = stringResource(R.string.settings_feedback_body_your_message),
+        note = stringResource(R.string.settings_feedback_body_note)
+    )
+
+    fun sendFeedback(translation: Boolean) {
+        val diagnostics = FeedbackHelper.currentDiagnostics(context, activeBackendId, activeModelName)
+        if (translation) {
+            val localeTag = java.util.Locale.getDefault().toLanguageTag()
+            FeedbackHelper.sendOrCopy(
+                context,
+                FeedbackHelper.translationSubject(localeTag),
+                FeedbackHelper.buildTranslationBody(diagnostics, bodyLabels)
+            )
+        } else {
+            FeedbackHelper.sendOrCopy(
+                context,
+                FeedbackHelper.feedbackSubject(),
+                FeedbackHelper.buildFeedbackBody(diagnostics, bodyLabels)
+            )
+        }
+    }
+
+    CollapsibleSection(
+        title = stringResource(R.string.settings_section_feedback),
+        icon = Icons.Default.Mail,
+        initiallyExpanded = false
+    ) {
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // Send feedback row
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { sendFeedback(translation = false) },
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Column {
+                            Text(
+                                text = stringResource(R.string.settings_feedback_send_title),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = stringResource(R.string.settings_feedback_send_description),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.OpenInNew,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+
+                // Report wrong translation row
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { sendFeedback(translation = true) },
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Translate,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Column {
+                            Text(
+                                text = stringResource(R.string.settings_feedback_translation_title),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = stringResource(R.string.settings_feedback_translation_description),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.OpenInNew,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+
+                // Source code row
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            runCatching {
+                                context.startActivity(
+                                    Intent(Intent.ACTION_VIEW, Uri.parse(FeedbackHelper.SOURCE_CODE_URL))
+                                )
+                            }
+                        },
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        modifier = Modifier.weight(1f),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Code,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            text = stringResource(R.string.settings_feedback_source_title),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.OpenInNew,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+
+                // License row (informational, no action)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Description,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            text = stringResource(R.string.settings_feedback_license_title),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    Text(
+                        text = stringResource(R.string.settings_feedback_license_value),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                // Privacy note
+                Text(
+                    text = stringResource(R.string.settings_feedback_privacy_note),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
 }
 
 /**

@@ -285,6 +285,23 @@
     <string name="settings_section_transcription">Trascrizione</string>
     <string name="settings_section_appearance">Aspetto</string>
     <string name="settings_section_advanced">Avanzate</string>
+    <string name="settings_section_feedback">Feedback e informazioni</string>
+    <string name="settings_feedback_send_title">Invia feedback / Segnala un problema</string>
+    <string name="settings_feedback_send_description">Apre la tua app email con i dettagli gia compilati</string>
+    <string name="settings_feedback_translation_title">Segnala una traduzione errata</string>
+    <string name="settings_feedback_translation_description">Ci indica la lingua dell\'app in uso</string>
+    <string name="settings_feedback_source_title">Codice sorgente</string>
+    <string name="settings_feedback_license_title">Licenza</string>
+    <string name="settings_feedback_license_value">Apache 2.0</string>
+    <string name="settings_feedback_privacy_note">Nulla viene inviato senza un tuo intervento; questa email la invia la tua app email.</string>
+    <string name="settings_feedback_address_copied">Nessuna app email trovata. Indirizzo copiato negli appunti: %1$s</string>
+    <string name="settings_feedback_body_version">Versione app</string>
+    <string name="settings_feedback_body_android">Android</string>
+    <string name="settings_feedback_body_device">Dispositivo</string>
+    <string name="settings_feedback_body_locale">Lingua</string>
+    <string name="settings_feedback_body_model">Modello attivo</string>
+    <string name="settings_feedback_body_your_message">Il tuo messaggio:</string>
+    <string name="settings_feedback_body_note">Puoi rimuovere i dettagli tecnici sopra se preferisci.</string>
     <string name="oauth_connected">OAuth connesso</string>
 
     <!-- Settings Tab - Model status -->
