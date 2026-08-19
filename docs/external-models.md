@@ -179,8 +179,10 @@ network and the joint network.
 
 - sherpa whisper: `base64(token) id` per line (NOT plain tokens).
 - transducer/CTC: plain token text per line or `token id`.
-The conversion from a publisher's `vocab.json` is a few lines of Python; a worked
-example lives in [pantinor/whisper-arabic-dialectal-tokens](https://huggingface.co/pantinor/whisper-arabic-dialectal-tokens).
+The conversion from a publisher's `vocab.json` is a few lines of Python. CAREFUL
+with whisper: the format is base64 of RAW BYTES (the official csukuangfj turbo
+tokens are the reference), not base64 of gpt2-decoded characters - an earlier
+mirror using the gpt2 character encoding produced mojibake and was deleted.
 
 ### 5. The mirror pattern
 
@@ -193,11 +195,10 @@ pins, documenting provenance and exactly what was changed. Working examples:
 - [pantinor/whisper-arabic-dialectal-sherpa](https://huggingface.co/pantinor/whisper-arabic-dialectal-sherpa):
   full Arabic dialectal Whisper Turbo (sherpa int8 encoder+decoder, k2-fsa metadata,
   transcripts verified against the oddadmix samples). The upstream OpenVoiceOS optimum
-  export of the same weights is NOT sherpa-loadable (see TASK-332). Supersedes the earlier
-  tokens-only mirror [pantinor/whisper-arabic-dialectal-tokens](https://huggingface.co/pantinor/whisper-arabic-dialectal-tokens),
-  whose 51,866-line tokens use the gpt2 byte-level-unicode character encoding sherpa does
-  not understand; sherpa whisper models use the 50,257-line raw-byte base64 format
-  (identical to the official csukuangfj turbo tokens).
+  export of the same weights is NOT sherpa-loadable (see TASK-332). An earlier tokens-only
+  mirror was deleted: its 51,866-line tokens used the gpt2 byte-level-unicode character
+  encoding, which sherpa does not understand; sherpa whisper models use the 50,257-line
+  raw-byte base64 format (identical to the official csukuangfj turbo tokens).
 
 Always verify the massaged model actually LOADS AND TRANSCRIBES with sherpa-onnx on
 desktop before publishing the entry (see `eval/multifamily_probe.py` for a harness);
