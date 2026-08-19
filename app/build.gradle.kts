@@ -127,10 +127,6 @@ android {
         targetCompatibility = JavaVersion.VERSION_21
     }
 
-    kotlinOptions {
-        jvmTarget = "21"
-    }
-
     buildFeatures {
         compose = true
         buildConfig = true
@@ -173,6 +169,12 @@ tasks.whenTaskAdded {
 
 ksp {
     arg("room.schemaLocation", "$projectDir/schemas")
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21)
+    }
 }
 
 dependencies {
@@ -241,8 +243,8 @@ dependencies {
     implementation("org.apache.commons:commons-compress:1.26.1")
 
     // Hilt dependency injection
-    implementation("com.google.dagger:hilt-android:2.56.1")
-    ksp("com.google.dagger:hilt-compiler:2.56.1")
+    implementation("com.google.dagger:hilt-android:2.58")
+    ksp("com.google.dagger:hilt-compiler:2.58")
     implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
 
     // WorkManager + hilt-work: powers the subtitle-choice timeout worker (Task 9).
@@ -273,8 +275,14 @@ dependencies {
     testImplementation("androidx.compose.ui:ui-test-manifest")
 
     // Hilt testing
-    testImplementation("com.google.dagger:hilt-android-testing:2.56.1")
-    kspTest("com.google.dagger:hilt-compiler:2.56.1")
+    testImplementation("com.google.dagger:hilt-android-testing:2.58")
+    kspTest("com.google.dagger:hilt-compiler:2.58")
+    // Hilt 2.58 (last AGP-8 line) ships kotlin-metadata-jvm 2.2.20, which cannot
+    // read the Kotlin 2.4 metadata our classes now carry. Forcing the matching
+    // version on the KSP classpath; drop this when Hilt requires AGP 9 and we
+    // follow (2.59+ embeds a new enough metadata reader).
+    "ksp"("org.jetbrains.kotlin:kotlin-metadata-jvm:2.4.10")
+    "kspTest"("org.jetbrains.kotlin:kotlin-metadata-jvm:2.4.10")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
     androidTestImplementation(platform("androidx.compose:compose-bom:2025.01.00"))

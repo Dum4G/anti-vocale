@@ -46,7 +46,7 @@ class DownloadStateTest {
 
     @Test
     fun `CopyingFiles is distinct from all other DownloadState variants`() {
-        val copying = DownloadState.CopyingFiles(fileIndex = 1, totalFiles = 2)
+        val copying: DownloadState = DownloadState.CopyingFiles(fileIndex = 1, totalFiles = 2)
 
         assertTrue(copying !is DownloadState.Idle)
         assertTrue(copying !is DownloadState.CheckingAccess)
