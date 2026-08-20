@@ -908,7 +908,7 @@ fun LogEntryItem(
                                     ) {
                                         Icon(
                                             Icons.Default.Refresh,
-                                            contentDescription = stringResource(R.string.retranscribe_title),
+                                            contentDescription = stringResource(R.string.retranscribe),
                                             modifier = Modifier.size(18.dp),
                                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
