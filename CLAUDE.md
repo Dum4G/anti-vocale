@@ -87,6 +87,10 @@ NNAPI is available on ALL devices including MediaTek. If a native crash occurs w
 
 - **`/model-scout [scope]`** -- Scout HuggingFace, GitHub releases, and the ASR landscape for new models, framework updates, and techniques that could improve on-device transcription. Scopes: `full`, `asr`, `llm`, `frameworks`, `parakeet`, `whisper`, `qwen`. Reports saved to `docs/scout-reports/`.
 
+## GitHub issue triage
+
+External issue reports get answered on GitHub; anything we commit to goes into a tracking issue first, then a Backlog task. Recent tracker state: #50 (Parakeet long-audio chunking, model hard cap 400s), #51 (Queued/Processing split in Logs tab), #52 (long-press context menu). FAQ.md at the root mirrors the public answers; keep it in sync when these land.
+
 ## Release Checklist: New Models / Native Libraries / Architectures
 
 Whenever integrating a new model, native library, JNI bridge, or supporting a new CPU architecture, **always** verify ProGuard/R8 rules before shipping a release build:
