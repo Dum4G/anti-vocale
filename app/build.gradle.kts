@@ -20,13 +20,13 @@ android {
     namespace = "com.antivocale.app"
     compileSdk = 36
 
-    // Pinned to the NDK the F-Droid recipe uses (`ndk: r27c` = 27.2.12479018;
-    // note 27.3.13750724 is r27d, a different strip toolchain). AGP strips the
-    // packaged .so with the NDK's llvm-strip; an unpinned (or absent) NDK made
-    // release APKs differ from the F-Droid buildserver byte-for-byte
-    // (libllm_inference_engine_jni.so layout), breaking reproducibility
-    // (fdroiddata MR !46215). Keep in sync with the recipe's ndk: field.
-    ndkVersion = "27.2.12479018"
+    // Pinned to the NDK the fdroiddata builds actually resolve to: r27
+    // (27.0.12077973), which is also AGP 8.10's default and the toolchain
+    // behind the strip/compile bytes we must match reproducibly. AGP strips
+    // the packaged .so with the NDK's llvm-strip; an unpinned (or absent)
+    // NDK made release APKs differ from the F-Droid buildserver
+    // byte-for-byte (fdroiddata MR !46215). Keep in sync with the recipe.
+    ndkVersion = "27.0.12077973"
 
     defaultConfig {
         applicationId = "com.antivocale.app"

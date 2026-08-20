@@ -356,7 +356,13 @@ jobs:
           export serverwebroot=/tmp
           # F-Droid's image ships without an NDK; install r27c (the recipe's ndk:) where fdroid looks.
           chown -R vagrant:vagrant /opt/android-sdk
-          yes | sdkmanager "ndk;27.2.12479018" || true
+          # Install ONLY NDK r27 (27.0.12077973): this is what the fdroiddata
+          # CI runner effectively resolved for our builds (fdroid's 'Set up NDK
+          # r27' lines in job logs; AGP 8.10's default NDK is also r27, which is
+          # what strips the Maven .so there). Installing r27c instead made AGP
+          # find no NDK (unstripped Maven libs) and sherpa compile with a
+          # different toolchain than the fdroiddata builds we must byte-match.
+          yes | sdkmanager "ndk;27.0.12077973" || true
           # The recipe's sudo: deps (wget etc.) don't auto-install when running as root; install them.
           apt-get update -qq && apt-get install -y --no-install-recommends wget build-essential cmake g++ zip unzip
           fdroid --version || true
