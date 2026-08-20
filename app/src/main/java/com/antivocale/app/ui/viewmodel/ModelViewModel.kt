@@ -665,8 +665,12 @@ class ModelViewModel @Inject constructor(
             val copiedPath = copyModelToAppStorage(context, uri)
 
             if (copiedPath != null) {
-                // Persist the model path
+                // Persist the model path and activate the LLM backend: a manually
+                // imported model file is an LLM asset; leaving the previous backend
+                // (e.g. a catalog sherpa entry) would ignore it (same class as the
+                // useDownloadedModel fix).
                 preferencesManager.saveModelPath(copiedPath)
+                preferencesManager.saveTranscriptionBackend(LlmTranscriptionBackend.BACKEND_ID)
 
                 val fileName = extractFileName(copiedPath)
                 _uiState.update { it.copy(
@@ -936,8 +940,12 @@ class ModelViewModel @Inject constructor(
             )
             if (modelPath != null) {
                 preferencesManager.saveModelPath(modelPath)
-                // Switch to LLM backend when selecting an LLM model
-                preferencesManager.saveTranscriptionBackend(PreferencesManager.DEFAULT_TRANSCRIPTION_BACKEND)
+                // Switch to LLM backend when selecting an LLM model. Must be the
+                // explicit "llm" id: the old DEFAULT_TRANSCRIPTION_BACKEND value
+                // ("sherpa-onnx") is itself a catalog entry since the PR #28
+                // consolidation, so it resolves to Parakeet instead of falling
+                // through to the LLM loader and Gemma never became active.
+                preferencesManager.saveTranscriptionBackend(LlmTranscriptionBackend.BACKEND_ID)
                 val message = ctx.getString(R.string.model_selected_message, variant.displayName)
                 _uiState.update { it.copy(
                     modelPath = modelPath,
