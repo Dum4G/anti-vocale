@@ -77,7 +77,10 @@ class SettingsViewModel @Inject constructor(
         LanguageOption("it", "Italiano"),
         LanguageOption("de", "Deutsch"),
         LanguageOption("ru", "Русский"),
-        LanguageOption("hi", "हिन्दी")
+        LanguageOption("hi", "हिन्दी"),
+        LanguageOption("fr", "Français"),
+        LanguageOption("es", "Español"),
+        LanguageOption("pt-BR", "Português (BR)")
     )
 
     // Transcription language options (reuses LanguageOption)

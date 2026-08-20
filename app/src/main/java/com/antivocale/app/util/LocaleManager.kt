@@ -30,7 +30,9 @@ object LocaleManager {
         Log.d(TAG, "setLocale called with: $localeCode")
         val localeList = when (localeCode) {
             "system" -> LocaleListCompat.getEmptyLocaleList()
-            else -> LocaleListCompat.create(Locale(localeCode))
+            // forLanguageTag handles region suffixes like "pt-BR" (values-pt-rBR);
+            // the single-arg Locale constructor would treat the whole string as a language
+            else -> LocaleListCompat.create(Locale.forLanguageTag(localeCode))
         }
         Log.d(TAG, "Calling setApplicationLocales with: $localeList")
         AppCompatDelegate.setApplicationLocales(localeList)
