@@ -237,6 +237,19 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    val compactResultActions: StateFlow<Boolean> = preferencesManager.compactResultActions
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = PreferencesManager.DEFAULT_COMPACT_RESULT_ACTIONS
+        )
+
+    fun saveCompactResultActions(enabled: Boolean) {
+        viewModelScope.launch {
+            preferencesManager.saveCompactResultActions(enabled)
+        }
+    }
+
     // Current language from Per-App Language API (not DataStore)
     private val _currentLanguage = MutableStateFlow(LocaleManager.getCurrentLocaleCode())
     val currentLanguage: StateFlow<String> = _currentLanguage.asStateFlow()

@@ -237,6 +237,9 @@ class LogsViewModel @Inject constructor(
     val showRetranscribeButton: StateFlow<Boolean> = preferencesManager.showRetranscribeButton
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), PreferencesManager.DEFAULT_SHOW_RETRANSCRIBE_BUTTON)
 
+    val compactResultActions: StateFlow<Boolean> = preferencesManager.compactResultActions
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), PreferencesManager.DEFAULT_COMPACT_RESULT_ACTIONS)
+
     fun saveGroupLogsByConversation(enabled: Boolean) {
         viewModelScope.launch {
             preferencesManager.saveGroupLogsByConversation(enabled)

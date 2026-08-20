@@ -759,6 +759,8 @@
     <string name="advanced_sharing_toggle">Afficher les modèles dans le menu de partage</string>
     <string name="share_targets_models_info">Chaque modèle téléchargé apparaîtra comme cible de partage distincte. Supprimer un modèle retire sa cible.</string>
     <string name="conversation_grouping_title">Grouper par conversation</string>
+    <string name="compact_result_actions_title">Actions compactes</string>
+    <string name="compact_result_actions_description">Affiche les actions de transcription sous forme d\'icônes seules dans le coin de la carte. Désactivez pour des boutons avec libellé.</string>
     <string name="conversation_grouping_description">Groupe les transcriptions par application source (WhatsApp, Telegram, etc.) en sections repliables.</string>
     <plurals name="conversation_group_count">
         <item quantity="one">%1$d message</item>

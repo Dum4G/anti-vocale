@@ -862,6 +862,8 @@
 
     <!-- Conversation Grouping -->
     <string name="conversation_grouping_title">Nach Unterhaltung gruppieren</string>
+    <string name="compact_result_actions_title">Kompakte Aktionsschaltflächen</string>
+    <string name="compact_result_actions_description">Zeigt die Transkriptionsaktionen nur als Symbole in der Ecke der Karte an. Deaktivieren für beschriftete Schaltflächen.</string>
     <string name="conversation_grouping_description">Gruppiert Transkriptionen nach Quell-App (WhatsApp, Telegram usw.) in einklappbaren Abschnitten.</string>
     <string name="conversation_group_unknown">Andere</string>
 

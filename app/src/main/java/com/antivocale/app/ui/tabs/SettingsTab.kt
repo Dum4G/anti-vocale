@@ -83,6 +83,7 @@ fun SettingsTab(
     val advancedSharingEnabled by viewModel.advancedSharingEnabled.collectAsState()
     val showRetranscribeButton by viewModel.showRetranscribeButton.collectAsState()
     val forceModelLoad by viewModel.forceModelLoad.collectAsState()
+    val compactResultActions by viewModel.compactResultActions.collectAsState()
     val tokenState by viewModel.tokenState.collectAsState()
     val tokenInput by viewModel.tokenInput.collectAsState()
     val oauthState by viewModel.oauthState.collectAsState()
@@ -741,6 +742,17 @@ fun SettingsTab(
                 checked = groupLogsByConversation,
                 onCheckedChange = { enabled ->
                     viewModel.saveGroupLogsByConversation(enabled)
+                }
+            )
+
+            // Compact icon-only actions on result cards
+            ToggleSettingCard(
+                icon = Icons.Default.TouchApp,
+                title = stringResource(R.string.compact_result_actions_title),
+                description = stringResource(R.string.compact_result_actions_description),
+                checked = compactResultActions,
+                onCheckedChange = { enabled ->
+                    viewModel.saveCompactResultActions(enabled)
                 }
             )
         }

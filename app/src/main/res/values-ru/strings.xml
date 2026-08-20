@@ -899,6 +899,8 @@
 
     <!-- Conversation Grouping -->
     <string name="conversation_grouping_title">Группировка по беседам</string>
+    <string name="compact_result_actions_title">Компактные кнопки действий</string>
+    <string name="compact_result_actions_description">Показывать действия с расшифровкой только как значки в углу карточки. Отключите для кнопок с подписями.</string>
     <string name="conversation_grouping_description">Группировать расшифровки по исходному приложению (WhatsApp, Telegram и т.д.) в сворачиваемые разделы.</string>
     <plurals name="conversation_group_count">
         <item quantity="one">%1$d сообщение</item>

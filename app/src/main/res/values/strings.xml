@@ -888,6 +888,8 @@
 
     <!-- Conversation Grouping -->
     <string name="conversation_grouping_title">Group by Conversation</string>
+    <string name="compact_result_actions_title">Compact action buttons</string>
+    <string name="compact_result_actions_description">Show transcription actions as icons only, tucked into the corner of the result card. Turn off for labeled buttons.</string>
     <string name="conversation_grouping_description">Group transcriptions by source app (WhatsApp, Telegram, etc.) into collapsible sections.</string>
     <plurals name="conversation_group_count">
         <item quantity="one">%1$d message</item>

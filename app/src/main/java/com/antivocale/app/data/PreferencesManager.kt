@@ -37,6 +37,7 @@ interface PreferencesManager {
     val advancedSharingEnabled: Flow<Boolean>
     val showRetranscribeButton: Flow<Boolean>
     val forceModelLoad: Flow<Boolean>
+    val compactResultActions: Flow<Boolean>
 
     val externalModelsJson: Flow<String?>
     suspend fun saveExternalModelsJson(json: String)
@@ -68,6 +69,7 @@ interface PreferencesManager {
     suspend fun saveAdvancedSharingEnabled(enabled: Boolean)
     suspend fun saveShowRetranscribeButton(enabled: Boolean)
     suspend fun saveForceModelLoad(enabled: Boolean)
+    suspend fun saveCompactResultActions(enabled: Boolean)
 
     suspend fun saveBenchmarkResult(modelId: String, jsonResult: String)
     fun getBenchmarkResult(modelId: String): Flow<String?>
@@ -105,5 +107,6 @@ interface PreferencesManager {
         const val DEFAULT_ADVANCED_SHARING_ENABLED = false
         const val DEFAULT_SHOW_RETRANSCRIBE_BUTTON = true
         const val DEFAULT_FORCE_MODEL_LOAD = false
+        const val DEFAULT_COMPACT_RESULT_ACTIONS = true
     }
 }

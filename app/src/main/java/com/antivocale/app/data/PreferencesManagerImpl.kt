@@ -71,6 +71,7 @@ class PreferencesManagerImpl(
         private val ADVANCED_SHARING_ENABLED = booleanPreferencesKey("advanced_sharing_enabled")
         private val SHOW_RETRANSCRIBE_BUTTON = booleanPreferencesKey("show_retranscribe_button")
         private val FORCE_MODEL_LOAD = booleanPreferencesKey("force_model_load")
+        private val COMPACT_RESULT_ACTIONS = booleanPreferencesKey("compact_result_actions")
         private val PARTIAL_TRANSCRIPTION_TEXT = stringPreferencesKey("partial_transcription_text")
         private val PARTIAL_TRANSCRIPTION_TIMESTAMP = longPreferencesKey("partial_transcription_timestamp")
         private val EXTERNAL_MODELS_JSON = stringPreferencesKey("external_models_json")
@@ -103,6 +104,7 @@ class PreferencesManagerImpl(
         val advancedSharingEnabled: Boolean = PreferencesManager.DEFAULT_ADVANCED_SHARING_ENABLED,
         val showRetranscribeButton: Boolean = PreferencesManager.DEFAULT_SHOW_RETRANSCRIBE_BUTTON,
         val forceModelLoad: Boolean = PreferencesManager.DEFAULT_FORCE_MODEL_LOAD,
+        val compactResultActions: Boolean = PreferencesManager.DEFAULT_COMPACT_RESULT_ACTIONS,
         val externalModelsJson: String? = null
     )
 
@@ -136,6 +138,7 @@ class PreferencesManagerImpl(
         advancedSharingEnabled = this[ADVANCED_SHARING_ENABLED] ?: PreferencesManager.DEFAULT_ADVANCED_SHARING_ENABLED,
         showRetranscribeButton = this[SHOW_RETRANSCRIBE_BUTTON] ?: PreferencesManager.DEFAULT_SHOW_RETRANSCRIBE_BUTTON,
         forceModelLoad = this[FORCE_MODEL_LOAD] ?: PreferencesManager.DEFAULT_FORCE_MODEL_LOAD,
+        compactResultActions = this[COMPACT_RESULT_ACTIONS] ?: PreferencesManager.DEFAULT_COMPACT_RESULT_ACTIONS,
         externalModelsJson = this[EXTERNAL_MODELS_JSON]
     )
 
@@ -470,6 +473,16 @@ class PreferencesManagerImpl(
 
     override val forceModelLoad: Flow<Boolean> = dataStore.data.map { it[FORCE_MODEL_LOAD] ?: PreferencesManager.DEFAULT_FORCE_MODEL_LOAD }
         .onStart { emit(cache.get().forceModelLoad) }
+
+    override val compactResultActions: Flow<Boolean> = dataStore.data.map { it[COMPACT_RESULT_ACTIONS] ?: PreferencesManager.DEFAULT_COMPACT_RESULT_ACTIONS }
+        .onStart { emit(cache.get().compactResultActions) }
+
+    override suspend fun saveCompactResultActions(enabled: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[COMPACT_RESULT_ACTIONS] = enabled
+        }
+        cache.updateAndGet { it.copy(compactResultActions = enabled) }
+    }
 
     override suspend fun saveForceModelLoad(enabled: Boolean) {
         dataStore.edit { preferences ->

@@ -759,6 +759,8 @@
     <string name="advanced_sharing_toggle">Mostrar modelos no menu de compartilhamento</string>
     <string name="share_targets_models_info">Cada modelo baixado aparecerá como destino separado. Excluir um modelo remove seu destino.</string>
     <string name="conversation_grouping_title">Agrupar por conversa</string>
+    <string name="compact_result_actions_title">Ações compactas</string>
+    <string name="compact_result_actions_description">Mostra as ações de transcrição apenas como ícones no canto do cartão. Desative para botões com rótulo.</string>
     <string name="conversation_grouping_description">Agrupa transcrições por app de origem (WhatsApp, Telegram etc.) em seções recolhíveis.</string>
     <plurals name="conversation_group_count">
         <item quantity="one">%1$d mensagem</item>

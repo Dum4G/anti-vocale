@@ -861,6 +861,8 @@
 
     <!-- Conversation Grouping -->
     <string name="conversation_grouping_title">बातचीत से समूह बनाएं</string>
+    <string name="compact_result_actions_title">संक्षिप्त एक्शन बटन</string>
+    <string name="compact_result_actions_description">ट्रांस्क्रिप्शन क्रियाओं को कार्ड के कोने में केवल आइकन के रूप में दिखाएं। लेबल वाले बटनों के लिए बंद करें।</string>
     <string name="conversation_grouping_description">स्रोत ऐप (WhatsApp, Telegram आदि) के अनुसार ट्रांसक्रिप्शन सिकुड़ने वाले सेक्शन में समूहबद्ध दिखाएं।</string>
     <string name="conversation_group_unknown">अन्य</string>
 

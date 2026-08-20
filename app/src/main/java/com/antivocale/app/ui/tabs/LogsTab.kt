@@ -35,6 +35,7 @@ import com.antivocale.app.R
 import com.antivocale.app.util.AppInfoUtils
 import com.antivocale.app.util.SharedAudioHandler
 import com.antivocale.app.data.PreferencesManager
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.animation.Crossfade
 import com.antivocale.app.ui.components.SkeletonTranscriptionCard
 import com.antivocale.app.ui.components.SkeletonTranscriptionPreview
@@ -86,6 +87,46 @@ private fun shareTranscription(context: Context, text: String) {
         context.getString(R.string.share_transcription)
     )
     context.startActivity(shareIntent)
+}
+
+/**
+ * A result-card action rendered either as a compact icon-only button (localized
+ * contentDescription) or as a labeled TextButton, per the user preference.
+ */
+@Composable
+private fun RowScope.ResultActionButton(
+    compact: Boolean,
+    onClick: () -> Unit,
+    icon: ImageVector,
+    labelRes: Int,
+    contentDescriptionRes: Int = labelRes
+) {
+    if (compact) {
+        IconButton(
+            onClick = onClick,
+            modifier = Modifier.size(40.dp)
+        ) {
+            Icon(
+                icon,
+                contentDescription = stringResource(contentDescriptionRes),
+                modifier = Modifier.size(18.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    } else {
+        TextButton(
+            onClick = onClick,
+            modifier = Modifier.weight(1f)
+        ) {
+            Icon(
+                icon,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(stringResource(labelRes))
+        }
+    }
 }
 
 /**
@@ -163,6 +204,7 @@ fun LogsTab(
     var recentlyDeletedEntry by remember { mutableStateOf<LogEntry?>(null) }
     var retranscribeTarget by remember { mutableStateOf<LogEntry?>(null) }
     val showRetranscribeButton by viewModel.showRetranscribeButton.collectAsState()
+    val compactActions by viewModel.compactResultActions.collectAsState()
 
     if (retranscribeTarget != null) {
         val retranscribeBackends by produceState(
@@ -474,7 +516,8 @@ fun LogsTab(
                                         onDeleted = { entry -> recentlyDeletedEntry = entry },
                                         onDeleteLog = { id -> viewModel.deleteLog(id) },
                                         viewModel = viewModel,
-                                        onRetranscribe = if (showRetranscribeButton && log.type == LogEntry.Type.AUDIO && log.filePath != null) {{ retranscribeTarget = log }} else null
+                                        onRetranscribe = if (showRetranscribeButton && log.type == LogEntry.Type.AUDIO && log.filePath != null) {{ retranscribeTarget = log }} else null,
+                                        compactActions = compactActions
                                     )
                                     HorizontalDivider(
                                         modifier = Modifier.padding(horizontal = 16.dp),
@@ -510,7 +553,8 @@ fun LogsTab(
                                     onDeleted = { entry -> recentlyDeletedEntry = entry },
                                     onDeleteLog = { id -> viewModel.deleteLog(id) },
                                     viewModel = viewModel,
-                                    onRetranscribe = if (showRetranscribeButton && log.type == LogEntry.Type.AUDIO && log.filePath != null) {{ retranscribeTarget = log }} else null
+                                    onRetranscribe = if (showRetranscribeButton && log.type == LogEntry.Type.AUDIO && log.filePath != null) {{ retranscribeTarget = log }} else null,
+                                    compactActions = compactActions
                                 )
                                 HorizontalDivider(
                                     modifier = Modifier.padding(horizontal = 16.dp),
@@ -668,7 +712,8 @@ fun LogEntryItem(
     searchQuery: String = "",
     expanded: Boolean = false,
     onExpandChange: (Boolean) -> Unit = {},
-    onRetranscribe: (() -> Unit)? = null
+    onRetranscribe: (() -> Unit)? = null,
+    compactActions: Boolean = PreferencesManager.DEFAULT_COMPACT_RESULT_ACTIONS
 ) {
     val context = LocalContext.current
 
@@ -893,8 +938,9 @@ fun LogEntryItem(
                         // bottom corner of the card (no labels; localized
                         // contentDescription keeps them accessible). Icon-only also
                         // sidesteps the TASK-345 label-overflow class entirely.
+                        // The labeled layout remains available as a user preference.
                         if (log.result.isNotEmpty()) {
-                            Spacer(modifier = Modifier.height(4.dp))
+                            Spacer(modifier = Modifier.height(if (compactActions) 4.dp else 8.dp))
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.End,
@@ -902,46 +948,28 @@ fun LogEntryItem(
                             ) {
                                 // Re-transcribe button (audio entries with file)
                                 if (onRetranscribe != null) {
-                                    IconButton(
+                                    ResultActionButton(
+                                        compact = compactActions,
                                         onClick = onRetranscribe,
-                                        modifier = Modifier.size(40.dp)
-                                    ) {
-                                        Icon(
-                                            Icons.Default.Refresh,
-                                            contentDescription = stringResource(R.string.retranscribe),
-                                            modifier = Modifier.size(18.dp),
-                                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
+                                        icon = Icons.Default.Refresh,
+                                        labelRes = R.string.retranscribe
+                                    )
                                 }
                                 // Copy button
-                                IconButton(
-                                    onClick = {
-                                        copyTranscriptionToClipboard(context, log.result)
-                                    },
-                                    modifier = Modifier.size(40.dp)
-                                ) {
-                                    Icon(
-                                        Icons.Default.ContentCopy,
-                                        contentDescription = stringResource(R.string.copy_transcription),
-                                        modifier = Modifier.size(18.dp),
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
+                                ResultActionButton(
+                                    compact = compactActions,
+                                    onClick = { copyTranscriptionToClipboard(context, log.result) },
+                                    icon = Icons.Default.ContentCopy,
+                                    labelRes = R.string.copy,
+                                    contentDescriptionRes = R.string.copy_transcription
+                                )
                                 // Share button
-                                IconButton(
-                                    onClick = {
-                                        shareTranscription(context, log.result)
-                                    },
-                                    modifier = Modifier.size(40.dp)
-                                ) {
-                                    Icon(
-                                        Icons.Default.Share,
-                                        contentDescription = stringResource(R.string.share_transcription),
-                                        modifier = Modifier.size(18.dp),
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
+                                ResultActionButton(
+                                    compact = compactActions,
+                                    onClick = { shareTranscription(context, log.result) },
+                                    icon = Icons.Default.Share,
+                                    labelRes = R.string.share_transcription
+                                )
                             }
                         }
                     }
@@ -1135,7 +1163,8 @@ private fun LogEntryWithSwipe(
     onDeleted: (LogEntry) -> Unit,
     onDeleteLog: (String) -> Unit,
     viewModel: LogsViewModel,
-    onRetranscribe: (() -> Unit)? = null
+    onRetranscribe: (() -> Unit)? = null,
+    compactActions: Boolean = PreferencesManager.DEFAULT_COMPACT_RESULT_ACTIONS
 ) {
     val context = LocalContext.current
     if (swipeActionMode == "REVEAL") {
@@ -1183,7 +1212,8 @@ private fun LogEntryWithSwipe(
                         onExpandChange(expanded)
                     }
                 },
-                onRetranscribe = onRetranscribe
+                onRetranscribe = onRetranscribe,
+                compactActions = compactActions
             )
         }
     } else {
@@ -1227,7 +1257,8 @@ private fun LogEntryWithSwipe(
                 searchQuery = searchQuery,
                 expanded = isExpanded,
                 onExpandChange = onExpandChange,
-                onRetranscribe = onRetranscribe
+                onRetranscribe = onRetranscribe,
+                compactActions = compactActions
             )
         }
     }
