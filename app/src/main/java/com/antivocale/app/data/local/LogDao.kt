@@ -38,4 +38,30 @@ interface LogDao {
 
     @Query("SELECT * FROM logs WHERE taskId = :taskId LIMIT 1")
     suspend fun getByTaskId(taskId: String): LogEntity?
+
+    // ---- GH #51 status transitions ----
+    // The SQL IN-lists below are the single source for the non-terminal set,
+    // including the legacy "PENDING" spelling written before the QUEUED/PROCESSING
+    // split; Kotlin callers must not keep their own copy.
+
+    /** Promotes a row to PROCESSING when work starts; terminal rows (and absent rows) are untouched. */
+    @Query("UPDATE logs SET status = 'PROCESSING' WHERE taskId = :taskId AND status IN ('QUEUED', 'PROCESSING', 'PENDING')")
+    suspend fun promoteToProcessing(taskId: String)
+
+    /** Fails a single non-terminal row (cancellation / interruption paths). */
+    @Query("UPDATE logs SET status = 'ERROR', errorMessage = :errorMessage, durationMs = :durationMs WHERE taskId = :taskId AND status IN ('QUEUED', 'PROCESSING', 'PENDING')")
+    suspend fun failNonTerminal(taskId: String, errorMessage: String, durationMs: Long)
+
+    /** Fails the non-terminal rows of the given tasks in one round trip (batch cancel). */
+    @Query("UPDATE logs SET status = 'ERROR', errorMessage = :errorMessage WHERE taskId IN (:taskIds) AND status IN ('QUEUED', 'PROCESSING', 'PENDING')")
+    suspend fun failNonTerminalForTaskIds(taskIds: List<String>, errorMessage: String)
+
+    /**
+     * Fails every non-terminal row at once (cold-start sweep): rows left QUEUED or
+     * PROCESSING (or the legacy "PENDING") by a process death can never complete.
+     * Safe to run only at process start, before the transcription service can be
+     * running in this same process.
+     */
+    @Query("UPDATE logs SET status = 'ERROR', errorMessage = :reason WHERE status IN ('QUEUED', 'PROCESSING', 'PENDING')")
+    suspend fun failAllNonTerminal(reason: String)
 }

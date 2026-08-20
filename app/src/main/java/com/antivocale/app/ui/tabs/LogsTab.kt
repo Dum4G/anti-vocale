@@ -1,7 +1,9 @@
 package com.antivocale.app.ui.tabs
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -130,6 +132,31 @@ private fun RowScope.ResultActionButton(
 }
 
 /**
+ * Long-press context menu actions for a log entry (GH #52). Kept as a pure
+ * function so the gating mirrors [buildSwipeActions] and stays unit-tested.
+ */
+enum class ContextMenuAction { RETRANSCRIBE, COPY, DELETE }
+
+/** Shared "Queued" label (collapsed and expanded views render it identically). */
+@Composable
+private fun QueuedStatusLabel() {
+    Text(
+        text = stringResource(R.string.logs_status_queued),
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.tertiary
+    )
+}
+
+fun buildContextMenuActions(log: LogEntry, canRetranscribe: Boolean): List<ContextMenuAction> {
+    val actions = mutableListOf<ContextMenuAction>()
+    if (canRetranscribe) actions.add(ContextMenuAction.RETRANSCRIBE)
+    // Mirrors buildSwipeActions: Copy needs a completed result, not interim text.
+    if (log.hasCompletedResult) actions.add(ContextMenuAction.COPY)
+    actions.add(ContextMenuAction.DELETE)
+    return actions
+}
+
+/**
  * Builds the list of swipe actions for a log entry.
  * Copy and Share only appear for successful transcriptions with non-empty results.
  * Delete always appears.
@@ -146,7 +173,7 @@ private fun buildSwipeActions(
 ): List<SwipeAction> {
     val actions = mutableListOf<SwipeAction>()
 
-    if (log.status == LogEntry.Status.SUCCESS && log.result.isNotEmpty()) {
+    if (log.hasCompletedResult) {
         actions.add(
             SwipeAction(
                 icon = Icons.Default.ContentCopy,
@@ -705,7 +732,7 @@ private fun PartialTranscriptionBanner(failedChunkCount: Int) {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun LogEntryItem(
     log: LogEntry,
@@ -713,17 +740,66 @@ fun LogEntryItem(
     expanded: Boolean = false,
     onExpandChange: (Boolean) -> Unit = {},
     onRetranscribe: (() -> Unit)? = null,
+    onDelete: (() -> Unit)? = null,
     compactActions: Boolean = PreferencesManager.DEFAULT_COMPACT_RESULT_ACTIONS
 ) {
     val context = LocalContext.current
+    var contextMenuExpanded by remember { mutableStateOf(false) }
+    val menuActions = remember(log.id, log.result, onRetranscribe) {
+        buildContextMenuActions(log, canRetranscribe = onRetranscribe != null)
+    }
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 6.dp),
-        onClick = { onExpandChange(!expanded) }
+            .padding(horizontal = 12.dp, vertical = 6.dp)
+            .combinedClickable(
+                onClick = { onExpandChange(!expanded) },
+                onLongClick = { contextMenuExpanded = true }
+            )
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
+            // Long-press context menu (GH #52), anchored to the card's top-start.
+            // Composed only while open: idle rows carry just the boolean flag.
+            if (contextMenuExpanded) DropdownMenu(
+                expanded = true,
+                onDismissRequest = { contextMenuExpanded = false }
+            ) {
+                menuActions.forEach { action ->
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                stringResource(
+                                    when (action) {
+                                        ContextMenuAction.RETRANSCRIBE -> R.string.retranscribe
+                                        ContextMenuAction.COPY -> R.string.copy
+                                        ContextMenuAction.DELETE -> R.string.logs_delete_entry
+                                    }
+                                )
+                            )
+                        },
+                        leadingIcon = {
+                            Icon(
+                                when (action) {
+                                    ContextMenuAction.RETRANSCRIBE -> Icons.Default.Refresh
+                                    ContextMenuAction.COPY -> Icons.Default.ContentCopy
+                                    ContextMenuAction.DELETE -> Icons.Default.Delete
+                                },
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        },
+                        onClick = {
+                            contextMenuExpanded = false
+                            when (action) {
+                                ContextMenuAction.RETRANSCRIBE -> onRetranscribe?.invoke()
+                                ContextMenuAction.COPY -> copyTranscriptionToClipboard(context, log.result)
+                                ContextMenuAction.DELETE -> onDelete?.invoke()
+                            }
+                        }
+                    )
+                }
+            }
             // === COLLAPSED VIEW ===
             // Header row: Audio duration + Status icon + Relative time
             Row(
@@ -780,7 +856,8 @@ fun LogEntryItem(
                             log.status == LogEntry.Status.SUCCESS && log.isPartial -> Icons.Default.Warning
                             log.status == LogEntry.Status.SUCCESS -> Icons.Default.CheckCircle
                             log.status == LogEntry.Status.ERROR -> Icons.Default.Error
-                            log.status == LogEntry.Status.PENDING -> Icons.Default.HourglassEmpty
+                            log.status == LogEntry.Status.QUEUED -> Icons.Default.Schedule
+                            log.status == LogEntry.Status.PROCESSING -> Icons.Default.HourglassEmpty
                             else -> Icons.Default.CheckCircle
                         },
                         contentDescription = if (log.status == LogEntry.Status.SUCCESS && log.isPartial) {
@@ -791,7 +868,8 @@ fun LogEntryItem(
                             log.status == LogEntry.Status.SUCCESS && log.isPartial -> MaterialTheme.colorScheme.error
                             log.status == LogEntry.Status.SUCCESS -> MaterialTheme.colorScheme.primary
                             log.status == LogEntry.Status.ERROR -> MaterialTheme.colorScheme.error
-                            log.status == LogEntry.Status.PENDING -> MaterialTheme.colorScheme.secondary
+                            log.status == LogEntry.Status.QUEUED -> MaterialTheme.colorScheme.tertiary
+                            log.status == LogEntry.Status.PROCESSING -> MaterialTheme.colorScheme.secondary
                             else -> MaterialTheme.colorScheme.primary
                         }
                     )
@@ -805,7 +883,7 @@ fun LogEntryItem(
             }
 
             // Preview text (transcription preview for successful audio)
-            if (log.status == LogEntry.Status.SUCCESS && log.result.isNotEmpty()) {
+            if (log.hasCompletedResult) {
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
                     text = highlightText(
@@ -827,7 +905,10 @@ fun LogEntryItem(
                     overflow = TextOverflow.Ellipsis,
                     color = MaterialTheme.colorScheme.error
                 )
-            } else if (log.status == LogEntry.Status.PENDING) {
+            } else if (log.status == LogEntry.Status.QUEUED) {
+                Spacer(modifier = Modifier.height(6.dp))
+                QueuedStatusLabel()
+            } else if (log.status == LogEntry.Status.PROCESSING) {
                 Spacer(modifier = Modifier.height(6.dp))
                 Crossfade(
                     targetState = log.result.isNotEmpty(),
@@ -993,7 +1074,10 @@ fun LogEntryItem(
                                 .padding(8.dp)
                         )
                     }
-                    LogEntry.Status.PENDING -> {
+                    LogEntry.Status.QUEUED -> {
+                        QueuedStatusLabel()
+                    }
+                    LogEntry.Status.PROCESSING -> {
                         if (log.result.isNotEmpty()) {
                             // Interim transcription text during progressive VAD transcription
                             Text(
@@ -1213,6 +1297,7 @@ private fun LogEntryWithSwipe(
                     }
                 },
                 onRetranscribe = onRetranscribe,
+                onDelete = { onDeleted(log); viewModel.deleteLog(log.id) },
                 compactActions = compactActions
             )
         }
@@ -1258,6 +1343,7 @@ private fun LogEntryWithSwipe(
                 expanded = isExpanded,
                 onExpandChange = onExpandChange,
                 onRetranscribe = onRetranscribe,
+                onDelete = { onDeleted(log); onDeleteLog(log.id) },
                 compactActions = compactActions
             )
         }

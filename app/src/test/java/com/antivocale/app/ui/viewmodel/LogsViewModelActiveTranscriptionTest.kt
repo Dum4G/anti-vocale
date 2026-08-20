@@ -24,7 +24,7 @@ import org.junit.Test
  * Unit tests for LogsViewModel.activeTranscription flow.
  *
  * Verifies the mapping logic that selects the active transcription
- * for the PiP view: first PENDING with non-empty result, then any PENDING.
+ * for the PiP view: first PROCESSING with non-empty result, then any PROCESSING, then any QUEUED.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class LogsViewModelActiveTranscriptionTest {
@@ -49,7 +49,7 @@ class LogsViewModelActiveTranscriptionTest {
 
     private fun makeEntity(
         taskId: String,
-        status: String = "PENDING",
+        status: String = "PROCESSING",
         result: String = ""
     ) = LogEntity(
         id = "id-$taskId",
@@ -73,8 +73,9 @@ class LogsViewModelActiveTranscriptionTest {
     private fun selectActive(entities: List<LogEntity>): LogEntry? {
         val logList = entities.map { it.toLogEntry() }
         return logList.firstOrNull {
-            it.status == LogEntry.Status.PENDING && it.result.isNotEmpty()
-        } ?: logList.firstOrNull { it.status == LogEntry.Status.PENDING }
+            it.status == LogEntry.Status.PROCESSING && it.result.isNotEmpty()
+        } ?: logList.firstOrNull { it.status == LogEntry.Status.PROCESSING }
+            ?: logList.firstOrNull { it.status == LogEntry.Status.QUEUED }
     }
 
     @Test
@@ -97,7 +98,7 @@ class LogsViewModelActiveTranscriptionTest {
     @Test
     fun `selectActive picks pending entry without interim text`() {
         val active = selectActive(
-            listOf(makeEntity("task-1", status = "PENDING", result = ""))
+            listOf(makeEntity("task-1", status = "PROCESSING", result = ""))
         )
         assertNotNull(active)
         assertEquals("task-1", active!!.taskId)
@@ -107,8 +108,8 @@ class LogsViewModelActiveTranscriptionTest {
     fun `selectActive prefers pending entry with interim text over empty`() {
         val active = selectActive(
             listOf(
-                makeEntity("task-1", status = "PENDING", result = ""),
-                makeEntity("task-2", status = "PENDING", result = "Hello from segment 1")
+                makeEntity("task-1", status = "PROCESSING", result = ""),
+                makeEntity("task-2", status = "PROCESSING", result = "Hello from segment 1")
             )
         )
         assertNotNull(active)
@@ -120,8 +121,8 @@ class LogsViewModelActiveTranscriptionTest {
     fun `selectActive picks first pending with text when multiple have text`() {
         val active = selectActive(
             listOf(
-                makeEntity("task-1", status = "PENDING", result = "First"),
-                makeEntity("task-2", status = "PENDING", result = "Second")
+                makeEntity("task-1", status = "PROCESSING", result = "First"),
+                makeEntity("task-2", status = "PROCESSING", result = "Second")
             )
         )
         assertEquals("task-1", active!!.taskId)
@@ -130,7 +131,7 @@ class LogsViewModelActiveTranscriptionTest {
     @Test
     fun `selectActive returns null when pending becomes success`() {
         val before = selectActive(
-            listOf(makeEntity("task-1", status = "PENDING", result = "Working on it"))
+            listOf(makeEntity("task-1", status = "PROCESSING", result = "Working on it"))
         )
         assertNotNull(before)
 
@@ -143,14 +144,14 @@ class LogsViewModelActiveTranscriptionTest {
     @Test
     fun `selectActive switches to new pending when first completes`() {
         val first = selectActive(
-            listOf(makeEntity("task-1", status = "PENDING", result = "First task"))
+            listOf(makeEntity("task-1", status = "PROCESSING", result = "First task"))
         )
         assertEquals("task-1", first!!.taskId)
 
         val after = selectActive(
             listOf(
                 makeEntity("task-1", status = "SUCCESS", result = "Done"),
-                makeEntity("task-2", status = "PENDING", result = "Second task")
+                makeEntity("task-2", status = "PROCESSING", result = "Second task")
             )
         )
         assertEquals("task-2", after!!.taskId)
@@ -173,7 +174,7 @@ class LogsViewModelActiveTranscriptionTest {
         val active = selectActive(
             listOf(
                 makeEntity("task-1", status = "SUCCESS", result = "Done"),
-                makeEntity("task-2", status = "PENDING", result = "In progress"),
+                makeEntity("task-2", status = "PROCESSING", result = "In progress"),
                 makeEntity("task-3", status = "ERROR")
             )
         )

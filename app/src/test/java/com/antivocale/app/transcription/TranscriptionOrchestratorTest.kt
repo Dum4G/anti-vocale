@@ -2,6 +2,7 @@ package com.antivocale.app.transcription
 
 import android.content.Context
 import com.antivocale.app.data.TranscriptionCalibrator
+import com.antivocale.app.data.local.LogEntity
 import io.mockk.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
@@ -306,7 +307,9 @@ class TranscriptionOrchestratorTest : TranscriptionOrchestratorTestBase() {
             coroutineScope = this
         )
 
-        coVerify { logDao.insert(match { it.taskId == "test-log" }) }
+        // GH #51: processRequest no longer inserts; it promotes the enqueue-time
+        // QUEUED row (logQueued) to PROCESSING via the DAO transition.
+        coVerify { logDao.promoteToProcessing("test-log") }
     }
 
     // --- Backend Loading Tests ---

@@ -86,7 +86,7 @@ class TranscriptionOrchestratorInterimThrottleTest : TranscriptionOrchestratorTe
         stubMultiChunkStream(chunkCount = 3)
         coEvery { logDao.getByTaskId("throttle-task") } returns com.antivocale.app.data.local.LogEntity(
             id = "1", timestamp = 0L, taskId = "throttle-task",
-            type = "AUDIO", status = "PENDING", prompt = "")
+            type = "AUDIO", status = "PROCESSING", prompt = "")
 
         val texts = listOf("first", "second", "third")
         var i = 0
@@ -100,7 +100,7 @@ class TranscriptionOrchestratorInterimThrottleTest : TranscriptionOrchestratorTe
 
         val captured = mutableListOf<com.antivocale.app.data.local.LogEntity>()
         coVerify(atLeast = 0) { logDao.update(capture(captured)) }
-        val interimWrites = captured.filter { it.status == "PENDING" }.map { it.result }.filter { it.isNotBlank() }
+        val interimWrites = captured.filter { it.status == "PROCESSING" }.map { it.result }.filter { it.isNotBlank() }
         // First interim write lands immediately; the two within the interval are skipped.
         assertEquals(listOf("first"), interimWrites)
     }
@@ -110,7 +110,7 @@ class TranscriptionOrchestratorInterimThrottleTest : TranscriptionOrchestratorTe
         stubMultiChunkStream(chunkCount = 3)
         coEvery { logDao.getByTaskId("throttle-task") } returns com.antivocale.app.data.local.LogEntity(
             id = "1", timestamp = 0L, taskId = "throttle-task",
-            type = "AUDIO", status = "PENDING", prompt = "")
+            type = "AUDIO", status = "PROCESSING", prompt = "")
 
         val texts = listOf("first", "second", "third")
         var i = 0
@@ -132,7 +132,7 @@ class TranscriptionOrchestratorInterimThrottleTest : TranscriptionOrchestratorTe
         stubMultiChunkStream(chunkCount = 3)
         coEvery { logDao.getByTaskId("throttle-task") } returns com.antivocale.app.data.local.LogEntity(
             id = "1", timestamp = 0L, taskId = "throttle-task",
-            type = "AUDIO", status = "PENDING", prompt = "")
+            type = "AUDIO", status = "PROCESSING", prompt = "")
 
         val texts = listOf("first", "second", "third")
         var i = 0
@@ -146,7 +146,7 @@ class TranscriptionOrchestratorInterimThrottleTest : TranscriptionOrchestratorTe
 
         val captured = mutableListOf<com.antivocale.app.data.local.LogEntity>()
         coVerify(atLeast = 0) { logDao.update(capture(captured)) }
-        val interimWrites = captured.filter { it.status == "PENDING" }.map { it.result }.filter { it.isNotBlank() }
+        val interimWrites = captured.filter { it.status == "PROCESSING" }.map { it.result }.filter { it.isNotBlank() }
         assertEquals(listOf("first", "first second", "first second third"), interimWrites)
     }
 }

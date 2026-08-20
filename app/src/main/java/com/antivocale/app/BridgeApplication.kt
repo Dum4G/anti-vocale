@@ -18,6 +18,7 @@ class BridgeApplication : Application(), Configuration.Provider {
     @Inject lateinit var shareTargetManager: ShareTargetManager
     @Inject lateinit var workerFactory: HiltWorkerFactory
     @Inject lateinit var externalModelStore: com.antivocale.app.data.ExternalModelStore
+    @Inject lateinit var logDao: com.antivocale.app.data.local.LogDao
 
     /**
      * Provides the Hilt-aware [androidx.work.WorkManager] configuration so that
@@ -64,6 +65,17 @@ class BridgeApplication : Application(), Configuration.Provider {
             }
         }.onFailure { e ->
             android.util.Log.e("BridgeApplication", "Dangling-backend cleanup failed (will retry on next launch)", e)
+        }
+        // GH #51: rows left QUEUED/PROCESSING by a process death can never complete
+        // (START_NOT_STICKY restores nothing); fail them so they don't render as a
+        // permanently in-flight queue. Runs at process start, before the service can
+        // exist in this process, so no live row can be caught.
+        runCatching {
+            kotlinx.coroutines.runBlocking {
+                logDao.failAllNonTerminal("Interrupted by app restart")
+            }
+        }.onFailure { e ->
+            android.util.Log.e("BridgeApplication", "Non-terminal log sweep failed", e)
         }
         shareTargetManager.syncAll()
         migrateLanguagePreference()

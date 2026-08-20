@@ -49,7 +49,11 @@ data class LogEntry(
     val failedChunkCount: Int = 0
 ) {
     enum class Type { TEXT, AUDIO }
-    enum class Status { PENDING, SUCCESS, ERROR }
+    enum class Status { QUEUED, PROCESSING, SUCCESS, ERROR }
+
+    /** A final, copyable transcript (mirrors the swipe/menu action gating). */
+    val hasCompletedResult: Boolean
+        get() = status == Status.SUCCESS && result.isNotEmpty()
 }
 
 /**
@@ -87,13 +91,13 @@ class LogsViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     /**
-     * The currently active (PENDING) transcription entry.
+     * The currently active transcription entry (PROCESSING, falling back to QUEUED).
      * Prioritises entries that already have interim text from progressive transcription.
      * Used by the PiP view to efficiently observe only the relevant entry.
      */
     val activeTranscription: StateFlow<LogEntry?> = logs.map { logList ->
-        logList.firstOrNull { it.status == LogEntry.Status.PENDING && it.result.isNotEmpty() }
-            ?: logList.firstOrNull { it.status == LogEntry.Status.PENDING }
+        logList.firstOrNull { it.status == LogEntry.Status.PROCESSING && it.result.isNotEmpty() }
+            ?: logList.firstOrNull { it.status == LogEntry.Status.PROCESSING || it.status == LogEntry.Status.QUEUED }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     private val _interruptedTranscription = MutableStateFlow<String?>(null)
@@ -160,7 +164,7 @@ class LogsViewModel @Inject constructor(
             LogEntry(
                 taskId = taskId,
                 type = type,
-                status = LogEntry.Status.PENDING,
+                status = LogEntry.Status.PROCESSING,
                 prompt = prompt,
                 filePath = filePath,
                 audioDurationSeconds = audioDurationSeconds,
@@ -204,20 +208,12 @@ class LogsViewModel @Inject constructor(
     }
 
     /**
-     * Marks a log entry as ERROR only if it is still PENDING.
-     * Used in finally/cancellation paths to avoid overwriting a completed result.
+     * Marks a log entry as ERROR only if it is still in a non-terminal state
+     * (QUEUED or PROCESSING). Used in finally/cancellation paths to avoid
+     * overwriting a completed result.
      */
     suspend fun cancelIfPending(taskId: String, errorMessage: String, durationMs: Long) {
-        val entity = logDao.getByTaskId(taskId) ?: return
-        if (entity.status == LogEntry.Status.PENDING.name) {
-            logDao.update(
-                entity.toLogEntry().copy(
-                    status = LogEntry.Status.ERROR,
-                    errorMessage = errorMessage,
-                    durationMs = durationMs
-                ).toEntity()
-            )
-        }
+        logDao.failNonTerminal(taskId, errorMessage, durationMs)
     }
 
     fun onSearchQueryChanged(query: String) {

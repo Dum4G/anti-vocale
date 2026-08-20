@@ -43,7 +43,41 @@ class LogEntityMapperTest {
 
         assertNull(entry.sourcePackageName)
         assertEquals(LogEntry.Type.TEXT, entry.type)
-        assertEquals(LogEntry.Status.PENDING, entry.status)
+        // "PENDING" is a legacy row value; the mapper resolves it to PROCESSING
+        assertEquals(LogEntry.Status.PROCESSING, entry.status)
+    }
+
+    // ── toLogEntry: legacy PENDING rows (pre-QUEUED/PROCESSING schema) ──
+
+    @Test
+    fun `toLogEntry maps legacy PENDING status to PROCESSING`() {
+        val entity = LogEntity(
+            id = "test-id",
+            timestamp = 1000L,
+            taskId = "task-1",
+            type = "AUDIO",
+            status = "PENDING"
+        )
+
+        val entry = entity.toLogEntry()
+
+        // Rows written before the QUEUED/PROCESSING split said "PENDING" for
+        // both meanings; PROCESSING is the safe reading (most such rows are
+        // mid-flight at upgrade time, and terminal states clean them up).
+        assertEquals(LogEntry.Status.PROCESSING, entry.status)
+    }
+
+    @Test
+    fun `toLogEntry maps QUEUED status`() {
+        val entity = LogEntity(
+            id = "test-id",
+            timestamp = 1000L,
+            taskId = "task-1",
+            type = "AUDIO",
+            status = "QUEUED"
+        )
+
+        assertEquals(LogEntry.Status.QUEUED, entity.toLogEntry().status)
     }
 
     // ── toEntity: sourcePackageName present ────────────────────────

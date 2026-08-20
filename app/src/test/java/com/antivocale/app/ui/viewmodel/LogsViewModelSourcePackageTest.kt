@@ -93,7 +93,7 @@ class LogsViewModelSourcePackageTest {
             logDao.insert(match {
                 it.taskId == "task-4" &&
                 it.type == "AUDIO" &&
-                it.status == "PENDING" &&
+                it.status == "PROCESSING" &&
                 it.prompt == "a voice note" &&
                 it.filePath == "/path/to/audio.m4a" &&
                 it.audioDurationSeconds == 12.5 &&

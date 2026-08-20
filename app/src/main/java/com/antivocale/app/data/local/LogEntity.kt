@@ -33,7 +33,10 @@ fun LogEntity.toLogEntry(): LogEntry = LogEntry(
     timestamp = timestamp,
     taskId = taskId,
     type = LogEntry.Type.valueOf(type),
-    status = LogEntry.Status.valueOf(status),
+    // Explicit legacy alias: rows written before the QUEUED/PROCESSING split (GH #51)
+    // stored "PENDING" for both meanings. Anything else unknown fails loudly rather
+    // than silently rendering as in-progress forever.
+    status = if (status == "PENDING") LogEntry.Status.PROCESSING else LogEntry.Status.valueOf(status),
     prompt = prompt,
     result = result,
     errorMessage = errorMessage,

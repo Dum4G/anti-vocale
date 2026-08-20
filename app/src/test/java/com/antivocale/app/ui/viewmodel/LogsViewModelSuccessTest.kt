@@ -36,7 +36,7 @@ class LogsViewModelSuccessTest {
         timestamp = System.currentTimeMillis(),
         taskId = testTaskId,
         type = "AUDIO",
-        status = "PENDING",
+        status = "PROCESSING",
         result = ""
     )
 

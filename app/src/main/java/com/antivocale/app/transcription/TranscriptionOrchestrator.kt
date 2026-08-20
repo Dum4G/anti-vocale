@@ -117,7 +117,7 @@ class TranscriptionOrchestrator @Inject constructor(
     suspend fun processRequest(
         taskId: String,
         requestType: String,
-        prompt: String,
+        prompt: String = "",
         filePath: String?,
         source: String?,
         sourcePackage: String?,
@@ -133,13 +133,7 @@ class TranscriptionOrchestrator @Inject constructor(
         val isShareRequest = source == "share"
 
         // Log request start
-        logRequest(
-            taskId = taskId,
-            type = if (requestType == "audio" || requestType == "subtitles") LogEntry.Type.AUDIO else LogEntry.Type.TEXT,
-            prompt = prompt,
-            filePath = filePath,
-            sourcePackageName = sourcePackage
-        )
+        markProcessing(taskId)
 
         val startTime = System.currentTimeMillis()
 
@@ -277,7 +271,7 @@ class TranscriptionOrchestrator @Inject constructor(
         coroutineScope: CoroutineScope,
         queuePosition: Int,
         queueTotal: Int,
-        prompt: String,
+        prompt: String = "",
         backendOverride: String?
     ): Result<String>? {
         if (filePath.isNullOrEmpty() || trackIndex < 0) {
@@ -584,7 +578,7 @@ class TranscriptionOrchestrator @Inject constructor(
     private suspend fun processAudioRequest(
         taskId: String,
         filePath: String?,
-        prompt: String,
+        prompt: String = "",
         queuePosition: Int,
         queueTotal: Int,
         context: Context,
@@ -735,7 +729,7 @@ class TranscriptionOrchestrator @Inject constructor(
         taskId: String,
         chunks: List<FloatArray>,
         sampleRate: Int,
-        prompt: String,
+        prompt: String = "",
         backend: TranscriptionBackend,
         audioDurationSeconds: Int,
         chunkProcessingStartTime: Long,
@@ -807,7 +801,7 @@ class TranscriptionOrchestrator @Inject constructor(
         taskId: String,
         chunks: List<FloatArray>,
         sampleRate: Int,
-        prompt: String,
+        prompt: String = "",
         backend: TranscriptionBackend,
         audioDurationSeconds: Int,
         chunkProcessingStartTime: Long,
@@ -963,7 +957,7 @@ class TranscriptionOrchestrator @Inject constructor(
         context: Context,
         coroutineScope: CoroutineScope,
         listener: TranscriptionListener,
-        prompt: String,
+        prompt: String = "",
         progressiveEnabled: Boolean = false
     ): Result<TranscriptionResult> {
         val resolvedPrompt = resolvePrompt(prompt)
@@ -1240,25 +1234,39 @@ class TranscriptionOrchestrator @Inject constructor(
 
     // ---- DB Logging ----
 
-    private suspend fun logRequest(
+    /**
+     * Creates the log entry at enqueue time (GH #51): the request is visible in
+     * the Logs tab as QUEUED from the moment it enters the queue, before work
+     * starts. Called by InferenceService when a request is accepted. This is the
+     * single insert point for a request's row.
+     */
+    suspend fun logQueued(
         taskId: String,
-        type: LogEntry.Type,
-        prompt: String,
+        requestType: String,
+        prompt: String = "",
         filePath: String? = null,
-        audioDurationSeconds: Double = 0.0,
         sourcePackageName: String? = null
     ) {
         logDao.insert(
             LogEntry(
                 taskId = taskId,
-                type = type,
-                status = LogEntry.Status.PENDING,
+                type = if (requestType == "audio" || requestType == "subtitles") LogEntry.Type.AUDIO else LogEntry.Type.TEXT,
+                status = LogEntry.Status.QUEUED,
                 prompt = prompt,
                 filePath = filePath,
-                audioDurationSeconds = audioDurationSeconds,
                 sourcePackageName = sourcePackageName
             ).toEntity()
         )
+    }
+
+    /**
+     * Promotes the QUEUED entry (created by [logQueued]) to PROCESSING when work
+     * starts. DAO-level and non-inserting by design: this racing the enqueue
+     * write can never produce a duplicate row, and an entry the user deleted
+     * mid-flight stays deleted (no resurrect).
+     */
+    suspend fun markProcessing(taskId: String) {
+        logDao.promoteToProcessing(taskId)
     }
 
     private suspend fun logSuccess(
@@ -1290,12 +1298,7 @@ class TranscriptionOrchestrator @Inject constructor(
 
     private suspend fun cancelIfPending(taskId: String, errorMessage: String, durationMs: Long) {
         lastInterimRoomWriteMs.remove(taskId)
-        val entity = logDao.getByTaskId(taskId) ?: return
-        if (entity.status == LogEntry.Status.PENDING.name) {
-            logDao.update(entity.toLogEntry().copy(
-                status = LogEntry.Status.ERROR, errorMessage = errorMessage, durationMs = durationMs
-            ).toEntity())
-        }
+        logDao.failNonTerminal(taskId, errorMessage, durationMs)
     }
 
     private suspend fun updateInterimResult(taskId: String, accumulatedText: String) {

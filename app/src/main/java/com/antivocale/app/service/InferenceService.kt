@@ -49,6 +49,7 @@ class InferenceService : Service(), TranscriptionListener {
     @Inject lateinit var preferencesManager: PreferencesManager
     @Inject lateinit var perAppPreferencesManager: PerAppPreferencesManager
     @Inject lateinit var orchestrator: TranscriptionOrchestrator
+    @Inject lateinit var logDao: LogDao
 
     companion object {
         const val TAG = "InferenceService"
@@ -180,6 +181,20 @@ class InferenceService : Service(), TranscriptionListener {
         val queueSize = pendingCount.incrementAndGet()
         Log.i(TAG, "Request enqueued: ${request.taskId}, source=${request.source}, sourcePackage=${request.sourcePackage}, filePath=$filePath")
 
+        // GH #51: make the request visible in the Logs tab from enqueue time.
+        // processRequest's markProcessing promotes the entry once work starts.
+        serviceScope.launch {
+            runCatching {
+                orchestrator.logQueued(
+                    taskId = request.taskId,
+                    requestType = request.requestType,
+                    prompt = request.prompt,
+                    filePath = request.filePath,
+                    sourcePackageName = request.sourcePackage,
+                )
+            }.onFailure { Log.w(TAG, "Failed to log queued request ${request.taskId}", it) }
+        }
+
         if (_isTranscribing.value && queueSize > 1) {
             updateNotificationQueueHint(queueSize)
         }
@@ -256,6 +271,7 @@ class InferenceService : Service(), TranscriptionListener {
                 }
             } catch (e: CancellationException) {
                 Log.i(TAG, "Processing cancelled by user")
+                failQueuedLogs("Cancelled")
                 requestQueue.clear()
                 pendingCount.set(0)
             } finally {
@@ -276,10 +292,25 @@ class InferenceService : Service(), TranscriptionListener {
     private fun handleCancelRequest() {
         Log.i(TAG, "Cancel request received")
         currentProcessingJob?.cancel()
+        failQueuedLogs("Cancelled")
         requestQueue.clear()
         pendingCount.set(0)
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
+    }
+
+    /**
+     * Closes the log rows of requests still waiting in the queue when the whole
+     * batch is cancelled (GH #51: queued items have rows; without this they
+     * would show "Queued" forever). Runs before the queue is cleared.
+     */
+    private fun failQueuedLogs(reason: String) {
+        val waiting = requestQueue.map { it.taskId }
+        if (waiting.isEmpty()) return
+        serviceScope.launch {
+            runCatching { logDao.failNonTerminalForTaskIds(waiting, reason) }
+                .onFailure { Log.w(TAG, "Failed to close queued log rows", it) }
+        }
     }
 
     // ---- TranscriptionListener Implementation ----

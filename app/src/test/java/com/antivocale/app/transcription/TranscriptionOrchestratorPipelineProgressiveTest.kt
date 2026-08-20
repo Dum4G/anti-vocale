@@ -153,7 +153,7 @@ class TranscriptionOrchestratorPipelineProgressiveTest : TranscriptionOrchestrat
 
         val entity = com.antivocale.app.data.local.LogEntity(
             id = "1", timestamp = 0L, taskId = "test-pipeline",
-            type = "AUDIO", status = "PENDING", prompt = ""
+            type = "AUDIO", status = "PROCESSING", prompt = ""
         )
         coEvery { logDao.getByTaskId("test-pipeline") } returns entity
 
