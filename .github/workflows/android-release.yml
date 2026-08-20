@@ -465,9 +465,17 @@ jobs:
           set -ex
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > release.keystore
           echo "${{ secrets.KEYSTORE_PROPERTIES }}" > keystore.properties
+          # Secret hygiene: xtrace prints variable assignments ('+ STORE_PASS=...'),
+          # which leaked the keystore passwords into a public Actions log once
+          # (2026-08-20). Disable tracing for the reads and register add-mask so
+          # any future accidental echo of these values is redacted by GitHub.
+          set +x
           STORE_PASS=$(grep '^storePassword=' keystore.properties | cut -d= -f2-)
           KEY_PASS=$(grep '^keyPassword=' keystore.properties | cut -d= -f2-)
           ALIAS=$(grep '^keyAlias=' keystore.properties | cut -d= -f2-)
+          echo "::add-mask::$STORE_PASS"
+          echo "::add-mask::$KEY_PASS"
+          set -x
           # fdroidserver copies each built unsigned APK to unsigned/com.antivocale.app_<versionCode>.apk.
           # Discover the versionCodes fdroid actually built and derive each ABI from the arch suffix
           # (VC % 10): 1=armeabi-v7a, 2=arm64-v8a, 4=x86_64. This invariant lives in
