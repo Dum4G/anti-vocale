@@ -96,6 +96,13 @@ interface TranscriptionBackend {
     fun setKeepAliveTimeout(minutes: Int)
 
     /**
+     * Callback invoked after the backend unloads itself (idle timeout or
+     * explicit unload), so the manager can clear its bookkeeping. Default
+     * no-op for backends without self-managed lifecycle.
+     */
+    fun setOnAutoUnloadCallback(callback: (() -> Unit)?) {}
+
+    /**
      * Returns the path to the model file.
      */
     fun getModelPath(): String?

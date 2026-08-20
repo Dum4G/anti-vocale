@@ -6,8 +6,11 @@ import com.antivocale.app.data.FilePin
 import com.antivocale.app.data.ModelFamily
 import com.antivocale.app.data.ExternalModelRecordsProvider
 import com.antivocale.app.manager.LlmManager
+import io.mockk.Runs
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.every
+import io.mockk.just
 import io.mockk.mockk
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
@@ -40,6 +43,7 @@ class TranscriptionBackendManagerExternalTest {
         llmManager = mockk(relaxed = true)
         engine = mockk()
         coEvery { engine.initialize(any(), any()) } returns Result.success(Unit)
+        every { engine.setOnAutoUnloadCallback(any()) } just Runs
         providerRecords = MutableStateFlow(emptyList())
         val provider = object : ExternalModelRecordsProvider {
             override val records = providerRecords

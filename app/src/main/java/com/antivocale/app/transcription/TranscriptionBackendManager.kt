@@ -108,6 +108,15 @@ class TranscriptionBackendManager @Inject constructor(
         if (result.isSuccess) {
             _activeBackend = backend
             _activeBackendId.value = backendId
+            // Backends with a self-managed idle timer (sherpa keep-alive) unload
+            // themselves; clear our bookkeeping so the next request reloads.
+            backend.setOnAutoUnloadCallback {
+                if (_activeBackend === backend) {
+                    _activeBackend = null
+                    _activeBackendId.value = null
+                    Log.i(TAG, "Active backend self-unloaded (idle timeout): $backendId")
+                }
+            }
             Log.i(TAG, "Backend activated: $backendId")
         } else {
             Log.e(TAG, "Failed to initialize backend: $backendId", result.exceptionOrNull())

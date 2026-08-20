@@ -19,7 +19,10 @@ import com.k2fsa.sherpa.onnx.OnlineRecognizer
 import com.k2fsa.sherpa.onnx.OnlineRecognizerConfig
 import com.k2fsa.sherpa.onnx.OnlineStream
 import com.k2fsa.sherpa.onnx.OnlineTransducerModelConfig
+import com.antivocale.app.data.PreferencesManager
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.withContext
 import java.io.File
 
@@ -321,6 +324,21 @@ class SherpaBackend(
     private var language: String = "auto"
 
     /**
+     * Idle-unload timer (TASK-344 / issue #42): the ORT arena under a loaded
+     * sherpa session never shrinks (~2.3GB retained after a long clip), and
+     * release() provably frees it, so the keep-alive timeout now really
+     * unloads this backend when idle. Fires only when no work is in flight.
+     */
+    private val keepAliveScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val keepAlive = NativeKeepAlive(
+        scope = keepAliveScope,
+        tag = TAG,
+        defaultTimeoutMinutes = PreferencesManager.DEFAULT_KEEP_ALIVE_TIMEOUT,
+        onIdleUnload = { runCatching { unload() } },
+    )
+    private val onAutoUnloadCallback = java.util.concurrent.atomic.AtomicReference<(() -> Unit)?>(null)
+
+    /**
      * Shared tail-pad silence (TASK-340 Fix 1b): chunked transcription used to build a fresh
      * `samples + FloatArray(tail)` copy per chunk; a second acceptWaveform of this one shared
      * zero-filled buffer (64KB for 1s at 16kHz) achieves the same final-token flush with no
@@ -408,6 +426,7 @@ class SherpaBackend(
                 modelDir = modelDirectory
                 language = sherpaConfig.language.ifBlank { "auto" }
                 isInitialized = true
+                keepAlive.start()
                 Log.i(TAG, "'${entry.id}' initialized successfully")
                 Result.success(Unit)
             } catch (e: Exception) {
@@ -538,7 +557,9 @@ class SherpaBackend(
         val rec = offlineRecognizer
             ?: return Result.failure(TranscriptionException.NotInitialized())
 
-        return withContext(Dispatchers.IO) {
+        keepAlive.beginWork()
+        try {
+            return withContext(Dispatchers.IO) {
             // Release the native OfflineStream on EVERY path (happy, exception, blank-result)
             // so the JNI handle is freed deterministically, not left to GC finalization.
             var stream: OfflineStream? = null
@@ -580,6 +601,9 @@ class SherpaBackend(
             } finally {
                 stream?.release()
             }
+            }
+        } finally {
+            keepAlive.endWork()
         }
     }
 
@@ -597,7 +621,9 @@ class SherpaBackend(
         val rec = onlineRecognizer
             ?: return Result.failure(TranscriptionException.NotInitialized())
 
-        return withContext(Dispatchers.IO) {
+        keepAlive.beginWork()
+        try {
+            return withContext(Dispatchers.IO) {
             var stream: OnlineStream? = null
             try {
                 Log.d(TAG, "Transcribing audio: ${samples.size} samples at ${sampleRate}Hz")
@@ -661,6 +687,9 @@ class SherpaBackend(
             } finally {
                 stream?.release()
             }
+            }
+        } finally {
+            keepAlive.endWork()
         }
     }
 
@@ -676,6 +705,7 @@ class SherpaBackend(
 
     override fun unload() {
         Log.i(TAG, "Unloading '$entryId' backend")
+        keepAlive.stop()
         offlineRecognizer?.release()
         offlineRecognizer = null
         onlineRecognizer?.release()
@@ -683,10 +713,16 @@ class SherpaBackend(
         modelDir = null
         language = "auto"
         isInitialized = false
+        // Notify the manager/UI after the native memory is actually freed.
+        onAutoUnloadCallback.get()?.invoke()
     }
 
     override fun setKeepAliveTimeout(minutes: Int) {
-        // No-op: sherpa-onnx backends don't manage their own lifecycle.
+        keepAlive.setTimeout(minutes)
+    }
+
+    override fun setOnAutoUnloadCallback(callback: (() -> Unit)?) {
+        onAutoUnloadCallback.set(callback)
     }
 
     override fun getModelPath(): String? = modelDir

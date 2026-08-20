@@ -7,7 +7,10 @@ import com.k2fsa.sherpa.onnx.FeatureConfig
 import com.k2fsa.sherpa.onnx.OfflineRecognizer
 import com.k2fsa.sherpa.onnx.OfflineRecognizerConfig
 import com.k2fsa.sherpa.onnx.OfflineStream
+import com.antivocale.app.data.PreferencesManager
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.withContext
 import java.io.File
 import javax.inject.Inject
@@ -49,6 +52,16 @@ class ExternalSherpaBackend @Inject constructor() : TranscriptionBackend {
     @Volatile private var recognizer: OfflineRecognizer? = null
     private var modelDir: String? = null
     @Volatile private var isInitialized = false
+
+    /** Idle-unload timer, same rationale as SherpaBackend (TASK-344 / issue #42). */
+    private val keepAliveScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val keepAlive = NativeKeepAlive(
+        scope = keepAliveScope,
+        tag = TAG,
+        defaultTimeoutMinutes = PreferencesManager.DEFAULT_KEEP_ALIVE_TIMEOUT,
+        onIdleUnload = { runCatching { unload() } },
+    )
+    private val onAutoUnloadCallback = java.util.concurrent.atomic.AtomicReference<(() -> Unit)?>(null)
 
     override suspend fun initialize(context: Context, config: BackendConfig): Result<Unit> {
         val externalConfig = config as? BackendConfig.ExternalConfig
@@ -109,6 +122,7 @@ class ExternalSherpaBackend @Inject constructor() : TranscriptionBackend {
                 modelDir = record.dir
                 configuredId = record.backendId
                 isInitialized = true
+                keepAlive.start()
 
                 Log.i(TAG, "External backend initialized: $configuredId (family=${record.family}, modelType=${record.modelType})")
                 Result.success(Unit)
@@ -127,7 +141,9 @@ class ExternalSherpaBackend @Inject constructor() : TranscriptionBackend {
         val rec = recognizer
             ?: return Result.failure(TranscriptionException.NotInitialized())
 
-        return withContext(Dispatchers.IO) {
+        keepAlive.beginWork()
+        try {
+            return withContext(Dispatchers.IO) {
             // Release the native OfflineStream on EVERY path so the JNI handle is freed
             // deterministically, not left to GC finalization (NemotronStreamingBackend pattern).
             var stream: OfflineStream? = null
@@ -161,6 +177,9 @@ class ExternalSherpaBackend @Inject constructor() : TranscriptionBackend {
             } finally {
                 stream?.release()
             }
+            }
+        } finally {
+            keepAlive.endWork()
         }
     }
 
@@ -175,15 +194,21 @@ class ExternalSherpaBackend @Inject constructor() : TranscriptionBackend {
 
     override fun unload() {
         Log.i(TAG, "Unloading external backend: $configuredId")
+        keepAlive.stop()
         recognizer?.release()
         recognizer = null
         modelDir = null
         isInitialized = false
         configuredId = PLACEHOLDER_ID
+        onAutoUnloadCallback.get()?.invoke()
     }
 
     override fun setKeepAliveTimeout(minutes: Int) {
-        // No-op: the engine does not manage its own lifecycle.
+        keepAlive.setTimeout(minutes)
+    }
+
+    override fun setOnAutoUnloadCallback(callback: (() -> Unit)?) {
+        onAutoUnloadCallback.set(callback)
     }
 
     override fun getModelPath(): String? = modelDir
