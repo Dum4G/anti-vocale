@@ -223,9 +223,21 @@ class AudioPreprocessorTest {
 
     // ========== mergeVadSegments (TASK-340 Fix 3) ==========
 
-    /** Naive reference merge: grow a group array one segment at a time. */
+    /**
+     * Naive reference merge: grow a group array one segment at a time. A single
+     * segment longer than the limit is split at the limit (GH #50: unbroken
+     * speech must not bypass the model's per-segment cap).
+     */
     private fun naiveMerge(segments: List<FloatArray>, maxMergeSamples: Int): List<FloatArray> {
         val out = mutableListOf<FloatArray>()
+        fun emit(seg: FloatArray) {
+            var offset = 0
+            while (offset < seg.size) {
+                val len = minOf(maxMergeSamples, seg.size - offset)
+                out.add(seg.copyOfRange(offset, offset + len))
+                offset += len
+            }
+        }
         var current = segments.first().clone()
         for (i in 1 until segments.size) {
             if (current.size + segments[i].size <= maxMergeSamples) {
@@ -234,11 +246,11 @@ class AudioPreprocessorTest {
                 System.arraycopy(segments[i], 0, combined, current.size, segments[i].size)
                 current = combined
             } else {
-                out.add(current)
+                emit(current)
                 current = segments[i].clone()
             }
         }
-        out.add(current)
+        emit(current)
         return out
     }
 

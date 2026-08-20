@@ -35,6 +35,15 @@ class AudioPreprocessor @Inject constructor() {
 
     companion object {
         private const val TAG = "AudioPreprocessor"
+
+        /**
+         * VAD segments are merged up to the model's per-segment limit minus a 2s
+         * margin (GH #50): 30s-limit models keep the historical 28s window, a
+         * 380s-limit model merges speech into large segments instead of many
+         * Whisper-sized ones.
+         */
+        internal fun vadMergeLimitSeconds(maxChunkDurationSeconds: Int?): Int =
+            ((maxChunkDurationSeconds ?: 30) - 2).coerceAtLeast(1)
         private const val TARGET_SAMPLE_RATE = 16000
         private const val TARGET_CHANNELS = 1
         private const val MAX_FILE_SIZE_BYTES = 100 * 1024 * 1024 // 100MB limit
@@ -138,10 +147,12 @@ class AudioPreprocessor @Inject constructor() {
                 // proceeds (TASK-340 Fix 3).
                 val segments = vadResult.speechSegments.toMutableList()
 
-                // Multiple segments: merge adjacent ones up to 28s (WhisperX-style).
-                // No overlap = no repetition. Boundaries are on VAD silence gaps.
+                // Multiple segments: merge adjacent ones up to the model's per-segment
+                // limit minus a small margin (WhisperX-style; historically 28s for
+                // Whisper's 30s window). No overlap = no repetition. Boundaries are on
+                // VAD silence gaps.
                 if (segments.size > 1) {
-                    val maxMergeSamples = audioData.sampleRate * 28 // 28s, under Whisper's 30s limit
+                    val maxMergeSamples = audioData.sampleRate * vadMergeLimitSeconds(maxChunkDurationSeconds)
 
                     val mergedSegments = mergeVadSegments(segments, maxMergeSamples)
                     segments.clear()
@@ -562,7 +573,18 @@ class AudioPreprocessor @Inject constructor() {
             }
 
             // Pass 2: one allocation, copy each segment in.
-            if (end == start) {
+            if (end == start && segments[start].size > maxMergeSamples) {
+                // A single raw VAD segment longer than the merge limit (unbroken
+                // speech): split it at the limit so it cannot bypass the model's
+                // per-segment cap (GH #50 review finding).
+                val seg = segments[start]
+                var offset = 0
+                while (offset < seg.size) {
+                    val len = minOf(maxMergeSamples, seg.size - offset)
+                    merged.add(seg.copyOfRange(offset, offset + len))
+                    offset += len
+                }
+            } else if (end == start) {
                 merged.add(segments[start])
             } else {
                 val combined = FloatArray(groupSize)

@@ -3,9 +3,17 @@ package com.antivocale.app.transcription
 import com.antivocale.app.manager.LlmManager
 import io.mockk.mockk
 import org.junit.Assert.*
+import org.junit.Before
 import org.junit.Test
 
 class TranscriptionBackendContractsTest {
+
+    @Before
+    fun seedCatalog() {
+        // SherpaBackend resolves flags (chunking, streaming) from the bundled
+        // catalog; without seeding, byId returns null and flag tests pass vacuously.
+        seedCatalogForTest()
+    }
 
     // The whole sherpa-onnx family shares one generic [SherpaBackend]; the
     // per-model backends are gone, so the contract is pinned per catalog entry.
@@ -58,8 +66,12 @@ class TranscriptionBackendContractsTest {
     }
 
     @Test
-    fun `parakeet maxChunkDurationSeconds is null (no chunking limit)`() {
-        assertNull(parakeet().maxChunkDurationSeconds)
+    fun `parakeet maxChunkDurationSeconds is set below the 400s native cap (GH #50)`() {
+        // The model's attention hard-caps at 400s (max_position_embeddings 5000);
+        // the app must chunk below it so long inputs never reach the native failure.
+        val chunkSeconds = parakeet().maxChunkDurationSeconds
+        assertNotNull(chunkSeconds)
+        assertTrue(chunkSeconds in 300..390)
     }
 
     // --- SherpaBackend (Whisper) ---
