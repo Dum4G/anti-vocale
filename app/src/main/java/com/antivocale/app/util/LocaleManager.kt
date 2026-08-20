@@ -57,11 +57,12 @@ object LocaleManager {
     /**
      * Gets the current locale code for persistence/UI purposes.
      *
-     * @return "system", "en", or "it"
+     * @return "system", or a BCP-47 tag like "en", "it", "pt-BR"
      */
     fun getCurrentLocaleCode(): String {
         val locale = getCurrentLocale()
-        val code = locale?.language ?: "system"
+        // toLanguageTag preserves the region ("pt-BR"); language-only would round-trip as "pt"
+        val code = locale?.let { if (it.country.isNullOrEmpty()) it.language else it.toLanguageTag() } ?: "system"
         Log.d(TAG, "getCurrentLocaleCode returning: $code")
         return code
     }

@@ -371,6 +371,9 @@
     <string name="language_german">Deutsch</string>
     <string name="language_russian">Русский</string>
     <string name="language_hindi">हिन्दी</string>
+    <string name="language_french">Français</string>
+    <string name="language_spanish">Español</string>
+    <string name="language_portuguese">Português (BR)</string>
     <string name="transcription_language_title">Idioma de transcrição</string>
     <string name="transcription_language_auto">Detecção automática</string>
     <string name="transcription_language_description">Escolha o idioma de transcrição do áudio. Selecionar um idioma específico pula a detecção e é mais rápido.</string>
@@ -557,11 +560,11 @@
     <string name="pip_enter_button">PiP</string>
     <string name="pip_enter_description">Mostrar em janela Picture-in-Picture</string>
     <string name="model_title_gemma4_gguf_q4km">Gemma 4 GGUF (Q4_K_M)</string>
-    <string name="model_desc_gemma4_gguf_q4km">4.9 GB · Apache 2.0 · Text generation via llama.cpp. Best balance of quality and size.</string>
+    <string name="model_desc_gemma4_gguf_q4km">4,9 GB · Apache 2.0 · Geração de texto via llama.cpp. Melhor equilíbrio qualidade/tamanho.</string>
     <string name="model_title_gemma4_gguf_q5km">Gemma 4 GGUF (Q5_K_M)</string>
-    <string name="model_desc_gemma4_gguf_q5km">5.3 GB · Apache 2.0 · Higher quality text generation via llama.cpp.</string>
+    <string name="model_desc_gemma4_gguf_q5km">5,3 GB · Apache 2.0 · Geração de texto de maior qualidade via llama.cpp.</string>
     <string name="model_title_gemma4_gguf_q8">Gemma 4 GGUF (Q8_0)</string>
-    <string name="model_desc_gemma4_gguf_q8">7.4 GB · Apache 2.0 · Best quality text generation via llama.cpp. Requires 8GB+ RAM.</string>
+    <string name="model_desc_gemma4_gguf_q8">7,4 GB · Apache 2.0 · Melhor qualidade via llama.cpp. Requer 8 GB+ de RAM.</string>
     <string name="model_title_gemma_4_e2b">Gemma 4 E2B</string>
     <string name="model_title_gemma_4_e4b">Gemma 4 E4B</string>
     <string name="model_title_gemma_3n_e2b">Gemma 3n E2B</string>

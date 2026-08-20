@@ -445,6 +445,9 @@
     <string name="language_system">Как в системе</string>
     <string name="language_english">English</string>
     <string name="language_italian">Italiano</string>
+    <string name="language_french">Français</string>
+    <string name="language_spanish">Español</string>
+    <string name="language_portuguese">Português (BR)</string>
 
     <!-- Settings Tab - Transcription Language -->
     <string name="transcription_language_title">Язык расшифровки</string>

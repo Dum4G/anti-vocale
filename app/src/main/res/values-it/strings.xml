@@ -430,6 +430,9 @@
     <string name="language_german">Deutsch</string>
     <string name="language_russian">Русский</string>
     <string name="language_hindi">हिन्दी</string>
+    <string name="language_french">Français</string>
+    <string name="language_spanish">Español</string>
+    <string name="language_portuguese">Português (BR)</string>
 
     <!-- Settings Tab - Transcription Language -->
     <string name="transcription_language_title">Lingua Trascrizione</string>
