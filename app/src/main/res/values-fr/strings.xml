@@ -82,161 +82,87 @@
     <string name="time_seconds_ago">il y a %1$ds</string>
     <string name="time_minutes_ago">il y a %1$dm</string>
     <string name="time_hours_ago">il y a %1$dh</string>
-    <string name="model_desc_gemma_4_e2b">2.6GB - Multimodal (text + audio), newest generation, best for most devices</string>
-    <string name="model_desc_gemma_4_e4b">3.7GB - Multimodal (text + audio), newest generation, higher quality</string>
-    <string name="model_desc_gemma_3n_e2b">3.3GB - Multimodal (text + audio), best for most devices</string>
-    <string name="model_desc_gemma_3n_e4b">4.2GB - Multimodal (text + audio), higher quality</string>
-    <!-- TODO: translate -->
+    <string name="model_desc_gemma_4_e2b">2,6 Go • Multimodal (texte + audio), génération la plus récente, idéal pour la plupart des appareils</string>
+    <string name="model_desc_gemma_4_e4b">3,7 Go • Multimodal (texte + audio), génération la plus récente, meilleure qualité</string>
+    <string name="model_desc_gemma_3n_e2b">3,3 Go • Multimodal (texte + audio), idéal pour la plupart des appareils</string>
+    <string name="model_desc_gemma_3n_e4b">4,2 Go • Multimodal (texte + audio), meilleure qualité</string>
     <string name="parakeet_title">Parakeet TDT</string>
-    <!-- TODO: translate -->
-    <string name="parakeet_description">25 languages • Fast • Recommended</string>
-    <!-- TODO: translate -->
-    <string name="parakeet_download">Download Parakeet TDT</string>
-    <!-- TODO: translate -->
-    <string name="parakeet_download_confirm_title">Download Parakeet TDT?</string>
-    <!-- TODO: translate -->
-    <string name="parakeet_download_confirm_message">This will download ~%1$dMB. Parakeet is faster but less accurate than Gemma for transcription.</string>
-    <!-- TODO: translate -->
+    <string name="parakeet_description">25 langues • Rapide • Recommandé</string>
+    <string name="parakeet_download">Télécharger Parakeet TDT</string>
+    <string name="parakeet_download_confirm_title">Télécharger Parakeet TDT ?</string>
+    <string name="parakeet_download_confirm_message">Cela téléchargera environ %1$d Mo. Parakeet est plus rapide mais moins précis que Gemma pour la transcription.</string>
     <string name="parakeet_smoothquant_title">Parakeet TDT (SmoothQuant)</string>
-    <!-- TODO: translate -->
-    <string name="parakeet_smoothquant_description">~862MB • 25 languages • Recommended</string>
-    <!-- TODO: translate -->
+    <string name="parakeet_smoothquant_description">~862 Mo • 25 langues • Recommandé</string>
     <string name="parakeet_stock_title">Parakeet TDT (Stock int8)</string>
-    <!-- TODO: translate -->
-    <string name="parakeet_stock_description">~464MB • 25 languages • Lighter fallback</string>
-    <!-- TODO: translate -->
+    <string name="parakeet_stock_description">~464 Mo • 25 langues • Alternative légère</string>
     <string name="whisper_title">Whisper</string>
-    <!-- TODO: translate -->
-    <string name="whisper_description">Multilingual speech recognition</string>
-    <!-- TODO: translate -->
+    <string name="whisper_description">Reconnaissance vocale multilingue</string>
     <string name="whisper_small_title">Whisper Small</string>
-    <!-- TODO: translate -->
-    <string name="whisper_small_description">~358MB • Lower accuracy, especially on noisy audio • Only for low-spec devices</string>
-    <!-- TODO: translate -->
+    <string name="whisper_small_description">~358 Mo • Précision inférieure, surtout sur audio bruité • Appareils modestes uniquement</string>
     <string name="whisper_turbo_title">Whisper Turbo</string>
-    <!-- TODO: translate -->
-    <string name="whisper_turbo_description">~988MB • Near large-v3 quality • Balanced multilingual</string>
-    <!-- TODO: translate -->
+    <string name="whisper_turbo_description">~988 Mo • Qualité proche de large-v3 • Multilingue équilibré</string>
     <string name="whisper_medium_title">Whisper Medium</string>
-    <!-- TODO: translate -->
-    <string name="whisper_medium_description">~903MB • Good accuracy • Multilingual</string>
-    <!-- TODO: translate -->
+    <string name="whisper_medium_description">~903 Mo • Bonne précision • Multilingue</string>
     <string name="whisper_distil_large_v3_title">Distil Italian</string>
-    <!-- TODO: translate -->
-    <string name="whisper_distil_large_v3_description">~939MB • 2 decoder layers • Fastest • Optimized for Italian</string>
-    <!-- TODO: translate -->
-    <string name="whisper_download">Download Whisper</string>
-    <!-- TODO: translate -->
-    <string name="whisper_download_confirm_title">Download %1$s?</string>
-    <!-- TODO: translate -->
-    <string name="whisper_download_confirm_message">This will download ~%1$dMB. Whisper provides excellent multilingual support with proper punctuation.</string>
-    <!-- TODO: translate -->
-    <string name="whisper_extract_confirm_title">Extract %1$s?</string>
-    <!-- TODO: translate -->
-    <string name="whisper_extract_confirm_message">The model file is already downloaded. This will extract it for use.</string>
-    <!-- TODO: translate -->
-    <string name="qwen3_asr_title">Qwen3-ASR (52 languages)</string>
-    <!-- TODO: translate -->
-    <string name="qwen3_asr_description">52 languages • Poor Italian accuracy</string>
-    <!-- TODO: translate -->
-    <string name="qwen3_asr_0_6b_title">Qwen3-ASR 0.6B</string>
-    <!-- TODO: translate -->
-    <string name="qwen3_asr_0_6b_description">~938MB • 52 languages • Poor Italian accuracy</string>
-    <!-- TODO: translate -->
-    <string name="qwen3_asr_download_confirm_title">Download %1$s?</string>
-    <!-- TODO: translate -->
-    <string name="qwen3_asr_download_confirm_message">This will download ~%1$dMB. Qwen3-ASR supports 52 languages with poor accuracy for Italian.</string>
-    <!-- TODO: translate -->
-    <string name="qwen3_asr_download">Download Qwen3-ASR</string>
-    <!-- TODO: translate -->
-    <string name="qwen3_asr_delete_message">Delete Qwen3-ASR model?</string>
-    <!-- TODO: translate -->
-    <string name="qwen3_asr_downloaded">%1$s downloaded successfully</string>
-    <!-- TODO: translate -->
-    <string name="qwen3_asr_deleted">%1$s deleted</string>
-    <!-- TODO: translate -->
+    <string name="whisper_distil_large_v3_description">~939 Mo • 2 couches décodeur • Le plus rapide • Optimisé italien</string>
+    <string name="whisper_download">Télécharger Whisper</string>
+    <string name="whisper_download_confirm_title">Télécharger %1$s ?</string>
+    <string name="whisper_download_confirm_message">Cela téléchargera environ %1$d Mo. Whisper offre un excellent support multilingue avec une ponctuation correcte.</string>
+    <string name="whisper_extract_confirm_title">Extraire %1$s ?</string>
+    <string name="whisper_extract_confirm_message">Le fichier du modèle est déjà téléchargé. Il sera extrait pour utilisation.</string>
+    <string name="qwen3_asr_title">Qwen3-ASR (52 langues)</string>
+    <string name="qwen3_asr_description">52 langues • Précision italienne faible</string>
+    <string name="qwen3_asr_0_6b_title">Qwen3-ASR 0,6B</string>
+    <string name="qwen3_asr_0_6b_description">~938 Mo • 52 langues • Précision italienne faible</string>
+    <string name="qwen3_asr_download_confirm_title">Télécharger %1$s ?</string>
+    <string name="qwen3_asr_download_confirm_message">Cela téléchargera environ %1$d Mo. Qwen3-ASR prend en charge 52 langues avec une précision faible pour l'italien.</string>
+    <string name="qwen3_asr_download">Télécharger Qwen3-ASR</string>
+    <string name="qwen3_asr_delete_message">Supprimer le modèle Qwen3-ASR ?</string>
+    <string name="qwen3_asr_downloaded">%1$s téléchargé</string>
+    <string name="qwen3_asr_deleted">%1$s supprimé</string>
     <string name="nemotron_name">Nemotron 3.5</string>
-    <!-- TODO: translate -->
     <string name="nemotron_title">Nemotron 3.5 (streaming)</string>
-    <!-- TODO: translate -->
-    <string name="nemotron_description">Streaming transducer • Experimental Italian quality</string>
-    <!-- TODO: translate -->
-    <string name="nemotron_download_confirm_title">Download %1$s?</string>
-    <!-- TODO: translate -->
-    <string name="nemotron_download_confirm_message">This will download ~%1$dMB. Nemotron 3.5 is a streaming multilingual ASR model.</string>
-    <!-- TODO: translate -->
-    <string name="nemotron_download">Download Nemotron</string>
-    <!-- TODO: translate -->
-    <string name="nemotron_delete_message">Delete Nemotron 3.5 model?</string>
-    <!-- TODO: translate -->
-    <string name="nemotron_downloaded">%1$s downloaded successfully</string>
-    <!-- TODO: translate -->
-    <string name="nemotron_deleted">%1$s deleted</string>
-    <!-- TODO: translate -->
+    <string name="nemotron_description">Transducteur en streaming • Qualité italienne expérimentale</string>
+    <string name="nemotron_download_confirm_title">Télécharger %1$s ?</string>
+    <string name="nemotron_download_confirm_message">Cela téléchargera environ %1$d Mo. Nemotron 3.5 est un modèle ASR multilingue en streaming.</string>
+    <string name="nemotron_download">Télécharger Nemotron</string>
+    <string name="nemotron_delete_message">Supprimer le modèle Nemotron 3.5 ?</string>
+    <string name="nemotron_downloaded">%1$s téléchargé</string>
+    <string name="nemotron_deleted">%1$s supprimé</string>
     <string name="gigaam_title">GigaAM v3</string>
-    <!-- TODO: translate -->
-    <string name="gigaam_description">Russian ASR • ~326MB • Sber (MIT)</string>
-    <!-- TODO: translate -->
+    <string name="gigaam_description">ASR russe • ~326 Mo • Sber (MIT)</string>
     <string name="gigaam_name">GigaAM v3</string>
-    <!-- TODO: translate -->
-    <string name="gigaam_download_confirm_title">Download GigaAM v3?</string>
-    <!-- TODO: translate -->
-    <string name="gigaam_download_confirm_message">This will download ~%1$dMB. GigaAM v3 is a Russian-only ASR model from Sber with strong Russian accuracy.</string>
-    <!-- TODO: translate -->
-    <string name="gigaam_download">Download GigaAM</string>
-    <!-- TODO: translate -->
-    <string name="gigaam_downloaded">%1$s downloaded successfully</string>
-    <!-- TODO: translate -->
-    <string name="gigaam_deleted">%1$s deleted</string>
-    <!-- TODO: translate -->
-    <string name="catalog_model_downloaded">%1$s downloaded successfully</string>
-    <!-- TODO: translate -->
-    <string name="catalog_model_deleted">%1$s deleted</string>
-    <!-- TODO: translate -->
-    <string name="catalog_download_confirm_title">Download %1$s?</string>
-    <!-- TODO: translate -->
-    <string name="catalog_download_confirm_message">This will download ~%1$dMB.</string>
-    <!-- TODO: translate -->
-    <string name="catalog_extract_confirm_title">Extract %1$s?</string>
-    <!-- TODO: translate -->
-    <string name="catalog_extract_confirm_message">The model file is already downloaded. This will extract it for use.</string>
-    <!-- TODO: translate -->
-    <string name="download_status_downloading">Downloading…</string>
-    <!-- TODO: translate -->
-    <string name="download_status_extracting">Extracting %1$s…</string>
-    <!-- TODO: translate -->
-    <string name="download_status_extracting_files">Extracting files…</string>
-    <!-- TODO: translate -->
-    <string name="download_status_copying_file">Copying %1$s…</string>
-    <!-- TODO: translate -->
-    <string name="download_status_copying_files">Copying files…</string>
-    <!-- TODO: translate -->
-    <string name="download_status_connecting">Connecting…</string>
+    <string name="gigaam_download_confirm_title">Télécharger GigaAM v3 ?</string>
+    <string name="gigaam_download_confirm_message">Cela téléchargera environ %1$d Mo. GigaAM v3 est un modèle ASR exclusivement russe de Sber, très précis en russe.</string>
+    <string name="gigaam_download">Télécharger GigaAM</string>
+    <string name="gigaam_downloaded">%1$s téléchargé</string>
+    <string name="gigaam_deleted">%1$s supprimé</string>
+    <string name="catalog_model_downloaded">%1$s téléchargé</string>
+    <string name="catalog_model_deleted">%1$s supprimé</string>
+    <string name="catalog_download_confirm_title">Télécharger %1$s ?</string>
+    <string name="catalog_download_confirm_message">Cela téléchargera environ %1$d Mo.</string>
+    <string name="catalog_extract_confirm_title">Extraire %1$s ?</string>
+    <string name="catalog_extract_confirm_message">Le fichier du modèle est déjà téléchargé. Il sera extrait pour utilisation.</string>
+    <string name="download_status_downloading">Téléchargement…</string>
+    <string name="download_status_extracting">Extraction de %1$s…</string>
+    <string name="download_status_extracting_files">Extraction des fichiers…</string>
+    <string name="download_status_copying_file">Copie de %1$s…</string>
+    <string name="download_status_copying_files">Copie des fichiers…</string>
+    <string name="download_status_connecting">Connexion…</string>
     <string name="download_status_file_progress">%1$d/%2$d</string>
-    <!-- TODO: translate -->
-    <string name="download_status_checking_access">Checking access…</string>
-    <!-- TODO: translate -->
-    <string name="download_status_retrying">Retrying (%1$d/%2$d)…</string>
-    <!-- TODO: translate -->
-    <string name="download_status_resuming">Resuming download…</string>
-    <!-- TODO: translate -->
-    <string name="model_requires_auth">This model requires a HuggingFace account</string>
-    <!-- TODO: translate -->
+    <string name="download_status_checking_access">Vérification de l'accès…</string>
+    <string name="download_status_retrying">Nouvelle tentative (%1$d/%2$d)…</string>
+    <string name="download_status_resuming">Reprise du téléchargement…</string>
+    <string name="model_requires_auth">Ce modèle nécessite un compte HuggingFace</string>
     <string name="download_rate">%1$s/s</string>
-    <!-- TODO: translate -->
-    <string name="download_eta">%1$s remaining</string>
-    <!-- TODO: translate -->
-    <string name="download_eta_less_than_minute">Less than 1 min remaining</string>
-    <!-- TODO: translate -->
-    <string name="download_partial">Download interrupted at %1$d%% (%2$s / %3$s)</string>
+    <string name="download_eta">%1$s restants</string>
+    <string name="download_eta_less_than_minute">Moins d'une minute restante</string>
+    <string name="download_partial">Téléchargement interrompu à %1$d%% (%2$s / %3$s)</string>
     <string name="download_resume">Reprendre le téléchargement</string>
-    <!-- TODO: translate -->
-    <string name="download_clear_partial">Clear</string>
+    <string name="download_clear_partial">Effacer</string>
     <string name="download_partial_detected">Téléchargement partiel détecté</string>
-    <!-- TODO: translate -->
-    <string name="gemma_download_confirm_title">Download %1$s?</string>
-    <!-- TODO: translate -->
-    <string name="gemma_download_confirm_message">This will download ~%1$dMB. Gemma models are full LLMs with advanced features but use more storage.</string>
+    <string name="gemma_download_confirm_title">Télécharger %1$s ?</string>
+    <string name="gemma_download_confirm_message">Cela téléchargera environ %1$d Mo. Les modèles Gemma sont des LLM complets avec des fonctions avancées mais utilisent plus de stockage.</string>
     <string name="share_transcription">Partager</string>
     <string name="copy_transcription">Copier dans le presse-papiers</string>
     <string name="copied_to_clipboard">Copié dans le presse-papiers</string>
@@ -245,30 +171,18 @@
     <string name="transcription_partial">Transcription incomplète (%1$d fragment(s) échoué(s))</string>
     <string name="transcription_partial_chip">Incomplète</string>
     <string name="transcription_failed">Échec de la transcription</string>
-    <!-- TODO: translate -->
-    <string name="error_model_load">The model file may be corrupt or the wrong format. Try re-downloading it from the Model tab.</string>
-    <!-- TODO: translate -->
-    <string name="error_native">An internal error occurred during transcription. If this persists, try a different model.</string>
-    <!-- TODO: translate -->
-    <string name="error_not_initialized">No model is loaded. Open the Model tab to download or select one.</string>
-    <!-- TODO: translate -->
-    <string name="error_model_unavailable">The selected model is no longer available. Open the Model tab and select another one.</string>
-    <!-- TODO: translate -->
-    <string name="native_crash_model_warning">The app closed unexpectedly during the last transcription. If this happened while loading a model, the file may be corrupt. Try re-downloading it from the Model tab.</string>
-    <!-- TODO: translate -->
-    <string name="oom_crash_title">App closed for low memory</string>
-    <!-- TODO: translate -->
-    <string name="oom_crash_warning">The app was closed because the device was running low on memory. Try closing other apps or using a smaller model before transcribing again.</string>
-    <!-- TODO: translate -->
-    <string name="native_crash_title">App closed unexpectedly</string>
-    <!-- TODO: translate -->
-    <string name="native_crash_go_to_model">Go to Model tab</string>
-    <!-- TODO: translate -->
-    <string name="model_load_low_memory">Not enough free memory for this model (%1$s available, about %2$s needed). Close other apps or use a smaller model. You can also enable \"Force model load\" in Settings to try anyway.</string>
-    <!-- TODO: translate -->
-    <string name="force_model_load">Force model load</string>
-    <!-- TODO: translate -->
-    <string name="force_model_load_desc">Load the model even when memory seems insufficient. May close the app on devices with little RAM.</string>
+    <string name="error_model_load">Le fichier du modèle est peut-être corrompu ou dans un mauvais format. Re-téléchargez-le depuis l'onglet Modèle.</string>
+    <string name="error_native">Une erreur interne s'est produite pendant la transcription. Si cela persiste, essayez un autre modèle.</string>
+    <string name="error_not_initialized">Aucun modèle chargé. Ouvrez l'onglet Modèle pour en télécharger ou sélectionner un.</string>
+    <string name="error_model_unavailable">Le modèle sélectionné n'est plus disponible. Ouvrez l'onglet Modèle et choisissez-en un autre.</string>
+    <string name="native_crash_model_warning">L'application s'est fermée de manière inattendue pendant la dernière transcription. Si cela s'est produit au chargement d'un modèle, le fichier est peut-être corrompu. Re-téléchargez-le depuis l'onglet Modèle.</string>
+    <string name="oom_crash_title">Application fermée faute de mémoire</string>
+    <string name="oom_crash_warning">L'application a été fermée car la mémoire de l'appareil était insuffisante. Fermez d'autres applications ou utilisez un modèle plus léger avant de réessayer.</string>
+    <string name="native_crash_title">Application fermée de manière inattendue</string>
+    <string name="native_crash_go_to_model">Aller à l'onglet Modèle</string>
+    <string name="model_load_low_memory">Mémoire libre insuffisante pour ce modèle (%1$s disponibles, environ %2$s nécessaires). Fermez d'autres applications ou utilisez un modèle plus léger. Vous pouvez aussi activer « Forcer le chargement » dans Paramètres.</string>
+    <string name="force_model_load">Forcer le chargement du modèle</string>
+    <string name="force_model_load_desc">Charge le modèle même si la mémoire semble insuffisante. Peut fermer l'application sur les appareils avec peu de RAM.</string>
     <string name="copy">Copier</string>
     <string name="share">Partager</string>
     <string name="char_counter">%1$d sur %2$d caractères</string>
@@ -277,10 +191,8 @@
     <string name="confidence_low">Confiance faible</string>
     <string name="no_audio_file">Aucun fichier audio reçu</string>
     <string name="failed_to_process_audio">Échec du traitement du fichier audio</string>
-    <!-- TODO: translate -->
-    <string name="unsupported_audio_format">Voice messages from messaging apps are supported; .%1$s isn\'t a supported format.</string>
-    <!-- TODO: translate -->
-    <string name="unknown_audio_format">Could not identify the audio format. Share the audio from a messaging app.</string>
+    <string name="unsupported_audio_format">Les messages vocaux des applications de messagerie sont pris en charge ; .%1$s n'est pas un format pris en charge.</string>
+    <string name="unknown_audio_format">Impossible d'identifier le format audio. Partagez l'audio depuis une application de messagerie.</string>
     <string name="transcription_started">Transcription démarrée…</string>
     <string name="processing_segment_progress">Segment %1$d sur %2$d…</string>
     <string name="progressive_initial">Préparation des aperçus partiels, texte complet disponible à la fin</string>
@@ -297,32 +209,25 @@
     </plurals>
     <string name="generating_text">Génération de la réponse texte…</string>
     <string name="download_models">Modèles Gemma</string>
-    <!-- TODO: translate -->
-    <string name="gemma_advanced_features_description">Full multimodal LLMs with advanced features: transcription, text transformation, and enrichment.</string>
-    <!-- TODO: translate -->
-    <string name="requires_huggingface_token">Requires HuggingFace token.</string>
-    <!-- TODO: translate -->
-    <string name="add_in_settings">Add in Settings</string>
+    <string name="gemma_advanced_features_description">LLM multimodaux complets avec fonctions avancées : transcription, transformation et enrichissement de texte.</string>
+    <string name="requires_huggingface_token">Nécessite un jeton HuggingFace.</string>
+    <string name="add_in_settings">Ajouter dans Paramètres</string>
     <string name="recommended">Recommandé</string>
     <string name="best_italian_badge">Meilleur pour l'italien</string>
     <string name="downloading">Téléchargement…</string>
-    <!-- TODO: translate -->
-    <string name="connecting_to_huggingface">Connecting to HuggingFace…</string>
+    <string name="connecting_to_huggingface">Connexion à HuggingFace…</string>
     <string name="cancel_download">Annuler le téléchargement</string>
     <string name="cancel_extract">Annuler l'extraction</string>
     <string name="extract_model">Extraire</string>
     <string name="use_model">Utiliser le modèle</string>
     <string name="active_badge">Actif</string>
     <string name="model_selected_message">%1$s sélectionné</string>
-    <!-- TODO: translate -->
-    <string name="model_use_missing_files">The model files for %1$s are missing or incomplete. Re-download the variant from the Model tab.</string>
+    <string name="model_use_missing_files">Les fichiers du modèle %1$s sont manquants ou incomplets. Re-téléchargez la variante depuis l'onglet Modèle.</string>
     <string name="delete">Supprimer</string>
     <string name="download">Télécharger</string>
     <string name="model_update_button">Mettre à jour</string>
-    <!-- TODO: translate -->
-    <string name="gemma_update_confirm_title">Update %1$s</string>
-    <!-- TODO: translate -->
-    <string name="gemma_update_confirm_message">A faster version with speculative decoding is available. Re-download (~%1$d MB)?</string>
+    <string name="gemma_update_confirm_title">Mettre à jour %1$s</string>
+    <string name="gemma_update_confirm_message">Une version plus rapide avec décodage spéculatif est disponible. Re-télécharger (~%1$d Mo) ?</string>
     <string name="view">Voir</string>
     <string name="label_filename">Nom du fichier</string>
     <string name="label_supports_audio">Prend en charge l'audio</string>
@@ -338,14 +243,10 @@
     <string name="action_cancel">Annuler</string>
     <string name="chunk_nav_prev">◀</string>
     <string name="chunk_nav_next">▶</string>
-    <!-- TODO: translate -->
-    <string name="chunk_nav_live">Latest</string>
-    <!-- TODO: translate -->
-    <string name="chunk_nav_pinned_subtext">Chunk %1$d of %2$d · live %3$d of %2$d</string>
-    <!-- TODO: translate -->
-    <string name="chunk_nav_live_subtext">Live · chunk %1$d of %2$d</string>
-    <!-- TODO: translate -->
-    <string name="chunk_nav_empty">No text for this chunk</string>
+    <string name="chunk_nav_live">Dernier</string>
+    <string name="chunk_nav_pinned_subtext">Fragment %1$d sur %2$d · direct %3$d sur %2$d</string>
+    <string name="chunk_nav_live_subtext">Direct · fragment %1$d sur %2$d</string>
+    <string name="chunk_nav_empty">Aucun texte pour ce fragment</string>
     <string name="settings_section_transcription">Transcription</string>
     <string name="settings_section_appearance">Apparence</string>
     <string name="settings_section_advanced">Avancé</string>
@@ -376,45 +277,30 @@
     <string name="available_models">Modèles disponibles :</string>
     <string name="no_models_found">Aucun modèle trouvé. Téléchargez un modèle ou ajoutez-en un via l'onglet Modèle.</string>
     <string name="manage_models">Gérer les modèles</string>
-    <!-- TODO: translate -->
     <string name="source_hf">HF</string>
-    <!-- TODO: translate -->
-    <string name="source_gallery">Gallery</string>
+    <string name="source_gallery">Galerie</string>
     <string name="huggingface_auth">Authentification HuggingFace</string>
-    <!-- TODO: translate -->
-    <string name="huggingface_auth_description">Only needed to download models from HuggingFace on your behalf. Local models work without authentication.</string>
+    <string name="huggingface_auth_description">Nécessaire uniquement pour télécharger des modèles HuggingFace en votre nom. Les modèles locaux fonctionnent sans authentification.</string>
     <string name="setup_guide">Guide de configuration</string>
-    <!-- TODO: translate -->
-    <string name="setup_step1">1. Tap \'Login with HuggingFace\' below</string>
-    <!-- TODO: translate -->
-    <string name="setup_step2">2. Sign in to your HuggingFace account</string>
-    <!-- TODO: translate -->
-    <string name="setup_step3">3. Authorize the app</string>
-    <!-- TODO: translate -->
-    <string name="setup_step4">4. You\'ll be redirected back automatically</string>
+    <string name="setup_step1">1. Appuyez sur « Se connecter avec HuggingFace » ci-dessous</string>
+    <string name="setup_step2">2. Connectez-vous à votre compte HuggingFace</string>
+    <string name="setup_step3">3. Autorisez l'application</string>
+    <string name="setup_step4">4. Vous serez redirigé automatiquement</string>
     <string name="token_valid">Jeton valide</string>
-    <!-- TODO: translate -->
-    <string name="username_label">Username: %1$s</string>
-    <!-- TODO: translate -->
-    <string name="token_label">Token: %1$s</string>
-    <!-- TODO: translate -->
-    <string name="expires_label">Expires: %1$s</string>
+    <string name="username_label">Nom d'utilisateur : %1$s</string>
+    <string name="token_label">Jeton : %1$s</string>
+    <string name="expires_label">Expire : %1$s</string>
     <string name="expired">Expiré</string>
     <string name="login_with_huggingface">Se connecter avec HuggingFace</string>
-    <!-- TODO: translate -->
-    <string name="oauth_login_description">Quick login using your browser. If you\'re already logged into HuggingFace in Chrome, you\'ll be redirected back instantly.</string>
-    <!-- TODO: translate -->
-    <string name="create_account_link">Don\'t have an account? Create one at huggingface.co</string>
+    <string name="oauth_login_description">Connexion rapide via votre navigateur. Si vous êtes déjà connecté à HuggingFace dans Chrome, vous serez redirigé instantanément.</string>
+    <string name="create_account_link">Pas de compte ? Créez-en un sur huggingface.co</string>
     <string name="authenticating">Authentification avec HuggingFace…</string>
     <string name="logged_in_as">Connecté en tant que %1$s</string>
     <string name="logout">Se déconnecter</string>
     <string name="clear_token">Effacer le jeton</string>
-    <!-- TODO: translate -->
-    <string name="advanced_manual_token">Advanced: Manual Token Input</string>
-    <!-- TODO: translate -->
-    <string name="hide_advanced">Hide Advanced: Manual Token</string>
-    <!-- TODO: translate -->
-    <string name="manual_token_scope_info">For manual tokens, the \'read\' scope is required to download models.</string>
+    <string name="advanced_manual_token">Avancé : saisie manuelle du jeton</string>
+    <string name="hide_advanced">Masquer la saisie manuelle</string>
+    <string name="manual_token_scope_info">Pour les jetons manuels, la portée « read » est requise pour télécharger des modèles.</string>
     <string name="huggingface_token_label">Jeton HuggingFace</string>
     <string name="token_placeholder">hf_…</string>
     <string name="paste_from_clipboard">Coller depuis le presse-papiers</string>
@@ -427,8 +313,7 @@
     <string name="validate_and_save">Valider &amp; enregistrer</string>
     <string name="validating_token">Validation du jeton…</string>
     <string name="auto_unload_timeout">Délai de déchargement automatique</string>
-    <!-- TODO: translate -->
-    <string name="timeout_description">Automatically unload the model after a period of inactivity to free memory. The model will be automatically reloaded when needed.</string>
+    <string name="timeout_description">Décharge automatiquement le modèle après une période d'inactivité pour libérer la mémoire. Il sera rechargé automatiquement quand nécessaire.</string>
     <string name="timeout_1_minute">1 minute</string>
     <string name="timeout_1_hour">1 heure</string>
     <plurals name="timeout_minutes">
@@ -440,8 +325,7 @@
     <string name="thread_count_auto">%1$d (détecté automatiquement)</string>
     <string name="thread_count_value">%1$d</string>
     <string name="inference_provider_title">Fournisseur d'inférence</string>
-    <!-- TODO: translate -->
-    <string name="inference_provider_description">Execution backend for ONNX inference. NNAPI may use the device NPU/GPU, but can be slower than CPU for some models.</string>
+    <string name="inference_provider_description">Backend d'exécution pour l'inférence ONNX. NNAPI peut utiliser le NPU/GPU de l'appareil, mais peut être plus lent que le CPU pour certains modèles.</string>
     <string name="inference_provider_auto">Auto (CPU)</string>
     <string name="inference_provider_nnapi">NNAPI (accélération matérielle)</string>
     <string name="inference_provider_cpu">CPU uniquement</string>
@@ -451,380 +335,220 @@
     <string name="auto_copy_title">Copie automatique de la transcription</string>
     <string name="auto_copy_description">Copie automatiquement les résultats dans le presse-papiers. Vous pouvez toujours copier manuellement depuis la notification.</string>
     <string name="output_folder_title">Enregistrer les transcriptions dans un dossier</string>
-    <!-- TODO: translate -->
-    <string name="output_folder_description">Automatically save each transcription as a .txt to a folder you choose (e.g. a Drive or Syncthing folder).</string>
+    <string name="output_folder_description">Enregistre automatiquement chaque transcription en .txt dans un dossier de votre choix (ex. un dossier Drive ou Syncthing).</string>
     <string name="output_folder_choose">Choisir un dossier</string>
     <string name="output_folder_clear">Effacer le dossier</string>
     <string name="vad_title">Supprimer les silences (VAD)</string>
-    <!-- TODO: translate -->
-    <string name="vad_description">Remove silent portions from voice messages before transcription. Reduces processing time and improves accuracy.</string>
+    <string name="vad_description">Supprime les silences des messages vocaux avant transcription. Réduit le temps de traitement et améliore la précision.</string>
     <string name="progressive_title">Affichage progressif</string>
-    <!-- TODO: translate -->
-    <string name="progressive_description">Show transcription text as each speech segment is completed, instead of waiting for the full result.</string>
+    <string name="progressive_description">Affiche le texte de la transcription au fur et à mesure de chaque segment, sans attendre le résultat complet.</string>
     <string name="default_prompt_title">Invite de transcription par défaut</string>
-    <!-- TODO: translate -->
-    <string name="default_prompt_description">This prompt will be used when transcribing audio. Leave empty to use the default system prompt.</string>
+    <string name="default_prompt_description">Cette invite sera utilisée pour transcrire l'audio. Laissez vide pour l'invite système par défaut.</string>
     <string name="default_prompt_placeholder">ex. Transcris ce discours :</string>
     <string name="default_prompt_chars">%1$d / 500</string>
-    <!-- TODO: translate -->
-    <string name="default_prompt_compatibility_info">Only applies to LLM models (Gemma). Whisper and Parakeet models ignore this setting.</string>
+    <string name="default_prompt_compatibility_info">Ne s'applique qu'aux modèles LLM (Gemma). Whisper et Parakeet ignorent ce paramètre.</string>
     <string name="current_default_prompt_label">Actuellement utilisé :</string>
     <string name="default_system_prompt">Transcris ce discours :</string>
     <string name="builtin_default_prompt">Transcris ce discours : (par défaut intégré)</string>
     <string name="example_prompts_title">Exemples d'invites</string>
     <string name="example_prompts_description">Appuyez sur une invite pour l'utiliser</string>
-    <!-- TODO: translate -->
-    <string name="example_prompt_transcribe">Transcribe this audio accurately, preserving the original language.</string>
-    <!-- TODO: translate -->
-    <string name="example_prompt_summarize">Transcribe and briefly summarize the key points of this audio message.</string>
-    <!-- TODO: translate -->
-    <string name="example_prompt_formal">Transcribe this audio in a formal, clean style. Remove filler words and false starts.</string>
-    <!-- TODO: translate -->
-    <string name="example_prompt_translate_en">Transcribe and translate this audio into English.</string>
+    <string name="example_prompt_transcribe">Transcris cet audio avec précision, en préservant la langue d'origine.</string>
+    <string name="example_prompt_summarize">Transcris et résume brièvement les points clés de ce message audio.</string>
+    <string name="example_prompt_formal">Transcris cet audio dans un style formel et soigné. Supprime les hésitations et les faux départs.</string>
+    <string name="example_prompt_translate_en">Transcris et traduis cet audio en anglais.</string>
     <string name="example_prompt_translate_it">Trascrivi e traduci questo audio in italiano.</string>
-    <!-- TODO: translate -->
-    <string name="example_prompt_notes">Transcribe this audio and format it as bullet-point notes.</string>
+    <string name="example_prompt_notes">Transcris cet audio et mets-le en forme en notes à puces.</string>
     <string name="prompt_applied">Invite appliquée</string>
     <string name="preload_title">Chargement automatique &amp; préchargement</string>
-    <!-- TODO: translate -->
-    <string name="preload_description">The model will automatically load when a request is received and the model is not in memory. You can also preload the model explicitly:</string>
+    <string name="preload_description">Le modèle se charge automatiquement quand une requête arrive et qu'il n'est pas en mémoire. Vous pouvez aussi le précharger explicitement :</string>
     <string name="via_tasker">Via Tasker :</string>
     <string name="via_adb">Via ADB :</string>
     <string name="language_title">Langue</string>
     <string name="language_description">Choisissez la langue d'affichage de l'application.</string>
     <string name="language_system">Valeur système</string>
-    <!-- TODO: translate -->
     <string name="language_english">English</string>
-    <!-- TODO: translate -->
     <string name="language_italian">Italiano</string>
-    <!-- TODO: translate -->
     <string name="language_german">Deutsch</string>
-    <!-- TODO: translate -->
     <string name="language_russian">Русский</string>
-    <!-- TODO: translate -->
     <string name="language_hindi">हिन्दी</string>
     <string name="transcription_language_title">Langue de transcription</string>
     <string name="transcription_language_auto">Détection automatique</string>
-    <!-- TODO: translate -->
-    <string name="transcription_language_description">Choose the language for audio transcription. Selecting a specific language skips detection and is faster.</string>
-    <!-- TODO: translate -->
-    <string name="transcription_language_note">Only applies to Whisper models. The Distil Italian model always uses Italian. Other backends (Gemma, Parakeet, Qwen3-ASR) auto-detect.</string>
+    <string name="transcription_language_description">Choisissez la langue de transcription. Sélectionner une langue précise évite la détection et accélère le traitement.</string>
+    <string name="transcription_language_note">Ne s'applique qu'aux modèles Whisper. Distil Italian utilise toujours l'italien. Les autres backends (Gemma, Parakeet, Qwen3-ASR) détectent automatiquement.</string>
     <string name="theme_title">Thème</string>
     <string name="theme_description">Choisissez le thème de couleur de l'application.</string>
-    <!-- TODO: translate -->
-    <string name="theme_mode_title">Theme mode</string>
-    <!-- TODO: translate -->
-    <string name="theme_mode_description">Follow the system setting, or force dark or light.</string>
+    <string name="theme_mode_title">Mode du thème</string>
+    <string name="theme_mode_description">Suit le réglage système, ou force sombre ou clair.</string>
     <string name="theme_default">Par défaut (Indigo)</string>
-    <!-- TODO: translate -->
     <string name="theme_whatsapp">WhatsApp</string>
-    <!-- TODO: translate -->
     <string name="theme_telegram">Telegram</string>
-    <!-- TODO: translate -->
-    <string name="per_app_settings_title">Per-App Settings</string>
-    <!-- TODO: translate -->
-    <string name="per_app_settings_description">Customize notification behavior for each app</string>
-    <!-- TODO: translate -->
-    <string name="per_app_settings_info">Tap an app to configure how notifications behave when audio is shared from that app.</string>
-    <!-- TODO: translate -->
-    <string name="per_app_settings_loading">Loading preferences...</string>
-    <!-- TODO: translate -->
-    <string name="per_app_settings_manually_added">Manually Added</string>
-    <!-- TODO: translate -->
-    <string name="per_app_settings_add_app">Add App</string>
-    <!-- TODO: translate -->
-    <string name="per_app_settings_search">Search apps...</string>
-    <!-- TODO: translate -->
-    <string name="per_app_settings_no_apps">No apps found</string>
-    <!-- TODO: translate -->
-    <string name="per_app_settings_no_matching_apps">No matching apps</string>
-    <!-- TODO: translate -->
-    <string name="per_app_settings_using_defaults">Using defaults</string>
-    <!-- TODO: translate -->
-    <string name="per_app_settings_auto_copy_on">Auto-copy on</string>
-    <!-- TODO: translate -->
-    <string name="per_app_settings_auto_copy_off">Auto-copy off</string>
-    <!-- TODO: translate -->
-    <string name="per_app_settings_share_on">Share button on</string>
-    <!-- TODO: translate -->
-    <string name="per_app_settings_share_off">Share button off</string>
-    <!-- TODO: translate -->
-    <string name="per_app_settings_sound">Sound: %1$s</string>
-    <!-- TODO: translate -->
-    <string name="per_app_settings_dialog_title">Settings for %1$s</string>
-    <!-- TODO: translate -->
-    <string name="per_app_settings_auto_copy_title">Auto-copy transcription</string>
-    <!-- TODO: translate -->
-    <string name="per_app_settings_auto_copy_description">Automatically copy transcription to clipboard</string>
-    <!-- TODO: translate -->
-    <string name="per_app_settings_show_share_title">Show share button</string>
-    <!-- TODO: translate -->
-    <string name="per_app_settings_show_share_description">Display share button in notification</string>
-    <!-- TODO: translate -->
-    <string name="per_app_settings_notification_sound">Notification sound</string>
-    <!-- TODO: translate -->
-    <string name="per_app_settings_sound_label">Sound</string>
-    <!-- TODO: translate -->
-    <string name="per_app_settings_close">Close</string>
-    <!-- TODO: translate -->
-    <string name="per_app_settings_sound_default">Default</string>
-    <!-- TODO: translate -->
-    <string name="per_app_settings_sound_silent">Silent</string>
-    <!-- TODO: translate -->
-    <string name="per_app_settings_sound_chime">Chime</string>
-    <!-- TODO: translate -->
-    <string name="per_app_settings_sound_bell">Bell</string>
-    <!-- TODO: translate -->
-    <string name="per_app_settings_quick_share_back_title">Quick Share Back</string>
-    <!-- TODO: translate -->
-    <string name="per_app_settings_quick_share_back_description">One-tap to send transcriptions back to this app</string>
-    <!-- TODO: translate -->
-    <string name="per_app_settings_reset_all">Reset All to Defaults</string>
-    <!-- TODO: translate -->
-    <string name="per_app_settings_reset_all_confirm_title">Reset all settings?</string>
-    <!-- TODO: translate -->
-    <string name="per_app_settings_reset_all_confirm_message">Notification preferences for all apps will be restored to their defaults.</string>
-    <!-- TODO: translate -->
-    <string name="per_app_settings_reset_app">Reset to Defaults</string>
-    <!-- TODO: translate -->
-    <string name="per_app_settings_reset_app_confirm_title">Reset settings for %1$s?</string>
-    <!-- TODO: translate -->
-    <string name="per_app_settings_reset_app_confirm_message">Notification preferences for this app will be restored to defaults.</string>
-    <!-- TODO: translate -->
-    <string name="per_app_settings_reset_done">Settings restored to defaults</string>
-    <!-- TODO: translate -->
-    <string name="per_app_onboarding_title">Customize per-app behavior</string>
-    <!-- TODO: translate -->
-    <string name="per_app_onboarding_message">Tap any app to configure auto-copy, share actions, and notification sounds for that specific app.</string>
-    <!-- TODO: translate -->
-    <string name="per_app_onboarding_got_it">Got it</string>
-    <!-- TODO: translate -->
-    <string name="vad_advisory_title">VAD is not needed with Parakeet</string>
-    <!-- TODO: translate -->
-    <string name="vad_advisory_description">Silence stripping adds processing overhead without improving results for this model. You can turn it off in Settings.</string>
-    <!-- TODO: translate -->
-    <string name="vad_advisory_dismiss">Got it</string>
+    <string name="per_app_settings_title">Paramètres par application</string>
+    <string name="per_app_settings_description">Personnalise le comportement des notifications pour chaque application</string>
+    <string name="per_app_settings_info">Appuyez sur une application pour configurer le comportement des notifications quand l'audio est partagé depuis celle-ci.</string>
+    <string name="per_app_settings_loading">Chargement des préférences…</string>
+    <string name="per_app_settings_manually_added">Ajoutée manuellement</string>
+    <string name="per_app_settings_add_app">Ajouter une application</string>
+    <string name="per_app_settings_search">Rechercher des applications…</string>
+    <string name="per_app_settings_no_apps">Aucune application trouvée</string>
+    <string name="per_app_settings_no_matching_apps">Aucune correspondance</string>
+    <string name="per_app_settings_using_defaults">Valeurs par défaut</string>
+    <string name="per_app_settings_auto_copy_on">Copie auto activée</string>
+    <string name="per_app_settings_auto_copy_off">Copie auto désactivée</string>
+    <string name="per_app_settings_share_on">Bouton partager activé</string>
+    <string name="per_app_settings_share_off">Bouton partager désactivé</string>
+    <string name="per_app_settings_sound">Son : %1$s</string>
+    <string name="per_app_settings_dialog_title">Paramètres pour %1$s</string>
+    <string name="per_app_settings_auto_copy_title">Copie automatique de la transcription</string>
+    <string name="per_app_settings_auto_copy_description">Copie automatiquement la transcription dans le presse-papiers</string>
+    <string name="per_app_settings_show_share_title">Afficher le bouton partager</string>
+    <string name="per_app_settings_show_share_description">Affiche le bouton partager dans la notification</string>
+    <string name="per_app_settings_notification_sound">Son de notification</string>
+    <string name="per_app_settings_sound_label">Son</string>
+    <string name="per_app_settings_close">Fermer</string>
+    <string name="per_app_settings_sound_default">Par défaut</string>
+    <string name="per_app_settings_sound_silent">Silencieux</string>
+    <string name="per_app_settings_sound_chime">Carillon</string>
+    <string name="per_app_settings_sound_bell">Cloche</string>
+    <string name="per_app_settings_quick_share_back_title">Renvoi rapide</string>
+    <string name="per_app_settings_quick_share_back_description">Un appui pour renvoyer les transcriptions à cette application</string>
+    <string name="per_app_settings_reset_all">Tout réinitialiser</string>
+    <string name="per_app_settings_reset_all_confirm_title">Réinitialiser tous les paramètres ?</string>
+    <string name="per_app_settings_reset_all_confirm_message">Les préférences de notification de toutes les applications seront restaurées à leurs valeurs par défaut.</string>
+    <string name="per_app_settings_reset_app">Réinitialiser</string>
+    <string name="per_app_settings_reset_app_confirm_title">Réinitialiser les paramètres de %1$s ?</string>
+    <string name="per_app_settings_reset_app_confirm_message">Les préférences de notification de cette application seront restaurées aux valeurs par défaut.</string>
+    <string name="per_app_settings_reset_done">Paramètres réinitialisés</string>
+    <string name="per_app_onboarding_title">Personnaliser le comportement par application</string>
+    <string name="per_app_onboarding_message">Appuyez sur une application pour configurer copie auto, actions de partage et sons de notification pour cette application.</string>
+    <string name="per_app_onboarding_got_it">Compris</string>
+    <string name="vad_advisory_title">Le VAD n'est pas nécessaire avec Parakeet</string>
+    <string name="vad_advisory_description">La suppression des silences ajoute du traitement sans améliorer les résultats pour ce modèle. Vous pouvez la désactiver dans Paramètres.</string>
+    <string name="vad_advisory_dismiss">Compris</string>
     <string name="share_back">Renvoyer</string>
-    <!-- TODO: translate -->
-    <string name="share_back_description">Share transcription back to source app</string>
+    <string name="share_back_description">Renvoie la transcription à l'application source</string>
     <string name="send_to_app">Envoyer à %1$s</string>
-    <!-- TODO: translate -->
-    <string name="notification_channel_extraction">Model Download</string>
-    <!-- TODO: translate -->
-    <string name="notification_channel_extraction_description">Downloads and extracts ML models in the background</string>
-    <!-- TODO: translate -->
-    <string name="notification_downloading_progress">Downloading… %1$d%%</string>
-    <!-- TODO: translate -->
-    <string name="notification_extracting_progress">Extracting files… %1$d/%2$d</string>
-    <!-- TODO: translate -->
-    <string name="notification_copying_progress">Copying files… %1$d/%2$d</string>
-    <!-- TODO: translate -->
-    <string name="notification_extracting_hint">This may take more than 5 minutes</string>
+    <string name="notification_channel_extraction">Téléchargement de modèle</string>
+    <string name="notification_channel_extraction_description">Télécharge et extrait les modèles ML en arrière-plan</string>
+    <string name="notification_downloading_progress">Téléchargement… %1$d%%</string>
+    <string name="notification_extracting_progress">Extraction des fichiers… %1$d/%2$d</string>
+    <string name="notification_copying_progress">Copie des fichiers… %1$d/%2$d</string>
+    <string name="notification_extracting_hint">Cela peut prendre plus de 5 minutes</string>
     <string name="notification_download_complete">Téléchargement terminé</string>
-    <!-- TODO: translate -->
-    <string name="notification_channel_inference">Transcription Service</string>
-    <!-- TODO: translate -->
-    <string name="notification_channel_inference_description">Background audio transcription processing</string>
-    <!-- TODO: translate -->
-    <string name="notification_channel_result">Transcription Result</string>
-    <!-- TODO: translate -->
-    <string name="notification_channel_result_description">Notification when transcription is complete</string>
+    <string name="notification_channel_inference">Service de transcription</string>
+    <string name="notification_channel_inference_description">Traitement audio de transcription en arrière-plan</string>
+    <string name="notification_channel_result">Résultat de transcription</string>
+    <string name="notification_channel_result_description">Notification quand la transcription est terminée</string>
     <string name="notification_cancelling">Annulation…</string>
-    <!-- TODO: translate -->
-    <string name="notification_no_model_title">No transcription model</string>
-    <!-- TODO: translate -->
-    <string name="notification_no_model_message">Open the app to download a transcription model</string>
+    <string name="notification_no_model_title">Aucun modèle de transcription</string>
+    <string name="notification_no_model_message">Ouvrez l'application pour télécharger un modèle de transcription</string>
     <string name="notification_no_model_action">Ouvrir l'application</string>
-    <!-- TODO: translate -->
-    <string name="notification_channel_tasker_fallback">Tasker Automation</string>
-    <!-- TODO: translate -->
-    <string name="notification_channel_tasker_fallback_description">Tap to start transcription when triggered from the background</string>
-    <!-- TODO: translate -->
-    <string name="tasker_fallback_notification_text">Tap to start transcription</string>
+    <string name="notification_channel_tasker_fallback">Automatisation Tasker</string>
+    <string name="notification_channel_tasker_fallback_description">Appuyez pour lancer la transcription quand elle est déclenchée en arrière-plan</string>
+    <string name="tasker_fallback_notification_text">Appuyez pour lancer la transcription</string>
     <string name="dismiss">Fermer</string>
-    <!-- TODO: translate -->
-    <string name="parakeet_downloaded">Parakeet model downloaded successfully</string>
-    <!-- TODO: translate -->
-    <string name="whisper_downloaded">%1$s downloaded successfully</string>
-    <!-- TODO: translate -->
-    <string name="parakeet_deleted">Parakeet model deleted</string>
-    <!-- TODO: translate -->
-    <string name="whisper_deleted">%1$s deleted</string>
+    <string name="parakeet_downloaded">Modèle Parakeet téléchargé</string>
+    <string name="whisper_downloaded">%1$s téléchargé</string>
+    <string name="parakeet_deleted">Modèle Parakeet supprimé</string>
+    <string name="whisper_deleted">%1$s supprimé</string>
     <string name="speed_comparison_title">Comparaison de vitesse</string>
-    <!-- TODO: translate -->
-    <string name="speed_comparison_subtitle">Relative performance on typical voice messages (CPU)</string>
+    <string name="speed_comparison_subtitle">Performance relative sur des messages vocaux types (CPU)</string>
     <string name="speed_comparison_header_model">Modèle</string>
     <string name="speed_comparison_header_size">Taille</string>
     <string name="speed_comparison_header_speed">Vitesse</string>
     <string name="speed_comparison_header_quality">Qualité italienne</string>
-    <!-- TODO: translate -->
     <string name="speed_comparison_small_name">Whisper Small</string>
-    <!-- TODO: translate -->
     <string name="speed_comparison_small_size">~358MB</string>
-    <!-- TODO: translate -->
     <string name="speed_comparison_small_speed">1.0x</string>
-    <!-- TODO: translate -->
-    <string name="speed_comparison_small_quality">Fair</string>
-    <!-- TODO: translate -->
+    <string name="speed_comparison_small_quality">Correcte</string>
     <string name="speed_comparison_turbo_name">Whisper Turbo</string>
-    <!-- TODO: translate -->
     <string name="speed_comparison_turbo_size">~988MB</string>
-    <!-- TODO: translate -->
     <string name="speed_comparison_turbo_speed">1.3x</string>
-    <!-- TODO: translate -->
-    <string name="speed_comparison_turbo_quality">Good</string>
-    <!-- TODO: translate -->
+    <string name="speed_comparison_turbo_quality">Bonne</string>
     <string name="speed_comparison_medium_name">Whisper Medium</string>
-    <!-- TODO: translate -->
     <string name="speed_comparison_medium_size">~903MB</string>
-    <!-- TODO: translate -->
     <string name="speed_comparison_medium_speed">0.5x</string>
-    <!-- TODO: translate -->
-    <string name="speed_comparison_medium_quality">Good</string>
-    <!-- TODO: translate -->
+    <string name="speed_comparison_medium_quality">Bonne</string>
     <string name="speed_comparison_distil_it_name">Distil Italian</string>
-    <!-- TODO: translate -->
     <string name="speed_comparison_distil_it_size">~939MB</string>
-    <!-- TODO: translate -->
     <string name="speed_comparison_distil_it_speed">~1.8x</string>
-    <!-- TODO: translate -->
-    <string name="speed_comparison_distil_it_quality">Best Italian</string>
-    <!-- TODO: translate -->
-    <string name="speed_comparison_distil_it_note">Best Italian</string>
-    <!-- TODO: translate -->
+    <string name="speed_comparison_distil_it_quality">Meilleur italien</string>
+    <string name="speed_comparison_distil_it_note">Meilleur italien</string>
     <string name="speed_comparison_parakeet_name">Parakeet TDT</string>
-    <!-- TODO: translate -->
     <string name="speed_comparison_parakeet_size">~464MB</string>
-    <!-- TODO: translate -->
     <string name="speed_comparison_parakeet_speed">~17x</string>
-    <!-- TODO: translate -->
-    <string name="speed_comparison_parakeet_quality">Very Good</string>
-    <!-- TODO: translate -->
-    <string name="speed_comparison_parakeet_note">Recommended</string>
-    <!-- TODO: translate -->
+    <string name="speed_comparison_parakeet_quality">Très bonne</string>
+    <string name="speed_comparison_parakeet_note">Recommandé</string>
     <string name="speed_comparison_qwen3_name">Qwen3-ASR</string>
-    <!-- TODO: translate -->
     <string name="speed_comparison_qwen3_size">~938MB</string>
-    <!-- TODO: translate -->
     <string name="speed_comparison_qwen3_speed">~2x</string>
-    <!-- TODO: translate -->
-    <string name="speed_comparison_qwen3_quality">52 langs, variable</string>
-    <!-- TODO: translate -->
+    <string name="speed_comparison_qwen3_quality">52 langues, variable</string>
     <string name="speed_comparison_gigaam_name">GigaAM v3</string>
-    <!-- TODO: translate -->
     <string name="speed_comparison_gigaam_size">~326MB</string>
-    <!-- TODO: translate -->
     <string name="speed_comparison_gigaam_speed">Fast</string>
-    <!-- TODO: translate -->
-    <string name="speed_comparison_gigaam_quality">Russian only</string>
-    <!-- TODO: translate -->
+    <string name="speed_comparison_gigaam_quality">Russe uniquement</string>
     <string name="speed_comparison_nemotron_name">Nemotron 3.5</string>
-    <!-- TODO: translate -->
     <string name="speed_comparison_nemotron_size">~600MB</string>
-    <!-- TODO: translate -->
     <string name="speed_comparison_nemotron_speed">Streaming</string>
-    <!-- TODO: translate -->
-    <string name="speed_comparison_nemotron_quality">Experimental</string>
+    <string name="speed_comparison_nemotron_quality">Expérimental</string>
     <string name="fastest_badge">Plus rapide</string>
     <string name="coming_soon_badge">Bientôt disponible</string>
-    <!-- TODO: translate -->
-    <string name="transcription_eta_calibrating">Calibrating speed…</string>
-    <!-- TODO: translate -->
-    <string name="transcription_eta_seconds">~%1$ds remaining</string>
-    <!-- TODO: translate -->
-    <string name="transcription_eta_minutes">~%1$dm %2$ds remaining</string>
-    <!-- TODO: translate -->
-    <string name="transcription_eta_hours">~%1$dh %2$dm remaining</string>
-    <!-- TODO: translate -->
-    <string name="transcription_eta_estimating">Estimating… ~%1$dm %2$ds remaining</string>
+    <string name="transcription_eta_calibrating">Calibrage de la vitesse…</string>
+    <string name="transcription_eta_seconds">~%1$ds restantes</string>
+    <string name="transcription_eta_minutes">~%1$dm %2$ds restantes</string>
+    <string name="transcription_eta_hours">~%1$dh %2$dm restantes</string>
+    <string name="transcription_eta_estimating">Estimation… ~%1$dm %2$ds restantes</string>
     <string name="performance_stats_title">Statistiques de performance</string>
-    <!-- TODO: translate -->
-    <string name="performance_stats_subtitle">Real-world transcription speed from your device</string>
-    <!-- TODO: translate -->
-    <string name="performance_stats_empty">No data yet. Transcribe some audio to see stats.</string>
-    <!-- TODO: translate -->
+    <string name="performance_stats_subtitle">Vitesse réelle de transcription de votre appareil</string>
+    <string name="performance_stats_empty">Pas encore de données. Transcrivez de l'audio pour voir les statistiques.</string>
     <string name="performance_stats_speed">%1$.0fms/s</string>
     <plurals name="performance_stats_samples_count">
         <item quantity="one">%1$d échantillon</item>
         <item quantity="other">%1$d échantillons</item>
     </plurals>
-    <!-- TODO: translate -->
-    <string name="performance_stats_fastest_badge">Fastest</string>
+    <string name="performance_stats_fastest_badge">Le plus rapide</string>
     <string name="performance_stats_clear">Réinitialiser les statistiques</string>
     <string name="performance_stats_clear_confirm">Réinitialiser toutes les données de performance ?</string>
     <string name="performance_stats_just_now">À l'instant</string>
-    <!-- TODO: translate -->
-    <string name="performance_stats_minutes_ago">%1$dm ago</string>
-    <!-- TODO: translate -->
-    <string name="performance_stats_hours_ago">%1$dh ago</string>
-    <!-- TODO: translate -->
-    <string name="performance_stats_days_ago">%1$dd ago</string>
+    <string name="performance_stats_minutes_ago">il y a %1$dm</string>
+    <string name="performance_stats_hours_ago">il y a %1$dh</string>
+    <string name="performance_stats_days_ago">il y a %1$dd</string>
     <string name="performance_stats_total_audio">Total : %1$s d'audio traité</string>
-    <!-- TODO: translate -->
-    <string name="dialog_transcription_active_title">Transcription in Progress</string>
-    <!-- TODO: translate -->
-    <string name="dialog_delete_active_model_message">Cannot delete \'%1$s\' while it is being used for transcription. Please wait for the transcription to finish.</string>
-    <!-- TODO: translate -->
-    <string name="dialog_delete_inactive_model_message">A transcription is in progress. Deleting \'%1$s\' will not affect it, but proceed with caution.</string>
-    <!-- TODO: translate -->
-    <string name="dialog_switch_model_message">A transcription is currently in progress. Switching models may disrupt it. Are you sure?</string>
-    <!-- TODO: translate -->
-    <string name="action_understood">Understood</string>
-    <!-- TODO: translate -->
-    <string name="action_switch_anyway">Switch anyway</string>
-    <!-- TODO: translate -->
-    <string name="warn_reset_stats_during_transcription">A transcription is in progress. Resetting stats now won\'t affect it, but timing data may be incomplete.</string>
-    <!-- TODO: translate -->
-    <string name="cannot_unload_during_transcription">Cannot unload: model is being used for an active transcription</string>
-    <!-- TODO: translate -->
-    <string name="dialog_unload_title">Unload Model?</string>
-    <!-- TODO: translate -->
-    <string name="dialog_unload_message">The model \'%1$s\' will be unloaded from memory. It will be automatically reloaded on the next transcription.</string>
-    <!-- TODO: translate -->
-    <string name="action_unload">Unload</string>
-    <!-- TODO: translate -->
-    <string name="swipe_action_title">Swipe Action</string>
-    <!-- TODO: translate -->
-    <string name="swipe_action_description">Choose what happens when you swipe left on a log entry</string>
-    <!-- TODO: translate -->
-    <string name="swipe_action_reveal">Reveal actions</string>
-    <!-- TODO: translate -->
-    <string name="swipe_action_immediate_delete">Immediate delete</string>
-    <!-- TODO: translate -->
-    <string name="swipe_action_copy_description">Copy transcription</string>
-    <!-- TODO: translate -->
-    <string name="swipe_action_share_description">Share transcription</string>
-    <!-- TODO: translate -->
-    <string name="swipe_action_delete_description">Delete log</string>
-    <!-- TODO: translate -->
-    <string name="swipe_action_copied">Transcription copied</string>
+    <string name="dialog_transcription_active_title">Transcription en cours</string>
+    <string name="dialog_delete_active_model_message">Impossible de supprimer « %1$s » pendant une transcription. Attendez la fin de la transcription.</string>
+    <string name="dialog_delete_inactive_model_message">Une transcription est en cours. Supprimer « %1$s » ne l'affectera pas, mais soyez prudent.</string>
+    <string name="dialog_switch_model_message">Une transcription est en cours. Changer de modèle peut l'interrompre. Continuer ?</string>
+    <string name="action_understood">Compris</string>
+    <string name="action_switch_anyway">Changer quand même</string>
+    <string name="warn_reset_stats_during_transcription">Une transcription est en cours. Réinitialiser les statistiques ne l'affectera pas, mais les données de temps seront incomplètes.</string>
+    <string name="cannot_unload_during_transcription">Impossible de décharger : modèle utilisé par une transcription active</string>
+    <string name="dialog_unload_title">Décharger le modèle ?</string>
+    <string name="dialog_unload_message">Le modèle « %1$s » sera déchargé de la mémoire. Il sera rechargé automatiquement à la prochaine transcription.</string>
+    <string name="action_unload">Décharger</string>
+    <string name="swipe_action_title">Action de balayage</string>
+    <string name="swipe_action_description">Choisissez l'action d'un balayage vers la gauche sur une entrée du journal</string>
+    <string name="swipe_action_reveal">Révéler les actions</string>
+    <string name="swipe_action_immediate_delete">Suppression immédiate</string>
+    <string name="swipe_action_copy_description">Copier la transcription</string>
+    <string name="swipe_action_share_description">Partager la transcription</string>
+    <string name="swipe_action_delete_description">Supprimer l'entrée</string>
+    <string name="swipe_action_copied">Transcription copiée</string>
     <string name="back">Retour</string>
     <string name="add_app">Ajouter une application</string>
     <string name="view_settings">Voir les paramètres</string>
     <string name="app_icon">Icône %1$s</string>
-    <!-- TODO: translate -->
-    <string name="error_load_backend">Failed to load backend: %1$s</string>
-    <!-- TODO: translate -->
-    <string name="error_no_active_backend">No active backend</string>
-    <!-- TODO: translate -->
-    <string name="error_no_file_path">No file path provided for audio request</string>
-    <!-- TODO: translate -->
-    <string name="error_backend_no_audio_support">%1$s does not support audio transcription. Switch to a speech-to-text model in Settings.</string>
-    <!-- TODO: translate -->
-    <string name="error_no_transcription_produced">No transcription produced</string>
-    <!-- TODO: translate -->
-    <string name="error_no_llm_model">No LLM model configured. Open the app to download a model.</string>
-    <!-- TODO: translate -->
-    <string name="error_no_model_configured">No %1$s model configured. Open the app to download a model.</string>
+    <string name="error_load_backend">Échec du chargement du backend : %1$s</string>
+    <string name="error_no_active_backend">Aucun backend actif</string>
+    <string name="error_no_file_path">Aucun chemin de fichier fourni pour la requête audio</string>
+    <string name="error_backend_no_audio_support">%1$s ne prend pas en charge la transcription audio. Passez à un modèle vocale-vers-texte dans Paramètres.</string>
+    <string name="error_no_transcription_produced">Aucune transcription produite</string>
+    <string name="error_no_llm_model">Aucun modèle LLM configuré. Ouvrez l'application pour télécharger un modèle.</string>
+    <string name="error_no_model_configured">Aucun modèle %1$s configuré. Ouvrez l'application pour télécharger un modèle.</string>
     <string name="loading_model">Chargement du modèle %1$s…</string>
     <string name="preprocessing_audio">Prétraitement de l'audio…</string>
     <string name="clipboard_label_transcription">Transcription</string>
-    <!-- TODO: translate -->
-    <string name="open_prompt_settings">Open prompt settings</string>
-    <!-- TODO: translate -->
-    <string name="open_per_app_settings">Open per-app settings</string>
-    <!-- TODO: translate -->
-    <string name="open_performance_stats">Open performance stats</string>
+    <string name="open_prompt_settings">Ouvrir les paramètres d'invite</string>
+    <string name="open_per_app_settings">Ouvrir les paramètres par application</string>
+    <string name="open_performance_stats">Ouvrir les statistiques de performance</string>
     <string name="hide_details">Masquer les détails</string>
     <string name="show_details">Afficher les détails</string>
     <string name="model_unknown">Inconnu</string>
@@ -842,224 +566,150 @@
     <string name="model_title_gemma_4_e4b">Gemma 4 E4B</string>
     <string name="model_title_gemma_3n_e2b">Gemma 3n E2B</string>
     <string name="model_title_gemma_3n_e4b">Gemma 3n E4B</string>
-    <!-- TODO: translate -->
     <string name="backend_gemma4_gguf">Gemma 4 (GGUF)</string>
-    <!-- TODO: translate -->
-    <string name="gguf_inference_unavailable">GGUF inference requires native llama.cpp library. Build libllama.so for Android ARM64.</string>
-    <!-- TODO: translate -->
-    <string name="gguf_model_download_error">Failed to download GGUF model</string>
-    <!-- TODO: translate -->
-    <string name="gguf_title">Gemma 4 GGUF (Text Generation)</string>
-    <!-- TODO: translate -->
-    <string name="gguf_description">On-device LLM for text generation , no cloud dependency. Requires native llama.cpp library.</string>
-    <!-- TODO: translate -->
-    <string name="gguf_unsupported_arch">Not supported on this device (requires ARM64).</string>
-    <!-- TODO: translate -->
-    <string name="gguf_download_confirm_title">Download %1$s?</string>
-    <!-- TODO: translate -->
-    <string name="gguf_download_confirm_message">This will download ~%1$dMB. GGUF models enable local text generation without internet.</string>
-    <!-- TODO: translate -->
-    <string name="gguf_downloaded">%1$s downloaded successfully</string>
-    <!-- TODO: translate -->
-    <string name="gguf_delete_message">Delete %1$s? This will free ~%2$dMB of storage.</string>
-    <!-- TODO: translate -->
-    <string name="gguf_deleted">%1$s deleted</string>
-    <string name="lang_filter_label">Filter by language</string>
-    <string name="lang_filter_all">All languages</string>
-    <string name="lang_filter_search">Search language…</string>
-    <string name="lang_filter_no_results">No matching language</string>
-    <string name="lang_filter_clear">Clear search</string>
+    <string name="gguf_inference_unavailable">L'inférence GGUF nécessite la bibliothèque native llama.cpp. Compilez libllama.so pour Android ARM64.</string>
+    <string name="gguf_model_download_error">Échec du téléchargement du modèle GGUF</string>
+    <string name="gguf_title">Gemma 4 GGUF (génération de texte)</string>
+    <string name="gguf_description">LLM local pour la génération de texte, sans dépendance au cloud. Nécessite la bibliothèque native llama.cpp.</string>
+    <string name="gguf_unsupported_arch">Non pris en charge sur cet appareil (ARM64 requis).</string>
+    <string name="gguf_download_confirm_title">Télécharger %1$s ?</string>
+    <string name="gguf_download_confirm_message">Cela téléchargera environ %1$d Mo. Les modèles GGUF permettent la génération de texte locale sans internet.</string>
+    <string name="gguf_downloaded">%1$s téléchargé</string>
+    <string name="gguf_delete_message">Supprimer %1$s ? Cela libérera environ %2$d Mo.</string>
+    <string name="gguf_deleted">%1$s supprimé</string>
+    <string name="lang_filter_label">Filtrer par langue</string>
+    <string name="lang_filter_all">Toutes les langues</string>
+    <string name="lang_filter_search">Rechercher une langue…</string>
+    <string name="lang_filter_no_results">Aucune langue correspondante</string>
+    <string name="lang_filter_clear">Effacer la recherche</string>
     <string name="lang_afrikaans">Afrikaans</string>
-    <string name="lang_arabic">Arabic</string>
-    <string name="lang_azerbaijani">Azerbaijani</string>
-    <string name="lang_belarusian">Belarusian</string>
-    <string name="lang_bulgarian">Bulgarian</string>
+    <string name="lang_arabic">Arabe</string>
+    <string name="lang_azerbaijani">Azéri</string>
+    <string name="lang_belarusian">Biélorusse</string>
+    <string name="lang_bulgarian">Bulgare</string>
     <string name="lang_bengali">Bengali</string>
     <string name="lang_catalan">Catalan</string>
-    <string name="lang_czech">Czech</string>
-    <string name="lang_welsh">Welsh</string>
-    <string name="lang_danish">Danish</string>
-    <string name="lang_german">German</string>
-    <string name="lang_greek">Greek</string>
-    <string name="lang_english">English</string>
-    <string name="lang_spanish">Spanish</string>
-    <string name="lang_estonian">Estonian</string>
+    <string name="lang_czech">Tchèque</string>
+    <string name="lang_welsh">Gallois</string>
+    <string name="lang_danish">Danois</string>
+    <string name="lang_german">Allemand</string>
+    <string name="lang_greek">Grec</string>
+    <string name="lang_english">Anglais</string>
+    <string name="lang_spanish">Espagnol</string>
+    <string name="lang_estonian">Estonien</string>
     <string name="lang_basque">Basque</string>
-    <string name="lang_persian">Persian</string>
-    <string name="lang_finnish">Finnish</string>
-    <string name="lang_french">French</string>
-    <string name="lang_galician">Galician</string>
-    <string name="lang_hebrew">Hebrew</string>
+    <string name="lang_persian">Persan</string>
+    <string name="lang_finnish">Finnois</string>
+    <string name="lang_french">Français</string>
+    <string name="lang_galician">Galicien</string>
+    <string name="lang_hebrew">Hébreu</string>
     <string name="lang_hindi">Hindi</string>
-    <string name="lang_croatian">Croatian</string>
-    <string name="lang_hungarian">Hungarian</string>
-    <string name="lang_indonesian">Indonesian</string>
-    <string name="lang_italian">Italian</string>
-    <string name="lang_japanese">Japanese</string>
-    <string name="lang_georgian">Georgian</string>
-    <string name="lang_korean">Korean</string>
-    <string name="lang_lithuanian">Lithuanian</string>
-    <string name="lang_latvian">Latvian</string>
-    <string name="lang_macedonian">Macedonian</string>
-    <string name="lang_malay">Malay</string>
-    <string name="lang_dutch">Dutch</string>
-    <string name="lang_norwegian">Norwegian</string>
-    <string name="lang_polish">Polish</string>
-    <string name="lang_portuguese">Portuguese</string>
-    <string name="lang_romanian">Romanian</string>
-    <string name="lang_russian">Russian</string>
-    <string name="lang_slovak">Slovak</string>
-    <string name="lang_slovenian">Slovenian</string>
-    <string name="lang_albanian">Albanian</string>
-    <string name="lang_serbian">Serbian</string>
-    <string name="lang_swedish">Swedish</string>
+    <string name="lang_croatian">Croate</string>
+    <string name="lang_hungarian">Hongrois</string>
+    <string name="lang_indonesian">Indonésien</string>
+    <string name="lang_italian">Italien</string>
+    <string name="lang_japanese">Japonais</string>
+    <string name="lang_georgian">Géorgien</string>
+    <string name="lang_korean">Coréen</string>
+    <string name="lang_lithuanian">Lituanien</string>
+    <string name="lang_latvian">Letton</string>
+    <string name="lang_macedonian">Macédonien</string>
+    <string name="lang_malay">Malais</string>
+    <string name="lang_dutch">Néerlandais</string>
+    <string name="lang_norwegian">Norvégien</string>
+    <string name="lang_polish">Polonais</string>
+    <string name="lang_portuguese">Portugais</string>
+    <string name="lang_romanian">Roumain</string>
+    <string name="lang_russian">Russe</string>
+    <string name="lang_slovak">Slovaque</string>
+    <string name="lang_slovenian">Slovène</string>
+    <string name="lang_albanian">Albanais</string>
+    <string name="lang_serbian">Serbe</string>
+    <string name="lang_swedish">Suédois</string>
     <string name="lang_swahili">Swahili</string>
-    <string name="lang_tamil">Tamil</string>
-    <string name="lang_thai">Thai</string>
-    <string name="lang_turkish">Turkish</string>
-    <string name="lang_ukrainian">Ukrainian</string>
-    <string name="lang_urdu">Urdu</string>
-    <string name="lang_uzbek">Uzbek</string>
-    <string name="lang_vietnamese">Vietnamese</string>
-    <string name="lang_chinese">Chinese</string>
-    <!-- TODO: translate -->
+    <string name="lang_tamil">Tamoul</string>
+    <string name="lang_thai">Thaï</string>
+    <string name="lang_turkish">Turc</string>
+    <string name="lang_ukrainian">Ukrainien</string>
+    <string name="lang_urdu">Ourdou</string>
+    <string name="lang_uzbek">Ouzbek</string>
+    <string name="lang_vietnamese">Vietnamien</string>
+    <string name="lang_chinese">Chinois</string>
     <string name="benchmark_title">Benchmark %1$s</string>
-    <!-- TODO: translate -->
-    <string name="benchmark_preparing">Preparing benchmark…</string>
-    <!-- TODO: translate -->
-    <string name="benchmark_running">Running benchmark…</string>
-    <!-- TODO: translate -->
-    <string name="benchmark_progress">%1$d%% complete</string>
+    <string name="benchmark_preparing">Préparation du benchmark…</string>
+    <string name="benchmark_running">Exécution du benchmark…</string>
+    <string name="benchmark_progress">%1$d%% terminé</string>
     <string name="benchmark_cancel">Annuler</string>
     <string name="benchmark_rerun">Relancer</string>
     <string name="benchmark_retry">Réessayer</string>
-    <!-- TODO: translate -->
-    <string name="benchmark_speed_label">Speed</string>
-    <!-- TODO: translate -->
+    <string name="benchmark_speed_label">Vitesse</string>
     <string name="benchmark_speed_value">%1$.1f s/min audio</string>
-    <!-- TODO: translate -->
-    <string name="benchmark_time_label">Inference time</string>
-    <!-- TODO: translate -->
+    <string name="benchmark_time_label">Temps d'inférence</string>
     <string name="benchmark_time_value">%1$d ms</string>
-    <!-- TODO: translate -->
-    <string name="benchmark_memory_label">Peak memory</string>
-    <!-- TODO: translate -->
-    <string name="benchmark_memory_value">%1$.0f MB</string>
-    <!-- TODO: translate -->
-    <string name="benchmark_duration_label">Sample duration</string>
-    <!-- TODO: translate -->
+    <string name="benchmark_memory_label">Mémoire maximale</string>
+    <string name="benchmark_memory_value">%1$.0f Mo</string>
+    <string name="benchmark_duration_label">Durée de l'échantillon</string>
     <string name="benchmark_duration_value">%1$.0f s</string>
-    <!-- TODO: translate -->
-    <string name="benchmark_rating_fast">Fast</string>
-    <!-- TODO: translate -->
-    <string name="benchmark_rating_good">Good</string>
-    <!-- TODO: translate -->
-    <string name="benchmark_rating_moderate">Moderate</string>
-    <!-- TODO: translate -->
-    <string name="benchmark_rating_slow">Slow</string>
-    <!-- TODO: translate -->
-    <string name="benchmark_disclaimer">Results may vary based on device load and temperature.</string>
+    <string name="benchmark_rating_fast">Rapide</string>
+    <string name="benchmark_rating_good">Bon</string>
+    <string name="benchmark_rating_moderate">Modéré</string>
+    <string name="benchmark_rating_slow">Lent</string>
+    <string name="benchmark_disclaimer">Les résultats varient selon la charge et la température de l'appareil.</string>
     <string name="benchmark_button">Benchmark</string>
-    <!-- TODO: translate -->
-    <string name="benchmark_cached_result">Last benchmark: %1$s</string>
-    <!-- TODO: translate -->
-    <string name="benchmark_provider_label">Provider</string>
-    <!-- TODO: translate -->
+    <string name="benchmark_cached_result">Dernier benchmark : %1$s</string>
+    <string name="benchmark_provider_label">Fournisseur</string>
     <string name="benchmark_provider_value">%1$s</string>
-    <!-- TODO: translate -->
-    <string name="transcription_interrupted_title">Transcription was interrupted</string>
-    <!-- TODO: translate -->
-    <string name="action_dismiss">Dismiss</string>
-    <!-- TODO: translate -->
-    <string name="model_info_title">Model Information</string>
-    <!-- TODO: translate -->
-    <string name="model_info_section_languages">Supported Languages</string>
-    <!-- TODO: translate -->
-    <string name="model_info_section_recommendations">Recommendations</string>
-    <!-- TODO: translate -->
-    <string name="model_info_section_technical">Technical Details</string>
-    <!-- TODO: translate -->
-    <string name="model_info_section_performance">Performance Tips</string>
+    <string name="transcription_interrupted_title">La transcription a été interrompue</string>
+    <string name="action_dismiss">Fermer</string>
+    <string name="model_info_title">Informations du modèle</string>
+    <string name="model_info_section_languages">Langues prises en charge</string>
+    <string name="model_info_section_recommendations">Recommandations</string>
+    <string name="model_info_section_technical">Détails techniques</string>
+    <string name="model_info_section_performance">Conseils de performance</string>
     <plurals name="model_info_languages_count">
         <item quantity="one">%d langue</item>
         <item quantity="other">%d langues</item>
     </plurals>
-    <!-- TODO: translate -->
-    <string name="model_info_no_languages">Language support unknown</string>
-    <!-- TODO: translate -->
+    <string name="model_info_no_languages">Prise en charge linguistique inconnue</string>
     <string name="model_info_architecture">Architecture</string>
-    <!-- TODO: translate -->
-    <string name="model_info_arch_encoder_decoder">Encoder-Decoder (Whisper)</string>
-    <!-- TODO: translate -->
-    <string name="model_info_arch_transducer">Transducer (TDT)</string>
-    <!-- TODO: translate -->
-    <string name="model_info_arch_ctc">CTC (Connectionist Temporal Classification)</string>
-    <!-- TODO: translate -->
-    <string name="model_info_arch_llm">Large Language Model</string>
-    <!-- TODO: translate -->
-    <string name="model_info_model_size">Model size</string>
-    <!-- TODO: translate -->
-    <string name="model_info_max_audio">Max audio length</string>
-    <!-- TODO: translate -->
-    <string name="model_info_max_audio_unlimited">Unlimited</string>
+    <string name="model_info_arch_encoder_decoder">Encodeur-Décodeur (Whisper)</string>
+    <string name="model_info_arch_transducer">Transducteur (TDT)</string>
+    <string name="model_info_arch_ctc">CTC (Classification Temporelle Connexionniste)</string>
+    <string name="model_info_arch_llm">Grand modèle de langage</string>
+    <string name="model_info_model_size">Taille du modèle</string>
+    <string name="model_info_max_audio">Durée audio maximale</string>
+    <string name="model_info_max_audio_unlimited">Illimitée</string>
     <plurals name="model_info_max_audio_seconds">
         <item quantity="one">%d seconde</item>
         <item quantity="other">%d secondes</item>
     </plurals>
-    <!-- TODO: translate -->
-    <string name="model_info_quantization">Quantization</string>
-    <!-- TODO: translate -->
-    <string name="model_info_recommended_threads">Recommended threads</string>
-    <!-- TODO: translate -->
+    <string name="model_info_quantization">Quantification</string>
+    <string name="model_info_recommended_threads">Threads recommandés</string>
     <string name="model_info_threads_range">%1$d – %2$d</string>
-    <!-- TODO: translate -->
-    <string name="model_info_arm64_only">ARM64 devices only</string>
-    <!-- TODO: translate -->
-    <string name="model_info_progressive">Progressive transcription</string>
-    <!-- TODO: translate -->
-    <string name="model_info_vad_recommended">VAD preprocessing recommended</string>
-    <!-- TODO: translate -->
-    <string name="model_info_best_for_whisper_small">Compact multilingual model for quick testing</string>
-    <!-- TODO: translate -->
-    <string name="model_info_notes_whisper_small">Good starting point. Limited accuracy compared to larger models.</string>
-    <!-- TODO: translate -->
-    <string name="model_info_best_for_whisper_turbo">Balanced multilingual ASR with auto-detection</string>
-    <!-- TODO: translate -->
-    <string name="model_info_notes_whisper_turbo">Near large-v3 quality at moderate speed. Good for multilingual users.</string>
-    <!-- TODO: translate -->
-    <string name="model_info_best_for_whisper_medium">Mid-size multilingual model</string>
-    <!-- TODO: translate -->
-    <string name="model_info_notes_whisper_medium">Good balance between accuracy and resource usage.</string>
-    <!-- TODO: translate -->
-    <string name="model_info_best_for_distil_it">Best Italian accuracy (4.3%% WER)</string>
-    <!-- TODO: translate -->
-    <string name="model_info_notes_distil_it">Italian-only. Highest accuracy for Italian voice messages. Prioritize accuracy over speed.</string>
-    <!-- TODO: translate -->
-    <string name="model_info_best_for_qwen3">52-language auto-detection</string>
-    <!-- TODO: translate -->
-    <string name="model_info_notes_qwen3">Broadest language coverage. Note: truncates audio longer than 30 seconds. ARM64 devices only.</string>
-    <!-- TODO: translate -->
-    <string name="model_info_best_for_parakeet">Fastest transcription (17.6x faster than Whisper, 5.4%% WER)</string>
-    <!-- TODO: translate -->
-    <string name="model_info_notes_parakeet">No audio length limit. VAD not needed. Best for users who prioritize speed.</string>
-    <!-- TODO: translate -->
-    <string name="model_info_best_for_gigaam">Best Russian accuracy on-device</string>
-    <!-- TODO: translate -->
-    <string name="model_info_notes_gigaam">Russian only. Native punctuation and capitalization.</string>
-    <!-- TODO: translate -->
-    <string name="model_info_best_for_nemotron">Streaming transcription for long audio</string>
-    <!-- TODO: translate -->
-    <string name="model_info_notes_nemotron">Low-latency streaming transducer. Multilingual auto-detect with a per-stream language option.</string>
-    <!-- TODO: translate -->
-    <string name="model_info_best_for_gemma">Multimodal LLM for text + audio tasks</string>
-    <!-- TODO: translate -->
-    <string name="model_info_notes_gemma">Not optimized for pure ASR. Use for advanced features like audio understanding combined with text generation.</string>
-    <!-- TODO: translate -->
-    <string name="model_info_benchmark_wer">Word Error Rate (Italian): %.1f%%</string>
-    <!-- TODO: translate -->
-    <string name="model_info_relative_speed">Speed: %s</string>
-    <!-- TODO: translate -->
-    <string name="model_info_close">Close</string>
+    <string name="model_info_arm64_only">Appareils ARM64 uniquement</string>
+    <string name="model_info_progressive">Transcription progressive</string>
+    <string name="model_info_vad_recommended">Prétraitement VAD recommandé</string>
+    <string name="model_info_best_for_whisper_small">Modèle multilingue compact pour tests rapides</string>
+    <string name="model_info_notes_whisper_small">Bon point de départ. Précision limitée face aux modèles plus grands.</string>
+    <string name="model_info_best_for_whisper_turbo">ASR multilingue équilibré avec détection automatique</string>
+    <string name="model_info_notes_whisper_turbo">Qualité proche de large-v3 à vitesse modérée. Idéal pour les utilisateurs multilingues.</string>
+    <string name="model_info_best_for_whisper_medium">Modèle multilingue de taille moyenne</string>
+    <string name="model_info_notes_whisper_medium">Bon équilibre entre précision et consommation de ressources.</string>
+    <string name="model_info_best_for_distil_it">Meilleure précision italienne (4,3%% WER)</string>
+    <string name="model_info_notes_distil_it">Italien uniquement. Précision maximale pour les messages vocaux italiens. Priorité à la précision plutôt qu'à la vitesse.</string>
+    <string name="model_info_best_for_qwen3">Détection automatique en 52 langues</string>
+    <string name="model_info_notes_qwen3">Couverture linguistique la plus large. Note : tronque l'audio de plus de 30 secondes. ARM64 uniquement.</string>
+    <string name="model_info_best_for_parakeet">Transcription la plus rapide (17,6x plus rapide que Whisper, 5,4%% WER)</string>
+    <string name="model_info_notes_parakeet">Aucune limite de durée. VAD inutile. Idéal si la vitesse est prioritaire.</string>
+    <string name="model_info_best_for_gigaam">Meilleure précision russe sur appareil</string>
+    <string name="model_info_notes_gigaam">Russe uniquement. Ponctuation et majuscules natives.</string>
+    <string name="model_info_best_for_nemotron">Transcription en streaming pour l'audio long</string>
+    <string name="model_info_notes_nemotron">Transducteur en streaming à faible latence. Détection multilingue avec option de langue par flux.</string>
+    <string name="model_info_best_for_gemma">LLM multimodal pour tâches texte + audio</string>
+    <string name="model_info_notes_gemma">Non optimisé pour l'ASR pur. Pour les fonctions avancées : compréhension audio combinée à la génération de texte.</string>
+    <string name="model_info_benchmark_wer">Taux d'erreur de mots (italien) : %.1f%%</string>
+    <string name="model_info_relative_speed">Vitesse : %s</string>
+    <string name="model_info_close">Fermer</string>
     <string name="skeleton_loading_content_description">Chargement de la transcription</string>
     <string name="share_target_parakeet">Anti-Vocale (Parakeet)</string>
     <string name="share_target_whisper">Anti-Vocale (Whisper)</string>
@@ -1068,79 +718,45 @@
     <string name="share_target_nemotron">Anti-Vocale (Nemotron)</string>
     <string name="share_target_gigaam">Anti-Vocale (GigaAM)</string>
     <string name="share_target_external">Anti-Vocale (External)</string>
-    <!-- TODO: translate -->
-    <string name="external_none_imported">No external models imported</string>
-    <!-- TODO: translate -->
-    <string name="external_section_title">External models</string>
-    <!-- TODO: translate -->
-    <string name="model_advanced_section">Advanced</string>
-    <!-- TODO: translate -->
-    <string name="model_advanced_description">Manually import model files</string>
-    <!-- TODO: translate -->
-    <string name="external_import_folder">Select folder</string>
-    <!-- TODO: translate -->
-    <string name="external_import_url">Import from URL</string>
-    <!-- TODO: translate -->
-    <string name="external_url_hint">HuggingFace repo or catalog-entry JSON URL</string>
-    <!-- TODO: translate -->
-    <string name="external_url_dialog_title">Import external model</string>
+    <string name="external_none_imported">Aucun modèle externe importé</string>
+    <string name="external_section_title">Modèles externes</string>
+    <string name="model_advanced_section">Avancé</string>
+    <string name="model_advanced_description">Importer manuellement des fichiers de modèle</string>
+    <string name="external_import_folder">Sélectionner un dossier</string>
+    <string name="external_import_url">Importer depuis une URL</string>
+    <string name="external_url_hint">URL de dépôt HuggingFace ou JSON de catalogue</string>
+    <string name="external_url_dialog_title">Importer un modèle externe</string>
     <string name="external_import">Importer</string>
     <string name="external_importing">Importation du modèle…</string>
-    <!-- TODO: translate -->
-    <string name="external_import_failed">Import failed: %1$s</string>
-    <!-- TODO: translate -->
-    <string name="external_imported">Imported %1$s</string>
-    <!-- TODO: translate -->
-    <string name="external_delete_confirm">Delete external model %1$s?</string>
-    <!-- TODO: translate -->
-    <string name="external_deleted">%1$s deleted</string>
+    <string name="external_import_failed">Échec de l'importation : %1$s</string>
+    <string name="external_imported">%1$s importé</string>
+    <string name="external_delete_confirm">Supprimer le modèle externe %1$s ?</string>
+    <string name="external_deleted">%1$s supprimé</string>
     <string name="external_family">Famille de modèle</string>
-    <!-- TODO: translate -->
-    <string name="external_family_transducer">Transducer (NeMo/Zipformer)</string>
-    <!-- TODO: translate -->
-    <string name="external_family_transducer_help">Expects encoder + decoder + joiner + tokens files</string>
-    <!-- TODO: translate -->
+    <string name="external_family_transducer">Transducteur (NeMo/Zipformer)</string>
+    <string name="external_family_transducer_help">Attend les fichiers encoder + decoder + joiner + tokens</string>
     <string name="external_family_whisper">Whisper</string>
-    <!-- TODO: translate -->
-    <string name="external_family_whisper_help">Expects encoder + decoder + tokens files</string>
-    <!-- TODO: translate -->
+    <string name="external_family_whisper_help">Attend les fichiers encoder + decoder + tokens</string>
     <string name="external_family_ctc">CTC</string>
-    <!-- TODO: translate -->
-    <string name="external_family_ctc_help">Expects encoder + tokens files</string>
-    <!-- TODO: translate -->
+    <string name="external_family_ctc_help">Attend les fichiers encoder + tokens</string>
     <string name="external_family_sense_voice">SenseVoice</string>
-    <!-- TODO: translate -->
-    <string name="external_family_sense_voice_help">Expects model + tokens files</string>
-    <!-- TODO: translate -->
-    <string name="external_option_language">Language (optional)</string>
-    <!-- TODO: translate -->
-    <string name="external_option_language_hint">e.g. ar, en, it (blank = auto)</string>
-    <!-- TODO: translate -->
-    <string name="external_option_itn">Inverse text normalization</string>
-    <!-- TODO: translate -->
-    <string name="external_ctc_subtype">CTC subtype</string>
-    <!-- TODO: translate -->
+    <string name="external_family_sense_voice_help">Attend les fichiers model + tokens</string>
+    <string name="external_option_language">Langue (optionnel)</string>
+    <string name="external_option_language_hint">ex. ar, en, it (vide = auto)</string>
+    <string name="external_option_itn">Normalisation inverse du texte</string>
+    <string name="external_ctc_subtype">Sous-type CTC</string>
     <string name="external_ctc_subtype_nemo">NeMo CTC</string>
-    <!-- TODO: translate -->
     <string name="external_ctc_subtype_zipformer">Zipformer CTC</string>
     <string name="external_languages">Langues (optionnel)</string>
-    <!-- TODO: translate -->
-    <string name="external_languages_hint">comma or space separated, e.g. ar, en</string>
-    <!-- TODO: translate -->
-    <string name="external_notice_single_pass">Single-pass transcription: very long audio may fail with large models. Trim the audio or use a smaller model.</string>
-    <!-- TODO: translate -->
-    <string name="external_notice_family">If transcription crashes with no error, the architecture may be wrong: delete and re-import the model with a different architecture selected.</string>
-    <!-- TODO: translate -->
-    <string name="share_targets_title">Share Targets</string>
-    <!-- TODO: translate -->
-    <string name="share_targets_description">Show each downloaded model as a separate option in the Android share sheet. When you share audio via a specific model, it is used temporarily for that transcription only.</string>
-    <!-- TODO: translate -->
-    <string name="advanced_sharing_toggle">Show models in share sheet</string>
-    <!-- TODO: translate -->
-    <string name="share_targets_models_info">Each downloaded model will appear as a separate share target. Deleting a model removes its share target.</string>
+    <string name="external_languages_hint">séparées par des virgules ou espaces, ex. ar, en</string>
+    <string name="external_notice_single_pass">Transcription en une passe : l'audio très long peut échouer avec les modèles volumineux. Découpez l'audio ou utilisez un modèle plus léger.</string>
+    <string name="external_notice_family">Si la transcription plante sans erreur, l'architecture est peut-être incorrecte : supprimez puis réimportez le modèle avec une autre architecture.</string>
+    <string name="share_targets_title">Cibles de partage</string>
+    <string name="share_targets_description">Affiche chaque modèle téléchargé comme option distincte dans le menu de partage Android. Partager l'audio via un modèle précis l'utilise uniquement pour cette transcription.</string>
+    <string name="advanced_sharing_toggle">Afficher les modèles dans le menu de partage</string>
+    <string name="share_targets_models_info">Chaque modèle téléchargé apparaîtra comme cible de partage distincte. Supprimer un modèle retire sa cible.</string>
     <string name="conversation_grouping_title">Grouper par conversation</string>
-    <!-- TODO: translate -->
-    <string name="conversation_grouping_description">Group transcriptions by source app (WhatsApp, Telegram, etc.) into collapsible sections.</string>
+    <string name="conversation_grouping_description">Groupe les transcriptions par application source (WhatsApp, Telegram, etc.) en sections repliables.</string>
     <plurals name="conversation_group_count">
         <item quantity="one">%1$d message</item>
         <item quantity="other">%1$d messages</item>
@@ -1150,21 +766,16 @@
     <string name="retranscribe_title">Re-transcrire avec…</string>
     <string name="retranscribe_subtitle">Sélectionnez un modèle pour re-transcrire cet audio</string>
     <string name="retranscribe_confirm">Transcrire</string>
-    <!-- TODO: translate -->
-    <string name="retranscribe_no_models">No audio models configured. Download a model from the Model tab first.</string>
-    <!-- TODO: translate -->
-    <string name="retranscribe_file_not_found">Audio file no longer available</string>
+    <string name="retranscribe_no_models">Aucun modèle audio configuré. Téléchargez d'abord un modèle depuis l'onglet Modèle.</string>
+    <string name="retranscribe_file_not_found">Fichier audio plus disponible</string>
     <string name="retranscribe_active_badge">Actif</string>
     <string name="retranscribe_setting_title">Bouton de re-transcription</string>
-    <!-- TODO: translate -->
-    <string name="retranscribe_setting_description">Show a button on audio transcriptions to retry with a different model.</string>
+    <string name="retranscribe_setting_description">Affiche un bouton sur les transcriptions audio pour réessayer avec un autre modèle.</string>
     <string name="subtitles_found_title">Sous-titres trouvés</string>
-    <!-- TODO: translate -->
-    <string name="subtitles_found_text">Use the embedded subtitles (%1$s), or transcribe the audio?</string>
+    <string name="subtitles_found_text">Utiliser les sous-titres intégrés (%1$s), ou transcrire l'audio ?</string>
     <string name="subtitles_language_unknown">inconnue</string>
     <string name="action_use_subtitles">Utiliser les sous-titres</string>
     <string name="action_transcribe_audio">Transcrire l'audio</string>
-    <!-- TODO: translate -->
-    <string name="subtitle_fallback_status">Couldn\'t extract subtitles , transcribing audio</string>
+    <string name="subtitle_fallback_status">Impossible d'extraire les sous-titres, transcription de l'audio</string>
     <string name="subtitle_choice_notification_text">En attente de votre choix…</string>
 </resources>
