@@ -39,6 +39,10 @@ interface LogDao {
     @Query("SELECT * FROM logs WHERE taskId = :taskId LIMIT 1")
     suspend fun getByTaskId(taskId: String): LogEntity?
 
+    /** Records which model handled a task (GH #45); written as soon as the backend is loaded. */
+    @Query("UPDATE logs SET modelName = :modelName WHERE taskId = :taskId")
+    suspend fun setModelName(taskId: String, modelName: String)
+
     // ---- GH #51 status transitions ----
     // The SQL IN-lists below are the single source for the non-terminal set,
     // including the legacy "PENDING" spelling written before the QUEUED/PROCESSING

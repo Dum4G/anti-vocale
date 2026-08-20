@@ -8,6 +8,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Before
@@ -68,11 +69,11 @@ class AppDatabaseMigrationTest {
         seedV2Database()
 
         db = Room.databaseBuilder(context, AppDatabase::class.java, DB_NAME)
-            .addMigrations(AppDatabase.MIGRATION_1_2, AppDatabase.MIGRATION_2_3)
+            .addMigrations(AppDatabase.MIGRATION_1_2, AppDatabase.MIGRATION_2_3, AppDatabase.MIGRATION_3_4)
             .allowMainThreadQueries()
             .build()
 
-        // Opening + querying triggers MIGRATION_2_3 and Room's runtime schema validation.
+        // Opening + querying triggers the full chain and Room's runtime schema validation.
         // If the migration SQL is broken or a column is missing, Room throws here.
         val row = runBlocking { db!!.logDao().getByTaskId("task-1") }
 
@@ -82,6 +83,23 @@ class AppDatabaseMigrationTest {
         // Columns added by MIGRATION_2_3 default to 0/false for pre-existing rows.
         assertFalse("isPartial should default to false for a v2 row", row.isPartial)
         assertEquals(0, row.failedChunkCount)
+        // Column added by MIGRATION_3_4 defaults to NULL for pre-existing rows (GH #45).
+        assertNull("modelName should default to null for a v2 row", row.modelName)
+    }
+
+    /** MIGRATION_3_4 (GH #45) must run and preserve rows. */
+    @Test
+    fun migrate_3_to_4_preservesRowAndPassesSchemaValidation() {
+        // Seed a v3 database by running the 2->3 chain first, then 3->4 on top.
+        seedV2Database()
+        db = Room.databaseBuilder(context, AppDatabase::class.java, DB_NAME)
+            .addMigrations(AppDatabase.MIGRATION_1_2, AppDatabase.MIGRATION_2_3, AppDatabase.MIGRATION_3_4)
+            .allowMainThreadQueries()
+            .build()
+
+        val row = runBlocking { db!!.logDao().getByTaskId("task-1") }
+        assertNotNull(row)
+        assertNull("modelName must be null after the v4 migration for old rows", row!!.modelName)
     }
 
     /** A fresh v3 DB (no migration) must also be internally consistent with the entity. */

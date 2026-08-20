@@ -81,6 +81,9 @@ abstract class TranscriptionOrchestratorTestBase {
         // behaviour assertions. (The memory check itself is fail-open on a mock Context anyway,
         // but stubbing the preference keeps the intent explicit.)
         every { preferencesManager.forceModelLoad } returns flowOf(false)
+        // GH #45: the model-name write reads the LLM model path before deriving the
+        // display name; a relaxed mock Flow explodes on first().
+        every { preferencesManager.modelPath } returns flowOf("/models/gemma")
     }
 
     protected fun stubWhisperBackend(): TranscriptionBackend =

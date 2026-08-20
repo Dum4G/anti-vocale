@@ -25,7 +25,9 @@ data class LogEntity(
     /** True when transcription completed but one or more audio chunks were skipped (e.g. low-RAM OOM). */
     val isPartial: Boolean = false,
     /** Number of audio chunks that failed (only meaningful when isPartial == true). */
-    val failedChunkCount: Int = 0
+    val failedChunkCount: Int = 0,
+    /** Display name of the model that produced this transcription (GH #45; null on pre-v4 rows). */
+    val modelName: String? = null,
 )
 
 fun LogEntity.toLogEntry(): LogEntry = LogEntry(
@@ -45,7 +47,8 @@ fun LogEntity.toLogEntry(): LogEntry = LogEntry(
     audioDurationSeconds = audioDurationSeconds,
     sourcePackageName = sourcePackageName,
     isPartial = isPartial,
-    failedChunkCount = failedChunkCount
+    failedChunkCount = failedChunkCount,
+    modelName = modelName
 )
 
 fun LogEntry.toEntity(): LogEntity = LogEntity(
@@ -62,5 +65,6 @@ fun LogEntry.toEntity(): LogEntity = LogEntity(
     audioDurationSeconds = audioDurationSeconds,
     sourcePackageName = sourcePackageName,
     isPartial = isPartial,
-    failedChunkCount = failedChunkCount
+    failedChunkCount = failedChunkCount,
+    modelName = modelName
 )

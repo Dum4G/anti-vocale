@@ -179,6 +179,18 @@ class TranscriptionOrchestrator @Inject constructor(
                 return Result.failure(error)
             }
 
+            // GH #45: record which model handled the request, as soon as the
+            // backend is resolved (before the result lands). Metadata only:
+            // never let it break the transcription itself.
+            runCatching {
+                backendManager.getActiveBackend()?.let { backend ->
+                    logDao.setModelName(
+                        taskId,
+                        deriveDisplayName(backend.id, modelPathForBackend(backend.id), backend.displayName),
+                    )
+                }
+            }
+
             val result = when (requestType) {
                 "audio" -> processAudioRequest(
                     taskId = taskId,

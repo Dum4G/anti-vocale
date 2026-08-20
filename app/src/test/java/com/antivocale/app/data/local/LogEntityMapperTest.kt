@@ -80,6 +80,20 @@ class LogEntityMapperTest {
         assertEquals(LogEntry.Status.QUEUED, entity.toLogEntry().status)
     }
 
+    // ── modelName round-trip (GH #45) ───────────────────────────────
+
+    @Test
+    fun `modelName survives both mapping directions`() {
+        val entry = entityWithStatus("SUCCESS").let { it.toLogEntry().copy(modelName = "Whisper Turbo") }
+        assertEquals("Whisper Turbo", entry.toEntity().toLogEntry().modelName)
+        assertNull(entityWithStatus("SUCCESS").toLogEntry().modelName)
+    }
+
+    private fun entityWithStatus(status: String) = LogEntity(
+        id = "test-id", timestamp = 1000L, taskId = "task-1",
+        type = "AUDIO", status = status,
+    )
+
     // ── toEntity: sourcePackageName present ────────────────────────
 
     @Test

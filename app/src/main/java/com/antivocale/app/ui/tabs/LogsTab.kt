@@ -1005,6 +1005,16 @@ fun LogEntryItem(
                                     )
                                 }
                             }
+                            // Model that produced the transcription (GH #45); null on pre-v4 rows
+                            log.modelName?.let { name ->
+                                Text(
+                                    text = stringResource(R.string.logs_model_label, name),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
                         }
 
                         // Task ID (less prominent)

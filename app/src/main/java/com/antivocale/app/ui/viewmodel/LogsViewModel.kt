@@ -46,7 +46,9 @@ data class LogEntry(
     val audioDurationSeconds: Double = 0.0,
     val sourcePackageName: String? = null,
     val isPartial: Boolean = false,
-    val failedChunkCount: Int = 0
+    val failedChunkCount: Int = 0,
+    /** Display name of the model that produced this transcription (GH #45; null on old rows). */
+    val modelName: String? = null,
 ) {
     enum class Type { TEXT, AUDIO }
     enum class Status { QUEUED, PROCESSING, SUCCESS, ERROR }
