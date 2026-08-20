@@ -238,7 +238,7 @@
     <string name="show_less">Mostrar menos</string>
     <string name="show_more">Mostrar más</string>
     <string name="dialog_delete_title">¿Eliminar modelo?</string>
-    <string name="dialog_delete_message">Esto eliminará permanentemente '%1$s' de tu dispositivo. Podrás volver a descargarlo más tarde.</string>
+    <string name="dialog_delete_message">Esto eliminará permanentemente \'%1$s\' de tu dispositivo. Podrás volver a descargarlo más tarde.</string>
     <string name="action_delete">Eliminar</string>
     <string name="action_cancel">Cancelar</string>
     <string name="chunk_nav_prev">◀</string>
@@ -300,7 +300,7 @@
     <string name="clear_token">Borrar token</string>
     <string name="advanced_manual_token">Avanzado: token manual</string>
     <string name="hide_advanced">Ocultar avanzado</string>
-    <string name="manual_token_scope_info">Para tokens manuales se requiere el ámbito 'read' para descargar modelos.</string>
+    <string name="manual_token_scope_info">Para tokens manuales se requiere el ámbito \'read\' para descargar modelos.</string>
     <string name="huggingface_token_label">Token de HuggingFace</string>
     <string name="token_placeholder">hf_…</string>
     <string name="paste_from_clipboard">Pegar del portapapeles</string>
