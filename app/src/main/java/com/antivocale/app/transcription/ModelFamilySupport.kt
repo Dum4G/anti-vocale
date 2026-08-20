@@ -294,6 +294,10 @@ object WhisperSupport : ModelFamilySupport {
                 language = language,
                 task = task,
             ),
+            // tokens must be passed even though OfflineWhisperModelConfig takes
+            // no tokens path: the built-in whisper config passes it and the
+            // external one failed native validation without it (TASK-332).
+            tokens = "${record.dir}/${SherpaBackend.CANONICAL_TOKENS}",
             modelType = "whisper",
             numThreads = numThreads,
             debug = false,

@@ -243,6 +243,9 @@ class ModelFamilySupportTest {
             )
         assertEquals("/models/external/test-abc123/encoder.int8.onnx", config.whisper.encoder)
         assertEquals("/models/external/test-abc123/decoder.int8.onnx", config.whisper.decoder)
+        // tokens must be set even though the whisper sub-config takes no tokens
+        // path: without it native validation rejects the config on device (TASK-332)
+        assertEquals("/models/external/test-abc123/tokens.txt", config.tokens)
         assertEquals("it", config.whisper.language)
         assertEquals("transcribe", config.whisper.task)
         assertEquals("whisper", config.modelType)
