@@ -31,25 +31,32 @@ class NativeKeepAlive(
     private val timeoutMinutes = AtomicInteger(defaultTimeoutMinutes)
     private val workInFlight = AtomicInteger(0)
     private val timerActive = AtomicBoolean(false)
+    private val lock = Any()
     private var job: Job? = null
 
     /** Stores the timeout; a running timer restarts with the new value. */
     fun setTimeout(minutes: Int) {
         timeoutMinutes.set(if (minutes > 0) minutes else defaultTimeoutMinutes)
-        if (timerActive.get()) restart()
+        synchronized(lock) {
+            if (timerActive.get()) restartLocked()
+        }
     }
 
     /** Starts the idle timer (call once after the backend initializes). */
     fun start() {
-        timerActive.set(true)
-        restart()
+        synchronized(lock) {
+            timerActive.set(true)
+            restartLocked()
+        }
     }
 
     /** Stops the timer and forgets it (call on [TranscriptionBackend.unload]). */
     fun stop() {
-        timerActive.set(false)
-        job?.cancel()
-        job = null
+        synchronized(lock) {
+            timerActive.set(false)
+            job?.cancel()
+            job = null
+        }
     }
 
     /** Must wrap every native inference call: pauses the idle timer. */
@@ -63,24 +70,43 @@ class NativeKeepAlive(
     }
 
     fun beginWork() {
-        workInFlight.incrementAndGet()
-        job?.cancel()
+        synchronized(lock) {
+            workInFlight.incrementAndGet()
+            job?.cancel()
+        }
     }
 
     fun endWork() {
-        workInFlight.decrementAndGet()
-        if (timerActive.get()) restart()
+        synchronized(lock) {
+            workInFlight.decrementAndGet()
+            if (timerActive.get()) restartLocked()
+        }
     }
 
-    private fun restart() {
+    private fun restartLocked() {
         job?.cancel()
         job = scope.launch {
             val minutes = timeoutMinutes.get()
             delay(minutes * 60_000L)
-            // Re-check both flags: new work may have arrived during the delay.
-            if (timerActive.get() && workInFlight.get() == 0) {
-                android.util.Log.i(tag, "Idle timeout (${minutes}m) reached, unloading native backend")
-                onIdleUnload()
+            android.util.Log.i(tag, "Idle timeout (${minutes}m) reached, unloading native backend")
+            // The unload runs UNDER the lock: a beginWork arriving meanwhile
+            // blocks here instead of racing the native release (synchronized
+            // is reentrant on the same thread, so the unload path's own
+            // stop() call does not deadlock).
+            synchronized(lock) {
+                if (timerActive.get() && workInFlight.get() == 0) {
+                    onIdleUnload()
+                    if (workInFlight.get() > 0) {
+                        // Work that queued while we held the lock started on an
+                        // unloaded backend (its read saw the post-unload null);
+                        // re-arm so the NEXT idle period still fires.
+                        restartLocked()
+                    } else {
+                        // Disarm: no no-op refires every timeout while idle.
+                        // The next initialize() re-arms via start().
+                        timerActive.set(false)
+                    }
+                }
             }
         }
     }

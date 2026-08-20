@@ -138,11 +138,12 @@ class ExternalSherpaBackend @Inject constructor() : TranscriptionBackend {
     }
 
     override suspend fun transcribeAudio(samples: FloatArray, sampleRate: Int, prompt: String): Result<TranscriptionResult> {
-        val rec = recognizer
-            ?: return Result.failure(TranscriptionException.NotInitialized())
-
+        // beginWork before the recognizer read: closes the idle-unload race
+        // (see SherpaBackend for the full rationale).
         keepAlive.beginWork()
         try {
+            val rec = recognizer
+                ?: return Result.failure(TranscriptionException.NotInitialized())
             return withContext(Dispatchers.IO) {
             // Release the native OfflineStream on EVERY path so the JNI handle is freed
             // deterministically, not left to GC finalization (NemotronStreamingBackend pattern).

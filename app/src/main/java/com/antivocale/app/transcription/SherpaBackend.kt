@@ -317,8 +317,11 @@ class SherpaBackend(
     override val maxChunkDurationSeconds: Int?
         get() = BundledCatalog.byId(entryId)?.flags?.chunkDurationSeconds?.takeIf { it > 0 }
 
-    private var offlineRecognizer: OfflineRecognizer? = null
-    private var onlineRecognizer: OnlineRecognizer? = null
+    // @Volatile: the idle-unload timer frees these on Dispatchers.Default while
+    // transcriptions start on Dispatchers.IO; a stale non-null read after an
+    // unload would be a use-after-free on the native handle.
+    @Volatile private var offlineRecognizer: OfflineRecognizer? = null
+    @Volatile private var onlineRecognizer: OnlineRecognizer? = null
     private var modelDir: String? = null
     private var isInitialized = false
     private var language: String = "auto"
@@ -554,11 +557,13 @@ class SherpaBackend(
             return transcribeAudioStreaming(samples, sampleRate, prompt) {}
         }
 
-        val rec = offlineRecognizer
-            ?: return Result.failure(TranscriptionException.NotInitialized())
-
+        // beginWork BEFORE reading the recognizer: claiming work first closes
+        // the idle-unload race (a timer fire that already reserved the unload
+        // still wins, but then this read sees the post-unload null).
         keepAlive.beginWork()
         try {
+            val rec = offlineRecognizer
+                ?: return Result.failure(TranscriptionException.NotInitialized())
             return withContext(Dispatchers.IO) {
             // Release the native OfflineStream on EVERY path (happy, exception, blank-result)
             // so the JNI handle is freed deterministically, not left to GC finalization.
@@ -618,11 +623,10 @@ class SherpaBackend(
             return transcribeAudio(samples, sampleRate, prompt)
         }
 
-        val rec = onlineRecognizer
-            ?: return Result.failure(TranscriptionException.NotInitialized())
-
         keepAlive.beginWork()
         try {
+            val rec = onlineRecognizer
+                ?: return Result.failure(TranscriptionException.NotInitialized())
             return withContext(Dispatchers.IO) {
             var stream: OnlineStream? = null
             try {
