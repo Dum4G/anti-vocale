@@ -889,59 +889,58 @@ fun LogEntryItem(
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                         )
 
-                        // Action buttons
+                        // Action buttons: compact icon-only actions tucked into the
+                        // bottom corner of the card (no labels; localized
+                        // contentDescription keeps them accessible). Icon-only also
+                        // sidesteps the TASK-345 label-overflow class entirely.
                         if (log.result.isNotEmpty()) {
-                            Spacer(modifier = Modifier.height(8.dp))
+                            Spacer(modifier = Modifier.height(4.dp))
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.End
+                                horizontalArrangement = Arrangement.End,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                // Locale-safe: weight on each button so three long
-                                // labels share the row instead of overflowing (TASK-345)
-                                // Copy button
-                                TextButton(
-                                    onClick = {
-                                        copyTranscriptionToClipboard(context, log.result)
-                                    },
-                                    modifier = Modifier.weight(1f)
-                                ) {
-                                    Icon(
-                                        Icons.Default.ContentCopy,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text(stringResource(R.string.copy))
-                                }
-                                // Share button
-                                TextButton(
-                                    onClick = {
-                                        shareTranscription(context, log.result)
-                                    },
-                                    modifier = Modifier.weight(1f)
-                                ) {
-                                    Icon(
-                                        Icons.Default.Share,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text(stringResource(R.string.share_transcription))
-                                }
                                 // Re-transcribe button (audio entries with file)
                                 if (onRetranscribe != null) {
-                                    TextButton(
+                                    IconButton(
                                         onClick = onRetranscribe,
-                                        modifier = Modifier.weight(1f)
+                                        modifier = Modifier.size(40.dp)
                                     ) {
                                         Icon(
                                             Icons.Default.Refresh,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(18.dp)
+                                            contentDescription = stringResource(R.string.retranscribe_title),
+                                            modifier = Modifier.size(18.dp),
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
-                                        Spacer(modifier = Modifier.width(4.dp))
-                                        Text(stringResource(R.string.retranscribe))
                                     }
+                                }
+                                // Copy button
+                                IconButton(
+                                    onClick = {
+                                        copyTranscriptionToClipboard(context, log.result)
+                                    },
+                                    modifier = Modifier.size(40.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Default.ContentCopy,
+                                        contentDescription = stringResource(R.string.copy_transcription),
+                                        modifier = Modifier.size(18.dp),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                // Share button
+                                IconButton(
+                                    onClick = {
+                                        shareTranscription(context, log.result)
+                                    },
+                                    modifier = Modifier.size(40.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Default.Share,
+                                        contentDescription = stringResource(R.string.share_transcription),
+                                        modifier = Modifier.size(18.dp),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
                                 }
                             }
                         }
