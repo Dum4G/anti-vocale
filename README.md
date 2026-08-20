@@ -107,7 +107,7 @@ Long transcripts are split into pages you can read without leaving the notificat
 
 | Model | Size | Languages | Notes |
 |-------|------|-----------|-------|
-| **Parakeet TDT SmoothQuant** | ~862MB | 25 European | Best quality on long audio, recommended default |
+| **Parakeet TDT SmoothQuant** | ~862MB | 25 European | Best overall quality, recommended default (inputs over 6:40 chunked, see [FAQ](FAQ.md)) |
 | **Parakeet TDT Stock int8** | ~464MB | 25 European | Lighter fallback, best speed/size ratio |
 | **GigaAM v3** | ~326MB | Russian | Best Russian accuracy, native punctuation |
 | **Qwen3-ASR 0.6B** | ~938MB | 52 | 52 languages, poor Italian accuracy |
@@ -144,6 +144,8 @@ Import any sherpa-onnx transducer model from a local folder or HuggingFace URL. 
 Both flavors share the same `applicationId` and feature set. The only difference is crash reporting (Firebase vs logcat-only).
 
 ## Getting Started
+
+Common questions (model limits, chunking, queue behavior, where to find transcription metadata) are answered in the [FAQ](FAQ.md).
 
 ### Prerequisites
 
