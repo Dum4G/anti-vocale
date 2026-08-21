@@ -37,6 +37,7 @@ import com.antivocale.app.R
 import com.antivocale.app.util.AppInfoUtils
 import com.antivocale.app.util.SharedAudioHandler
 import com.antivocale.app.data.PreferencesManager
+import com.antivocale.app.service.InferenceService
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.animation.Crossfade
 import com.antivocale.app.ui.components.SkeletonTranscriptionCard
@@ -73,6 +74,18 @@ private fun copyTranscriptionToClipboard(context: Context, text: String) {
     val clip = ClipData.newPlainText(context.getString(R.string.clipboard_label_transcription), text)
     clipboard.setPrimaryClip(clip)
     ToastCompat.show(context, context.getString(R.string.copied_to_clipboard))
+}
+
+/**
+ * Per-task cancel (GH #52 follow-up): tells the service to drop one queued
+ * request or abort the in-flight one, leaving the rest of the queue intact.
+ */
+private fun cancelTask(context: Context, taskId: String) {
+    val intent = Intent(context, InferenceService::class.java).apply {
+        action = InferenceService.ACTION_CANCEL_TASK
+        putExtra(InferenceService.EXTRA_CANCEL_TASK_ID, taskId)
+    }
+    context.startService(intent)
 }
 
 /**
@@ -135,7 +148,7 @@ private fun RowScope.ResultActionButton(
  * Long-press context menu actions for a log entry (GH #52). Kept as a pure
  * function so the gating mirrors [buildSwipeActions] and stays unit-tested.
  */
-enum class ContextMenuAction { RETRANSCRIBE, COPY, DELETE }
+enum class ContextMenuAction { RETRANSCRIBE, CANCEL, COPY, DELETE }
 
 /** Shared "Queued" label (collapsed and expanded views render it identically). */
 @Composable
@@ -149,6 +162,11 @@ private fun QueuedStatusLabel() {
 
 fun buildContextMenuActions(log: LogEntry, canRetranscribe: Boolean): List<ContextMenuAction> {
     val actions = mutableListOf<ContextMenuAction>()
+    // In-flight entries (queued or processing) can be cancelled (GH #52 follow-up);
+    // Cancel leads while the item is in flight, it is the primary action there.
+    if (log.status == LogEntry.Status.QUEUED || log.status == LogEntry.Status.PROCESSING) {
+        actions.add(ContextMenuAction.CANCEL)
+    }
     if (canRetranscribe) actions.add(ContextMenuAction.RETRANSCRIBE)
     // Mirrors buildSwipeActions: Copy needs a completed result, not interim text.
     if (log.hasCompletedResult) actions.add(ContextMenuAction.COPY)
@@ -741,6 +759,7 @@ fun LogEntryItem(
     onExpandChange: (Boolean) -> Unit = {},
     onRetranscribe: (() -> Unit)? = null,
     onDelete: (() -> Unit)? = null,
+    onCancel: (() -> Unit)? = null,
     compactActions: Boolean = PreferencesManager.DEFAULT_COMPACT_RESULT_ACTIONS
 ) {
     val context = LocalContext.current
@@ -772,6 +791,7 @@ fun LogEntryItem(
                                 stringResource(
                                     when (action) {
                                         ContextMenuAction.RETRANSCRIBE -> R.string.retranscribe
+                                        ContextMenuAction.CANCEL -> R.string.logs_cancel
                                         ContextMenuAction.COPY -> R.string.copy
                                         ContextMenuAction.DELETE -> R.string.logs_delete_entry
                                     }
@@ -782,6 +802,7 @@ fun LogEntryItem(
                             Icon(
                                 when (action) {
                                     ContextMenuAction.RETRANSCRIBE -> Icons.Default.Refresh
+                                    ContextMenuAction.CANCEL -> Icons.Default.Close
                                     ContextMenuAction.COPY -> Icons.Default.ContentCopy
                                     ContextMenuAction.DELETE -> Icons.Default.Delete
                                 },
@@ -793,6 +814,7 @@ fun LogEntryItem(
                             contextMenuExpanded = false
                             when (action) {
                                 ContextMenuAction.RETRANSCRIBE -> onRetranscribe?.invoke()
+                                ContextMenuAction.CANCEL -> onCancel?.invoke()
                                 ContextMenuAction.COPY -> copyTranscriptionToClipboard(context, log.result)
                                 ContextMenuAction.DELETE -> onDelete?.invoke()
                             }
@@ -1307,6 +1329,7 @@ private fun LogEntryWithSwipe(
                     }
                 },
                 onRetranscribe = onRetranscribe,
+                onCancel = { cancelTask(context, log.taskId) },
                 onDelete = { onDeleted(log); viewModel.deleteLog(log.id) },
                 compactActions = compactActions
             )
@@ -1353,6 +1376,7 @@ private fun LogEntryWithSwipe(
                 expanded = isExpanded,
                 onExpandChange = onExpandChange,
                 onRetranscribe = onRetranscribe,
+                onCancel = { cancelTask(context, log.taskId) },
                 onDelete = { onDeleted(log); onDeleteLog(log.id) },
                 compactActions = compactActions
             )

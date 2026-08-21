@@ -74,6 +74,10 @@ class InferenceService : Service(), TranscriptionListener {
 
         const val ACTION_CANCEL = "com.antivocale.app.CANCEL_TRANSCRIPTION"
 
+        /** Per-task cancel (GH #52 follow-up): cancels one queued or in-flight request. */
+        const val ACTION_CANCEL_TASK = "com.antivocale.app.CANCEL_TRANSCRIPTION_TASK"
+        const val EXTRA_CANCEL_TASK_ID = "cancel_task_id"
+
         // Chunk navigation actions for the in-progress notification (TASK-242).
         // Target the service directly — navigation is stateful (mutates the live cursor the
         // producer also writes to), unlike the stateless copy/share actions in
@@ -97,6 +101,10 @@ class InferenceService : Service(), TranscriptionListener {
     private val requestQueue = ConcurrentLinkedQueue<PendingRequest>()
     private val inFlightTaskIds: MutableSet<String> = ConcurrentHashMap.newKeySet()
     private var currentProcessingJob: Job? = null
+    /** taskId currently being processed (null while idle); per-task cancel targets this. */
+    @Volatile private var currentTaskId: String? = null
+    /** Child job running the current task's processRequest; per-task cancel target. */
+    @Volatile private var currentTaskJob: Job? = null
     @Volatile private var transcriptionStartTime: Long = 0
     private val pendingCount = AtomicInteger(0)
     private val resultNotificationFactory: ResultNotificationFactory by lazy { ResultNotificationFactory(this) }
@@ -140,6 +148,11 @@ class InferenceService : Service(), TranscriptionListener {
 
         if (intent?.action == ACTION_CANCEL) {
             handleCancelRequest()
+            return START_NOT_STICKY
+        }
+
+        if (intent?.action == ACTION_CANCEL_TASK) {
+            intent.getStringExtra(EXTRA_CANCEL_TASK_ID)?.let { handleCancelTask(it) }
             return START_NOT_STICKY
         }
 
@@ -229,6 +242,7 @@ class InferenceService : Service(), TranscriptionListener {
                     val request = requestQueue.poll() ?: continue
                     pendingCount.decrementAndGet()
                     currentIndex++
+                    currentTaskId = request.taskId
 
                     try {
                         // Show queue-aware initial notification
@@ -247,34 +261,53 @@ class InferenceService : Service(), TranscriptionListener {
                         latestQueuedCount = 0
                         lastNavSignature = null
 
-                        orchestrator.processRequest(
-                            taskId = request.taskId,
-                            requestType = request.requestType,
-                            prompt = request.prompt,
-                            filePath = request.filePath,
-                            source = request.source,
-                            sourcePackage = request.sourcePackage,
-                            backendOverride = request.backendOverride,
-                            trackIndex = request.trackIndex,
-                            queuePosition = currentIndex,
-                            queueTotal = totalInBatch,
-                            context = applicationContext,
-                            cacheDir = cacheDir,
-                            listener = this@InferenceService,
-                            coroutineScope = this
-                        )
+                        // Per-task child job (GH #52): cancelling it (per-task cancel
+                        // from the Logs menu) aborts only THIS request; the drain loop
+                        // survives via join() and keeps processing the queue. A batch
+                        // ACTION_CANCEL instead cancels the drain job itself, and join()
+                        // rethrows, reaching the batch catch below.
+                        val taskJob = launch {
+                            try {
+                                orchestrator.processRequest(
+                                    taskId = request.taskId,
+                                    requestType = request.requestType,
+                                    prompt = request.prompt,
+                                    filePath = request.filePath,
+                                    source = request.source,
+                                    sourcePackage = request.sourcePackage,
+                                    backendOverride = request.backendOverride,
+                                    trackIndex = request.trackIndex,
+                                    queuePosition = currentIndex,
+                                    queueTotal = totalInBatch,
+                                    context = applicationContext,
+                                    cacheDir = cacheDir,
+                                    listener = this@InferenceService,
+                                    coroutineScope = this
+                                )
+                            } finally {
+                                // Always release the taskId so a future request with the
+                                // same id is accepted. Runs on success, error, cancel.
+                                inFlightTaskIds.remove(request.taskId)
+                            }
+                        }
+                        currentTaskJob = taskJob
+                        taskJob.join()
+                        currentTaskJob = null
                     } finally {
-                        // Always release the taskId so a future request with the same id is
-                        // accepted. Runs on success, error, and cancellation.
+                        // Belt for the case where we never launched (notification etc.)
                         inFlightTaskIds.remove(request.taskId)
                     }
                 }
             } catch (e: CancellationException) {
+                // Batch cancel (ACTION_CANCEL) or scope teardown: per-task cancels
+                // never reach here anymore, they only cancel the child task job.
                 Log.i(TAG, "Processing cancelled by user")
                 failQueuedLogs("Cancelled")
                 requestQueue.clear()
                 pendingCount.set(0)
             } finally {
+                currentTaskId = null
+                currentTaskJob = null
                 _isTranscribing.value = false
             }
 
@@ -297,6 +330,36 @@ class InferenceService : Service(), TranscriptionListener {
         pendingCount.set(0)
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
+    }
+
+    /**
+     * Per-task cancel (GH #52 follow-up): removes one queued request or cancels
+     * the in-flight task job. The drain loop keeps processing the rest of the
+     * queue, unlike the batch [handleCancelRequest]. The log row is closed from
+     * the (never cancelled) service scope: a Room suspend write from inside the
+     * cancelled task job would itself be cancelled and never land.
+     * failNonTerminal only touches non-terminal rows, so a racing terminal write
+     * by the orchestrator makes the close a harmless no-op.
+     */
+    private fun handleCancelTask(taskId: String) {
+        val isCurrent = taskId == currentTaskId
+        if (isCurrent) {
+            Log.i(TAG, "Per-task cancel for in-flight $taskId")
+            currentTaskJob?.cancel()
+        } else {
+            val removed = requestQueue.removeIf { it.taskId == taskId }
+            if (!removed) {
+                Log.i(TAG, "Per-task cancel for unknown/finished $taskId; nothing to do")
+                return
+            }
+            pendingCount.decrementAndGet()
+            inFlightTaskIds.remove(taskId)
+            Log.i(TAG, "Per-task cancel removed queued $taskId")
+        }
+        serviceScope.launch {
+            runCatching { logDao.failNonTerminal(taskId, "Cancelled", durationMs = 0) }
+                .onFailure { Log.w(TAG, "Failed to close cancelled row for $taskId", it) }
+        }
     }
 
     /**

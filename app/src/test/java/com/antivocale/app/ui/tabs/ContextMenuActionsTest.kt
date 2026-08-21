@@ -51,7 +51,7 @@ class ContextMenuActionsTest {
             canRetranscribe = true,
         )
 
-        assertEquals(listOf(ContextMenuAction.RETRANSCRIBE, ContextMenuAction.DELETE), actions)
+        assertEquals(listOf(ContextMenuAction.CANCEL, ContextMenuAction.RETRANSCRIBE, ContextMenuAction.DELETE), actions)
     }
 
     @Test
@@ -62,5 +62,27 @@ class ContextMenuActionsTest {
         )
 
         assertEquals(listOf(ContextMenuAction.DELETE), actions)
+    }
+
+    @Test
+    fun `queued entry offers cancel`() {
+        val actions = buildContextMenuActions(entry(status = LogEntry.Status.QUEUED, result = ""), canRetranscribe = false)
+
+        assertEquals(listOf(ContextMenuAction.CANCEL, ContextMenuAction.DELETE), actions)
+    }
+
+    @Test
+    fun `processing entry offers cancel`() {
+        val actions = buildContextMenuActions(
+            entry(status = LogEntry.Status.PROCESSING, result = "partial"),
+            canRetranscribe = true,
+        )
+
+        assertEquals(listOf(ContextMenuAction.CANCEL, ContextMenuAction.RETRANSCRIBE, ContextMenuAction.DELETE), actions)
+    }
+
+    @Test
+    fun `terminal entries offer no cancel`() {
+        assertNull(buildContextMenuActions(entry(), canRetranscribe = false).firstOrNull { it == ContextMenuAction.CANCEL })
     }
 }
