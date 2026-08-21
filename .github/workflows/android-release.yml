@@ -479,35 +479,45 @@ jobs:
           # revision (MR !46215 note_3715941208). Require the newest trio, and
           # verify each APK's OWN versionCode, before anything gets signed.
           RECIPE=/home/vagrant/metadata/com.antivocale.app.yml
-          # Last three versionCodes in the recipe = the newest version's per-ABI trio
-          TRIO=$(grep -oE 'versionCode: [0-9]+' "$RECIPE" | awk '{print $2}' | tail -3)
-          echo "expected newest trio: $TRIO"
-          [ "$(echo "$TRIO" | wc -l)" -eq 3 ] || { echo "ERROR: could not read a full trio from $RECIPE"; exit 1; }
+          # Newest version = the LAST 'versionName:' build block in the recipe
+          # (fdroiddata lists builds oldest-first). Take every versionCode in
+          # that block, so a future 2-ABI release needs no edit here.
+          TRIO=$(awk '/^  - versionName:/{block=""} {block=block $0 "\n"} END{printf "%s", block}' "$RECIPE" \
+            | grep -oE 'versionCode: [0-9]+' | awk '{print $2}')
+          NEWEST_VC=$(echo "$TRIO" | tail -1)
+          echo "expected newest-version versionCodes: $TRIO"
+          [ -n "$TRIO" ] || { echo "ERROR: could not read the newest build block from $RECIPE"; exit 1; }
           # Newer build-tools ship aapt2 only; both support 'dump badging'.
           AAPT=$(find /opt/android-sdk/build-tools \( -name aapt -o -name aapt2 \) | sort | tail -1)
           [ -n "$AAPT" ] || { echo "ERROR: no aapt/aapt2 under /opt/android-sdk/build-tools"; exit 1; }
-          # The directory that actually contains the NEWEST trio is the only one the
-          # sign step may touch (exported below). Picking any other directory (or
-          # scanning everywhere, as the old sign loop did) risks signing stale APKs
-          # left by earlier runs on this persistent VM.
+          # The directory that actually contains the NEWEST version is the only one
+          # the sign step may touch (exported below). Scanning everywhere, as the old
+          # sign loop did, risks signing stale APKs left by earlier runs on this
+          # persistent VM.
           UNSIGNED_DIR=""
-          for CANDIDATE in $(find /home/vagrant /tmp -name "com.antivocale.app_$(echo "$TRIO" | tail -1).apk" 2>/dev/null | grep -v test/data | xargs -r -n1 dirname | sort -u); do
+          for CANDIDATE in $(find /home/vagrant /tmp -name "com.antivocale.app_$NEWEST_VC.apk" 2>/dev/null | grep -v test/data | xargs -r -n1 dirname | sort -u); do
             FOUND=0
             for VC in $TRIO; do [ -f "$CANDIDATE/com.antivocale.app_$VC.apk" ] && FOUND=$((FOUND+1)); done
-            if [ "$FOUND" -eq 3 ]; then UNSIGNED_DIR="$CANDIDATE"; break; fi
+            [ "$FOUND" -eq "$(echo "$TRIO" | wc -l)" ] && { UNSIGNED_DIR="$CANDIDATE"; break; }
           done
-          [ -n "$UNSIGNED_DIR" ] || { echo "ERROR: no directory contains the full newest trio ($TRIO); refusing to sign stale APKs"; exit 1; }
+          [ -n "$UNSIGNED_DIR" ] || { echo "ERROR: no directory contains the full newest version ($TRIO); refusing to sign stale APKs"; exit 1; }
+          # The commit the newest build must come from (the incident shipped APKs
+          # built at the previous tag's commit with a correct versionCode).
+          RECIPE_COMMIT=$(awk '/^  - versionName:/{c=""} /^    commit:/{c=$2} END{print c}' "$RECIPE")
+          [ -n "$RECIPE_COMMIT" ] || { echo "ERROR: could not read the newest commit: from $RECIPE"; exit 1; }
           for VC in $TRIO; do
             APK="$UNSIGNED_DIR/com.antivocale.app_$VC.apk"
             EMBEDDED=$("$AAPT" dump badging "$APK" | head -1 | grep -oE "versionCode='[0-9]+'" | grep -oE '[0-9]+')
             [ "$EMBEDDED" = "$VC" ] || { echo "ERROR: $APK embeds versionCode '$EMBEDDED', expected $VC"; exit 1; }
-            echo "OK: $VC built and matches ($APK)"
+            EMBEDDED_REV=$(unzip -p "$APK" META-INF/version-control-info.textproto 2>/dev/null | grep -oE 'revision: "[0-9a-f]+"' | grep -oE '[0-9a-f]+')
+            [ "$EMBEDDED_REV" = "$RECIPE_COMMIT" ] || { echo "ERROR: $APK was built at revision '$EMBEDDED_REV', expected $RECIPE_COMMIT (stale build)"; exit 1; }
+            echo "OK: $VC built at $RECIPE_COMMIT ($APK)"
           done
           echo "REPRO_UNSIGNED_DIR=$UNSIGNED_DIR" >> "$GITHUB_ENV"
 
       - name: Sign the three per-ABI reference APKs (v2/v3 only, alignment preserved; apksigner must not rewrite the zip)
         run: |
-          set -ex
+          set -eux
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > release.keystore
           echo "${{ secrets.KEYSTORE_PROPERTIES }}" > keystore.properties
           # Secret hygiene: xtrace prints variable assignments ('+ STORE_PASS=...'),
