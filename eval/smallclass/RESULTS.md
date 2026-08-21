@@ -20,6 +20,8 @@ WER = Levenshtein on normalized lowercase words; RTF = decode time / audio durat
 | csukuangfj/sherpa-onnx-streaming-zipformer-fr-kroko-2025-08-06 (fp32 only, OnlineRecognizer.from_transducer) | fr | 68 MB | OK | 22.5 % | 0.12-0.15 |
 | fr-kroko (cross-check on German clips) | de | - | OK | 99.5 % (expected; French-only) | 0.15 |
 | csukuangfj streaming-zipformer-es-kroko (fp32) | es | 148 MB | OK | **6.8 %** | 0.13 |
+| csukuangfj streaming-zipformer-de-kroko (fp32) | de | 67 MB | OK | **6.3 %** | 0.08 |
+| csukuangfj streaming-zipformer-en-kroko (fp32) | en | 67 MB | OK | 17.6 % | 0.09 |
 
 ## Notes
 
@@ -42,6 +44,13 @@ WER = Levenshtein on normalized lowercase words; RTF = decode time / audio durat
   integration; also only fp32 files exist, 68 MB). Not German-capable (99.5 % on de).
 - RTF on this host is noisy across runs (ru showed 0.05-0.14); treat as order-of-magnitude
   "well below realtime on desktop CPU", phone numbers will be smaller-core-bound.
+
+## 2026-08-21 second follow-up: DE resolved by de-kroko (6.3%), EN marginal
+
+de-kroko is the best small-class result so far (6.3% WER on the German FLEURS set,
+67 MB fp32): it fills the DE gap left by the broken whisper-tiny-de export. en-kroko
+at 17.6% is not competitive for English (Parakeet is the default there). All kroko
+models share CC-BY-SA and fp32-only caveats.
 
 ## 2026-08-21 follow-up: ES resolved by es-kroko
 
