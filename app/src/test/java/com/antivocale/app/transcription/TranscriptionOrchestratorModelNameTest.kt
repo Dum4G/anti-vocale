@@ -27,6 +27,9 @@ class TranscriptionOrchestratorModelNameTest : TranscriptionOrchestratorTestBase
         every { preferencesManager.transcriptionBackend } returns flowOf("llm")
         // modelPathForBackend reads this before the display-name derivation
         every { preferencesManager.modelPath } returns flowOf("/models/gemma")
+        // The registry resolves the LLM backend name through a string resource
+        val context = mockk<android.content.Context>(relaxed = true)
+        every { context.getString(any()) } returns "Gemma 4 E2B"
 
         orchestrator.processRequest(
             taskId = "task-model",
@@ -37,7 +40,7 @@ class TranscriptionOrchestratorModelNameTest : TranscriptionOrchestratorTestBase
             sourcePackage = null,
             queuePosition = 1,
             queueTotal = 1,
-            context = mockk(relaxed = true),
+            context = context,
             cacheDir = java.io.File("/cache"),
             listener = listener,
             coroutineScope = this,

@@ -180,15 +180,18 @@ class TranscriptionOrchestrator @Inject constructor(
             }
 
             // GH #45: record which model handled the request, as soon as the
-            // backend is resolved (before the result lands). Metadata only:
-            // never let it break the transcription itself.
+            // backend is resolved (before the result lands). Resolved through the
+            // registry display-name contract so raw backend ids never reach the
+            // Logs UI. Metadata only: never let it break the transcription itself.
             runCatching {
-                backendManager.getActiveBackend()?.let { backend ->
-                    logDao.setModelName(
-                        taskId,
-                        deriveDisplayName(backend.id, modelPathForBackend(backend.id), backend.displayName),
-                    )
+                val backend = backendManager.getActiveBackend() ?: return@runCatching
+                val descriptor = backendRegistry.byBackendId(backend.id)
+                val name = when {
+                    descriptor == null -> backend.displayName
+                    descriptor.displayNameResId != null -> context.getString(descriptor.displayNameResId)
+                    else -> descriptor.deriveDisplayName(context, modelPathForBackend(backend.id))
                 }
+                logDao.setModelName(taskId, name)
             }
 
             val result = when (requestType) {
