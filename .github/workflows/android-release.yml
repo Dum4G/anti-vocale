@@ -342,7 +342,7 @@ jobs:
           # so fdroid's build/ output lands at /home/vagrant/build (not /home/vagrant/fdroiddata/build).
           sudo -u vagrant sh -c 'cd /home/vagrant && cp -r fdroiddata/* fdroiddata/.* . 2>/dev/null || true'
 
-      - name: Install fdroidserver and NDK r27c
+      - name: Install fdroidserver (fdroid sets up the recipe NDK itself)
         run: |
           set -ex
           . /etc/profile.d/bsenv.sh || true
@@ -354,15 +354,15 @@ jobs:
           export PYTHONPATH="$fdroidserver:$fdroidserver/examples"
           export PYTHONUNBUFFERED=true
           export serverwebroot=/tmp
-          # F-Droid's image ships without an NDK; install r27c (the recipe's ndk:) where fdroid looks.
+          # F-Droid's image ships without an NDK. Do NOT preinstall one: fdroidserver
+          # sets up whatever the recipe's `ndk:` maps to (r27c -> 27.2.12479018),
+          # downloading it itself, the exact code path the fdroiddata CI uses.
+          # Preinstalling any other NDK (we had 27.0.12077973) shadows that setup and
+          # builds every native lib with a different toolchain than the builds we must
+          # byte-match: this is the 371/372/374 reproducibility failure on MR !46215
+          # (all .so + classes.dex differed; their job log shows 'Set up NDK r27c
+          # (27.2.12479018)' while our reference run showed 'Set up NDK r27').
           chown -R vagrant:vagrant /opt/android-sdk
-          # Install ONLY NDK r27 (27.0.12077973): this is what the fdroiddata
-          # CI runner effectively resolved for our builds (fdroid's 'Set up NDK
-          # r27' lines in job logs; AGP 8.10's default NDK is also r27, which is
-          # what strips the Maven .so there). Installing r27c instead made AGP
-          # find no NDK (unstripped Maven libs) and sherpa compile with a
-          # different toolchain than the fdroiddata builds we must byte-match.
-          yes | sdkmanager "ndk;27.0.12077973" || true
           # The recipe's sudo: deps (wget etc.) don't auto-install when running as root; install them.
           apt-get update -qq && apt-get install -y --no-install-recommends wget build-essential cmake g++ zip unzip
           fdroid --version || true
