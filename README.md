@@ -16,31 +16,53 @@ Anti-Vocale intercepts shared audio files (from WhatsApp, Telegram, etc.), trans
 
 ## Features
 
+### Privacy & offline first
+
 - **Fully offline** - All processing happens on-device, no data leaves your phone
+- **Local history** - Every transcription is saved to an on-device database with full-text search; nothing is uploaded
+
+### Models
+
 - **Multiple ASR engines** - Choose between Gemma (LLM), Whisper, Parakeet TDT, Qwen3-ASR, GigaAM v3, Nemotron 3.5 (streaming), or import your own
-- **Custom model import** - Bring any sherpa-onnx transducer model from a folder or HuggingFace URL, no app update needed ([docs](docs/external-models.md))
-- **Share integration** - Share audio from any messaging app to transcribe
-- **Model-specific share targets** - Pick a specific model directly from the Android share sheet
-- **Re-transcribe** - Retry any transcription with a different model from the log
-- **Smart notifications** - Read long transcripts page-by-page without leaving the shade, copy the full result, or send it back to the source app with one tap
+- **Custom model import** - Bring any sherpa-onnx model (transducer, Whisper, CTC, SenseVoice) from a folder or HuggingFace URL, no app update needed ([docs](docs/external-models.md))
+- **Any audio length** - Long inputs are automatically split and stitched: no model's internal limit is user-facing (see the [FAQ](FAQ.md))
+- **Declared limits before download** - Each model card states its audio-length capability up front, so big downloads are informed choices
+- **Model benchmarking** - Compare real-world transcription speed between models on your own device
+
+### Transcription pipeline
+
+- **Queue-aware processing** - Concurrent requests queue up visibly (Queued → Processing → Done) and complete in order
+- **Progressive display** - Text appears segment-by-segment instead of waiting for the full result
+- **VAD silence stripping** - Optionally strip silent segments before transcription for faster results (boundaries fall on natural speech gaps)
 - **Confidence indicator** - Shows detected language and warns about low-confidence results
-- **Progressive display** - See transcription text appear segment-by-segment instead of waiting for the full result
-- **Swipe actions** - Swipe log entries to copy, share, or delete
-- **Persistent transcription log** - All transcriptions saved to local database with search
-- **Queue-aware processing** - Handles multiple concurrent transcription requests with progress tracking
+- **Video file support** - Transcribe audio from video files; extract embedded subtitles
 - **Calibration-based ETA** - Progress estimates improve as the model adapts to your device
-- **Performance stats** - Track real-world transcription speed per model on your device
-- **VAD silence stripping** - Optionally strip silent segments before transcription for faster results
-- **Configurable inference threads** - Auto-detects or manually sets thread count for performance tuning
-- **Organized settings** - Grouped into Transcription, Appearance, and Advanced sections
-- **Per-app settings** - Configure notification behavior per messaging app
-- **Picture-in-Picture** - See live transcription in a floating window while using other apps
-- **Multilingual UI** - App interface fully translated in English and Italian
-- **Theming** - Three color palettes (Indigo, WhatsApp, Telegram) with light and dark modes
+
+### Results & history
+
+- **Smart notifications** - Read long transcripts page-by-page without leaving the shade, copy the full result, or send it back to the source app with one tap
+- **Re-transcribe** - Retry any transcription with a different model straight from the history
+- **History actions** - Swipe or long-press any entry for copy, re-transcribe, and delete
+- **Per-entry metadata** - Each entry shows which model produced it and how long it took
 - **Auto-copy** - Optionally copy transcription to clipboard automatically
 - **Save to folder** - Auto-save transcripts as .txt to a folder of your choice (Drive, Syncthing, Dropbox, etc.)
-- **Video file support** - Transcribe audio from video files; extract embedded subtitles
+- **Picture-in-Picture** - See live transcription in a floating window while using other apps
+
+### Integration & automation
+
+- **Share integration** - Share audio from any messaging app to transcribe
+- **Model-specific share targets** - Pick a specific model directly from the Android share sheet
 - **Tasker/automation support** - Trigger transcription via broadcast intents
+- **HuggingFace login** - Authenticate (token or OAuth) for gated model downloads
+
+### Performance & appearance
+
+- **Configurable inference threads** - Auto-detects or manually sets thread count; NNAPI and CPU providers selectable
+- **Performance stats** - Track real-world transcription speed per model on your device
+- **Theming** - Three color palettes (Indigo, WhatsApp, Telegram) with light and dark modes
+- **Multilingual UI** - Interface translated in English, Italian, German, Spanish, French, Portuguese (BR), Russian, and Hindi
+- **Per-app settings** - Configure notification behavior per messaging app
+- **Organized settings** - Grouped into Transcription, Appearance, and Advanced sections
 
 ## Screenshots
 
