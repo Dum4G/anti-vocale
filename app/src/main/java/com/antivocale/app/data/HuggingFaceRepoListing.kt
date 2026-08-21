@@ -110,6 +110,8 @@ object ExternalModelEntryJson {
         val languages: List<String>,
         val options: Map<String, String>,
         val files: List<EntryFile>,
+        /** TASK-368: streaming zipformer transducer (TRANSDUCER only). */
+        val streaming: Boolean = false,
     )
 
     fun parse(text: String): Entry {
@@ -147,6 +149,14 @@ object ExternalModelEntryJson {
         // Parse options (null-tolerant, absent → empty map)
         val options = o.optStringMap("options")
 
+        // TASK-368: streaming flag, TRANSDUCER-only. The single choke point for
+        // the restriction: entry JSON, and through it every import path.
+        val streaming = o.optBoolean("streaming", false)
+        if (streaming && family != ModelFamily.TRANSDUCER) {
+            throw IllegalArgumentException(
+                "entry '${o.optString("name")}': streaming=true is only supported for the TRANSDUCER family")
+        }
+
         // Languages are a mandatory field of every explicit-family entry; only
         // legacy entries (no "family" key, parsed as TRANSDUCER above) may omit
         // them, so the rule reads as a languages requirement, not a family one.
@@ -180,6 +190,7 @@ object ExternalModelEntryJson {
             languages = languages,
             options = options,
             files = files,
+            streaming = streaming,
         )
     }
 }

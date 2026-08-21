@@ -44,6 +44,8 @@ data class ExternalModelRecord(
     val sizeBytes: Long,
     val importedAt: Long,
     val options: Map<String, String> = emptyMap(),
+    /** TASK-368: streaming zipformer transducer (decoded via OnlineRecognizer). */
+    val streaming: Boolean = false,
 ) {
     val backendId: String get() = BACKEND_ID_PREFIX + id
 
@@ -64,6 +66,7 @@ data class ExternalModelRecord(
         val optsJson = JSONObject()
         options.forEach { (k, v) -> optsJson.put(k, v) }
         put("options", optsJson)
+        put("streaming", streaming)
     }
 
     companion object {
@@ -92,6 +95,7 @@ data class ExternalModelRecord(
                 sourceUrl = if (o.isNull("sourceUrl")) null else o.getString("sourceUrl"),
                 files = files, sizeBytes = o.getLong("sizeBytes"), importedAt = o.getLong("importedAt"),
                 options = o.optStringMap("options"),
+                streaming = o.optBoolean("streaming", false),
             )
         } catch (e: Exception) {
             Log.w(TAG, "Malformed ExternalModelRecord; whole list will be rejected", e)

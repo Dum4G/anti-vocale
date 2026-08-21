@@ -1,0 +1,36 @@
+{
+  "name": "Zipformer Spanish streaming (Kroko, sherpa)",
+  "family": "TRANSDUCER",
+  "modelType": "",
+  "languages": [
+    "es"
+  ],
+  "streaming": true,
+  "options": {},
+  "files": [
+    {
+      "name": "encoder.onnx",
+      "url": "https://huggingface.co/csukuangfj/sherpa-onnx-streaming-zipformer-es-kroko-2025-08-06/resolve/main/encoder.onnx",
+      "sha256": "2d9f5ef87d1a5257f8a6687e21501c56f3aa2fcbfcfab9364dcc4ce4e06ae81b",
+      "size": 154878102
+    },
+    {
+      "name": "decoder.onnx",
+      "url": "https://huggingface.co/csukuangfj/sherpa-onnx-streaming-zipformer-es-kroko-2025-08-06/resolve/main/decoder.onnx",
+      "sha256": "d4ce176b94b25f7acc88717bc3f704fcf5d6e131aaac2e0cabab3885541181ee",
+      "size": 617488
+    },
+    {
+      "name": "joiner.onnx",
+      "url": "https://huggingface.co/csukuangfj/sherpa-onnx-streaming-zipformer-es-kroko-2025-08-06/resolve/main/joiner.onnx",
+      "sha256": "dae35df88d676e320fcdb99217328e66dcf722bf11b0f2459e14ddb5b982ded5",
+      "size": 336817
+    },
+    {
+      "name": "tokens.txt",
+      "url": "https://huggingface.co/csukuangfj/sherpa-onnx-streaming-zipformer-es-kroko-2025-08-06/resolve/main/tokens.txt",
+      "sha256": "1be5e0a58e05d06d327df4c6b7b5e4f8aba01da6981eb016fcaceafc6a56680f",
+      "size": 6385
+    }
+  ]
+}

@@ -15,6 +15,14 @@
       ],
       "family": "TRANSDUCER",
       "entryUrl": "https://raw.githubusercontent.com/RisorseArtificiali/anti-vocale/main/app/src/main/assets/external-catalog/russian-small.json"
+    },
+    {
+      "name": "Zipformer Spanish streaming (Kroko, sherpa)",
+      "languages": [
+        "es"
+      ],
+      "family": "TRANSDUCER",
+      "entryUrl": "https://raw.githubusercontent.com/RisorseArtificiali/anti-vocale/main/app/src/main/assets/external-catalog/spanish-small.json"
     }
   ]
 }

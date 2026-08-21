@@ -92,6 +92,7 @@ A single-model manifest with integrity pins. This is how third parties share a m
 | `modelType` | no (family-aware default) | `nemo_transducer` for TRANSDUCER without the field, `""` for WHISPER/SENSE_VOICE; CTC requires `nemo_ctc` or `zipformer_ctc` |
 | `languages` | yes for new entries (`family` present) | normalized ISO codes (`["ar"]`); doubles as the Whisper default language |
 | `options` | no | flat map of family options (`{"whisper.language": "ar"}`) |
+| `streaming` | no (default `false`) | `true` for streaming zipformer transducers (decoded via the online recognizer, whole-clip batch); `TRANSDUCER` family only, rejected otherwise |
 | `files` | yes | Array, one entry per file |
 | `files[].name` | yes | Source file name (role-matched by keyword) |
 | `files[].url` | yes | Direct download URL (must support HTTP Range for resume) |

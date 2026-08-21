@@ -7,6 +7,11 @@ import com.k2fsa.sherpa.onnx.FeatureConfig
 import com.k2fsa.sherpa.onnx.OfflineRecognizer
 import com.k2fsa.sherpa.onnx.OfflineRecognizerConfig
 import com.k2fsa.sherpa.onnx.OfflineStream
+import com.k2fsa.sherpa.onnx.OnlineModelConfig
+import com.k2fsa.sherpa.onnx.OnlineRecognizer
+import com.k2fsa.sherpa.onnx.OnlineRecognizerConfig
+import com.k2fsa.sherpa.onnx.OnlineStream
+import com.k2fsa.sherpa.onnx.OnlineTransducerModelConfig
 import com.antivocale.app.data.PreferencesManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -50,6 +55,8 @@ class ExternalSherpaBackend @Inject constructor() : TranscriptionBackend {
     // null recognizer after initialize completes (the unload-during-transcription window
     // is inherited from the sibling backends and unchanged).
     @Volatile private var recognizer: OfflineRecognizer? = null
+    /** TASK-368: set for streaming records (zipformer transducers); decoded batch-wise. */
+    @Volatile private var onlineRecognizer: OnlineRecognizer? = null
     private var modelDir: String? = null
     @Volatile private var isInitialized = false
 
@@ -109,7 +116,42 @@ class ExternalSherpaBackend @Inject constructor() : TranscriptionBackend {
                     "family validation failed for ${record.backendId}: ${e.message ?: "no detail provided"}", e))
             }
 
+            // TASK-368: streaming records build the OnlineRecognizer instead. The
+            // family restriction was already enforced at import (entry-JSON choke
+            // point); this is the defensive second gate before the native load.
+            if (record.streaming && record.family != com.antivocale.app.data.ModelFamily.TRANSDUCER) {
+                return@withContext Result.failure(TranscriptionException.ModelLoadError(
+                    "streaming is only supported for TRANSDUCER imports (${record.backendId})"))
+            }
+
             try {
+                if (record.streaming) {
+                    val transducerConfig = OnlineTransducerModelConfig(
+                        encoder = "${record.dir}/${SherpaBackend.CANONICAL_ENCODER}",
+                        decoder = "${record.dir}/${SherpaBackend.CANONICAL_DECODER}",
+                        joiner = "${record.dir}/${SherpaBackend.CANONICAL_JOINER}",
+                    )
+                    val onlineConfig = OnlineRecognizerConfig(
+                        modelConfig = OnlineModelConfig(
+                            transducer = transducerConfig,
+                            tokens = "${record.dir}/${SherpaBackend.CANONICAL_TOKENS}",
+                            numThreads = externalConfig.numThreads,
+                            debug = false,
+                            provider = externalConfig.provider,
+                            // Streaming zipformers carry no modelType metadata: "" (Nemotron pattern).
+                            modelType = "",
+                        ),
+                        featConfig = FeatureConfig(sampleRate = 16000, featureDim = 80),
+                    )
+                    onlineRecognizer = OnlineRecognizer(config = onlineConfig)
+                    modelDir = record.dir
+                    configuredId = record.backendId
+                    isInitialized = true
+                    keepAlive.start()
+                    Log.i(TAG, "External backend initialized (streaming): $configuredId")
+                    return@withContext Result.success(Unit)
+                }
+
                 val modelConfig = support.buildModelConfig(record, externalConfig.numThreads, externalConfig.provider)
 
                 val recognizerConfig = OfflineRecognizerConfig(
@@ -142,6 +184,11 @@ class ExternalSherpaBackend @Inject constructor() : TranscriptionBackend {
         // (see SherpaBackend for the full rationale).
         keepAlive.beginWork()
         try {
+            onlineRecognizer?.let { rec ->
+                return withContext(Dispatchers.IO) {
+                    transcribeStreamingBatch(rec, samples, sampleRate)
+                }
+            }
             val rec = recognizer
                 ?: return Result.failure(TranscriptionException.NotInitialized())
             return withContext(Dispatchers.IO) {
@@ -184,12 +231,48 @@ class ExternalSherpaBackend @Inject constructor() : TranscriptionBackend {
         }
     }
 
+    /**
+     * Batch decode over the streaming recognizer (TASK-368): feed the whole clip
+     * plus a 1s tail pad, drain the decode loop, signal EOF, drain again (a
+     * streaming transducer holds trailing tokens until input-finished), then read
+     * the final hypothesis. Same shape as the Nemotron batch path minus the
+     * progressive callback (external imports surface one final result).
+     */
+    private fun transcribeStreamingBatch(
+        rec: OnlineRecognizer,
+        samples: FloatArray,
+        sampleRate: Int,
+    ): Result<TranscriptionResult> {
+        var stream: OnlineStream? = null
+        try {
+            stream = rec.createStream()
+            stream.acceptWaveform(samples, sampleRate)
+            stream.acceptWaveform(FloatArray(sampleRate), sampleRate) // tail pad, no per-chunk copy
+            while (rec.isReady(stream)) rec.decode(stream)
+            stream.inputFinished()
+            while (rec.isReady(stream)) rec.decode(stream)
+            val transcription = rec.getResult(stream).text
+            if (transcription.isBlank()) {
+                return Result.failure(TranscriptionException.NoTranscriptionProduced())
+            }
+            return Result.success(TranscriptionResult(
+                text = transcription,
+                confidence = TranscriptionResult.computeConfidence(transcription, samples.size, sampleRate),
+            ))
+        } catch (e: Exception) {
+            Log.e(TAG, "External streaming transcription failed", e)
+            return Result.failure(TranscriptionException.NativeError(e.message ?: "unknown", e))
+        } finally {
+            stream?.release()
+        }
+    }
+
     override suspend fun generateText(prompt: String): Result<String> {
         return Result.failure(UnsupportedOperationException(
             "Text generation not supported by the external sherpa engine. Use for audio transcription only."))
     }
 
-    override fun isReady(): Boolean = isInitialized && recognizer != null
+    override fun isReady(): Boolean = isInitialized && (recognizer != null || onlineRecognizer != null)
 
     override fun isAudioSupported(): Boolean = true
 
@@ -198,6 +281,8 @@ class ExternalSherpaBackend @Inject constructor() : TranscriptionBackend {
         keepAlive.stop()
         recognizer?.release()
         recognizer = null
+        onlineRecognizer?.release()
+        onlineRecognizer = null
         modelDir = null
         isInitialized = false
         configuredId = PLACEHOLDER_ID

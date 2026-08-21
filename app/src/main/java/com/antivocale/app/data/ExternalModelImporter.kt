@@ -27,6 +27,7 @@ interface ExternalModelImportOperations {
         family: ModelFamily = ModelFamily.TRANSDUCER,
         options: Map<String, String> = emptyMap(),
         languages: List<String> = emptyList(),
+        streaming: Boolean = false,
     ): ExternalModelRecord
 
     suspend fun importFromUrl(
@@ -35,6 +36,7 @@ interface ExternalModelImportOperations {
         family: ModelFamily = ModelFamily.TRANSDUCER,
         options: Map<String, String> = emptyMap(),
         languages: List<String> = emptyList(),
+        streaming: Boolean = false,
     ): ExternalModelRecord
 }
 
@@ -161,6 +163,7 @@ class ExternalModelImporter(
         family: ModelFamily,
         options: Map<String, String>,
         languages: List<String>,
+        streaming: Boolean,
     ): ExternalModelRecord {
         val tree = DocumentFile.fromTreeUri(context, treeUri)
             ?: throw IllegalArgumentException("Cannot open the selected folder")
@@ -168,7 +171,7 @@ class ExternalModelImporter(
             .filter { it.isFile }
             .map { SafSource(it, context.contentResolver) }
         val displayName = tree.name ?: "imported-model"
-        return importCore(children, modelType, displayName, family, options, languages)
+        return importCore(children, modelType, displayName, family, options, languages, streaming)
     }
 
     /** Direct-file import: tests and tooling. The Task 9 migration does NOT use this
@@ -179,9 +182,10 @@ class ExternalModelImporter(
         family: ModelFamily = ModelFamily.TRANSDUCER,
         options: Map<String, String> = emptyMap(),
         languages: List<String> = emptyList(),
+        streaming: Boolean = false,
     ): ExternalModelRecord {
         val children = src.listFiles()?.filter { it.isFile }?.map(::FileSource) ?: emptyList()
-        return importCore(children, modelType, src.name, family, options, languages)
+        return importCore(children, modelType, src.name, family, options, languages, streaming)
     }
 
     /**
@@ -195,6 +199,7 @@ class ExternalModelImporter(
         family: ModelFamily = ModelFamily.TRANSDUCER,
         options: Map<String, String> = emptyMap(),
         languages: List<String> = emptyList(),
+        streaming: Boolean = false,
     ): ExternalModelRecord {
         val repoId = HuggingFaceRepoListing.parseRepoId(repoUrl)
             ?: throw IllegalArgumentException("not a HuggingFace repository URL: $repoUrl")
@@ -213,7 +218,7 @@ class ExternalModelImporter(
         }
         return downloadCore(
             triples, resolveModelType(modelType, family), repoId.substringAfter('/'),
-            ExternalModelSource.URL, repoUrl, family, options, languages)
+            ExternalModelSource.URL, repoUrl, family, options, languages, streaming)
     }
 
     /** Catalog-entry JSON import: every file must carry a sha256 pin (hashless entries rejected).
@@ -236,7 +241,7 @@ class ExternalModelImporter(
         }
         return downloadCore(
             triples, entry.modelType, entry.name, ExternalModelSource.URL, entryUrl,
-            entry.family, entry.options, entry.languages)
+            entry.family, entry.options, entry.languages, entry.streaming)
     }
 
     /**
@@ -252,11 +257,12 @@ class ExternalModelImporter(
         family: ModelFamily,
         options: Map<String, String>,
         languages: List<String>,
+        streaming: Boolean,
     ): ExternalModelRecord =
         if (url.trim().endsWith(".json")) {
             importFromEntryJson(url)
         } else if (HuggingFaceRepoListing.parseRepoId(url) != null) {
-            importFromHuggingFaceRepo(url, modelType, family, options, languages)
+            importFromHuggingFaceRepo(url, modelType, family, options, languages, streaming)
         } else {
             // A stray URL must fail classification loudly here; falling through to
             // the entry-JSON parse would surface as a raw JSON error instead.
@@ -272,6 +278,7 @@ class ExternalModelImporter(
         family: ModelFamily,
         options: Map<String, String>,
         languages: List<String>,
+        streaming: Boolean = false,
     ): ExternalModelRecord {
         val resolvedModelType = resolveModelType(modelType, family)
         // 1. Copy plan by role, plus any ONNX split-file sidecars.
@@ -315,7 +322,7 @@ class ExternalModelImporter(
             }
 
             registerImported(targetDir, pins, family, resolvedModelType, options, languages,
-                ExternalModelSource.LOCAL, null, displayName)
+                ExternalModelSource.LOCAL, null, displayName, streaming)
         }
     }
 
@@ -338,6 +345,7 @@ class ExternalModelImporter(
         family: ModelFamily = ModelFamily.TRANSDUCER,
         options: Map<String, String> = emptyMap(),
         languages: List<String> = emptyList(),
+        streaming: Boolean = false,
     ): ExternalModelRecord {
         val root = filesRoot()
         // Unconditional pre-flight (spec binding): callers must supply sizes (the HF
@@ -389,7 +397,7 @@ class ExternalModelImporter(
                 scanner?.let { checkSidecars(displayName, it.names(), declaredNames) }
             }
 
-            registerImported(targetDir, pins, family, modelType, options, languages, source, sourceUrl, displayName)
+            registerImported(targetDir, pins, family, modelType, options, languages, source, sourceUrl, displayName, streaming)
         }
     }
 
@@ -404,6 +412,7 @@ class ExternalModelImporter(
         source: ExternalModelSource,
         sourceUrl: String?,
         displayName: String,
+        streaming: Boolean = false,
     ): ExternalModelRecord {
         // Pre-native metadata validation BEFORE persisting: a wrong family is an
         // import-time error, never a transcription-time exit(255). Both the checked
@@ -462,6 +471,7 @@ class ExternalModelImporter(
             files = pins,
             sizeBytes = sizeBytes,
             importedAt = System.currentTimeMillis(),
+            streaming = streaming,
         )
         store.add(record)
         Log.i(TAG, "Imported external model ${record.backendId} from $displayName ($sizeBytes bytes)")

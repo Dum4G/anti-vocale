@@ -75,7 +75,7 @@ class ModelViewModelExternalImportTest {
 
         override suspend fun importFromTreeUri(
             context: Context, treeUri: Uri, modelType: String?, family: ModelFamily,
-            options: Map<String, String>, languages: List<String>,
+            options: Map<String, String>, languages: List<String>, streaming: Boolean,
         ): ExternalModelRecord {
             this.treeUri = treeUri
             record(null, modelType, family, options, languages)
@@ -84,7 +84,7 @@ class ModelViewModelExternalImportTest {
 
         override suspend fun importFromUrl(
             url: String, modelType: String?, family: ModelFamily,
-            options: Map<String, String>, languages: List<String>,
+            options: Map<String, String>, languages: List<String>, streaming: Boolean,
         ): ExternalModelRecord {
             record(url, modelType, family, options, languages)
             return sampleRecord()
