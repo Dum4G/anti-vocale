@@ -99,7 +99,7 @@ class ExternalCatalogTest {
         // and surface via both name and language-code search.
         val text = java.io.File("src/main/assets/external-catalog/index.json").readText()
         val entries = ExternalCatalog.parseIndex(text)
-        assertEquals(1, entries.size)
+        assertEquals(2, entries.size)  // arabic (WHISPER) + russian-small (TRANSDUCER, TASK-366)
         val arabic = ExternalCatalog.filter(entries, "arabic")
         assertEquals(1, arabic.size)
         val byCode = ExternalCatalog.filter(entries, "ar")

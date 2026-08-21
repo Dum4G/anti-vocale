@@ -2,9 +2,19 @@
   "entries": [
     {
       "name": "Whisper Large v3 Turbo Arabic Dialectal (sherpa int8)",
-      "languages": ["ar"],
+      "languages": [
+        "ar"
+      ],
       "family": "WHISPER",
       "entryUrl": "https://raw.githubusercontent.com/RisorseArtificiali/anti-vocale/main/app/src/main/assets/external-catalog/arabic.json"
+    },
+    {
+      "name": "Zipformer Russian int8 (Vosk-based, sherpa)",
+      "languages": [
+        "ru"
+      ],
+      "family": "TRANSDUCER",
+      "entryUrl": "https://raw.githubusercontent.com/RisorseArtificiali/anti-vocale/main/app/src/main/assets/external-catalog/russian-small.json"
     }
   ]
 }

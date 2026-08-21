@@ -1,0 +1,35 @@
+{
+  "name": "Zipformer Russian int8 (Vosk-based, sherpa)",
+  "family": "TRANSDUCER",
+  "modelType": "",
+  "languages": [
+    "ru"
+  ],
+  "options": {},
+  "files": [
+    {
+      "name": "encoder.int8.onnx",
+      "url": "https://huggingface.co/csukuangfj/sherpa-onnx-zipformer-ru-int8-2025-04-20/resolve/main/encoder.int8.onnx",
+      "sha256": "eb6c12fbad810d5bc3e427802e604604c69b5943a91feebc43424dd09d9ec407",
+      "size": 70876638
+    },
+    {
+      "name": "decoder.onnx",
+      "url": "https://huggingface.co/csukuangfj/sherpa-onnx-zipformer-ru-int8-2025-04-20/resolve/main/decoder.onnx",
+      "sha256": "dcbe1ffa0211e77ca6d3a80164df13fbda3ec00e47d12b9f449f89572df12136",
+      "size": 2093080
+    },
+    {
+      "name": "joiner.int8.onnx",
+      "url": "https://huggingface.co/csukuangfj/sherpa-onnx-zipformer-ru-int8-2025-04-20/resolve/main/joiner.int8.onnx",
+      "sha256": "93f2e1d12b78d53e7802f1606488c14bb3d764b15fadf5ef6c022f6ba1fa40f7",
+      "size": 259417
+    },
+    {
+      "name": "tokens.txt",
+      "url": "https://huggingface.co/csukuangfj/sherpa-onnx-zipformer-ru-int8-2025-04-20/resolve/main/tokens.txt",
+      "sha256": "93bbbc0bae6b78c0bbb743d4aa9fded3bb5ff3aac5f0200e3a769a5a05e0fdf6",
+      "size": 6388
+    }
+  ]
+}
