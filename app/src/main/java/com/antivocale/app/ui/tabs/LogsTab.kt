@@ -237,6 +237,7 @@ fun LogsTab(
     val context = LocalContext.current
     val swipeActionMode by viewModel.swipeActionMode
         .collectAsState(initial = PreferencesManager.DEFAULT_SWIPE_ACTION_MODE)
+    val showTaskDetails by viewModel.showTaskDetails.collectAsState()
     val showVadAdvisory by viewModel.showVadAdvisory.collectAsState()
     val groupByConversation by viewModel.groupLogsByConversation.collectAsState()
 
@@ -548,6 +549,7 @@ fun LogsTab(
                                         searchQuery = searchQuery,
                                         isExpanded = log.taskId in expandedTaskIds,
                                         swipeActionMode = swipeActionMode,
+                                        showTaskDetails = showTaskDetails,
                                         revealedLogId = revealedLogId,
                                         onRevealedLogIdChange = { revealedLogId = it },
                                         onExpandChange = { expanded ->
@@ -585,6 +587,7 @@ fun LogsTab(
                                     searchQuery = searchQuery,
                                     isExpanded = log.taskId in expandedTaskIds,
                                     swipeActionMode = swipeActionMode,
+                                    showTaskDetails = showTaskDetails,
                                     revealedLogId = revealedLogId,
                                     onRevealedLogIdChange = { revealedLogId = it },
                                     onExpandChange = { expanded ->
@@ -756,6 +759,7 @@ fun LogEntryItem(
     log: LogEntry,
     searchQuery: String = "",
     expanded: Boolean = false,
+    showTaskDetails: Boolean = false,
     onExpandChange: (Boolean) -> Unit = {},
     onRetranscribe: (() -> Unit)? = null,
     onDelete: (() -> Unit)? = null,
@@ -1039,13 +1043,15 @@ fun LogEntryItem(
                             }
                         }
 
-                        // Task ID (less prominent)
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = stringResource(R.string.logs_task_id, log.taskId.take(8)),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                        )
+                        // Task ID: opt-in detail (GH #45 follow-up, default off)
+                        if (showTaskDetails) {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = stringResource(R.string.logs_task_id, log.taskId.take(8)),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                            )
+                        }
 
                         // Action buttons: compact icon-only actions tucked into the
                         // bottom corner of the card (no labels; localized
@@ -1272,6 +1278,7 @@ private fun LogEntryWithSwipe(
     searchQuery: String,
     isExpanded: Boolean,
     swipeActionMode: String,
+    showTaskDetails: Boolean,
     revealedLogId: String?,
     onRevealedLogIdChange: (String?) -> Unit,
     onExpandChange: (Boolean) -> Unit,
@@ -1321,6 +1328,7 @@ private fun LogEntryWithSwipe(
                 log = log,
                 searchQuery = searchQuery,
                 expanded = isExpanded,
+                showTaskDetails = showTaskDetails,
                 onExpandChange = { expanded ->
                     if (revealState.isRevealed) {
                         revealState.reset()
@@ -1374,6 +1382,7 @@ private fun LogEntryWithSwipe(
                 log = log,
                 searchQuery = searchQuery,
                 expanded = isExpanded,
+                showTaskDetails = showTaskDetails,
                 onExpandChange = onExpandChange,
                 onRetranscribe = onRetranscribe,
                 onCancel = { cancelTask(context, log.taskId) },

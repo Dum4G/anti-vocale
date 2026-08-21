@@ -161,6 +161,20 @@ class SettingsViewModel @Inject constructor(
             initialValue = PreferencesManager.DEFAULT_TRANSCRIPTION_LANGUAGE
         )
 
+    // GH #45 follow-up: opt-in task-id detail line on log entries
+    val showTaskDetails: StateFlow<Boolean> = preferencesManager.showTaskDetails
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = PreferencesManager.DEFAULT_SHOW_TASK_DETAILS
+        )
+
+    fun saveShowTaskDetails(enabled: Boolean) {
+        viewModelScope.launch {
+            preferencesManager.saveShowTaskDetails(enabled)
+        }
+    }
+
     // Swipe action mode preference
     val swipeActionMode: StateFlow<String> = preferencesManager.swipeActionMode
         .stateIn(

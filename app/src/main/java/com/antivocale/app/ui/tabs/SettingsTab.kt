@@ -84,6 +84,7 @@ fun SettingsTab(
     val showRetranscribeButton by viewModel.showRetranscribeButton.collectAsState()
     val forceModelLoad by viewModel.forceModelLoad.collectAsState()
     val compactResultActions by viewModel.compactResultActions.collectAsState()
+    val showTaskDetails by viewModel.showTaskDetails.collectAsState()
     val tokenState by viewModel.tokenState.collectAsState()
     val tokenInput by viewModel.tokenInput.collectAsState()
     val oauthState by viewModel.oauthState.collectAsState()
@@ -753,6 +754,17 @@ fun SettingsTab(
                 checked = compactResultActions,
                 onCheckedChange = { enabled ->
                     viewModel.saveCompactResultActions(enabled)
+                }
+            )
+
+            // GH #45 follow-up: opt-in task-id detail line on log entries
+            ToggleSettingCard(
+                icon = Icons.Default.Tag,
+                title = stringResource(R.string.show_task_details_title),
+                description = stringResource(R.string.show_task_details_description),
+                checked = showTaskDetails,
+                onCheckedChange = { enabled ->
+                    viewModel.saveShowTaskDetails(enabled)
                 }
             )
         }

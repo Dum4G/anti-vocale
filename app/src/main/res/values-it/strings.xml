@@ -815,6 +815,8 @@
 
     <!-- Raggruppamento conversazioni -->
     <string name="conversation_grouping_title">Raggruppa per conversazione</string>
+    <string name="show_task_details_title">Mostra dettagli task</string>
+    <string name="show_task_details_description">Mostra l\'ID task nelle voci del registro. Utile per segnalare problemi; disattivato di default.</string>
     <string name="compact_result_actions_title">Azioni compatte</string>
     <string name="compact_result_actions_description">Mostra le azioni sulla trascrizione come sole icone nell\'angolo della card. Disattiva per i pulsanti con etichetta.</string>
     <string name="conversation_grouping_description">Raggruppa le trascrizioni per app di origine (WhatsApp, Telegram, ecc.) in sezioni comprimibili.</string>

@@ -893,6 +893,8 @@
     <!-- Conversation Grouping -->
     <string name="conversation_grouping_title">Group by Conversation</string>
     <string name="compact_result_actions_title">Compact action buttons</string>
+    <string name="show_task_details_title">Show task details</string>
+    <string name="show_task_details_description">Show the task ID on log entries. Useful when reporting issues; off by default.</string>
     <string name="compact_result_actions_description">Show transcription actions as icons only, tucked into the corner of the result card. Turn off for labeled buttons.</string>
     <string name="conversation_grouping_description">Group transcriptions by source app (WhatsApp, Telegram, etc.) into collapsible sections.</string>
     <plurals name="conversation_group_count">
