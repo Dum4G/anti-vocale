@@ -479,14 +479,15 @@ jobs:
           # revision (MR !46215 note_3715941208). Require the newest trio, and
           # verify each APK's OWN versionCode, before anything gets signed.
           RECIPE=/home/vagrant/metadata/com.antivocale.app.yml
-          # Newest version = the LAST 'versionName:' build block in the recipe
-          # (fdroiddata lists builds oldest-first). Take every versionCode in
-          # that block, so a future 2-ABI release needs no edit here.
-          TRIO=$(awk '/^  - versionName:/{block=""} {block=block $0 "\n"} END{printf "%s", block}' "$RECIPE" \
-            | grep -oE 'versionCode: [0-9]+' | awk '{print $2}')
+          # Newest version = every build block whose versionName equals the LAST
+          # versionName in the recipe (fdroiddata lists builds oldest-first and
+          # uses ONE BLOCK PER versionCode, all sharing the version's name).
+          LASTVN=$(grep '^  - versionName:' "$RECIPE" | tail -1 | awk '{print $3}')
+          [ -n "$LASTVN" ] || { echo "ERROR: could not read any versionName from $RECIPE"; exit 1; }
+          TRIO=$(awk -v lv="$LASTVN" '/^  - versionName:/{inblk = ($3 == lv)} inblk && /versionCode:/{print $2}' "$RECIPE")
           NEWEST_VC=$(echo "$TRIO" | tail -1)
-          echo "expected newest-version versionCodes: $TRIO"
-          [ -n "$TRIO" ] || { echo "ERROR: could not read the newest build block from $RECIPE"; exit 1; }
+          echo "newest versionName: $LASTVN; expected versionCodes: $(echo $TRIO)"
+          [ -n "$TRIO" ] || { echo "ERROR: no versionCodes found for newest versionName $LASTVN"; exit 1; }
           # Newer build-tools ship aapt2 only; both support 'dump badging'.
           AAPT=$(find /opt/android-sdk/build-tools \( -name aapt -o -name aapt2 \) | sort | tail -1)
           [ -n "$AAPT" ] || { echo "ERROR: no aapt/aapt2 under /opt/android-sdk/build-tools"; exit 1; }
@@ -503,13 +504,17 @@ jobs:
           [ -n "$UNSIGNED_DIR" ] || { echo "ERROR: no directory contains the full newest version ($TRIO); refusing to sign stale APKs"; exit 1; }
           # The commit the newest build must come from (the incident shipped APKs
           # built at the previous tag's commit with a correct versionCode).
-          RECIPE_COMMIT=$(awk '/^  - versionName:/{c=""} /^    commit:/{c=$2} END{print c}' "$RECIPE")
+          RECIPE_COMMIT=$(awk -v lv="$LASTVN" '/^  - versionName:/{inblk = ($3 == lv)} inblk && /^    commit:/{print $2; exit}' "$RECIPE")
           [ -n "$RECIPE_COMMIT" ] || { echo "ERROR: could not read the newest commit: from $RECIPE"; exit 1; }
           for VC in $TRIO; do
             APK="$UNSIGNED_DIR/com.antivocale.app_$VC.apk"
             EMBEDDED=$("$AAPT" dump badging "$APK" | head -1 | grep -oE "versionCode='[0-9]+'" | grep -oE '[0-9]+')
             [ "$EMBEDDED" = "$VC" ] || { echo "ERROR: $APK embeds versionCode '$EMBEDDED', expected $VC"; exit 1; }
-            EMBEDDED_REV=$(unzip -p "$APK" META-INF/version-control-info.textproto 2>/dev/null | grep -oE 'revision: "[0-9a-f]+"' | grep -oE '[0-9a-f]+')
+            # Extract the sha INSIDE the quotes: a bare [0-9a-f]+ also matches
+            # the 'e' in 'revision' (caught as a false-positive guard failure on
+            # the first production run, 2026-08-21).
+            EMBEDDED_REV=$(unzip -p "$APK" META-INF/version-control-info.textproto 2>/dev/null \
+              | grep -oE 'revision: "[0-9a-f]+"' | sed 's/.*"\(.*\)"/\1/')
             [ "$EMBEDDED_REV" = "$RECIPE_COMMIT" ] || { echo "ERROR: $APK was built at revision '$EMBEDDED_REV', expected $RECIPE_COMMIT (stale build)"; exit 1; }
             echo "OK: $VC built at $RECIPE_COMMIT ($APK)"
           done
