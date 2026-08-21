@@ -17,12 +17,20 @@
       "entryUrl": "https://raw.githubusercontent.com/RisorseArtificiali/anti-vocale/main/app/src/main/assets/external-catalog/russian-small.json"
     },
     {
-      "name": "Zipformer Spanish streaming (Kroko, sherpa)",
+      "name": "Kroko Community Zipformer Spanish (streaming, CC-BY-SA 4.0, Banafo / kroko.ai)",
       "languages": [
         "es"
       ],
       "family": "TRANSDUCER",
       "entryUrl": "https://raw.githubusercontent.com/RisorseArtificiali/anti-vocale/main/app/src/main/assets/external-catalog/spanish-small.json"
+    },
+    {
+      "name": "Kroko Community Zipformer German (streaming, CC-BY-SA 4.0, Banafo / kroko.ai)",
+      "languages": [
+        "de"
+      ],
+      "family": "TRANSDUCER",
+      "entryUrl": "https://raw.githubusercontent.com/RisorseArtificiali/anti-vocale/main/app/src/main/assets/external-catalog/german-small.json"
     }
   ]
 }
