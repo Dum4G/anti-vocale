@@ -69,33 +69,18 @@ class SettingsViewModel @Inject constructor(
     // Keep-alive timeout options in minutes
     val timeoutOptions = listOf(1, 2, 5, 10, 15, 30, 60)
 
-    // Language options with display names
-    data class LanguageOption(val code: String, val displayName: String)
-    val languageOptions = listOf(
-        LanguageOption("system", "System Default"),
-        LanguageOption("en", "English"),
-        LanguageOption("it", "Italiano"),
-        LanguageOption("de", "Deutsch"),
-        LanguageOption("ru", "Русский"),
-        LanguageOption("hi", "हिन्दी"),
-        LanguageOption("fr", "Français"),
-        LanguageOption("es", "Español"),
-        LanguageOption("pt-BR", "Português (BR)")
-    )
+    // Language options with display names (native names: users find their
+    // language by its own name). TASK-353: sorted at READ time per the active
+    // app locale; see languageOptionsFor below.
+    val languageOptions: List<LanguageOption> =
+        languageOptionsFor(
+            com.antivocale.app.util.LocaleManager.getCurrentLocale() ?: java.util.Locale.getDefault()
+        )
 
-    // Transcription language options (reuses LanguageOption)
-    val transcriptionLanguageOptions = listOf(
-        LanguageOption("auto", "Auto-detect"),
-        LanguageOption("it", "Italiano"),
-        LanguageOption("en", "English"),
-        LanguageOption("es", "Español"),
-        LanguageOption("fr", "Français"),
-        LanguageOption("de", "Deutsch"),
-        LanguageOption("pt", "Português"),
-        LanguageOption("ja", "日本語"),
-        LanguageOption("zh", "中文"),
-        LanguageOption("ar", "العربية")
-    )
+    val transcriptionLanguageOptions: List<LanguageOption> =
+        transcriptionOptionsFor(
+            com.antivocale.app.util.LocaleManager.getCurrentLocale() ?: java.util.Locale.getDefault()
+        )
 
     // Theme options
     val themeOptions = ThemeType.entries
@@ -728,3 +713,50 @@ class SettingsViewModel @Inject constructor(
         }
     }
 }
+
+// ---- TASK-353: locale-aware language option ordering ----
+// Alphabetical order is locale-dependent, so the sort runs at READ time with a
+// Collator for the active app locale (what the Android system language picker
+// does, frameworks/opt/localepicker LocaleHelper). Native display names are
+// kept: users find their language by its own name. The sentinel entry (system
+// default / auto-detect) stays pinned first.
+
+data class LanguageOption(val code: String, val displayName: String)
+
+private val appLanguageEntries = listOf(
+    LanguageOption("de", "Deutsch"),
+    LanguageOption("en", "English"),
+    LanguageOption("es", "Español"),
+    LanguageOption("fr", "Français"),
+    LanguageOption("hi", "हिन्दी"),
+    LanguageOption("it", "Italiano"),
+    LanguageOption("pt-BR", "Português (BR)"),
+    LanguageOption("ru", "Русский"),
+)
+
+private val transcriptionLanguageEntries = listOf(
+    LanguageOption("ar", "العربية"),
+    LanguageOption("de", "Deutsch"),
+    LanguageOption("en", "English"),
+    LanguageOption("es", "Español"),
+    LanguageOption("fr", "Français"),
+    LanguageOption("it", "Italiano"),
+    LanguageOption("ja", "日本語"),
+    LanguageOption("pt", "Português"),
+    LanguageOption("zh", "中文"),
+)
+
+private fun sortedWithSentinel(
+    sentinel: LanguageOption,
+    entries: List<LanguageOption>,
+    locale: java.util.Locale,
+): List<LanguageOption> {
+    val collator = java.text.Collator.getInstance(locale)
+    return listOf(sentinel) + entries.sortedWith { a, b -> collator.compare(a.displayName, b.displayName) }
+}
+
+internal fun languageOptionsFor(locale: java.util.Locale): List<LanguageOption> =
+    sortedWithSentinel(LanguageOption("system", "System Default"), appLanguageEntries, locale)
+
+internal fun transcriptionOptionsFor(locale: java.util.Locale): List<LanguageOption> =
+    sortedWithSentinel(LanguageOption("auto", "Auto-detect"), transcriptionLanguageEntries, locale)
