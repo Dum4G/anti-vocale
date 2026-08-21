@@ -248,6 +248,8 @@
     <!-- Model Tab - Download section -->
     <string name="download_models">Gemma Models</string>
     <string name="gemma_advanced_features_description">Full multimodal LLMs with advanced features: transcription, text transformation, and enrichment.</string>
+    <!-- GH #49: audio-length capability, shown in the model list BEFORE download -->
+    <string name="model_limit_chunked">Any length: longer audio is split automatically</string>
     <string name="requires_huggingface_token">Requires HuggingFace token.</string>
     <string name="add_in_settings">Add in Settings</string>
     <string name="recommended">Recommended</string>

@@ -468,6 +468,43 @@ jobs:
           fi
           exit 0
 
+      - name: Guard - newest-version builds must exist and match their versionCode
+        run: |
+          set -eu
+          # The 2026-08-21 incident: the 371/372/374 builds failed seconds after
+          # starting (stale ndk: pin in the mirror recipe) while fdroid still exited
+          # 0, having built the older versionCodes. The attach step then signed the
+          # STALE unsigned APKs (built at the beta.2 commit) and published them as
+          # the v1.10.0 reference: F-Droid's check failed on the embedded git
+          # revision (MR !46215 note_3715941208). Require the newest trio, and
+          # verify each APK's OWN versionCode, before anything gets signed.
+          RECIPE=/home/vagrant/metadata/com.antivocale.app.yml
+          # Last three versionCodes in the recipe = the newest version's per-ABI trio
+          TRIO=$(grep -oE 'versionCode: [0-9]+' "$RECIPE" | awk '{print $2}' | tail -3)
+          echo "expected newest trio: $TRIO"
+          [ "$(echo "$TRIO" | wc -l)" -eq 3 ] || { echo "ERROR: could not read a full trio from $RECIPE"; exit 1; }
+          # Newer build-tools ship aapt2 only; both support 'dump badging'.
+          AAPT=$(find /opt/android-sdk/build-tools \( -name aapt -o -name aapt2 \) | sort | tail -1)
+          [ -n "$AAPT" ] || { echo "ERROR: no aapt/aapt2 under /opt/android-sdk/build-tools"; exit 1; }
+          # The directory that actually contains the NEWEST trio is the only one the
+          # sign step may touch (exported below). Picking any other directory (or
+          # scanning everywhere, as the old sign loop did) risks signing stale APKs
+          # left by earlier runs on this persistent VM.
+          UNSIGNED_DIR=""
+          for CANDIDATE in $(find /home/vagrant /tmp -name "com.antivocale.app_$(echo "$TRIO" | tail -1).apk" 2>/dev/null | grep -v test/data | xargs -r -n1 dirname | sort -u); do
+            FOUND=0
+            for VC in $TRIO; do [ -f "$CANDIDATE/com.antivocale.app_$VC.apk" ] && FOUND=$((FOUND+1)); done
+            if [ "$FOUND" -eq 3 ]; then UNSIGNED_DIR="$CANDIDATE"; break; fi
+          done
+          [ -n "$UNSIGNED_DIR" ] || { echo "ERROR: no directory contains the full newest trio ($TRIO); refusing to sign stale APKs"; exit 1; }
+          for VC in $TRIO; do
+            APK="$UNSIGNED_DIR/com.antivocale.app_$VC.apk"
+            EMBEDDED=$("$AAPT" dump badging "$APK" | head -1 | grep -oE "versionCode='[0-9]+'" | grep -oE '[0-9]+')
+            [ "$EMBEDDED" = "$VC" ] || { echo "ERROR: $APK embeds versionCode '$EMBEDDED', expected $VC"; exit 1; }
+            echo "OK: $VC built and matches ($APK)"
+          done
+          echo "REPRO_UNSIGNED_DIR=$UNSIGNED_DIR" >> "$GITHUB_ENV"
+
       - name: Sign the three per-ABI reference APKs (v2/v3 only, alignment preserved; apksigner must not rewrite the zip)
         run: |
           set -ex
@@ -511,9 +548,13 @@ jobs:
               --in "$UNSIGNED" --out "app-fdroid-${ABI}-release.apk"
             apksigner verify --print-certs "app-fdroid-${ABI}-release.apk" | grep SHA-256
           }
-          # unsigned/ may be under /home/vagrant/unsigned or /tmp/unsigned depending on layout; find both.
+          # The guard step located the one directory holding the full newest trio
+          # (REPRO_UNSIGNED_DIR) and verified each APK's embedded versionCode.
+          # Sign ONLY from there: the old scan-everywhere loop could pick up stale
+          # APKs from earlier runs on this persistent VM and let them overwrite
+          # the good ones under the fixed per-ABI output names.
           SIGNED_ANY=0
-          for UNSIGNED in $(find /home/vagrant /tmp -name 'com.antivocale.app_*.apk' 2>/dev/null | grep -v test/data | sort -u); do
+          for UNSIGNED in $(find "$REPRO_UNSIGNED_DIR" -maxdepth 1 -name 'com.antivocale.app_*.apk' | sort); do
             VC=$(echo "$UNSIGNED" | grep -oE 'com\.antivocale\.app_[0-9]+\.apk' | grep -oE '[0-9]+')
             sign_built "$UNSIGNED" "$VC"
             SIGNED_ANY=1

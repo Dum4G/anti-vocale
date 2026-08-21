@@ -22,6 +22,7 @@ import androidx.compose.ui.Alignment
 import kotlinx.coroutines.delay
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -41,7 +42,10 @@ import com.antivocale.app.data.download.DownloadState
 import com.antivocale.app.service.InferenceService
 import com.antivocale.app.transcription.CatalogVariantUi
 import com.antivocale.app.transcription.ModelFamilySupport
+import com.antivocale.app.transcription.AudioLimit
 import com.antivocale.app.transcription.ModelInfoProvider
+import com.antivocale.app.transcription.audioLimitForCatalogEntry
+import com.antivocale.app.transcription.audioLimitForVariants
 import com.antivocale.app.transcription.ModelVariant
 import com.antivocale.app.transcription.SherpaModelDownloader
 import com.antivocale.app.ui.components.DownloadButtonState
@@ -550,6 +554,11 @@ private fun ModelDownloadSection(
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                        // GH #49: audio-length capability from metadata
+                        val gemmaLimit = remember(visibleVariants) {
+                            audioLimitForVariants(visibleVariants)
+                        }
+                        AudioLimitLabel(gemmaLimit)
                     }
                 }
             }
@@ -699,6 +708,11 @@ private fun CatalogModelSection(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
+                        // GH #49: declare the audio-length capability BEFORE download
+                        val entryLimit = remember(entry.id, entry.storageDir) {
+                            audioLimitForCatalogEntry(entry.storageDir, entry.flags.chunkDurationSeconds)
+                        }
+                        AudioLimitLabel(entryLimit)
                     }
                 }
                 when {
@@ -1427,4 +1441,29 @@ private fun ComparisonRow(
             Text(quality, modifier = Modifier.weight(1.5f), style = MaterialTheme.typography.bodySmall)
         }
     }
+}
+
+/**
+ * GH #49: one-line audio-length capability shown in the model list BEFORE the
+ * download, so users can make an informed decision (metadata-driven; see
+ * [audioLimit]). Terminology mirrors FAQ.md.
+ */
+@Composable
+private fun AudioLimitLabel(limit: AudioLimit) {
+    // Reuses the model_info_max_audio* family (translated in all locales) for the
+    // capped and no-limit cases; only the chunked wording is new (GH #49).
+    val text = when (limit) {
+        is AudioLimit.HardCap ->
+            stringResource(R.string.model_info_max_audio) + ": " +
+                pluralStringResource(R.plurals.model_info_max_audio_seconds, limit.seconds, limit.seconds)
+        AudioLimit.ChunkedAnyLength ->
+            stringResource(R.string.model_limit_chunked)
+        AudioLimit.NoKnownLimit ->
+            stringResource(R.string.model_info_max_audio_unlimited)
+    }
+    Text(
+        text = text,
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.tertiary
+    )
 }

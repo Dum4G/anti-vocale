@@ -149,51 +149,11 @@ object ModelInfoProvider {
                 performanceNotes = R.string.model_info_notes_gigaam
             ))
 
-            put("gemma-4-gguf-q4km", ModelInfo(
+            // Shared base for every Gemma variant: all are LLMs with the same hard
+            // 30s audio cap (GH #49); per-variant entries override threads/quant.
+            val gemmaInfoBase = ModelInfo(
                 architectureType = ArchitectureType.LLM,
-                maxAudioDuration = null,
-                recommendedThreads = 4..6,
-                quantizationLevel = "Q4_K_M",
-                isArm64Only = false,
-                supportsProgressiveTranscription = false,
-                vadRecommended = false,
-                benchmarkWer = null,
-                relativeSpeed = null,
-                bestFor = R.string.model_info_best_for_gemma,
-                performanceNotes = R.string.model_info_notes_gemma
-            ))
-
-            put("gemma-4-gguf-q5km", ModelInfo(
-                architectureType = ArchitectureType.LLM,
-                maxAudioDuration = null,
-                recommendedThreads = 4..6,
-                quantizationLevel = "Q5_K_M",
-                isArm64Only = false,
-                supportsProgressiveTranscription = false,
-                vadRecommended = false,
-                benchmarkWer = null,
-                relativeSpeed = null,
-                bestFor = R.string.model_info_best_for_gemma,
-                performanceNotes = R.string.model_info_notes_gemma
-            ))
-
-            put("gemma-4-gguf-q8", ModelInfo(
-                architectureType = ArchitectureType.LLM,
-                maxAudioDuration = null,
-                recommendedThreads = 6..8,
-                quantizationLevel = "Q8_0",
-                isArm64Only = false,
-                supportsProgressiveTranscription = false,
-                vadRecommended = false,
-                benchmarkWer = null,
-                relativeSpeed = null,
-                bestFor = R.string.model_info_best_for_gemma,
-                performanceNotes = R.string.model_info_notes_gemma
-            ))
-
-            put("gemma-4-e2b", ModelInfo(
-                architectureType = ArchitectureType.LLM,
-                maxAudioDuration = null,
+                maxAudioDuration = 30,
                 recommendedThreads = 4..6,
                 quantizationLevel = null,
                 isArm64Only = false,
@@ -203,49 +163,27 @@ object ModelInfoProvider {
                 relativeSpeed = null,
                 bestFor = R.string.model_info_best_for_gemma,
                 performanceNotes = R.string.model_info_notes_gemma
-            ))
+            )
 
-            put("gemma-4-e4b", ModelInfo(
-                architectureType = ArchitectureType.LLM,
-                maxAudioDuration = null,
-                recommendedThreads = 6..8,
-                quantizationLevel = null,
-                isArm64Only = false,
-                supportsProgressiveTranscription = false,
-                vadRecommended = false,
-                benchmarkWer = null,
-                relativeSpeed = null,
-                bestFor = R.string.model_info_best_for_gemma,
-                performanceNotes = R.string.model_info_notes_gemma
-            ))
+            put("gemma-4-gguf-q4km", gemmaInfoBase.copy(
+                quantizationLevel = "Q4_K_M"))
 
-            put("gemma-3n-e2b", ModelInfo(
-                architectureType = ArchitectureType.LLM,
-                maxAudioDuration = null,
-                recommendedThreads = 4..6,
-                quantizationLevel = "INT4",
-                isArm64Only = false,
-                supportsProgressiveTranscription = false,
-                vadRecommended = false,
-                benchmarkWer = null,
-                relativeSpeed = null,
-                bestFor = R.string.model_info_best_for_gemma,
-                performanceNotes = R.string.model_info_notes_gemma
-            ))
+            put("gemma-4-gguf-q5km", gemmaInfoBase.copy(
+                quantizationLevel = "Q5_K_M"))
 
-            put("gemma-3n-e4b", ModelInfo(
-                architectureType = ArchitectureType.LLM,
-                maxAudioDuration = null,
-                recommendedThreads = 6..8,
-                quantizationLevel = "INT4",
-                isArm64Only = false,
-                supportsProgressiveTranscription = false,
-                vadRecommended = false,
-                benchmarkWer = null,
-                relativeSpeed = null,
-                bestFor = R.string.model_info_best_for_gemma,
-                performanceNotes = R.string.model_info_notes_gemma
-            ))
+            put("gemma-4-gguf-q8", gemmaInfoBase.copy(
+                quantizationLevel = "Q8_0"))
+
+            put("gemma-4-e2b", gemmaInfoBase.copy())
+
+            put("gemma-4-e4b", gemmaInfoBase.copy(
+                recommendedThreads = 6..8))
+
+            put("gemma-3n-e2b", gemmaInfoBase.copy(
+                quantizationLevel = "INT4"))
+
+            put("gemma-3n-e4b", gemmaInfoBase.copy(
+                recommendedThreads = 6..8, quantizationLevel = "INT4"))
         }
     }
 
