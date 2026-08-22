@@ -188,7 +188,24 @@ right vercodes and CurrentVersionCode; and, critically, the recipe's sherpa
 srclib pin matching the sherpa tag of the AAR version (a stale pin builds the
 F-Droid APK with a different native stack than every other artifact).
 
-## Dispatch semantics and hard rules (v1.10.0 lessons)
+## Dispatch semantics and hard rules (v1.10.0 + 1.10.0-final lessons)
+
+- **The mirror is the #1 drift source** (2026-08-21: three reference failures traced to it).
+  Before ANY `workflow_dispatch` of the reproducible job: `diff` the mirror's recipe
+  (github.com/paoloantinori/fdroid-data-mirror, branch `av1100-slim`) against the live
+  fdroiddata MR HEAD for the app. The workflow guard will fail loudly on drift, but
+  checking first saves a 45-minute build cycle.
+- **Never `[ci skip]` on fdroiddata MRs**: their runners allow 4h; skipping blocks the
+  maintainers' verification (learned 2026-08-21).
+- **The reproducible job's guard is the last line of defense**: it fails the build
+  unless every versionCode of the newest recipe block exists, its embedded
+  versionCode matches, AND its embedded git revision equals the recipe's commit.
+  A red guard is never "retry it": read the error, it names the exact drift.
+- **fdroiddata uses ONE build block per versionCode sharing the versionName**:
+  "the newest version" = all blocks whose versionName equals the last one.
+- **Fastlane screenshot deletions do not propagate** to the F-Droid repo; same-name
+  overwrites do. To retire a bad screenshot, replace it (commit a clean file under
+  the same name), never just delete it upstream.
 
 - `workflow_dispatch` with `-f tag=` checks out THE TAG COMMIT: anything fixed
   on main after tagging (notes, scripts, recipe couplings) does not reach that
