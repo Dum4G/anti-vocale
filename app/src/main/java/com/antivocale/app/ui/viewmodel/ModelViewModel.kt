@@ -1399,6 +1399,11 @@ class ModelViewModel @Inject constructor(
         viewModelScope.launch {
             val modelPath = file.absolutePath
             preferencesManager.saveModelPath(modelPath)
+            // Every legacy-download asset is an LLM (.litertlm) file; persisting
+            // the path without switching the backend leaves the previous backend
+            // active and Gemma never loads (same class as the c36199b fixes for
+            // useDownloadedModel/onModelSelected; reported again as GH #23).
+            preferencesManager.saveTranscriptionBackend(LlmTranscriptionBackend.BACKEND_ID)
             _uiState.update { it.copy(
                 modelPath = modelPath,
                 modelName = file.name,
