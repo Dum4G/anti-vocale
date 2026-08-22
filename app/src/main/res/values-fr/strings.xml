@@ -790,4 +790,9 @@
     <string name="model_limit_chunked">Durée illimitée : les audios longs sont découpés automatiquement</string>
     <string name="show_task_details_title">Afficher les détails de la tâche</string>
     <string name="show_task_details_description">Affiche l\'ID de tâche dans les entrées du journal. Utile pour signaler des problèmes ; désactivé par défaut.</string>
+
+    <!-- TASK-336 -->
+    <string name="battery_exemption_title">Autoriser la transcription en arrière-plan</string>
+    <string name="battery_exemption_description">Votre appareil a interrompu une transcription pendant que l\'application était en arrière-plan (fréquent sur certains téléphones Android). Autorisez Anti-Vocale à fonctionner en arrière-plan pour terminer les transcriptions.</string>
+    <string name="battery_exemption_action">Ouvrir le paramètre</string>
 </resources>

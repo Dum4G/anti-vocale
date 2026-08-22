@@ -929,4 +929,8 @@
     <string name="lang_uzbek">Uzbeco</string>
     <string name="lang_vietnamese">Vietnamita</string>
     <string name="lang_welsh">Gallese</string>
+    <!-- TASK-336: background-kill remediation card -->
+    <string name="battery_exemption_title">Consenti trascrizioni in background</string>
+    <string name="battery_exemption_description">Il dispositivo ha interrotto una trascrizione mentre l\'app era in background (comune su alcuni telefoni Android). Consenti ad Anti-Vocale di operare in background per completare le trascrizioni.</string>
+    <string name="battery_exemption_action">Open setting</string>
 </resources>

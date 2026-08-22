@@ -922,4 +922,8 @@
     <string name="action_transcribe_audio">Transcribe audio</string>
     <string name="subtitle_fallback_status">Couldn\'t extract subtitles — transcribing audio</string>
     <string name="subtitle_choice_notification_text">Waiting for your choice…</string>
+    <!-- TASK-336: background-kill remediation card -->
+    <string name="battery_exemption_title">Allow background transcription</string>
+    <string name="battery_exemption_description">Your device stopped a transcription while the app was in the background (common on some Android phones). Allow Anti-Vocale to run in the background to finish transcriptions.</string>
+    <string name="battery_exemption_action">Open setting</string>
 </resources>

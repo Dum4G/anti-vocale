@@ -923,4 +923,9 @@
     <string name="language_hindi">हिन्दी</string>
     <string name="show_task_details_title">टास्क विवरण दिखाएँ</string>
     <string name="show_task_details_description">लॉग प्रविष्टियों पर टास्क ID दिखाता है। समस्या बताते समय उपयोगी; डिफ़ॉल्ट रूप से बंद।</string>
+
+    <!-- TASK-336: background-kill remediation card -->
+    <string name="battery_exemption_title">बैकग्राउंड में ट्रांस्क्रिप्शन की अनुमति दें</string>
+    <string name="battery_exemption_description">ऐप बैकग्राउंड में थी, तभी आपके डिवाइस ने एक ट्रांस्क्रिप्शन बंद कर दी (कुछ Android फ़ोन पर आम)। ट्रांस्क्रिप्शन पूरी करने के लिए Anti-Vocale को बैकग्राउंड में चलने की अनुमति दें।</string>
+    <string name="battery_exemption_action">सेटिंग खोलें</string>
 </resources>

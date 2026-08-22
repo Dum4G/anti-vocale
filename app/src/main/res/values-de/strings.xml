@@ -924,4 +924,9 @@
     <string name="language_hindi">हिन्दी</string>
     <string name="show_task_details_title">Taskdetails anzeigen</string>
     <string name="show_task_details_description">Zeigt die Task-ID in Protokolleinträgen an. Nützlich bei Fehlermeldungen; standardmäßig aus.</string>
+
+    <!-- TASK-336: background-kill remediation card -->
+    <string name="battery_exemption_title">Transkription im Hintergrund erlauben</string>
+    <string name="battery_exemption_description">Dein Ger\u00e4t hat eine Transkription abgebrochen, w\u00e4hrend die App im Hintergrund war (bei einigen Android-Ger\u00e4ten \u00fcblich). Erlaube Anti-Vocale im Hintergrund zu laufen, damit Transkriptionen abgeschlossen werden.</string>
+    <string name="battery_exemption_action">Einstellung \u00f6ffnen</string>
 </resources>

@@ -68,4 +68,8 @@ interface LogDao {
      */
     @Query("UPDATE logs SET status = 'ERROR', errorMessage = :reason WHERE status IN ('QUEUED', 'PROCESSING', 'PENDING')")
     suspend fun failAllNonTerminal(reason: String)
+
+    /** TASK-336: rows closed by the cold-start sweep = the process died mid-transcription (OEM background kill). */
+    @Query("SELECT COUNT(*) FROM logs WHERE errorMessage = 'Interrupted by app restart' AND timestamp > :since")
+    suspend fun countInterruptedSince(since: Long): Int
 }

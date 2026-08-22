@@ -790,4 +790,9 @@
     <string name="model_limit_chunked">Sin límite: los audios largos se dividen automáticamente</string>
     <string name="show_task_details_title">Mostrar detalles de la tarea</string>
     <string name="show_task_details_description">Muestra el ID de tarea en las entradas del registro. Útil para informar problemas; desactivado por defecto.</string>
+
+    <!-- TASK-336 -->
+    <string name="battery_exemption_title">Permitir transcripción en segundo plano</string>
+    <string name="battery_exemption_description">Tu dispositivo interrumpió una transcripción mientras la app estaba en segundo plano (frecuente en algunos teléfonos Android). Permite que Anti-Vocale funcione en segundo plano para completar las transcripciones.</string>
+    <string name="battery_exemption_action">Abrir ajuste</string>
 </resources>

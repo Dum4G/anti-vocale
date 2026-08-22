@@ -775,6 +775,33 @@ fun SettingsTab(
             icon = Icons.Default.Settings,
             initiallyExpanded = false
         ) {
+            // TASK-336: offer the battery-optimization exemption after a detected
+            // background kill (OEM killed the FGS; the sweep recorded the interruption)
+            val backgroundKills by viewModel.backgroundKills.collectAsState()
+            LaunchedEffect(Unit) { viewModel.refreshBackgroundKills() }
+            if (backgroundKills > 0) {
+                val context = LocalContext.current
+                Card(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.BatteryAlert, contentDescription = null, tint = MaterialTheme.colorScheme.error)
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(stringResource(R.string.battery_exemption_title), style = MaterialTheme.typography.titleMedium)
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(stringResource(R.string.battery_exemption_description), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        TextButton(onClick = {
+                            runCatching {
+                                context.startActivity(android.content.Intent(
+                                    android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+                                    android.net.Uri.parse("package:com.antivocale.app")))
+                            }
+                        }) { Text(stringResource(R.string.battery_exemption_action)) }
+                    }
+                }
+            }
+
             // HuggingFace Token Card
             Card(
                 modifier = Modifier.fillMaxWidth()

@@ -49,6 +49,7 @@ class SettingsViewModelActiveModelTest {
         viewModel = SettingsViewModel(
             application = mockk<Application>(relaxed = true),
             preferencesManager = fakePrefs,
+            logDao = mockk(relaxed = true),
             huggingFaceTokenManager = mockk(relaxed = true),
             huggingFaceAuthManager = mockk(relaxed = true),
             huggingFaceApiClient = mockk(relaxed = true),

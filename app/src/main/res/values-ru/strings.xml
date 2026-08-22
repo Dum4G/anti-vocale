@@ -939,4 +939,9 @@
     <string name="language_hindi">हिन्दी</string>
     <string name="show_task_details_title">Показывать детали задачи</string>
     <string name="show_task_details_description">Показывает ID задачи в записях журнала. Полезно при сообщении о проблемах; по умолчанию выключено.</string>
+
+    <!-- TASK-336: background-kill remediation card -->
+    <string name="battery_exemption_title">Разрешить транскрипцию в фоне</string>
+    <string name="battery_exemption_description">Ваше устройство прервало транскрипцию, пока приложение было в фоне (частое явление на некоторых Android-телефонах). Разрешите Anti-Vocale работать в фоне, чтобы транскрипции завершались.</string>
+    <string name="battery_exemption_action">Открыть настройку</string>
 </resources>

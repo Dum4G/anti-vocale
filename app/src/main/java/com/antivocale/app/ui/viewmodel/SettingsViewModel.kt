@@ -48,6 +48,7 @@ import kotlinx.coroutines.launch
 class SettingsViewModel @Inject constructor(
     application: Application,
     private val preferencesManager: PreferencesManager,
+    private val logDao: com.antivocale.app.data.local.LogDao,
     private val huggingFaceTokenManager: HuggingFaceTokenManager,
     val huggingFaceAuthManager: HuggingFaceAuthManager,
     private val huggingFaceApiClient: HuggingFaceApiClient,
@@ -161,6 +162,11 @@ class SettingsViewModel @Inject constructor(
             initialValue = PreferencesManager.DEFAULT_TRANSCRIPTION_LANGUAGE
         )
 
+    // TASK-336: background-kill detection (cold-start sweep marker rows) for the
+    // battery-exemption card. Only re-offered after a NEW interruption.
+    private val _backgroundKills = MutableStateFlow(0)
+    val backgroundKills: StateFlow<Int> = _backgroundKills.asStateFlow()
+
     // GH #45 follow-up: opt-in task-id detail line on log entries
     val showTaskDetails: StateFlow<Boolean> = preferencesManager.showTaskDetails
         .stateIn(
@@ -168,6 +174,17 @@ class SettingsViewModel @Inject constructor(
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = PreferencesManager.DEFAULT_SHOW_TASK_DETAILS
         )
+
+    fun refreshBackgroundKills() {
+        viewModelScope.launch {
+            // Look back 30 days: enough history to matter, bounded so the card
+            // does not haunt users forever after one old incident.
+            val since = System.currentTimeMillis() - 30L * 24 * 3600 * 1000
+            _backgroundKills.value = runCatching {
+                logDao.countInterruptedSince(since)
+            }.getOrDefault(0)
+        }
+    }
 
     fun saveShowTaskDetails(enabled: Boolean) {
         viewModelScope.launch {
