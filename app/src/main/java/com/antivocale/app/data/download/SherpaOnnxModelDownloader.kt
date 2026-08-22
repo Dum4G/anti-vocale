@@ -233,6 +233,19 @@ class SherpaOnnxModelDownloader<V>(
             }
         }
 
+        // TASK-305: structural validation for variants WITHOUT sha256 pins (most of
+        // the catalog): truncated/corrupt files die here with an actionable message
+        // instead of surfacing as an opaque native model-format error later.
+        val integrityFindings = DownloadedModelIntegrity.validate(modelDir)
+        if (integrityFindings.isNotEmpty()) {
+            val errorMsg = "Downloaded model is incomplete or corrupt: " +
+                integrityFindings.joinToString { "${it.file.name} (${it.reason})" }
+            Log.e(config.tag, errorMsg)
+            onStateChange(DownloadState.Error(errorMsg))
+            modelDir.deleteRecursively()
+            return@withContext Result.failure(Exception(errorMsg))
+        }
+
         if (!config.isValidModel(modelDir)) {
             val errorMsg = "Missing files after download in ${modelDir.absolutePath}"
             onStateChange(DownloadState.Error(errorMsg))
