@@ -19,6 +19,15 @@ gen/
 out/
 release/
 
+# TASK-248 / issue #32: heavy artifacts must never be committed. The sherpa AAR
+# fetches to app/libs (ignored above); model weights, audio corpora beyond the
+# small committed eval fixtures, and quantized exports stay out of git.
+*.onnx
+*.onnx_data
+*.gguf
+*.tflite
+!app/src/main/assets/models/*.onnx
+
 # Gradle files
 .gradle/
 build/
