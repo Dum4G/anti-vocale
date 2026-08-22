@@ -573,10 +573,11 @@ class InferenceService : Service(), TranscriptionListener {
         durationMs: Long
     ) {
         sendErrorReply(taskId, errorCode, errorMessage)
-        if (isShareRequest) {
-            if (isNoModelError) showNoModelNotification()
-            else showErrorNotification(errorMessage)
-        }
+        // TASK-307: in-app failures get the same notification as share failures.
+        // The Logs row records the error either way, but a user actively waiting on
+        // an in-app transcription had no immediate signal unless they expanded the row.
+        if (isNoModelError) showNoModelNotification()
+        else showErrorNotification(errorMessage)
     }
 
     // ---- Broadcast Replies ----
