@@ -21,6 +21,10 @@ The Parakeet limit is not arbitrary: the model's attention has a hard 5000-frame
 
 Every "any length" in the table above means *the app does the splitting for you in software*: no model itself handles arbitrary length in one pass. The two "no known limit" rows are models with no measured cap and no app-side splitting.
 
+### Why did my transcription stop while the app was in the background?
+
+Some Android phones (notably several OEM skins) kill apps in the background even when they are legitimately running a foreground service; the transcription is interrupted and only closes when you reopen the app. Anti-Vocale detects this and, after it happens, offers a one-tap fix in Settings > Advanced: adding the app to the battery-optimization exemption list. On some devices you may additionally need to allow background execution in the manufacturer's own battery settings.
+
 ### Can I control where the chunk boundaries fall?
 
 Yes, via **Settings → Strip Silence (VAD)**. With VAD on, boundaries fall on detected silence gaps (segments are merged up to ~28 s, WhisperX-style, no overlap so no repeated words). With VAD off, the app makes blind fixed-duration cuts.
