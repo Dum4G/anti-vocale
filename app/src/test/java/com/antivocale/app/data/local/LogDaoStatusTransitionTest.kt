@@ -80,6 +80,21 @@ class LogDaoStatusTransitionTest {
     }
 
     @Test
+    fun `failAllNonTerminal closes every non-terminal row including legacy PENDING`() = runBlocking {
+        insert("sweep-queued", "QUEUED")
+        insert("sweep-proc", "PROCESSING")
+        insert("sweep-legacy", "PENDING")
+        insert("sweep-done", "SUCCESS")
+
+        dao.failAllNonTerminal("Interrupted by app restart")
+
+        assertEquals("ERROR", dao.getByTaskId("sweep-queued")?.status)
+        assertEquals("ERROR", dao.getByTaskId("sweep-proc")?.status)
+        assertEquals("ERROR", dao.getByTaskId("sweep-legacy")?.status)
+        assertEquals("SUCCESS", dao.getByTaskId("sweep-done")?.status)
+    }
+
+    @Test
     fun `failNonTerminal closes a single non-terminal task`() = runBlocking {
         insert("q1", "QUEUED")
         insert("done", "SUCCESS")
