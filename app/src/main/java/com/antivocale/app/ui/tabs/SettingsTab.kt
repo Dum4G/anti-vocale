@@ -795,7 +795,7 @@ fun SettingsTab(
                             runCatching {
                                 context.startActivity(android.content.Intent(
                                     android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
-                                    android.net.Uri.parse("package:com.antivocale.app")))
+                                    android.net.Uri.parse("package:" + context.packageName)))
                             }
                         }) { Text(stringResource(R.string.battery_exemption_action)) }
                     }
