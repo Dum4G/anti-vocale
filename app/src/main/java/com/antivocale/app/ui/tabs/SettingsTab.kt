@@ -1,5 +1,6 @@
 package com.antivocale.app.ui.tabs
 
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.ClipboardManager
 import android.content.Context
@@ -1686,6 +1687,8 @@ private fun OutputFolderSettingCard(
     onClear: () -> Unit
 ) {
     val context = LocalContext.current
+    // returns String?; lint misresolves the elvis chain
+    @SuppressLint("RememberReturnType")
     val displayName = remember(outputFolderUri) {
         outputFolderUri?.let { uriStr ->
             runCatching {

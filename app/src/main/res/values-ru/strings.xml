@@ -929,4 +929,14 @@
     <string name="action_transcribe_audio">Расшифровать аудио</string>
     <string name="subtitle_fallback_status">Не удалось извлечь субтитры, расшифровываем аудио</string>
     <string name="subtitle_choice_notification_text">Ожидание вашего выбора…</string>
+
+    <!-- 1.11 strings: queue states, model label, limit labels, task details (TASK-251 lint pass) -->
+    <string name="logs_status_queued">В очереди</string>
+    <string name="logs_model_label">Модель: %1$s</string>
+    <string name="model_limit_chunked">Без ограничений: длинные записи разбиваются автоматически</string>
+    <string name="language_german">Deutsch</string>
+    <string name="language_russian">Русский</string>
+    <string name="language_hindi">हिन्दी</string>
+    <string name="show_task_details_title">Показывать детали задачи</string>
+    <string name="show_task_details_description">Показывает ID задачи в записях журнала. Полезно при сообщении о проблемах; по умолчанию выключено.</string>
 </resources>

@@ -74,7 +74,15 @@ object ResultNotificationRefresher {
             repost = true
         )
         val notification = ResultNotificationFactory(appContext).build(spec, prefs)
-        NotificationManagerCompat.from(appContext).notify(notificationId, notification)
+        // The repost happens outside any Activity, so check POST_NOTIFICATIONS
+        // explicitly: the receiver only fires from a notification action tap
+        // (implying notifications were deliverable), but lint is right that the
+        // code path itself must not assume the grant.
+        if (androidx.core.content.ContextCompat.checkSelfPermission(
+                appContext, android.Manifest.permission.POST_NOTIFICATIONS) ==
+            android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            NotificationManagerCompat.from(appContext).notify(notificationId, notification)
+        }
         Log.i(TAG, "Paged result notification to page ${target + 1}/$pageCount (id=$notificationId)")
     }
 }

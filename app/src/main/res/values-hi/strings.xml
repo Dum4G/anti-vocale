@@ -913,4 +913,14 @@
         <item quantity="one">%1$d संदेश</item>
         <item quantity="other">%1$d संदेश</item>
     </plurals>
+
+    <!-- 1.11 strings: queue states, model label, limit labels, task details (TASK-251 lint pass) -->
+    <string name="logs_status_queued">कतार में</string>
+    <string name="logs_model_label">मॉडल: %1$s</string>
+    <string name="model_limit_chunked">कोई सीमा नहीं: लंबी ऑडियो स्वतः विभाजित होती है</string>
+    <string name="language_german">Deutsch</string>
+    <string name="language_russian">Русский</string>
+    <string name="language_hindi">हिन्दी</string>
+    <string name="show_task_details_title">टास्क विवरण दिखाएँ</string>
+    <string name="show_task_details_description">लॉग प्रविष्टियों पर टास्क ID दिखाता है। समस्या बताते समय उपयोगी; डिफ़ॉल्ट रूप से बंद।</string>
 </resources>

@@ -1,5 +1,6 @@
 package com.antivocale.app.ui.tabs
 
+import android.annotation.SuppressLint
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
@@ -914,6 +915,8 @@ private fun ExternalModelsSection(
         }
     }
 
+    // lint AST misresolves this block; it returns List<Triple<...>>
+    @SuppressLint("RememberReturnType")
     val familyOptions = remember {
         listOf(
             Triple(ModelFamily.TRANSDUCER, R.string.external_family_transducer, R.string.external_family_transducer_help),

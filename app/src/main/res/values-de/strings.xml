@@ -914,4 +914,14 @@
         <item quantity="one">%1$d Nachricht</item>
         <item quantity="other">%1$d Nachrichten</item>
     </plurals>
+
+    <!-- 1.11 strings: queue states, model label, limit labels, task details (TASK-251 lint pass) -->
+    <string name="logs_status_queued">In Warteschlange</string>
+    <string name="logs_model_label">Modell: %1$s</string>
+    <string name="model_limit_chunked">Beliebige Länge: längere Audios werden automatisch aufgeteilt</string>
+    <string name="language_german">Deutsch</string>
+    <string name="language_russian">Русский</string>
+    <string name="language_hindi">हिन्दी</string>
+    <string name="show_task_details_title">Taskdetails anzeigen</string>
+    <string name="show_task_details_description">Zeigt die Task-ID in Protokolleinträgen an. Nützlich bei Fehlermeldungen; standardmäßig aus.</string>
 </resources>

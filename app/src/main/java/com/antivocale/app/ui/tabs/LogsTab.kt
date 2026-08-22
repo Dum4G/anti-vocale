@@ -320,8 +320,10 @@ fun LogsTab(
         modifier = Modifier.fillMaxSize(),
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
-    ) { _ ->
-        Column(modifier = Modifier.fillMaxSize()) {
+    ) { padding ->
+        // Scaffold insets are zeroed above (edge-to-edge list); consume the param
+        // explicitly so lint does not flag it as an ignored safety contract.
+        Column(modifier = Modifier.fillMaxSize().padding(padding)) {
             val interruptedText by viewModel.interruptedTranscription.collectAsState()
 
             if (interruptedText != null) {

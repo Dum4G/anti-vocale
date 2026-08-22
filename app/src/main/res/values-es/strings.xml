@@ -783,4 +783,11 @@
     <string name="action_transcribe_audio">Transcribir audio</string>
     <string name="subtitle_fallback_status">No se pudieron extraer subtítulos, transcribiendo el audio</string>
     <string name="subtitle_choice_notification_text">Esperando tu elección…</string>
+
+    <!-- 1.11 strings: queue states, model label, limit labels, task details (TASK-251 lint pass) -->
+    <string name="logs_status_queued">En cola</string>
+    <string name="logs_model_label">Modelo: %1$s</string>
+    <string name="model_limit_chunked">Sin límite: los audios largos se dividen automáticamente</string>
+    <string name="show_task_details_title">Mostrar detalles de la tarea</string>
+    <string name="show_task_details_description">Muestra el ID de tarea en las entradas del registro. Útil para informar problemas; desactivado por defecto.</string>
 </resources>

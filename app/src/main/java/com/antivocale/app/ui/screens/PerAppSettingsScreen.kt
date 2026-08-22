@@ -1,5 +1,6 @@
 package com.antivocale.app.ui.screens
 
+import android.annotation.SuppressLint
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -59,6 +60,8 @@ fun PerAppSettingsScreen(
     val scope = rememberCoroutineScope()
 
     // List of known apps (can be extended to detect from shared history)
+    // returns List<Pair<String,String>>; lint misresolves
+    @SuppressLint("RememberReturnType")
     val knownApps = remember {
         listOf(
             PerAppPreferencesManager.WHATSAPP to "WhatsApp",

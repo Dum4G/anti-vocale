@@ -149,6 +149,15 @@ android {
         }
     }
 
+    lint {
+        // TASK-251: errors are fatal (the CI gate); the 250 pre-existing warnings
+        // are pinned in lint-baseline.xml and reviewed at release time. New
+        // warnings surface (not baseline-hidden) only if their file+line changes.
+        baseline = file("lint-baseline.xml")
+        abortOnError = true
+        warningsAsErrors = false
+    }
+
     testOptions {
         unitTests {
             isReturnDefaultValues = true

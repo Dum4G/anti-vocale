@@ -36,6 +36,8 @@ class ChooserBroadcastReceiverTest {
 
         every { intent.extras } returns bundle
         every { bundle.getSerializable(any(), eq(String::class.java)) } returns null
+        every { bundle.getSerializable(any<String>()) } returns null
+        every { bundle.getSerializable(ChooserBroadcastReceiver.EXTRA_CHOSEN_COMPONENT) } returns null
         every { context.packageName } returns "com.antivocale.app"
     }
 
@@ -49,6 +51,7 @@ class ChooserBroadcastReceiverTest {
     @Test
     fun `onReceive with WhatsApp ComponentInfo broadcasts detected package`() {
         every { bundle.getSerializable(ChooserBroadcastReceiver.EXTRA_CHOSEN_COMPONENT, String::class.java) } returns componentInfo(PerAppPreferencesManager.WHATSAPP)
+        every { bundle.getSerializable(ChooserBroadcastReceiver.EXTRA_CHOSEN_COMPONENT) } returns componentInfo(PerAppPreferencesManager.WHATSAPP)
 
         receiver.onReceive(context, intent)
 
@@ -58,6 +61,7 @@ class ChooserBroadcastReceiverTest {
     @Test
     fun `onReceive with Telegram ComponentInfo broadcasts detected package`() {
         every { bundle.getSerializable(ChooserBroadcastReceiver.EXTRA_CHOSEN_COMPONENT, String::class.java) } returns componentInfo(PerAppPreferencesManager.TELEGRAM)
+        every { bundle.getSerializable(ChooserBroadcastReceiver.EXTRA_CHOSEN_COMPONENT) } returns componentInfo(PerAppPreferencesManager.TELEGRAM)
 
         receiver.onReceive(context, intent)
 
@@ -67,6 +71,7 @@ class ChooserBroadcastReceiverTest {
     @Test
     fun `onReceive with Signal ComponentInfo broadcasts detected package`() {
         every { bundle.getSerializable(ChooserBroadcastReceiver.EXTRA_CHOSEN_COMPONENT, String::class.java) } returns componentInfo(PerAppPreferencesManager.SIGNAL)
+        every { bundle.getSerializable(ChooserBroadcastReceiver.EXTRA_CHOSEN_COMPONENT) } returns componentInfo(PerAppPreferencesManager.SIGNAL)
 
         receiver.onReceive(context, intent)
 

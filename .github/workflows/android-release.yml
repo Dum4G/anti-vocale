@@ -73,6 +73,9 @@ jobs:
       - name: Run unit tests (fdroid debug)
         run: ./gradlew :app:testFdroidDebugUnitTest --console=plain
 
+      - name: Android Lint (errors fatal; warnings baseline-pinned, TASK-251)
+        run: ./gradlew :app:lintFdroidDebug --console=plain
+
       - name: Upload test results on failure
         if: failure()
         uses: actions/upload-artifact@v4

@@ -48,7 +48,13 @@ class ChooserBroadcastReceiver : BroadcastReceiver() {
             return
         }
 
-        val componentInfo = intent.extras?.getSerializable(EXTRA_CHOSEN_COMPONENT, String::class.java)?.toString()
+        @Suppress("DEPRECATION") // Bundle.getSerializable(Class) is 33+; minSdk 26 uses the raw form
+        val componentInfo = if (android.os.Build.VERSION.SDK_INT >= 33) {
+            intent.extras?.getSerializable(EXTRA_CHOSEN_COMPONENT, String::class.java)?.toString()
+        } else {
+            @Suppress("UNCHECKED_CAST")
+            (intent.extras?.getSerializable(EXTRA_CHOSEN_COMPONENT) as? java.io.Serializable)?.toString()
+        }
         if (componentInfo.isNullOrBlank()) {
             Log.w(TAG, "No component info in chooser intent")
             return
