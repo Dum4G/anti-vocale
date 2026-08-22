@@ -20,22 +20,27 @@ BUILT-IN MODELS
 - GigaAM v3: Russian, very small and fast
 - Gemma 4 / 3n (LiteRT): multimodal AI with customizable prompts
 
+Every model card states its audio-length capability before you download. Long audio is never a problem: inputs beyond a model's limit are split and stitched automatically, so any length works with any model.
+
 BRING YOUR OWN MODELS
 
-Import custom transcription models from a folder on your phone or from a link: Whisper fine-tunes, CTC models, SenseVoice and other sherpa-onnx architectures. Files are integrity-checked on import, split-file models are supported, and every imported model gets its own share target. Ideal for languages the built-in models don't cover.
+Import custom transcription models from a folder on your phone or from a link: Whisper fine-tunes, CTC, SenseVoice and streaming zipformer architectures (sherpa-onnx). Files are integrity-checked on import and after every download, split-file models are supported, and every imported model gets its own share target. A small curated catalog of community models (Russian, Spanish, German) installs in two taps.
 
 FEATURES
 
 - Share voice messages from any app via the Android share sheet
 - Smart notifications: one-tap copy, share back, page through long transcripts without opening the app
+- Queue with visible states: queued items appear instantly and can be cancelled individually
+- Long-press menu on any transcription: retry with a different model, copy, delete
 - Auto-copy to clipboard and auto-save transcripts to a folder you pick (Drive, Syncthing, ...)
 - Video file transcription (audio track extracted)
 - Real-time progressive text with streaming models
 - Per-app notification preferences
-- Transcription log with search and swipe actions
+- Transcription log with search: which model ran, how long it took, one-tap retry
 - Silence stripping and parallel chunk processing for speed
 - Neural acceleration (NNAPI) on supported devices, with automatic CPU fallback
 - Tasker integration for automation
+- Interface in 10 languages: English, Italian, German, Spanish, French, Portuguese (BR), Russian, Hindi, Turkish, Polish, Ukrainian
 
 PRIVACY
 
