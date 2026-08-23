@@ -517,6 +517,29 @@ class ShareReceiverActivity : Activity() {
     }
 
     private fun showErrorToast(message: String) {
+        // TASK-385 (WCAG 4.1.3): a ~4s Toast was the ONLY signal for share
+        // failures (no notification, no Logs row: dispatch never happens), so a
+        // user who missed it lost the failure entirely. Post a durable error
+        // notification on the result channel TOO; the toast stays for immediate
+        // feedback.
         com.antivocale.app.util.ToastCompat.show(this, message, Toast.LENGTH_LONG)
+        // MUST: this path can run before anything else created the channel
+        // (cold share, lines 213-250); notify() on an unregistered channel is
+        // silently dropped on API 26+. create() is idempotent.
+        AppNotificationChannel.TRANSCRIPTION_RESULT.create(this)
+        val notification = NotificationCompat.Builder(
+            this, AppNotificationChannel.TRANSCRIPTION_RESULT.id)
+            .setContentTitle(getString(R.string.transcription_failed))
+            .setContentText(message)
+            .setSmallIcon(android.R.drawable.ic_dialog_alert)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setContentIntent(PendingIntent.getActivity(
+                this, 0,
+                Intent(this, com.antivocale.app.MainActivity::class.java),
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT))
+            .setAutoCancel(true)
+            .build()
+        val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+        nm.notify(message.hashCode(), notification)
     }
 }
