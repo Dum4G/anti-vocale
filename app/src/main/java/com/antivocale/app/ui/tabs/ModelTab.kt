@@ -1379,12 +1379,18 @@ private fun ExternalModelCard(
                 horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)
             ) {
                 if (!isActive) {
-                    Button(onClick = onUse) {
+                    // TASK-381: 48dp minimum touch target for icon-only button
+                    Button(
+                        onClick = onUse,
+                        modifier = Modifier.heightIn(min = 48.dp)
+                    ) {
                         Icon(Icons.Default.Check, contentDescription = stringResource(R.string.use_model))
                     }
                 }
+                // TASK-381: 48dp minimum touch target for icon-only button
                 OutlinedButton(
                     onClick = onDelete,
+                    modifier = Modifier.heightIn(min = 48.dp),
                     colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
                         contentColor = MaterialTheme.colorScheme.error
                     )

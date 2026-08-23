@@ -935,7 +935,7 @@
     <string name="battery_exemption_action">सेटिंग खोलें</string>
     <!-- TASK-373: litert-lm HF url import -->
     <string name="litertlm_import_from_url">Hugging Face URL से आयात करें</string>
-    <string name="litertlm_url_hint" translatable="false">https://huggingface.co/owner/repo</string>
+    <string name="litertlm_url_hint">https://huggingface.co/owner/repo</string>
     <string name="litertlm_pick_file">मॉडल फ़ाइल चुनें</string>
     <string name="litertlm_no_models">इस रिपॉज़िटरी में कोई .litertlm फ़ाइल नहीं मिली</string>
     <!-- TASK-374: per-transcription feedback -->
@@ -947,4 +947,7 @@
     <string name="feedback_label_status">स्थिति</string>
     <string name="feedback_label_excerpt">ट्रांस्क्रिप्ट अंश</string>
     <string name="feedback_label_truncated">छोटा किया गया</string>
+    <string name="a11y_expand">विस्तार</string>
+    <string name="a11y_collapse">संकुचित</string>
+    <string name="a11y_back">पीछे</string>
 </resources>

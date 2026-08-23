@@ -135,7 +135,7 @@ fun PerAppSettingsScreen(
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = Icons.Default.ArrowBack,
-                            contentDescription = "Back"
+                            contentDescription = stringResource(R.string.a11y_back)
                         )
                     }
                 }

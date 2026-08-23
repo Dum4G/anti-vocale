@@ -150,10 +150,8 @@ private fun RowScope.ResultActionButton(
     contentDescriptionRes: Int = labelRes
 ) {
     if (compact) {
-        IconButton(
-            onClick = onClick,
-            modifier = Modifier.size(40.dp)
-        ) {
+        // TASK-381: no explicit size, IconButton defaults to 48dp touch target
+        IconButton(onClick = onClick) {
             Icon(
                 icon,
                 contentDescription = stringResource(contentDescriptionRes),

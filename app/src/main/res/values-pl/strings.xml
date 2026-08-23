@@ -950,7 +950,7 @@
     <string name="battery_exemption_action">Otwórz ustawienie</string>
     <!-- TASK-373: litert-lm HF url import -->
     <string name="litertlm_import_from_url">Importuj z adresu URL Hugging Face</string>
-    <string name="litertlm_url_hint" translatable="false">https://huggingface.co/owner/repo</string>
+    <string name="litertlm_url_hint">https://huggingface.co/owner/repo</string>
     <string name="litertlm_pick_file">Wybierz plik modelu</string>
     <string name="litertlm_no_models">W tym repozytorium nie znaleziono pliku .litertlm</string>
     <!-- TASK-374: per-transcription feedback -->
@@ -962,4 +962,7 @@
     <string name="feedback_label_status">Status</string>
     <string name="feedback_label_excerpt">Fragment transkrypcji</string>
     <string name="feedback_label_truncated">skrócony</string>
+    <string name="a11y_expand">rozwiń</string>
+    <string name="a11y_collapse">zwiń</string>
+    <string name="a11y_back">Wstecz</string>
 </resources>
