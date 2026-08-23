@@ -16,6 +16,8 @@ import com.antivocale.app.data.ShareTargetManager
 import com.antivocale.app.data.ExternalModelImportOperations
 import com.antivocale.app.data.ExternalModelRecord
 import com.antivocale.app.data.ExternalModelStore
+import com.antivocale.app.data.LitertLmFile
+import com.antivocale.app.data.LitertLmUrlImporter
 import com.antivocale.app.data.ModelFamily
 import com.antivocale.app.transcription.BackendRegistry
 import com.antivocale.app.transcription.BuiltInBackendIds
@@ -27,7 +29,9 @@ import com.antivocale.app.transcription.cleanOrphanedModelDirs
 import com.antivocale.app.R
 import com.antivocale.app.data.catalog.BundledCatalog
 import com.antivocale.app.data.catalog.CatalogEntry
+import com.antivocale.app.data.download.DownloadConfig
 import com.antivocale.app.data.download.DownloadState
+import com.antivocale.app.data.download.ResumeDownloadHelper
 import com.antivocale.app.manager.LlmManager
 import com.antivocale.app.service.ExtractionService
 import com.antivocale.app.transcription.TranscriptionBackendManager
@@ -69,7 +73,7 @@ class ModelViewModel @Inject constructor(
     private val backendRegistry: BackendRegistry,
     private val externalModelStore: ExternalModelStore,
     private val externalModelImporter: ExternalModelImportOperations,
-    private val litertLmUrlImporter: com.antivocale.app.data.LitertLmUrlImporter,
+    private val litertLmUrlImporter: LitertLmUrlImporter,
 ) : ViewModel() {
 
     val tokenState = tokenManager.tokenState
@@ -139,7 +143,7 @@ class ModelViewModel @Inject constructor(
         val modelName: String = "",
         // TASK-373: litert-lm HF url import (url field, repo candidates, busy flag)
         val litertLmUrlInput: String = "",
-        val litertLmCandidates: List<com.antivocale.app.data.LitertLmFile> = emptyList(),
+        val litertLmCandidates: List<LitertLmFile> = emptyList(),
         val litertLmImporting: Boolean = false
     )
 
@@ -727,7 +731,7 @@ class ModelViewModel @Inject constructor(
      * Downloads the chosen .litertlm file and activates it: same persistence tail
      * as onModelSelected (GH #23 route 3), model_path + backend "llm".
      */
-    fun importLitertLmFile(url: String, file: com.antivocale.app.data.LitertLmFile) =
+    fun importLitertLmFile(url: String, file: LitertLmFile) =
         viewModelScope.launch(Dispatchers.IO) {
             _uiState.update { it.copy(
                 litertLmImporting = true,
@@ -743,8 +747,8 @@ class ModelViewModel @Inject constructor(
                 freeBytes = { modelsDir.usableSpace },
                 token = token,
                 download = { dlUrl, target, sizeBytes, authHeader ->
-                    com.antivocale.app.data.download.ResumeDownloadHelper.downloadWithResume(
-                        com.antivocale.app.data.download.DownloadConfig(
+                    ResumeDownloadHelper.downloadWithResume(
+                        DownloadConfig(
                             url = dlUrl,
                             tempFile = File(target.path + ".tmp"),
                             targetFile = target,
@@ -753,7 +757,6 @@ class ModelViewModel @Inject constructor(
                 })
             _uiState.update { it.copy(
                 litertLmImporting = false,
-                litertLmCandidates = emptyList(),
                 litertLmUrlInput = "") }
             result.fold(
                 onSuccess = { downloaded ->

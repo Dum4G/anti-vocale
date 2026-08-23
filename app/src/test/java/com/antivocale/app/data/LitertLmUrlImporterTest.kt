@@ -44,9 +44,13 @@ class LitertLmUrlImporterTest {
         assertEquals(listOf("e2b.litertlm", "e4b.litertlm"), plan.map { it.fileName })
     }
 
-    @Test
+    @Test(expected = IllegalArgumentException::class)
     fun `parseRepoIdOrThrow rejects non hf url`() {
-        assertEquals(null, LitertLmUrlImporter.parseRepoIdOrThrow("https://example.com/x"))
+        LitertLmUrlImporter.parseRepoIdOrThrow("https://example.com/x")
+    }
+
+    @Test
+    fun `parseRepoIdOrThrow accepts full url or bare owner slash repo`() {
         assertEquals("owner/repo",
             LitertLmUrlImporter.parseRepoIdOrThrow("https://huggingface.co/owner/repo"))
         assertEquals("owner/repo",

@@ -88,7 +88,6 @@ fun ModelTab(
     var pendingModelSwitch by remember { mutableStateOf<(() -> Unit)?>(null) }
     var showUnloadDialog by remember { mutableStateOf(false) }
 
-    // TASK-373: litert-lm HF url import dialog + candidate picker visibility.
     var showLitertLmUrlDialog by remember { mutableStateOf(false) }
 
     var modelInfoVariant by remember { mutableStateOf<ModelVariant?>(null) }
@@ -250,8 +249,7 @@ fun ModelTab(
     }
 
     // TASK-373: litert-lm HF url import. URL entry first; when the repo offers
-    // multiple .litertlm files the candidate picker follows. A single candidate
-    // imports directly (no picker hop).
+    // multiple .litertlm files the candidate picker follows.
     if (showLitertLmUrlDialog) {
         AlertDialog(
             onDismissRequest = { showLitertLmUrlDialog = false },
@@ -299,7 +297,7 @@ fun ModelTab(
                             Column(modifier = Modifier.padding(vertical = 4.dp)) {
                                 Text(candidate.fileName, style = MaterialTheme.typography.bodyMedium)
                                 Text(
-                                    java.lang.String.format(java.util.Locale.US, "%.1f GB", candidate.sizeBytes / 1e9f),
+                                    com.antivocale.app.util.formatFileSize(candidate.sizeBytes),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )

@@ -36,15 +36,15 @@ class LitertLmUrlImporter(
         }
 
         /** Same tolerance as the external URL importer: full URL or owner/repo. */
-        fun parseRepoIdOrThrow(url: String): String? =
+        fun parseRepoIdOrThrow(url: String): String =
             HuggingFaceRepoListing.parseRepoId(url)
+                ?: throw IllegalArgumentException(
+                    "unsupported URL: $url (expected https://huggingface.co/<owner>/<repo>)")
     }
 
     /** Lists the repo's .litertlm files; throws IllegalArgumentException on bad URL/empty repo. */
     fun listModels(url: String): List<LitertLmFile> {
         val repoId = parseRepoIdOrThrow(url)
-            ?: throw IllegalArgumentException(
-                "unsupported URL: $url (expected https://huggingface.co/<owner>/<repo>)")
         return planDownload(listing.listFiles(repoId), repoId)
     }
 
@@ -67,7 +67,7 @@ class LitertLmUrlImporter(
         require(freeBytes() >= sizeBytes * 2) { "not enough free space (need ${sizeBytes * 2} bytes)" }
         modelsDir.mkdirs()
         val downloaded = download(
-            listing.resolveUrl(parseRepoIdOrThrow(url)!!, fileName),
+            listing.resolveUrl(parseRepoIdOrThrow(url), fileName),
             File(modelsDir, fileName), sizeBytes, token?.let { "Bearer $it" }).getOrThrow()
         require(downloaded.length() > 0) { "downloaded file is empty" }
         downloaded
