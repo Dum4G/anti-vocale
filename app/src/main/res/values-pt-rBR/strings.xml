@@ -243,6 +243,7 @@
     <string name="action_cancel">Cancelar</string>
     <string name="chunk_nav_prev">Anterior</string>
     <string name="chunk_nav_next">Próximo</string>
+    <string name="clear_search">Limpar busca</string>
     <string name="chunk_nav_live">Mais recente</string>
     <string name="chunk_nav_pinned_subtext">Fragmento %1$d de %2$d · ao vivo %3$d de %2$d</string>
     <string name="chunk_nav_live_subtext">Ao vivo · fragmento %1$d de %2$d</string>
@@ -786,6 +787,9 @@
 
     <!-- 1.11 strings: queue states, model label, limit labels, task details (TASK-251 lint pass) -->
     <string name="logs_status_queued">Na fila</string>
+    <string name="logs_status_success">Sucesso</string>
+    <string name="logs_status_error">Erro</string>
+    <string name="logs_status_processing">Processando</string>
     <string name="logs_model_label">Modelo: %1$s</string>
     <string name="model_limit_chunked">Sem limite: áudios longos são divididos automaticamente</string>
     <string name="show_task_details_title">Mostrar detalhes da tarefa</string>

@@ -276,6 +276,7 @@
     <!-- Chunk navigation in the in-progress notification (TASK-242) -->
     <string name="chunk_nav_prev">पिछला</string>
     <string name="chunk_nav_next">अगला</string>
+    <string name="clear_search">खोज साफ़ करें</string>
     <string name="chunk_nav_live">नवीनतम</string>
     <string name="chunk_nav_pinned_subtext">%2$d में से %1$d हिस्सा · %2$d में से %3$d लाइव</string>
     <string name="chunk_nav_live_subtext">लाइव · %2$d में से %1$d हिस्सा</string>
@@ -916,6 +917,9 @@
 
     <!-- 1.11 strings: queue states, model label, limit labels, task details (TASK-251 lint pass) -->
     <string name="logs_status_queued">कतार में</string>
+    <string name="logs_status_success">सफल</string>
+    <string name="logs_status_error">त्रुटि</string>
+    <string name="logs_status_processing">प्रोसेसिंग</string>
     <string name="logs_model_label">मॉडल: %1$s</string>
     <string name="model_limit_chunked">कोई सीमा नहीं: लंबी ऑडियो स्वतः विभाजित होती है</string>
     <string name="language_german">Deutsch</string>

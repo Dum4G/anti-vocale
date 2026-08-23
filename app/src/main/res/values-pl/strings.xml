@@ -90,6 +90,9 @@
     <string name="logs_task_id">Identyfikator zadania: %1$s</string>
     <string name="logs_unknown_error">Nieznany błąd</string>
     <string name="logs_status_queued">W kolejce</string>
+    <string name="logs_status_success">Zakończono</string>
+    <string name="logs_status_error">Błąd</string>
+    <string name="logs_status_processing">Przetwarzanie</string>
     <string name="logs_model_label">Model: %1$s</string>
     <string name="logs_transcription_cancelled">Transkrypcja anulowana</string>
     <string name="logs_search_placeholder">Szukaj transkrypcji…</string>
@@ -295,6 +298,7 @@
     <!-- Chunk navigation in the in-progress notification (TASK-242) -->
     <string name="chunk_nav_prev">Poprzedni</string>
     <string name="chunk_nav_next">Następny</string>
+    <string name="clear_search">Wyczyść wyszukiwanie</string>
     <string name="chunk_nav_live">Najnowszy</string>
     <string name="chunk_nav_pinned_subtext">Fragment %1$d z %2$d · na żywo %3$d z %2$d</string>
     <string name="chunk_nav_live_subtext">Na żywo · fragment %1$d z %2$d</string>

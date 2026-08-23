@@ -88,6 +88,9 @@
     <string name="logs_task_id">Görev Kimliği: %1$s</string>
     <string name="logs_unknown_error">Bilinmeyen hata</string>
     <string name="logs_status_queued">Kuyrukta</string>
+    <string name="logs_status_success">Başarılı</string>
+    <string name="logs_status_error">Hata</string>
+    <string name="logs_status_processing">İşleniyor</string>
     <string name="logs_model_label">Model: %1$s</string>
     <string name="logs_transcription_cancelled">Metin çıkarma iptal edildi</string>
     <string name="logs_search_placeholder">Metin çıkarmalarında ara…</string>
@@ -291,6 +294,7 @@
     <!-- Chunk navigation in the in-progress notification (TASK-242) -->
     <string name="chunk_nav_prev">Önceki</string>
     <string name="chunk_nav_next">Sonraki</string>
+    <string name="clear_search">Aramayı temizle</string>
     <string name="chunk_nav_live">En son</string>
     <string name="chunk_nav_pinned_subtext">Parça %1$d / %2$d · canlı %3$d / %2$d</string>
     <string name="chunk_nav_live_subtext">Canlı · parça %1$d / %2$d</string>

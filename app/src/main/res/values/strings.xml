@@ -85,6 +85,9 @@
     <string name="logs_task_id">Task ID: %1$s</string>
     <string name="logs_unknown_error">Unknown error</string>
     <string name="logs_status_queued">Queued</string>
+    <string name="logs_status_success">Success</string>
+    <string name="logs_status_error">Error</string>
+    <string name="logs_status_processing">Processing</string>
     <string name="logs_model_label">Model: %1$s</string>
     <string name="logs_transcription_cancelled">Transcription cancelled</string>
     <string name="logs_search_placeholder">Search transcriptions…</string>
@@ -288,6 +291,7 @@
     <!-- Chunk navigation in the in-progress notification (TASK-242) -->
     <string name="chunk_nav_prev">Previous</string>
     <string name="chunk_nav_next">Next</string>
+    <string name="clear_search">Clear search</string>
     <string name="chunk_nav_live">Latest</string>
     <string name="chunk_nav_pinned_subtext">Chunk %1$d of %2$d · live %3$d of %2$d</string>
     <string name="chunk_nav_live_subtext">Live · chunk %1$d of %2$d</string>
