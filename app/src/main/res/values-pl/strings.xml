@@ -293,8 +293,8 @@
     <string name="action_delete">Usuń</string>
     <string name="action_cancel">Anuluj</string>
     <!-- Chunk navigation in the in-progress notification (TASK-242) -->
-    <string name="chunk_nav_prev">◀</string>
-    <string name="chunk_nav_next">▶</string>
+    <string name="chunk_nav_prev">Poprzedni</string>
+    <string name="chunk_nav_next">Następny</string>
     <string name="chunk_nav_live">Najnowszy</string>
     <string name="chunk_nav_pinned_subtext">Fragment %1$d z %2$d · na żywo %3$d z %2$d</string>
     <string name="chunk_nav_live_subtext">Na żywo · fragment %1$d z %2$d</string>

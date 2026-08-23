@@ -274,8 +274,8 @@
     <string name="action_delete">मिटाएं</string>
     <string name="action_cancel">रद्द करें</string>
     <!-- Chunk navigation in the in-progress notification (TASK-242) -->
-    <string name="chunk_nav_prev">◀</string>
-    <string name="chunk_nav_next">▶</string>
+    <string name="chunk_nav_prev">पिछला</string>
+    <string name="chunk_nav_next">अगला</string>
     <string name="chunk_nav_live">नवीनतम</string>
     <string name="chunk_nav_pinned_subtext">%2$d में से %1$d हिस्सा · %2$d में से %3$d लाइव</string>
     <string name="chunk_nav_live_subtext">लाइव · %2$d में से %1$d हिस्सा</string>

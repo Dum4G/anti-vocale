@@ -295,8 +295,8 @@
     <string name="action_delete">Видалити</string>
     <string name="action_cancel">Скасувати</string>
     <!-- Chunk navigation in the in-progress notification (TASK-242) -->
-    <string name="chunk_nav_prev">◀</string>
-    <string name="chunk_nav_next">▶</string>
+    <string name="chunk_nav_prev">Назад</string>
+    <string name="chunk_nav_next">Далі</string>
     <string name="chunk_nav_live">Останній</string>
     <string name="chunk_nav_pinned_subtext">Фрагмент %1$d з %2$d · наживо %3$d з %2$d</string>
     <string name="chunk_nav_live_subtext">Наживо · фрагмент %1$d з %2$d</string>

@@ -53,7 +53,7 @@ class ResultNotificationRefresherTest {
         ResultNotificationRefresher.refresh(context, pageIntent(NotificationActionReceiver.ACTION_PAGE_NEXT, text, 0))
         val n = postedNotification(7)
         assertEquals("Page 2 of 3", subTextOf(n))
-        assertTrue(n.actions!!.map { it.title }.contains("◀"))
+        assertTrue(n.actions!!.map { it.title }.contains("Previous"))
     }
 
     @Test

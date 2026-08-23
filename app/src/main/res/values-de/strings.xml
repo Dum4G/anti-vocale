@@ -275,8 +275,8 @@
     <string name="action_delete">Löschen</string>
     <string name="action_cancel">Abbrechen</string>
     <!-- Chunk navigation in the in-progress notification (TASK-242) -->
-    <string name="chunk_nav_prev">◀</string>
-    <string name="chunk_nav_next">▶</string>
+    <string name="chunk_nav_prev">Zurück</string>
+    <string name="chunk_nav_next">Weiter</string>
     <string name="chunk_nav_live">Neueste</string>
     <string name="chunk_nav_pinned_subtext">Chunk %1$d von %2$d · live %3$d von %2$d</string>
     <string name="chunk_nav_live_subtext">Live · Chunk %1$d von %2$d</string>

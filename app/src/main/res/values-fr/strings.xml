@@ -241,8 +241,8 @@
     <string name="dialog_delete_message">Cela supprimera définitivement \'%1$s\' de votre appareil. Vous pourrez le re-télécharger plus tard.</string>
     <string name="action_delete">Supprimer</string>
     <string name="action_cancel">Annuler</string>
-    <string name="chunk_nav_prev">◀</string>
-    <string name="chunk_nav_next">▶</string>
+    <string name="chunk_nav_prev">Précédent</string>
+    <string name="chunk_nav_next">Suivant</string>
     <string name="chunk_nav_live">Dernier</string>
     <string name="chunk_nav_pinned_subtext">Fragment %1$d sur %2$d · direct %3$d sur %2$d</string>
     <string name="chunk_nav_live_subtext">Direct · fragment %1$d sur %2$d</string>
