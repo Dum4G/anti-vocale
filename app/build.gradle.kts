@@ -194,7 +194,14 @@ kotlin {
     }
 }
 
+// TASK-387: Byteman race-injection profile. Resolved but NOT on any classpath:
+// the agent jar is only referenced as a -javaagent path when -Pbyteman is set,
+// so the standard suite stays byte-identical (guide: byteman-guide-for-agents).
+val bytemanAgent = configurations.create("bytemanAgent")
+
 dependencies {
+    "bytemanAgent"("org.jboss.byteman:byteman:4.0.27")
+
     // Firebase Crashlytics only — playStore flavor (F-Droid build is Firebase-free).
     // firebase-analytics deliberately omitted: it transitively pulls play-services-measurement
     // + ads-adservices, which inject AD_ID / ACCESS_ADSERVICES_* permissions that contradict the
@@ -313,4 +320,19 @@ val buildingFdroidOnly = gradle.startParameter.taskNames.any { it.contains("Fdro
 if (!buildingFdroidOnly) {
     apply(plugin = "com.google.gms.google-services")
     apply(plugin = "com.google.firebase.crashlytics")
+}
+
+// TASK-387: -Pbyteman wires the agent into every Test JVM. Tests opt in by
+// assuming the byteman.agent system property (JUnit4 Assume; JUnit5 has
+// @EnabledIfSystemProperty); without the property the suite is identical
+// (no agent, no rules, gated tests skipped).
+if (project.hasProperty("byteman")) {
+    tasks.withType<Test>().configureEach {
+        val agentJar = bytemanAgent.singleFile
+        jvmArgs(
+            "-javaagent:$agentJar=script:${rootDir}/app/src/test/resources/byteman/spike.btm",
+            "-Dorg.jboss.byteman.verbose=true",
+        )
+        systemProperty("byteman.agent", "true")
+    }
 }
