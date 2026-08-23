@@ -42,6 +42,11 @@
          for core background-function apps is the battery-optimization whitelist. -->
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
+    <!-- TASK-375: optional, mirrors Google AI Edge Gallery; documents NNAPI usage in
+         device metadata without affecting Play filtering (required=false; CPU is the
+         fallback and the NNAPI provider is auto-reset on native crash, issue #26). -->
+    <uses-feature android:name="android.hardware.npu" android:required="false" />
+
     <application
         android:name=".BridgeApplication"
         android:allowBackup="true"
