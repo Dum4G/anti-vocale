@@ -795,4 +795,9 @@
     <string name="battery_exemption_title">Autoriser la transcription en arrière-plan</string>
     <string name="battery_exemption_description">Votre appareil a interrompu une transcription pendant que l\'application était en arrière-plan (fréquent sur certains téléphones Android). Autorisez Anti-Vocale à fonctionner en arrière-plan pour terminer les transcriptions.</string>
     <string name="battery_exemption_action">Ouvrir le paramètre</string>
+    <!-- TASK-373: litert-lm HF url import -->
+    <string name="litertlm_import_from_url">Importer depuis une URL Hugging Face</string>
+    <string name="litertlm_url_hint" translatable="false">https://huggingface.co/owner/repo</string>
+    <string name="litertlm_pick_file">Choisir le fichier du modèle</string>
+    <string name="litertlm_no_models">Aucun fichier .litertlm trouvé dans ce dépôt</string>
 </resources>

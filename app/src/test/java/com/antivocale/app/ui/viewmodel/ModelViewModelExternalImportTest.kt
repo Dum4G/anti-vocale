@@ -117,7 +117,9 @@ class ModelViewModelExternalImportTest {
             backendRegistry = staticRegistry(),
             externalModelStore = com.antivocale.app.data.ExternalModelStore(fakePrefs),
             externalModelImporter = fakeImporter,
+            litertLmUrlImporter = io.mockk.mockk(relaxed = true),
         )
+
     }
 
     @After

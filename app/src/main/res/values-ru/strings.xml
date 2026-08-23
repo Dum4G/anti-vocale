@@ -944,4 +944,9 @@
     <string name="battery_exemption_title">Разрешить транскрипцию в фоне</string>
     <string name="battery_exemption_description">Ваше устройство прервало транскрипцию, пока приложение было в фоне (частое явление на некоторых Android-телефонах). Разрешите Anti-Vocale работать в фоне, чтобы транскрипции завершались.</string>
     <string name="battery_exemption_action">Открыть настройку</string>
+    <!-- TASK-373: litert-lm HF url import -->
+    <string name="litertlm_import_from_url">Импорт по ссылке Hugging Face</string>
+    <string name="litertlm_url_hint" translatable="false">https://huggingface.co/owner/repo</string>
+    <string name="litertlm_pick_file">Выберите файл модели</string>
+    <string name="litertlm_no_models">В этом репозитории нет файла .litertlm</string>
 </resources>

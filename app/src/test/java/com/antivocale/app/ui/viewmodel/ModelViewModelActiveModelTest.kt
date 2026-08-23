@@ -105,7 +105,9 @@ class ModelViewModelActiveModelTest {
                 store = com.antivocale.app.data.ExternalModelStore(fakePrefs),
                 filesRoot = { filesRoot },
             ),
+            litertLmUrlImporter = io.mockk.mockk(relaxed = true),
         )
+
     }
 
     @After

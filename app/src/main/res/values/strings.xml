@@ -926,4 +926,9 @@
     <string name="battery_exemption_title">Allow background transcription</string>
     <string name="battery_exemption_description">Your device stopped a transcription while the app was in the background (common on some Android phones). Allow Anti-Vocale to run in the background to finish transcriptions.</string>
     <string name="battery_exemption_action">Open setting</string>
+    <!-- TASK-373: litert-lm HF url import -->
+    <string name="litertlm_import_from_url">Import from Hugging Face URL</string>
+    <string name="litertlm_url_hint" translatable="false">https://huggingface.co/owner/repo</string>
+    <string name="litertlm_pick_file">Choose model file</string>
+    <string name="litertlm_no_models">No .litertlm file found in this repository</string>
 </resources>

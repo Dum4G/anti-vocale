@@ -69,6 +69,7 @@ class ModelViewModel @Inject constructor(
     private val backendRegistry: BackendRegistry,
     private val externalModelStore: ExternalModelStore,
     private val externalModelImporter: ExternalModelImportOperations,
+    private val litertLmUrlImporter: com.antivocale.app.data.LitertLmUrlImporter,
 ) : ViewModel() {
 
     val tokenState = tokenManager.tokenState
@@ -135,7 +136,11 @@ class ModelViewModel @Inject constructor(
         val status: ModelStatus = ModelStatus.UNLOADED,
         val statusMessage: String = "",
         val modelPath: String = "",
-        val modelName: String = ""
+        val modelName: String = "",
+        // TASK-373: litert-lm HF url import (url field, repo candidates, busy flag)
+        val litertLmUrlInput: String = "",
+        val litertLmCandidates: List<com.antivocale.app.data.LitertLmFile> = emptyList(),
+        val litertLmImporting: Boolean = false
     )
 
     private val _uiState = MutableStateFlow(UiState())
@@ -687,6 +692,78 @@ class ModelViewModel @Inject constructor(
             }
         }
     }
+
+    // ==================== LiteRT-LM URL import (TASK-373) ====================
+
+    fun updateLitertLmUrl(url: String) {
+        _uiState.update { it.copy(litertLmUrlInput = url) }
+    }
+
+    /** Lists the repo's .litertlm candidates; failures surface via snackbar, prefs untouched. */
+    fun listLitertLmModels(url: String) = viewModelScope.launch {
+        _uiState.update { it.copy(litertLmImporting = true) }
+        runCatching { litertLmUrlImporter.listModels(url) }
+            .fold(
+                onSuccess = { candidates ->
+                    _uiState.update {
+                        it.copy(litertLmCandidates = candidates, litertLmImporting = false)
+                    }
+                },
+                onFailure = { e ->
+                    _uiState.update { it.copy(litertLmImporting = false) }
+                    _snackbarEvent.tryEmit(
+                        SnackbarEvent.Message(e.message ?: ctx.getString(R.string.litertlm_no_models)))
+                })
+    }
+
+    fun dismissLitertLmCandidates() {
+        _uiState.update { it.copy(litertLmCandidates = emptyList(), litertLmUrlInput = "") }
+    }
+
+    /**
+     * Downloads the chosen .litertlm file and activates it: same persistence tail
+     * as onModelSelected (GH #23 route 3), model_path + backend "llm".
+     */
+    fun importLitertLmFile(url: String, file: com.antivocale.app.data.LitertLmFile) =
+        viewModelScope.launch(Dispatchers.IO) {
+            _uiState.update { it.copy(litertLmImporting = true) }
+            val modelsDir = File(ctx.filesDir, "models")
+            val token = tokenManager.getEffectiveToken()
+            val result = litertLmUrlImporter.importFromUrl(
+                url, file.fileName, file.sizeBytes,
+                modelsDir = modelsDir,
+                freeBytes = { modelsDir.usableSpace },
+                token = token,
+                download = { dlUrl, target, sizeBytes, authHeader ->
+                    com.antivocale.app.data.download.ResumeDownloadHelper.downloadWithResume(
+                        com.antivocale.app.data.download.DownloadConfig(
+                            url = dlUrl,
+                            tempFile = File(target.path + ".tmp"),
+                            targetFile = target,
+                            estimatedSizeBytes = sizeBytes,
+                            authHeader = authHeader))
+                })
+            _uiState.update { it.copy(
+                litertLmImporting = false,
+                litertLmCandidates = emptyList(),
+                litertLmUrlInput = "") }
+            result.fold(
+                onSuccess = { downloaded ->
+                    preferencesManager.saveModelPath(downloaded.absolutePath)
+                    preferencesManager.saveTranscriptionBackend(LlmTranscriptionBackend.BACKEND_ID)
+                    _uiState.update { it.copy(
+                        modelPath = downloaded.absolutePath,
+                        modelName = downloaded.name,
+                        status = ModelStatus.UNLOADED,
+                        statusMessage = ctx.getString(R.string.model_selected, downloaded.name)) }
+                    _snackbarEvent.tryEmit(
+                        SnackbarEvent.Message(ctx.getString(R.string.model_selected, downloaded.name)))
+                },
+                onFailure = { e ->
+                    _snackbarEvent.tryEmit(
+                        SnackbarEvent.Message(e.message ?: ctx.getString(R.string.litertlm_no_models)))
+                })
+        }
 
     private fun copyModelToAppStorage(context: Context, uri: Uri): String? {
         return try {
