@@ -966,4 +966,5 @@
     <string name="a11y_expand">развернуть</string>
     <string name="a11y_collapse">свернуть</string>
     <string name="a11y_back">Назад</string>
+    <string name="litertlm_importing">Импорт…</string>
 </resources>

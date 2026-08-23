@@ -951,4 +951,5 @@
     <string name="a11y_expand">genişlet</string>
     <string name="a11y_collapse">daralt</string>
     <string name="a11y_back">Geri</string>
+    <string name="litertlm_importing">İçe aktarılıyor…</string>
 </resources>

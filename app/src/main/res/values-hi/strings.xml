@@ -950,4 +950,5 @@
     <string name="a11y_expand">विस्तार</string>
     <string name="a11y_collapse">संकुचित</string>
     <string name="a11y_back">पीछे</string>
+    <string name="litertlm_importing">इंपोर्ट हो रहा है…</string>
 </resources>

@@ -7,6 +7,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -343,6 +345,8 @@ internal fun DownloadProgressView(
 ) {
     when (val state = downloadState) {
         is DownloadState.Downloading -> {
+            // TASK-384: talkback reads the same percentage the sighted UI shows
+            val percentText = "${(downloadProgress * 100).toInt()}%"
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -356,11 +360,11 @@ internal fun DownloadProgressView(
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f)
                     )
-                    Text("${(downloadProgress * 100).toInt()}%", style = MaterialTheme.typography.bodySmall)
+                    Text(percentText, style = MaterialTheme.typography.bodySmall)
                 }
                 LinearProgressIndicator(
                     progress = { downloadProgress },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth().semantics { stateDescription = percentText }
                 )
                 Text(
                     text = formatFileSize(state.bytesDownloaded) +
@@ -372,10 +376,14 @@ internal fun DownloadProgressView(
             }
         }
         is DownloadState.Extracting -> {
+            // TASK-384: talkback reads the same status label the sighted UI shows
+            val extractingLabel =
+                state.fileName.takeIf { it.isNotEmpty() }
+                    ?: stringResource(R.string.download_status_extracting_files)
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 LinearProgressIndicator(
                     progress = { downloadProgress },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth().semantics { stateDescription = extractingLabel }
                 )
                 if (showExtractingFileSize && state.currentFileSize > 0) {
                     Row(
@@ -401,7 +409,7 @@ internal fun DownloadProgressView(
                         if (state.fileName.isNotEmpty()) {
                             stringResource(R.string.download_status_extracting, state.fileName)
                         } else {
-                            stringResource(R.string.download_status_extracting_files)
+                            extractingLabel
                         },
                         style = MaterialTheme.typography.bodySmall
                     )

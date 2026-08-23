@@ -955,4 +955,5 @@
     <string name="a11y_expand">espandi</string>
     <string name="a11y_collapse">comprimi</string>
     <string name="a11y_back">Indietro</string>
+    <string name="litertlm_importing">Importazione in corso…</string>
 </resources>

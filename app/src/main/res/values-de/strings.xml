@@ -951,4 +951,5 @@
     <string name="a11y_expand">ausklappen</string>
     <string name="a11y_collapse">einklappen</string>
     <string name="a11y_back">Zurück</string>
+    <string name="litertlm_importing">Import läuft…</string>
 </resources>

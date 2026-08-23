@@ -967,4 +967,5 @@
     <string name="a11y_expand">розгорнути</string>
     <string name="a11y_collapse">згорнути</string>
     <string name="a11y_back">Назад</string>
+    <string name="litertlm_importing">Імпортування…</string>
 </resources>
