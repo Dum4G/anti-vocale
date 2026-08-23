@@ -621,6 +621,18 @@ class TranscriptionOrchestrator @Inject constructor(
         val resolvedProvider = InferenceProvider.resolve(providerPref)
         val progressiveEnabled = preferencesManager.progressiveTranscription.first()
 
+        // Resolve prompt: request → settings → fallback
+        val resolvedPrompt = resolvePrompt(prompt)
+        // TASK-370: in multi-chunk mode the LLM backend must not receive a
+        // generative prompt per chunk (each fragment would be transformed
+        // independently and then concatenated). Chunks get a plain
+        // transcription instruction; a custom prompt runs ONCE, at the end,
+        // as a text-only pass over the full transcript.
+        val chunkPrompt = ChunkPromptPolicy.perChunkPrompt(backend.id, resolvedPrompt)
+        val finalGenerativePrompt =
+            if (ChunkPromptPolicy.shouldRunFinalGenerativePass(backend.id, resolvedPrompt)) resolvedPrompt
+            else null
+
         // Use streaming pipeline for multi-chunk non-VAD scenarios
         val maxChunkDuration = backend.maxChunkDurationSeconds
         val usePipeline = !vadEnabled && maxChunkDuration != null
@@ -628,17 +640,19 @@ class TranscriptionOrchestrator @Inject constructor(
         val totalStartMs = System.currentTimeMillis()
 
         if (usePipeline) {
-            return processPipelinedAudio(
-                taskId = taskId,
-                filePath = filePath,
-                backend = backend,
-                maxChunkDurationSeconds = maxChunkDuration,
-                context = context,
-                coroutineScope = coroutineScope,
-                listener = listener,
-                prompt = prompt,
-                progressiveEnabled = progressiveEnabled
-            )
+            return applyFinalGenerativePass(
+                backend, finalGenerativePrompt,
+                processPipelinedAudio(
+                    taskId = taskId,
+                    filePath = filePath,
+                    backend = backend,
+                    maxChunkDurationSeconds = maxChunkDuration,
+                    context = context,
+                    coroutineScope = coroutineScope,
+                    listener = listener,
+                    prompt = chunkPrompt,
+                    progressiveEnabled = progressiveEnabled
+                ))
         }
 
         val preprocessStartMs = System.currentTimeMillis()
@@ -667,9 +681,6 @@ class TranscriptionOrchestrator @Inject constructor(
 
         val transcriptionStartTime = System.currentTimeMillis()
         val chunkProcessingStartTime = System.currentTimeMillis()
-
-        // Resolve prompt: request → settings → fallback
-        val resolvedPrompt = resolvePrompt(prompt)
 
         // Fast path: single chunk. Uses the streaming variant so streaming backends
         // (e.g. Nemotron) can emit progressive partials; non-streaming backends ignore
@@ -709,35 +720,65 @@ class TranscriptionOrchestrator @Inject constructor(
 
         // Progressive path: VAD-segmented audio + progressive toggle enabled
         if (preprocessingResult.isVadSegmented && progressiveEnabled) {
-            return processProgressiveSegments(
-                taskId = taskId,
-                chunks = preprocessingResult.chunks,
-                sampleRate = preprocessingResult.sampleRate,
-                prompt = resolvedPrompt,
-                backend = backend,
-                audioDurationSeconds = audioDurationSeconds,
-                chunkProcessingStartTime = chunkProcessingStartTime,
-                listener = listener,
-                transcriptionStartTime = transcriptionStartTime
-            )
+            return applyFinalGenerativePass(
+                backend, finalGenerativePrompt,
+                processProgressiveSegments(
+                    taskId = taskId,
+                    chunks = preprocessingResult.chunks,
+                    sampleRate = preprocessingResult.sampleRate,
+                    prompt = chunkPrompt,
+                    backend = backend,
+                    audioDurationSeconds = audioDurationSeconds,
+                    chunkProcessingStartTime = chunkProcessingStartTime,
+                    listener = listener,
+                    transcriptionStartTime = transcriptionStartTime
+                ))
         }
 
         // Multi-chunk path: parallel processing with progress tracking
-        return processParallelChunks(
-            taskId = taskId,
-            chunks = preprocessingResult.chunks,
-            sampleRate = preprocessingResult.sampleRate,
-            prompt = resolvedPrompt,
-            backend = backend,
-            audioDurationSeconds = audioDurationSeconds,
-            chunkProcessingStartTime = chunkProcessingStartTime,
-            queuePosition = queuePosition,
-            queueTotal = queueTotal,
-            listener = listener,
-            coroutineScope = coroutineScope,
-            transcriptionStartTime = transcriptionStartTime,
-            progressiveEnabled = progressiveEnabled
-        )
+        return applyFinalGenerativePass(
+            backend, finalGenerativePrompt,
+            processParallelChunks(
+                taskId = taskId,
+                chunks = preprocessingResult.chunks,
+                sampleRate = preprocessingResult.sampleRate,
+                prompt = chunkPrompt,
+                backend = backend,
+                audioDurationSeconds = audioDurationSeconds,
+                chunkProcessingStartTime = chunkProcessingStartTime,
+                queuePosition = queuePosition,
+                queueTotal = queueTotal,
+                listener = listener,
+                coroutineScope = coroutineScope,
+                transcriptionStartTime = transcriptionStartTime,
+                progressiveEnabled = progressiveEnabled
+            ))
+    }
+
+    /**
+     * TASK-370: the single, final application of the user's generative prompt
+     * over the concatenated multi-chunk transcript. Fail-open: if the pass
+     * fails or returns blank, the raw transcript is delivered unchanged (the
+     * transcription itself succeeded; post-processing must not lose it).
+     */
+    private suspend fun applyFinalGenerativePass(
+        backend: TranscriptionBackend,
+        generativePrompt: String?,
+        result: Result<TranscriptionResult>
+    ): Result<TranscriptionResult> {
+        if (generativePrompt == null || result.isFailure) return result
+        val transcript = result.getOrNull()?.text?.takeIf { it.isNotBlank() } ?: return result
+        return backend
+            .generateText(ChunkPromptPolicy.finalPrompt(generativePrompt, transcript))
+            .fold(
+                onSuccess = { processed ->
+                    if (processed.isNotBlank()) result.map { it.copy(text = processed.trim()) }
+                    else result
+                },
+                onFailure = { error ->
+                    Log.w(TAG, "Final generative pass failed; delivering raw transcript", error)
+                    result
+                })
     }
 
     private suspend fun processProgressiveSegments(
