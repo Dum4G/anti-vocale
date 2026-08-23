@@ -24,7 +24,7 @@ class ContextMenuActionsTest {
         val actions = buildContextMenuActions(entry(), canRetranscribe = true)
 
         assertEquals(
-            listOf(ContextMenuAction.RETRANSCRIBE, ContextMenuAction.COPY, ContextMenuAction.DELETE),
+            listOf(ContextMenuAction.RETRANSCRIBE, ContextMenuAction.COPY, ContextMenuAction.REPORT, ContextMenuAction.DELETE),
             actions
         )
     }
@@ -33,14 +33,14 @@ class ContextMenuActionsTest {
     fun `entry without retranscribe handler omits retranscribe`() {
         val actions = buildContextMenuActions(entry(), canRetranscribe = false)
 
-        assertEquals(listOf(ContextMenuAction.COPY, ContextMenuAction.DELETE), actions)
+        assertEquals(listOf(ContextMenuAction.COPY, ContextMenuAction.REPORT, ContextMenuAction.DELETE), actions)
     }
 
     @Test
     fun `entry with empty result omits copy`() {
         val actions = buildContextMenuActions(entry(result = ""), canRetranscribe = true)
 
-        assertEquals(listOf(ContextMenuAction.RETRANSCRIBE, ContextMenuAction.DELETE), actions)
+        assertEquals(listOf(ContextMenuAction.RETRANSCRIBE, ContextMenuAction.REPORT, ContextMenuAction.DELETE), actions)
     }
 
     @Test
@@ -51,24 +51,24 @@ class ContextMenuActionsTest {
             canRetranscribe = true,
         )
 
-        assertEquals(listOf(ContextMenuAction.CANCEL, ContextMenuAction.RETRANSCRIBE, ContextMenuAction.DELETE), actions)
+        assertEquals(listOf(ContextMenuAction.CANCEL, ContextMenuAction.RETRANSCRIBE, ContextMenuAction.REPORT, ContextMenuAction.DELETE), actions)
     }
 
     @Test
-    fun `error entry offers delete only`() {
+    fun `error entry offers report and delete`() {
         val actions = buildContextMenuActions(
             entry(status = LogEntry.Status.ERROR, result = ""),
             canRetranscribe = false,
         )
 
-        assertEquals(listOf(ContextMenuAction.DELETE), actions)
+        assertEquals(listOf(ContextMenuAction.REPORT, ContextMenuAction.DELETE), actions)
     }
 
     @Test
     fun `queued entry offers cancel`() {
         val actions = buildContextMenuActions(entry(status = LogEntry.Status.QUEUED, result = ""), canRetranscribe = false)
 
-        assertEquals(listOf(ContextMenuAction.CANCEL, ContextMenuAction.DELETE), actions)
+        assertEquals(listOf(ContextMenuAction.CANCEL, ContextMenuAction.REPORT, ContextMenuAction.DELETE), actions)
     }
 
     @Test
@@ -78,7 +78,7 @@ class ContextMenuActionsTest {
             canRetranscribe = true,
         )
 
-        assertEquals(listOf(ContextMenuAction.CANCEL, ContextMenuAction.RETRANSCRIBE, ContextMenuAction.DELETE), actions)
+        assertEquals(listOf(ContextMenuAction.CANCEL, ContextMenuAction.RETRANSCRIBE, ContextMenuAction.REPORT, ContextMenuAction.DELETE), actions)
     }
 
     @Test

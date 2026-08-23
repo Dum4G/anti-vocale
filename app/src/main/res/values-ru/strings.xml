@@ -954,4 +954,13 @@
     <string name="litertlm_url_hint" translatable="false">https://huggingface.co/owner/repo</string>
     <string name="litertlm_pick_file">Выберите файл модели</string>
     <string name="litertlm_no_models">В этом репозитории нет файла .litertlm</string>
+    <!-- TASK-374: per-transcription feedback -->
+    <string name="feedback_report_transcription">Сообщить о расшифровке</string>
+    <string name="feedback_label_task">Задача</string>
+    <string name="feedback_label_model">Модель</string>
+    <string name="feedback_label_duration">Длительность аудио</string>
+    <string name="feedback_label_time">Время обработки</string>
+    <string name="feedback_label_status">Статус</string>
+    <string name="feedback_label_excerpt">Фрагмент расшифровки</string>
+    <string name="feedback_label_truncated">сокращено</string>
 </resources>

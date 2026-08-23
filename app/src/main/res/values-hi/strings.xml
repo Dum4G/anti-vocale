@@ -938,4 +938,13 @@
     <string name="litertlm_url_hint" translatable="false">https://huggingface.co/owner/repo</string>
     <string name="litertlm_pick_file">मॉडल फ़ाइल चुनें</string>
     <string name="litertlm_no_models">इस रिपॉज़िटरी में कोई .litertlm फ़ाइल नहीं मिली</string>
+    <!-- TASK-374: per-transcription feedback -->
+    <string name="feedback_report_transcription">ट्रांस्क्रिप्शन रिपोर्ट करें</string>
+    <string name="feedback_label_task">कार्य</string>
+    <string name="feedback_label_model">मॉडल</string>
+    <string name="feedback_label_duration">ऑडियो अवधि</string>
+    <string name="feedback_label_time">प्रोसेसिंग समय</string>
+    <string name="feedback_label_status">स्थिति</string>
+    <string name="feedback_label_excerpt">ट्रांस्क्रिप्ट अंश</string>
+    <string name="feedback_label_truncated">छोटा किया गया</string>
 </resources>

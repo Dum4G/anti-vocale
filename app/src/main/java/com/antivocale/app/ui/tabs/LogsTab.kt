@@ -47,6 +47,7 @@ import com.antivocale.app.ui.components.VadAdvisoryCard
 import com.antivocale.app.ui.components.SwipeToRevealBox
 import com.antivocale.app.ui.components.rememberSwipeToRevealState
 import com.antivocale.app.util.ToastCompat
+import com.antivocale.app.util.FeedbackHelper
 import com.antivocale.app.ui.viewmodel.LogEntry
 import com.antivocale.app.ui.viewmodel.LogsViewModel
 import androidx.compose.runtime.produceState
@@ -63,6 +64,38 @@ internal data class ConversationGroup(
 
 internal interface LogGroup {
     val logs: List<LogEntry>
+}
+
+/**
+ * TASK-374: opens the feedback email pre-filled with this entry's facts and a
+ * TRUNCATED excerpt (the user reviews/edits before sending; full transcripts
+ * are never auto-attached).
+ */
+private fun reportTranscription(context: Context, log: LogEntry) {
+    FeedbackHelper.sendOrCopy(
+        context,
+        FeedbackHelper.transcriptFeedbackSubject(log.taskId),
+        FeedbackHelper.buildTranscriptFeedbackBody(
+            FeedbackHelper.TranscriptFacts(
+                taskId = log.taskId,
+                modelName = log.modelName ?: "-",
+                audioDurationSeconds = log.audioDurationSeconds,
+                processingTimeMs = log.durationMs,
+                status = log.status.name,
+                excerpt = log.result,
+                errorMessage = log.errorMessage,
+            ),
+            FeedbackHelper.TranscriptLabels(
+                task = context.getString(R.string.feedback_label_task),
+                model = context.getString(R.string.feedback_label_model),
+                duration = context.getString(R.string.feedback_label_duration),
+                time = context.getString(R.string.feedback_label_time),
+                status = context.getString(R.string.feedback_label_status),
+                excerpt = context.getString(R.string.feedback_label_excerpt),
+                truncatedNote = context.getString(R.string.feedback_label_truncated),
+            ),
+        )
+    )
 }
 
 /**
@@ -148,7 +181,7 @@ private fun RowScope.ResultActionButton(
  * Long-press context menu actions for a log entry (GH #52). Kept as a pure
  * function so the gating mirrors [buildSwipeActions] and stays unit-tested.
  */
-enum class ContextMenuAction { RETRANSCRIBE, CANCEL, COPY, DELETE }
+enum class ContextMenuAction { RETRANSCRIBE, CANCEL, COPY, REPORT, DELETE }
 
 /** Shared "Queued" label (collapsed and expanded views render it identically). */
 @Composable
@@ -170,6 +203,9 @@ fun buildContextMenuActions(log: LogEntry, canRetranscribe: Boolean): List<Conte
     if (canRetranscribe) actions.add(ContextMenuAction.RETRANSCRIBE)
     // Mirrors buildSwipeActions: Copy needs a completed result, not interim text.
     if (log.hasCompletedResult) actions.add(ContextMenuAction.COPY)
+    // TASK-374: report entry available on EVERY entry (errors are the most
+    // valuable reports and have no completed result).
+    actions.add(ContextMenuAction.REPORT)
     actions.add(ContextMenuAction.DELETE)
     return actions
 }
@@ -802,6 +838,7 @@ fun LogEntryItem(
                                         ContextMenuAction.RETRANSCRIBE -> R.string.retranscribe
                                         ContextMenuAction.CANCEL -> R.string.logs_cancel
                                         ContextMenuAction.COPY -> R.string.copy
+                                        ContextMenuAction.REPORT -> R.string.feedback_report_transcription
                                         ContextMenuAction.DELETE -> R.string.logs_delete_entry
                                     }
                                 )
@@ -813,6 +850,7 @@ fun LogEntryItem(
                                     ContextMenuAction.RETRANSCRIBE -> Icons.Default.Refresh
                                     ContextMenuAction.CANCEL -> Icons.Default.Close
                                     ContextMenuAction.COPY -> Icons.Default.ContentCopy
+                                    ContextMenuAction.REPORT -> Icons.Default.Mail
                                     ContextMenuAction.DELETE -> Icons.Default.Delete
                                 },
                                 contentDescription = null,
@@ -825,6 +863,7 @@ fun LogEntryItem(
                                 ContextMenuAction.RETRANSCRIBE -> onRetranscribe?.invoke()
                                 ContextMenuAction.CANCEL -> onCancel?.invoke()
                                 ContextMenuAction.COPY -> copyTranscriptionToClipboard(context, log.result)
+                                ContextMenuAction.REPORT -> reportTranscription(context, log)
                                 ContextMenuAction.DELETE -> onDelete?.invoke()
                             }
                         }

@@ -114,4 +114,61 @@ class FeedbackHelperTest {
             clipboard.primaryClip?.getItemAt(0)?.text?.toString()
         )
     }
+
+    @Test
+    fun `transcript feedback body carries task facts and truncated excerpt`() {
+        val facts = FeedbackHelper.TranscriptFacts(
+            taskId = "task-42", modelName = "Gemma (LiteRT-LM)",
+            audioDurationSeconds = 95.5, processingTimeMs = 12_345,
+            status = "SUCCESS",
+            excerpt = "a".repeat(400))
+        val labels = FeedbackHelper.TranscriptLabels(
+            task = "Task", model = "Model", duration = "Audio length",
+            time = "Processing time", status = "Status", excerpt = "Transcript excerpt",
+            truncatedNote = "truncated")
+        val body = FeedbackHelper.buildTranscriptFeedbackBody(facts, labels)
+        org.junit.Assert.assertTrue(body.contains("task-42"))
+        org.junit.Assert.assertTrue(body.contains("Gemma (LiteRT-LM)"))
+        org.junit.Assert.assertTrue(body.contains("95.5"))
+        org.junit.Assert.assertTrue(body.contains("12.3"))  // seconds rendering
+        org.junit.Assert.assertTrue(body.contains("SUCCESS"))
+        // No errorMessage -> no extra line
+        // Excerpt capped at 300 chars + marker
+        org.junit.Assert.assertFalse(body.contains("a".repeat(301)))
+        org.junit.Assert.assertTrue(body.contains("a".repeat(300)))
+        org.junit.Assert.assertTrue(body.contains(labels.truncatedNote))
+    }
+
+    @Test
+    fun `transcript feedback body includes the error message when present`() {
+        val facts = FeedbackHelper.TranscriptFacts(
+            taskId = "t", modelName = "m", audioDurationSeconds = 1.0,
+            processingTimeMs = 100L, status = "ERROR", excerpt = "",
+            errorMessage = "NativeError: onnx runtime failure")
+        val labels = FeedbackHelper.TranscriptLabels(
+            task = "Task", model = "Model", duration = "D", time = "T",
+            status = "S", excerpt = "Excerpt", truncatedNote = "truncated")
+        val body = FeedbackHelper.buildTranscriptFeedbackBody(facts, labels)
+        org.junit.Assert.assertTrue(body.contains("onnx runtime failure"))
+    }
+
+    @Test
+    fun `transcript feedback body handles empty excerpt`() {
+        val facts = FeedbackHelper.TranscriptFacts(
+            taskId = "t", modelName = "m", audioDurationSeconds = 1.0,
+            processingTimeMs = 100L, status = "ERROR", excerpt = "")
+        val labels = FeedbackHelper.TranscriptLabels(
+            task = "Task", model = "Model", duration = "D", time = "T",
+            status = "S", excerpt = "Excerpt", truncatedNote = "truncated")
+        val body = FeedbackHelper.buildTranscriptFeedbackBody(facts, labels)
+        org.junit.Assert.assertTrue(body.isNotEmpty())
+        org.junit.Assert.assertFalse(body.contains("truncated"))
+    }
+
+    @Test
+    fun `transcript feedback subject groups by task`() {
+        org.junit.Assert.assertEquals(
+            "[Anti-Vocale feedback] task task-42",
+            FeedbackHelper.transcriptFeedbackSubject("task-42"))
+    }
 }

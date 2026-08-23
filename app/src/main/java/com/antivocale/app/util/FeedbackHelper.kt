@@ -49,6 +49,56 @@ object FeedbackHelper {
 
     fun feedbackSubject(): String = SUBJECT_FEEDBACK
 
+    /**
+     * TASK-374: facts about one transcription, embedded in a per-entry feedback
+     * email. The excerpt is TRUNCATED by the builder (privacy: the user reviews
+     * and edits the email before sending; full transcripts are never attached).
+     */
+    data class TranscriptFacts(
+        val taskId: String,
+        val modelName: String,
+        val audioDurationSeconds: Double,
+        val processingTimeMs: Long,
+        val status: String,
+        val excerpt: String,
+        /** For ERROR reports: the recorded failure reason, often the most useful fact. */
+        val errorMessage: String? = null,
+    )
+
+    /** Localized labels for the per-transcription body template. */
+    data class TranscriptLabels(
+        val task: String,
+        val model: String,
+        val duration: String,
+        val time: String,
+        val status: String,
+        val excerpt: String,
+        val truncatedNote: String,
+    )
+
+    /** Cap for the excerpt embedded in the body; referenced by the tests too. */
+    const val TRANSCRIPT_EXCERPT_CAP = 300
+
+    fun transcriptFeedbackSubject(taskId: String) = "$SUBJECT_FEEDBACK task $taskId"
+
+    fun buildTranscriptFeedbackBody(f: TranscriptFacts, l: TranscriptLabels): String = buildString {
+        appendLine("${l.task}: ${f.taskId}")
+        appendLine("${l.model}: ${f.modelName}")
+        appendLine("${l.duration}: ${"%.1f".format(f.audioDurationSeconds)}s")
+        appendLine("${l.time}: ${"%.1f".format(f.processingTimeMs / 1000.0)}s")
+        appendLine("${l.status}: ${f.status}")
+        f.errorMessage?.takeIf { it.isNotBlank() }?.let { appendLine("${l.status}: $it") }
+        appendLine()
+        append("${l.excerpt}: ")
+        if (f.excerpt.isEmpty()) {
+            appendLine("(empty)")
+        } else if (f.excerpt.length <= TRANSCRIPT_EXCERPT_CAP) {
+            appendLine(f.excerpt)
+        } else {
+            appendLine(f.excerpt.take(TRANSCRIPT_EXCERPT_CAP) + "... (${l.truncatedNote})")
+        }
+    }
+
     fun translationSubject(locale: String): String = "$SUBJECT_TRANSLATION_PREFIX $locale"
 
     fun buildFeedbackBody(d: Diagnostics, l: BodyLabels): String = buildString {

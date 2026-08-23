@@ -805,4 +805,13 @@
     <string name="litertlm_url_hint" translatable="false">https://huggingface.co/owner/repo</string>
     <string name="litertlm_pick_file">Escolher arquivo do modelo</string>
     <string name="litertlm_no_models">Nenhum arquivo .litertlm encontrado neste repositório</string>
+    <!-- TASK-374: per-transcription feedback -->
+    <string name="feedback_report_transcription">Denunciar transcrição</string>
+    <string name="feedback_label_task">Tarefa</string>
+    <string name="feedback_label_model">Modelo</string>
+    <string name="feedback_label_duration">Duração do áudio</string>
+    <string name="feedback_label_time">Tempo de processamento</string>
+    <string name="feedback_label_status">Status</string>
+    <string name="feedback_label_excerpt">Trecho da transcrição</string>
+    <string name="feedback_label_truncated">truncado</string>
 </resources>
