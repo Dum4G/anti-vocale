@@ -44,8 +44,11 @@ fun audioLimitForCatalogEntry(storageDir: String?, chunkDurationSeconds: Int): A
         chunkDurationSeconds = chunkDurationSeconds,
     )
 
-fun audioLimitForVariants(variants: List<ModelVariant>): AudioLimit =
+fun audioLimitForVariants(
+    variants: List<ModelVariant>,
+    chunkDurationSeconds: Int = 0,
+): AudioLimit =
     audioLimit(
         maxAudioDuration = variants.firstNotNullOfOrNull { ModelInfoProvider.getInfo(it)?.maxAudioDuration },
-        chunkDurationSeconds = 0,
+        chunkDurationSeconds = chunkDurationSeconds,
     )

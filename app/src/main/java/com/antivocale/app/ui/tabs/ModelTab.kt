@@ -42,6 +42,7 @@ import com.antivocale.app.data.catalog.CatalogStringKeys
 import com.antivocale.app.data.download.DownloadState
 import com.antivocale.app.service.InferenceService
 import com.antivocale.app.transcription.CatalogVariantUi
+import com.antivocale.app.transcription.LlmTranscriptionBackend
 import com.antivocale.app.transcription.ModelFamilySupport
 import com.antivocale.app.transcription.AudioLimit
 import com.antivocale.app.transcription.ModelInfoProvider
@@ -649,9 +650,13 @@ private fun ModelDownloadSection(
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        // GH #49: audio-length capability from metadata
+                        // GH #49: audio-length capability. TASK-371: use the runtime
+                        // chunk size (the llm backend chunks + concatenates), so the
+                        // label says Any length like the other chunked models.
                         val gemmaLimit = remember(visibleVariants) {
-                            audioLimitForVariants(visibleVariants)
+                            audioLimitForVariants(
+                                visibleVariants,
+                                chunkDurationSeconds = LlmTranscriptionBackend.AUDIO_CHUNK_SECONDS)
                         }
                         AudioLimitLabel(gemmaLimit)
                     }

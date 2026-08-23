@@ -14,10 +14,19 @@ class LlmTranscriptionBackend @Inject constructor(
 
     companion object {
         const val BACKEND_ID = "llm"
+
+        /**
+         * The encoder takes ~30s per pass; the orchestrator splits longer inputs at
+         * this size and concatenates (same contract as Whisper/Qwen3 chunking).
+         * Public so the model-card label (GH #49, TASK-370/#371) and tests derive
+         * from the value the runtime uses.
+         */
+        const val AUDIO_CHUNK_SECONDS = 30
         private const val TAG = "LlmTranscriptionBackend"
     }
 
     override val id: String = BACKEND_ID
+    override val maxChunkDurationSeconds: Int = AUDIO_CHUNK_SECONDS
     override val displayName: String = "Gemma (LiteRT-LM)"
     override val supportsAudio: Boolean = true
     override val supportsText: Boolean = true
