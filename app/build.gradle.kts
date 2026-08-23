@@ -330,7 +330,9 @@ if (project.hasProperty("byteman")) {
     tasks.withType<Test>().configureEach {
         val agentJar = bytemanAgent.singleFile
         jvmArgs(
-            "-javaagent:$agentJar=script:${rootDir}/app/src/test/resources/byteman/spike.btm",
+            // Single canonical rules file (Byteman 4.0.27 rejects a directory in script:);
+            // race targets append their RULE blocks to rules.btm, no build change needed.
+            "-javaagent:$agentJar=script:${rootDir}/app/src/test/resources/byteman/rules.btm",
             "-Dorg.jboss.byteman.verbose=true",
         )
         systemProperty("byteman.agent", "true")
