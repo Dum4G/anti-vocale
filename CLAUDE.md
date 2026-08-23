@@ -87,6 +87,14 @@ NNAPI is available on ALL devices including MediaTek. If a native crash occurs w
 
 - **`/model-scout [scope]`** -- Scout HuggingFace, GitHub releases, and the ASR landscape for new models, framework updates, and techniques that could improve on-device transcription. Scopes: `full`, `asr`, `llm`, `frameworks`, `parakeet`, `whisper`, `qwen`. Reports saved to `docs/scout-reports/`.
 
+## Backlog label taxonomy
+
+Task labels use a closed slash-namespaced vocabulary (migrated 2026-08-23 by `scripts/migrate-labels.py`); do not invent new labels:
+- `kind/` (exactly ONE per task): feature, enhancement, bug, refactor, test, performance, chore, research, docs, breaking
+- `area/` (one or two): ui, transcription, downloads, release, i18n, platform, settings, notifications, build, reliability, data, receiver, ci
+- `model/` (optional, only for model-specific tasks): parakeet, whisper, gemma, qwen, nemotron, gigaam, sherpa, external
+Never encode priority, milestone, or issue links in labels (dedicated fields exist for those).
+
 ## GitHub issue triage
 
 External issue reports get answered on GitHub; anything we commit to goes into a tracking issue first, then a Backlog task. Recent tracker state: #50 (Parakeet long-audio chunking, model hard cap 400s), #51 (Queued/Processing split in Logs tab), #52 (long-press context menu). FAQ.md at the root mirrors the public answers; keep it in sync when these land.
