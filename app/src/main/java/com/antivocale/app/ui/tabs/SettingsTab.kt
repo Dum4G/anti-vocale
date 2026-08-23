@@ -13,6 +13,7 @@ import androidx.documentfile.provider.DocumentFile
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
@@ -865,9 +866,9 @@ fun SettingsTab(
                                             color = MaterialTheme.colorScheme.onTertiaryContainer
                                         )
                                     }
+                                    // TASK-381: no explicit size, IconButton defaults to 48dp touch target
                                     IconButton(
-                                        onClick = { showSetupGuide = !showSetupGuide },
-                                        modifier = Modifier.size(24.dp)
+                                        onClick = { showSetupGuide = !showSetupGuide }
                                     ) {
                                         Icon(
                                             if (showSetupGuide) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
@@ -1312,8 +1313,15 @@ fun SettingsTab(
 
                     HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
 
+                    // TASK-382: canonical toggleable row; the Switch itself is display-only
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .toggleable(
+                                value = advancedSharingEnabled,
+                                role = Role.Switch,
+                                onValueChange = { viewModel.saveAdvancedSharingEnabled(it) }
+                            ),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
@@ -1325,7 +1333,7 @@ fun SettingsTab(
                         }
                         Switch(
                             checked = advancedSharingEnabled,
-                            onCheckedChange = { viewModel.saveAdvancedSharingEnabled(it) }
+                            onCheckedChange = null
                         )
                     }
 

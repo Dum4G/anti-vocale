@@ -226,8 +226,10 @@ fun ModelVariantCard(
                     }
                     is DownloadButtonState.Downloaded -> {
                         if (!state.isActive) {
+                            // TASK-381: 48dp minimum touch target for icon-only button
                             Button(
                                 onClick = onUseClick,
+                                modifier = Modifier.heightIn(min = 48.dp),
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = MaterialTheme.colorScheme.primary
                                 )
@@ -236,12 +238,18 @@ fun ModelVariantCard(
                             }
                         }
                         if (onBenchmarkClick != null) {
-                            OutlinedButton(onClick = onBenchmarkClick) {
+                            // TASK-381: 48dp minimum touch target for icon-only button
+                            OutlinedButton(
+                                onClick = onBenchmarkClick,
+                                modifier = Modifier.heightIn(min = 48.dp)
+                            ) {
                                 Icon(Icons.Default.Speed, contentDescription = stringResource(R.string.benchmark_button))
                             }
                         }
+                        // TASK-381: 48dp minimum touch target for icon-only button
                         OutlinedButton(
                             onClick = onDeleteClick,
+                            modifier = Modifier.heightIn(min = 48.dp),
                             colors = ButtonDefaults.outlinedButtonColors(
                                 contentColor = MaterialTheme.colorScheme.error
                             )
@@ -274,8 +282,10 @@ fun ModelVariantCard(
                     }
                     is DownloadButtonState.UpdateAvailable -> {
                         if (!state.isActive) {
+                            // TASK-381: 48dp minimum touch target for icon-only button
                             Button(
                                 onClick = onUseClick,
+                                modifier = Modifier.heightIn(min = 48.dp),
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = MaterialTheme.colorScheme.primary
                                 )
@@ -293,8 +303,10 @@ fun ModelVariantCard(
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(stringResource(R.string.model_update_button))
                         }
+                        // TASK-381: 48dp minimum touch target for icon-only button
                         OutlinedButton(
                             onClick = onDeleteClick,
+                            modifier = Modifier.heightIn(min = 48.dp),
                             colors = ButtonDefaults.outlinedButtonColors(
                                 contentColor = MaterialTheme.colorScheme.error
                             )
@@ -521,10 +533,8 @@ internal fun PartialDownloadSection(
 
 @Composable
 fun InfoIconButton(onClick: () -> Unit) {
-    IconButton(
-        onClick = onClick,
-        modifier = Modifier.size(32.dp)
-    ) {
+    // TASK-381: no explicit size, IconButton defaults to 48dp touch target
+    IconButton(onClick = onClick) {
         Icon(
             imageVector = Icons.Default.Info,
             contentDescription = stringResource(R.string.model_info_title),

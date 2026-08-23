@@ -24,7 +24,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
+import com.antivocale.app.R
 import androidx.compose.ui.unit.dp
 
 @Composable
@@ -36,12 +41,17 @@ fun CollapsibleSection(
     content: @Composable () -> Unit
 ) {
     var expanded by rememberSaveable { mutableStateOf(initiallyExpanded) }
+    val stateDescriptionText = stringResource(
+        if (expanded) R.string.a11y_collapse else R.string.a11y_expand
+    )
 
     Column(modifier = modifier.fillMaxWidth()) {
+        // TASK-382: header is the accessible toggle; stateDescription conveys state
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable { expanded = !expanded },
+                .clickable(role = Role.Button) { expanded = !expanded }
+                .semantics { stateDescription = stateDescriptionText },
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
@@ -60,7 +70,7 @@ fun CollapsibleSection(
             Spacer(modifier = Modifier.width(4.dp))
             Icon(
                 imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                contentDescription = if (expanded) "Collapse" else "Expand",
+                contentDescription = if (expanded) stringResource(R.string.a11y_collapse) else stringResource(R.string.a11y_expand),
                 tint = MaterialTheme.colorScheme.primary
             )
         }

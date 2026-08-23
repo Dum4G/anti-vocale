@@ -936,7 +936,10 @@
     <string name="battery_exemption_action">Ayarı aç</string>
     <!-- TASK-373: litert-lm HF url import -->
     <string name="litertlm_import_from_url">Hugging Face URL’sinden içe aktar</string>
-    <string name="litertlm_url_hint" translatable="false">https://huggingface.co/owner/repo</string>
+    <string name="litertlm_url_hint">https://huggingface.co/owner/repo</string>
     <string name="litertlm_pick_file">Model dosyasını seç</string>
     <string name="litertlm_no_models">Bu depoda .litertlm dosyası bulunamadı</string>
+    <string name="a11y_expand">genişlet</string>
+    <string name="a11y_collapse">daralt</string>
+    <string name="a11y_back">Geri</string>
 </resources>
