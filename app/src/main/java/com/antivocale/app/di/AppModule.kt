@@ -84,6 +84,14 @@ object AppModule {
 
     @Provides
     @Singleton
+    fun provideLitertLmUrlImporter(
+        okHttpClient: OkHttpClient,
+    ): com.antivocale.app.data.LitertLmUrlImporter =
+        com.antivocale.app.data.LitertLmUrlImporter(
+            com.antivocale.app.data.HuggingFaceRepoListing(okHttpClient))
+
+    @Provides
+    @Singleton
     fun provideAppDatabase(@ApplicationContext context: Context): AppDatabase {
         return AppDatabase.getDatabase(context)
     }
