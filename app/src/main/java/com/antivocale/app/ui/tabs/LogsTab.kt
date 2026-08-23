@@ -14,6 +14,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import android.content.ClipData
@@ -1417,10 +1421,18 @@ private fun ConversationGroupHeader(
     onToggle: () -> Unit
 ) {
     val context = LocalContext.current
+    // TASK-384: clickable Surface has no role; announce expand/collapse state to talkback
+    val toggleStateDescription = stringResource(
+        if (expanded) R.string.a11y_collapse else R.string.a11y_expand
+    )
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = 4.dp),
+            .padding(horizontal = 8.dp, vertical = 4.dp)
+            .semantics {
+                role = Role.Button
+                stateDescription = toggleStateDescription
+            },
         color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f),
         shape = MaterialTheme.shapes.small,
         onClick = onToggle

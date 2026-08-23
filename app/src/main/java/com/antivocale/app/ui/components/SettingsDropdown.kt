@@ -17,6 +17,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.selected
 
 /**
  * A reusable dropdown selector for settings screens.
@@ -76,13 +78,16 @@ fun <T> SettingsDropdown(
             modifier = Modifier.exposedDropdownSize()
         ) {
             options.forEach { option ->
+                val isCurrent = optionKey(currentValue) == optionKey(option)
                 DropdownMenuItem(
                     text = { Text(optionDisplay(option)) },
                     onClick = {
                         onOptionSelected(option)
                         expanded = false
                     },
-                    trailingIcon = if (optionKey(currentValue) == optionKey(option)) {
+                    // TASK-384: icon-only check is silent for talkback; selected announces it
+                    modifier = if (isCurrent) Modifier.semantics { selected = true } else Modifier,
+                    trailingIcon = if (isCurrent) {
                         { Icon(Icons.Default.Check, contentDescription = null) }
                     } else null
                 )

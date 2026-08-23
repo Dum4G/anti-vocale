@@ -8,7 +8,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.text.ClickableText
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
@@ -25,6 +24,9 @@ import kotlinx.coroutines.launch
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -544,10 +546,20 @@ fun ModelTab(
                         }
                         if (uiState.litertLmImporting) {
                             Spacer(modifier = Modifier.height(8.dp))
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(20.dp),
-                                strokeWidth = 2.dp
-                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    strokeWidth = 2.dp
+                                )
+                                // TASK-384: spinner alone is silent for talkback users
+                                Text(
+                                    stringResource(R.string.litertlm_importing),
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
                         }
                     }
                 }
@@ -732,10 +744,11 @@ private fun ModelDownloadSection(
                         }
                     }
                     Spacer(modifier = Modifier.height(2.dp))
-                    ClickableText(
+                    // TASK-384: Text+clickable with Button role; ClickableText has no role for talkback
+                    Text(
                         text = authWarningText,
                         style = MaterialTheme.typography.labelSmall,
-                        onClick = { onNavigateToSettings() }
+                        modifier = Modifier.clickable(role = Role.Button) { onNavigateToSettings() }
                     )
                 }
 
@@ -1337,8 +1350,9 @@ private fun ExternalModelCard(
         )
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
+            // TASK-384: expose the active state to talkback (selected) alongside the badge icon
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().semantics { selected = isActive },
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
             ) {
@@ -1366,7 +1380,7 @@ private fun ExternalModelCard(
                 if (isActive) {
                     Icon(
                         Icons.Default.CheckCircle,
-                        contentDescription = null,
+                        contentDescription = stringResource(R.string.active_badge),
                         tint = MaterialTheme.colorScheme.primary
                     )
                 }

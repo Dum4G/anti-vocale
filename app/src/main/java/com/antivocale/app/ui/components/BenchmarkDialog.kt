@@ -29,6 +29,8 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -137,9 +139,13 @@ private fun BenchmarkRunningContent(progress: Float) {
             text = stringResource(R.string.benchmark_running),
             style = MaterialTheme.typography.bodyLarge
         )
+        // TASK-384: talkback reads the same percentage line rendered below
+        val progressDescription = stringResource(R.string.benchmark_progress, (progress * 100).toInt())
         LinearProgressIndicator(
             progress = { progress },
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().semantics {
+                stateDescription = progressDescription
+            },
         )
         Text(
             text = stringResource(R.string.benchmark_progress, (progress * 100).toInt()),
