@@ -154,6 +154,7 @@
     <string name="download_status_retrying">Nouvelle tentative (%1$d/%2$d)…</string>
     <string name="download_status_resuming">Reprise du téléchargement…</string>
     <string name="model_requires_auth">Ce modèle nécessite un compte HuggingFace</string>
+    <string name="settings_action">Paramètres</string>
     <string name="download_rate">%1$s/s</string>
     <string name="download_eta">%1$s restants</string>
     <string name="download_eta_less_than_minute">Moins d\'une minute restante</string>

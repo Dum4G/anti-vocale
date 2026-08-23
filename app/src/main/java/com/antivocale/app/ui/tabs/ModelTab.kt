@@ -21,6 +21,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
@@ -172,7 +173,7 @@ fun ModelTab(
                 is ModelViewModel.SnackbarEvent.AuthRequired -> {
                     snackbarHostState.showSnackbar(
                         message = context.getString(R.string.model_requires_auth),
-                        actionLabel = "Settings",
+                        actionLabel = context.getString(R.string.settings_action),
                         duration = SnackbarDuration.Long
                     ).let { result ->
                         if (result == SnackbarResult.ActionPerformed) {
@@ -590,11 +591,27 @@ fun ModelTab(
                     contentColor = MaterialTheme.colorScheme.inverseOnSurface,
                     modifier = Modifier.padding(4.dp)
                 ) {
-                    Text(
-                        text = snackbarData.visuals.message,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                        style = MaterialTheme.typography.bodyMedium
-                    )
+                    // TASK-379: the default SnackbarHost launches performAction()
+                    // in a scope; ours must too or the Settings action is dead.
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(start = 16.dp, top = 4.dp, bottom = 4.dp, end = 4.dp)
+                    ) {
+                        Text(
+                            text = snackbarData.visuals.message,
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(vertical = 8.dp),
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        snackbarData.visuals.actionLabel?.let { actionLabel ->
+                            TextButton(
+                                onClick = { coroutineScope.launch { snackbarData.performAction() } }
+                            ) {
+                                Text(text = actionLabel)
+                            }
+                        }
+                    }
                 }
             }
         }

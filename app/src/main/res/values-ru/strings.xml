@@ -188,6 +188,7 @@
     <string name="download_status_retrying">Повторная попытка (%1$d/%2$d)…</string>
     <string name="download_status_resuming">Возобновление загрузки…</string>
     <string name="model_requires_auth">Для этой модели требуется аккаунт HuggingFace</string>
+    <string name="settings_action">Настройки</string>
 
     <!-- Download rate/ETA/partial -->
     <string name="download_rate">%1$s/с</string>

@@ -192,6 +192,7 @@
     <string name="download_status_retrying">Yeniden deneniyor (%1$d/%2$d)…</string>
     <string name="download_status_resuming">İndirme sürdürülüyor…</string>
     <string name="model_requires_auth">Bu model bir HuggingFace hesabı gerektirir</string>
+    <string name="settings_action">Ayarlar</string>
 
     <!-- Download rate/ETA/partial -->
     <string name="download_rate">%1$s/s</string>

@@ -59,9 +59,13 @@ class TaskerRequestReceiver : BroadcastReceiver() {
         const val STATUS_SUCCESS = "success"
         const val STATUS_ERROR = "error"
 
-        // Fallback notification
+        // Fallback notification. TASK-380: id is derived per taskId so two
+        // queued requests don't overwrite each other's notification.
         private val FALLBACK_CHANNEL_ID = AppNotificationChannel.TASKER_FALLBACK.id
-        private const val FALLBACK_NOTIFICATION_ID = 2001
+        private const val FALLBACK_NOTIFICATION_ID_BASE = 2001
+
+        internal fun fallbackNotificationId(taskId: String): Int =
+            FALLBACK_NOTIFICATION_ID_BASE + taskId.hashCode()
     }
 
     override fun onReceive(context: Context, intent: Intent) {
@@ -145,7 +149,7 @@ class TaskerRequestReceiver : BroadcastReceiver() {
             .setContentIntent(pendingIntent)
             .build()
 
-        notificationManager.notify(FALLBACK_NOTIFICATION_ID, notification)
+        notificationManager.notify(fallbackNotificationId(taskId), notification)
         Log.i(TAG, "Posted fallback notification for taskId: $taskId")
     }
 
