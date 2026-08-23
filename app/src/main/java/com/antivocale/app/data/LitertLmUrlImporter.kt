@@ -2,8 +2,6 @@ package com.antivocale.app.data
 
 import com.antivocale.app.data.HuggingFaceRepoListing.HfFile
 import java.io.File
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /** One downloadable .litertlm asset discovered in a HF repo. */
 data class LitertLmFile(val fileName: String, val sizeBytes: Long)
@@ -14,8 +12,10 @@ data class LitertLmFile(val fileName: String, val sizeBytes: Long)
  * consumed via the generic model_path preference and the "llm" backend, exactly
  * like the manual SAF import (onModelSelected) and the curated Gemma downloads.
  */
-@Singleton
-class LitertLmUrlImporter @Inject constructor(
+// No @Inject constructor (AppModule provides it, constructing the
+// HuggingFaceRepoListing with the shared OkHttpClient; ExternalModelStore
+// precedent for the same pattern).
+class LitertLmUrlImporter(
     private val listing: HuggingFaceRepoListing,
 ) {
     companion object {

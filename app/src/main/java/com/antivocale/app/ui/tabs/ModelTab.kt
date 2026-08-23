@@ -299,7 +299,7 @@ fun ModelTab(
                             Column(modifier = Modifier.padding(vertical = 4.dp)) {
                                 Text(candidate.fileName, style = MaterialTheme.typography.bodyMedium)
                                 Text(
-                                    java.lang.String.format("%.1f GB", candidate.sizeBytes / 1e9f),
+                                    java.lang.String.format(java.util.Locale.US, "%.1f GB", candidate.sizeBytes / 1e9f),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )

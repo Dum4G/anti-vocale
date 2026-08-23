@@ -700,7 +700,10 @@ class ModelViewModel @Inject constructor(
     }
 
     /** Lists the repo's .litertlm candidates; failures surface via snackbar, prefs untouched. */
-    fun listLitertLmModels(url: String) = viewModelScope.launch {
+    // Dispatchers.IO is mandatory here: listModels does a synchronous OkHttp call
+    // and Robolectric does not enforce the main-thread network policy that turns
+    // this into NetworkOnMainThreadException on a real device.
+    fun listLitertLmModels(url: String) = viewModelScope.launch(Dispatchers.IO) {
         _uiState.update { it.copy(litertLmImporting = true) }
         runCatching { litertLmUrlImporter.listModels(url) }
             .fold(
@@ -726,7 +729,12 @@ class ModelViewModel @Inject constructor(
      */
     fun importLitertLmFile(url: String, file: com.antivocale.app.data.LitertLmFile) =
         viewModelScope.launch(Dispatchers.IO) {
-            _uiState.update { it.copy(litertLmImporting = true) }
+            _uiState.update { it.copy(
+                litertLmImporting = true,
+                // Cleared at START, not completion: keeps the auto-import
+                // LaunchedEffect (keyed on candidates.size) from re-firing on
+                // tab switches mid-download and double-starting the transfer.
+                litertLmCandidates = emptyList()) }
             val modelsDir = File(ctx.filesDir, "models")
             val token = tokenManager.getEffectiveToken()
             val result = litertLmUrlImporter.importFromUrl(
