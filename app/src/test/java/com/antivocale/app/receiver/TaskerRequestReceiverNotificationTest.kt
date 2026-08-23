@@ -85,4 +85,31 @@ class TaskerRequestReceiverNotificationTest {
         val channel = notificationManager.getNotificationChannel("tasker_fallback_channel")
         assertNotNull("tasker_fallback_channel should still exist after double creation", channel)
     }
+
+    @Test
+    fun `two queued taskIds post two distinct fallback notifications`() {
+        val contextSpy = spyk(context)
+        every { contextSpy.startForegroundService(any()) } throws
+            ForegroundServiceStartNotAllowedException("test: blocked from background")
+
+        val receiver = TaskerRequestReceiver()
+
+        listOf("task_a", "task_b").forEach { taskId ->
+            receiver.onReceive(
+                contextSpy,
+                Intent(TaskerRequestReceiver.ACTION_PROCESS_REQUEST).apply {
+                    putExtra(TaskerRequestReceiver.EXTRA_REQUEST_TYPE, "text")
+                    putExtra(TaskerRequestReceiver.EXTRA_TASK_ID, taskId)
+                }
+            )
+        }
+
+        val notificationManager = context.getSystemService(NotificationManager::class.java)
+        val ids = notificationManager.activeNotifications.map { it.id }
+        assertEquals(
+            "TASK-380: distinct taskIds must not share one fallback notification id",
+            2,
+            ids.distinct().size
+        )
+    }
 }

@@ -69,6 +69,8 @@ fun SkeletonLine(
 fun SkeletonTranscriptionPreview(
     modifier: Modifier = Modifier
 ) {
+    // TASK-376: TalkBack must announce the preview as loading, like SkeletonTranscriptionCard.
+    val contentDescription = stringResource(R.string.skeleton_loading_content_description)
     val infiniteTransition = rememberInfiniteTransition(label = "skeleton")
     val progress by infiniteTransition.animateFloat(
         initialValue = 0f,
@@ -80,7 +82,11 @@ fun SkeletonTranscriptionPreview(
         label = "shimmer_sweep"
     )
 
-    Column(modifier = modifier) {
+    Column(
+        modifier = modifier.semantics(mergeDescendants = true) {
+            this.contentDescription = contentDescription
+        }
+    ) {
         SkeletonLine(progress = progress, widthFraction = 0.85f, height = 14.dp)
         Spacer(modifier = Modifier.height(6.dp))
         SkeletonLine(progress = progress, widthFraction = 0.6f, height = 14.dp)

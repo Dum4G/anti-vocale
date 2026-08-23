@@ -95,19 +95,19 @@ class ResultNotificationFactoryTest {
     @Test
     fun `first page shows Copy Share Next in that order`() {
         val n = factory.build(spec(longText(3)), prefs)
-        assertEquals(listOf("Copy", "Send to Telegram", "▶"), n.titles())
+        assertEquals(listOf("Copy", "Send to Telegram", "Next"), n.titles())
     }
 
     @Test
     fun `middle page drops Share and shows Prev before Next`() {
         val n = factory.build(spec(longText(3), page = 1), prefs)
-        assertEquals(listOf("Copy", "◀", "▶"), n.titles())
+        assertEquals(listOf("Copy", "Previous", "Next"), n.titles())
     }
 
     @Test
     fun `last page has Prev and no Next`() {
         val n = factory.build(spec(longText(3), page = 2), prefs)
-        assertEquals(listOf("Copy", "Send to Telegram", "◀"), n.titles())
+        assertEquals(listOf("Copy", "Send to Telegram", "Previous"), n.titles())
     }
 
     @Test
@@ -129,7 +129,7 @@ class ResultNotificationFactoryTest {
     fun `nav intent carries full text page and notification id`() {
         val text = longText(2)
         val n = factory.build(spec(text), prefs)
-        val intent = Shadows.shadowOf(n.actions!!.first { it.title == "▶" }.actionIntent).savedIntent
+        val intent = Shadows.shadowOf(n.actions!!.first { it.title == "Next" }.actionIntent).savedIntent
         assertEquals(NotificationActionReceiver.ACTION_PAGE_NEXT, intent.action)
         assertEquals(text, intent.getStringExtra(NotificationActionReceiver.EXTRA_TRANSCRIPTION_TEXT))
         assertEquals(0, intent.getIntExtra(NotificationActionReceiver.EXTRA_PAGE_INDEX, -1))
@@ -141,7 +141,7 @@ class ResultNotificationFactoryTest {
     fun `prev intent carries full text and page index`() {
         val text = longText(3)
         val n = factory.build(spec(text, page = 1), prefs)
-        val intent = Shadows.shadowOf(n.actions!!.first { it.title == "◀" }.actionIntent).savedIntent
+        val intent = Shadows.shadowOf(n.actions!!.first { it.title == "Previous" }.actionIntent).savedIntent
         assertEquals(NotificationActionReceiver.ACTION_PAGE_PREV, intent.action)
         assertEquals(text, intent.getStringExtra(NotificationActionReceiver.EXTRA_TRANSCRIPTION_TEXT))
         assertEquals(1, intent.getIntExtra(NotificationActionReceiver.EXTRA_PAGE_INDEX, -1))

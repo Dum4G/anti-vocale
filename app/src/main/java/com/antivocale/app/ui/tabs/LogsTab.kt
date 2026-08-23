@@ -510,7 +510,10 @@ fun LogsTab(
                                 trailingIcon = {
                                     if (searchQuery.isNotEmpty()) {
                                         IconButton(onClick = { viewModel.clearSearch() }) {
-                                            Icon(Icons.Default.Clear, contentDescription = null)
+                                            Icon(
+                                                Icons.Default.Clear,
+                                                contentDescription = stringResource(R.string.clear_search)
+                                            )
                                         }
                                     }
                                 },
@@ -888,9 +891,19 @@ fun LogEntryItem(
                             log.status == LogEntry.Status.PROCESSING -> Icons.Default.HourglassEmpty
                             else -> Icons.Default.CheckCircle
                         },
-                        contentDescription = if (log.status == LogEntry.Status.SUCCESS && log.isPartial) {
-                            stringResource(R.string.transcription_partial_chip)
-                        } else null,
+                        contentDescription = when {
+                            log.status == LogEntry.Status.SUCCESS && log.isPartial ->
+                                stringResource(R.string.transcription_partial_chip)
+                            log.status == LogEntry.Status.SUCCESS ->
+                                stringResource(R.string.logs_status_success)
+                            log.status == LogEntry.Status.ERROR ->
+                                stringResource(R.string.logs_status_error)
+                            log.status == LogEntry.Status.QUEUED ->
+                                stringResource(R.string.logs_status_queued)
+                            log.status == LogEntry.Status.PROCESSING ->
+                                stringResource(R.string.logs_status_processing)
+                            else -> stringResource(R.string.logs_status_success)
+                        },
                         modifier = Modifier.size(14.dp),
                         tint = when {
                             log.status == LogEntry.Status.SUCCESS && log.isPartial -> MaterialTheme.colorScheme.error

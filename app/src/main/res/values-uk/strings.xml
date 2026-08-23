@@ -92,6 +92,9 @@
     <string name="logs_task_id">Ідентифікатор завдання: %1$s</string>
     <string name="logs_unknown_error">Невідома помилка</string>
     <string name="logs_status_queued">У черзі</string>
+    <string name="logs_status_success">Успішно</string>
+    <string name="logs_status_error">Помилка</string>
+    <string name="logs_status_processing">Обробка</string>
     <string name="logs_model_label">Модель: %1$s</string>
     <string name="logs_transcription_cancelled">Розшифровку скасовано</string>
     <string name="logs_search_placeholder">Пошук розшифровок…</string>
@@ -193,6 +196,7 @@
     <string name="download_status_retrying">Повторна спроба (%1$d/%2$d)…</string>
     <string name="download_status_resuming">Поновлення завантаження…</string>
     <string name="model_requires_auth">Ця модель потребує облікового запису HuggingFace</string>
+    <string name="settings_action">Налаштування</string>
 
     <!-- Download rate/ETA/partial -->
     <string name="download_rate">%1$s/s</string>
@@ -295,8 +299,9 @@
     <string name="action_delete">Видалити</string>
     <string name="action_cancel">Скасувати</string>
     <!-- Chunk navigation in the in-progress notification (TASK-242) -->
-    <string name="chunk_nav_prev">◀</string>
-    <string name="chunk_nav_next">▶</string>
+    <string name="chunk_nav_prev">Назад</string>
+    <string name="chunk_nav_next">Далі</string>
+    <string name="clear_search">Очистити пошук</string>
     <string name="chunk_nav_live">Останній</string>
     <string name="chunk_nav_pinned_subtext">Фрагмент %1$d з %2$d · наживо %3$d з %2$d</string>
     <string name="chunk_nav_live_subtext">Наживо · фрагмент %1$d з %2$d</string>

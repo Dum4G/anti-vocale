@@ -528,7 +528,7 @@ class InferenceService : Service(), TranscriptionListener {
             )
         }
         // 'Jump to live' is deliberately not its own button: collapsed notifications cap at 3
-        // actions, and pressing ▶ until the tail already clears the pin (returns to live).
+        // actions, and pressing Next until the tail already clears the pin (returns to live).
 
         notificationManager.notify(NOTIFICATION_ID, builder.build())
     }

@@ -154,6 +154,7 @@
     <string name="download_status_retrying">Reintentando (%1$d/%2$d)…</string>
     <string name="download_status_resuming">Reanudando descarga…</string>
     <string name="model_requires_auth">Este modelo requiere cuenta de HuggingFace</string>
+    <string name="settings_action">Ajustes</string>
     <string name="download_rate">%1$s/s</string>
     <string name="download_eta">%1$s restantes</string>
     <string name="download_eta_less_than_minute">Menos de 1 min restante</string>
@@ -241,8 +242,9 @@
     <string name="dialog_delete_message">Esto eliminará permanentemente \'%1$s\' de tu dispositivo. Podrás volver a descargarlo más tarde.</string>
     <string name="action_delete">Eliminar</string>
     <string name="action_cancel">Cancelar</string>
-    <string name="chunk_nav_prev">◀</string>
-    <string name="chunk_nav_next">▶</string>
+    <string name="chunk_nav_prev">Anterior</string>
+    <string name="chunk_nav_next">Siguiente</string>
+    <string name="clear_search">Borrar búsqueda</string>
     <string name="chunk_nav_live">Último</string>
     <string name="chunk_nav_pinned_subtext">Fragmento %1$d de %2$d · en vivo %3$d de %2$d</string>
     <string name="chunk_nav_live_subtext">En vivo · fragmento %1$d de %2$d</string>
@@ -786,6 +788,9 @@
 
     <!-- 1.11 strings: queue states, model label, limit labels, task details (TASK-251 lint pass) -->
     <string name="logs_status_queued">En cola</string>
+    <string name="logs_status_success">Correcto</string>
+    <string name="logs_status_error">Error</string>
+    <string name="logs_status_processing">Procesando</string>
     <string name="logs_model_label">Modelo: %1$s</string>
     <string name="model_limit_chunked">Sin límite: los audios largos se dividen automáticamente</string>
     <string name="show_task_details_title">Mostrar detalles de la tarea</string>

@@ -188,6 +188,7 @@
     <string name="download_status_retrying">Повторная попытка (%1$d/%2$d)…</string>
     <string name="download_status_resuming">Возобновление загрузки…</string>
     <string name="model_requires_auth">Для этой модели требуется аккаунт HuggingFace</string>
+    <string name="settings_action">Настройки</string>
 
     <!-- Download rate/ETA/partial -->
     <string name="download_rate">%1$s/с</string>
@@ -288,8 +289,9 @@
     <string name="action_delete">Удалить</string>
     <string name="action_cancel">Отмена</string>
     <!-- Chunk navigation in the in-progress notification (TASK-242) -->
-    <string name="chunk_nav_prev">◀</string>
-    <string name="chunk_nav_next">▶</string>
+    <string name="chunk_nav_prev">Назад</string>
+    <string name="chunk_nav_next">Далее</string>
+    <string name="clear_search">Очистить поиск</string>
     <string name="chunk_nav_live">Последний</string>
     <string name="chunk_nav_pinned_subtext">Фрагмент %1$d из %2$d · в реальном времени %3$d из %2$d</string>
     <string name="chunk_nav_live_subtext">В реальном времени · фрагмент %1$d из %2$d</string>
@@ -932,6 +934,9 @@
 
     <!-- 1.11 strings: queue states, model label, limit labels, task details (TASK-251 lint pass) -->
     <string name="logs_status_queued">В очереди</string>
+    <string name="logs_status_success">Успешно</string>
+    <string name="logs_status_error">Ошибка</string>
+    <string name="logs_status_processing">Обработка</string>
     <string name="logs_model_label">Модель: %1$s</string>
     <string name="model_limit_chunked">Без ограничений: длинные записи разбиваются автоматически</string>
     <string name="language_german">Deutsch</string>
