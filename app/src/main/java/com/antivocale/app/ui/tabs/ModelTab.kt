@@ -88,6 +88,9 @@ fun ModelTab(
     var pendingModelSwitch by remember { mutableStateOf<(() -> Unit)?>(null) }
     var showUnloadDialog by remember { mutableStateOf(false) }
 
+    // TASK-373: litert-lm HF url import dialog + candidate picker visibility.
+    var showLitertLmUrlDialog by remember { mutableStateOf(false) }
+
     var modelInfoVariant by remember { mutableStateOf<ModelVariant?>(null) }
     var externalToDelete by remember { mutableStateOf<com.antivocale.app.data.ExternalModelRecord?>(null) }
     // Shared family selection + import options for both import paths (folder and URL).
@@ -150,6 +153,15 @@ fun ModelTab(
         if (downloadUiState.downloadError != null) {
             delay(150) // Small delay to let the UI update first
             scrollState.animateScrollTo(scrollState.maxValue)
+        }
+    }
+
+    // TASK-373: a repo with exactly one .litertlm asset imports directly,
+    // skipping the candidate picker.
+    LaunchedEffect(uiState.litertLmCandidates.size) {
+        if (uiState.litertLmCandidates.size == 1) {
+            viewModel.importLitertLmFile(
+                uiState.litertLmUrlInput, uiState.litertLmCandidates.first())
         }
     }
 
@@ -232,6 +244,74 @@ fun ModelTab(
             dismissButton = {
                 androidx.compose.material3.TextButton(onClick = { externalToDelete = null }) {
                     Text(stringResource(android.R.string.cancel))
+                }
+            }
+        )
+    }
+
+    // TASK-373: litert-lm HF url import. URL entry first; when the repo offers
+    // multiple .litertlm files the candidate picker follows. A single candidate
+    // imports directly (no picker hop).
+    if (showLitertLmUrlDialog) {
+        AlertDialog(
+            onDismissRequest = { showLitertLmUrlDialog = false },
+            title = { Text(stringResource(R.string.litertlm_import_from_url)) },
+            text = {
+                OutlinedTextField(
+                    value = uiState.litertLmUrlInput,
+                    onValueChange = { viewModel.updateLitertLmUrl(it) },
+                    label = { Text(stringResource(R.string.litertlm_url_hint)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.listLitertLmModels(uiState.litertLmUrlInput)
+                        showLitertLmUrlDialog = false
+                    },
+                    enabled = uiState.litertLmUrlInput.isNotBlank() && !uiState.litertLmImporting
+                ) {
+                    Text(stringResource(android.R.string.ok))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showLitertLmUrlDialog = false }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            }
+        )
+    }
+    if (uiState.litertLmCandidates.size > 1) {
+        AlertDialog(
+            onDismissRequest = { viewModel.dismissLitertLmCandidates() },
+            title = { Text(stringResource(R.string.litertlm_pick_file)) },
+            text = {
+                Column {
+                    uiState.litertLmCandidates.forEach { candidate ->
+                        TextButton(
+                            onClick = {
+                                viewModel.importLitertLmFile(uiState.litertLmUrlInput, candidate)
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(modifier = Modifier.padding(vertical = 4.dp)) {
+                                Text(candidate.fileName, style = MaterialTheme.typography.bodyMedium)
+                                Text(
+                                    java.lang.String.format("%.1f GB", candidate.sizeBytes / 1e9f),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { viewModel.dismissLitertLmCandidates() }) {
+                    Text(stringResource(R.string.action_cancel))
                 }
             }
         )
@@ -452,6 +532,22 @@ fun ModelTab(
                             Icon(Icons.Default.FolderOpen, contentDescription = null)
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(stringResource(R.string.select_model_from_device))
+                        }
+                        OutlinedButton(
+                            onClick = { showLitertLmUrlDialog = true },
+                            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                            enabled = !uiState.litertLmImporting
+                        ) {
+                            Icon(Icons.Default.CloudDownload, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(stringResource(R.string.litertlm_import_from_url))
+                        }
+                        if (uiState.litertLmImporting) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                strokeWidth = 2.dp
+                            )
                         }
                     }
                 }
