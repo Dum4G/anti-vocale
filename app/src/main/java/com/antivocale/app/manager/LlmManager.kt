@@ -41,11 +41,26 @@ open class LlmManager @Inject constructor() {
         private const val TAG = "LlmManager"
         private const val MAX_TOKENS = 2048
 
-        // Single source of truth for the LiteRT-LM conversation/sampler config, shared by the
-        // initial conversation (initializeLiteRT) and the per-request swap (generateFromAudioLiteRT).
-        // Hoisted so text-chat and audio paths cannot drift apart.
-        private val DEFAULT_CONVERSATION_CONFIG = ConversationConfig(
+        // Single source of truth for the LiteRT conversation/sampler config of TEXT chat,
+        // shared by the initial conversation (initializeLiteRT) and the post-audio restore.
+        // Hoisted so the text paths cannot drift apart. Internal for the pinned unit test.
+        internal val DEFAULT_CONVERSATION_CONFIG = ConversationConfig(
             samplerConfig = SamplerConfig(topK = 40, topP = 0.95, temperature = 0.8)
+        )
+
+        // TASK-370 E1+E2: dedicated config for the audio-transcription path. The chat-tuned
+        // sampler (temperature 0.8) on a fresh-per-chunk session made the model answer as a
+        // conversational assistant: refusals ("I can't process that request") and language
+        // drift (German/French chunks) on the 2026-08-23 240s device run, vs the Edge Gallery
+        // reference which transcribes inside a persistent session with a system instruction.
+        // A transcript is deterministic content: sample greedily and instruct verbatim output.
+        internal val AUDIO_CONVERSATION_CONFIG = ConversationConfig(
+            samplerConfig = SamplerConfig(topK = 1, topP = 1.0, temperature = 0.0),
+            systemInstruction = Contents.of(
+                "You are a speech-transcription engine. Transcribe the audio verbatim in its " +
+                    "original language. Output only the transcription, with no commentary, no " +
+                    "translation unless the user prompt explicitly asks for it."
+            )
         )
     }
 
@@ -402,8 +417,9 @@ open class LlmManager @Inject constructor() {
         closeConversationSafe(litertConversation)
         litertConversation = null
 
-        // Config shared with initializeLiteRT (see DEFAULT_CONVERSATION_CONFIG).
-        val conversationConfig = DEFAULT_CONVERSATION_CONFIG
+        // Audio gets the ASR-tuned config (greedy sampler + transcription system
+        // instruction); the main conversation restored in `finally` stays chat-tuned.
+        val conversationConfig = AUDIO_CONVERSATION_CONFIG
 
         var freshConversation: Conversation? = null
         var outcome: Result<String> = Result.failure(IllegalStateException("Audio processing did not complete"))
@@ -456,7 +472,12 @@ open class LlmManager @Inject constructor() {
                 // Recreate a valid main conversation so the next chunk/retry starts from a
                 // valid state on BOTH success and ordinary-exception paths.
                 try {
-                    litertConversation = engine.createConversation(conversationConfig)
+                    // DEFAULT (chat-tuned), NOT the local `conversationConfig`: after an
+                    // audio chunk the restored chat conversation must not inherit the ASR
+                    // system instruction and greedy sampler, or text chat and the final
+                    // generative pass (generateText reads this conversation) are conditioned
+                    // as a transcription engine (reviewer-caught wiring bug).
+                    litertConversation = engine.createConversation(DEFAULT_CONVERSATION_CONFIG)
                     Log.d(TAG, "Restored main conversation for text chat")
                 } catch (restoreError: Exception) {
                     // Broad catch is intentional: this runs in `finally` and must never mask the
