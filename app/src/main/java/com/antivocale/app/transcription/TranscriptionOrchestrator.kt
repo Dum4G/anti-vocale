@@ -586,7 +586,7 @@ class TranscriptionOrchestrator @Inject constructor(
     private suspend fun resolvePrompt(prompt: String): String {
         val savedDefaultPrompt = preferencesManager.defaultPrompt.first()
         return prompt.ifEmpty {
-            savedDefaultPrompt.ifEmpty { "Transcribe the following audio recording." }
+            savedDefaultPrompt.ifEmpty { ChunkPromptPolicy.DEFAULT_AUDIO_PROMPT }
         }
     }
 
@@ -621,17 +621,11 @@ class TranscriptionOrchestrator @Inject constructor(
         val resolvedProvider = InferenceProvider.resolve(providerPref)
         val progressiveEnabled = preferencesManager.progressiveTranscription.first()
 
-        // Resolve prompt: request → settings → fallback
+        // Resolve prompt: request → settings → fallback. TASK-370: multi-chunk
+        // routing lives in ChunkPromptPolicy (plain instruction per chunk,
+        // custom prompt once at the end).
         val resolvedPrompt = resolvePrompt(prompt)
-        // TASK-370: in multi-chunk mode the LLM backend must not receive a
-        // generative prompt per chunk (each fragment would be transformed
-        // independently and then concatenated). Chunks get a plain
-        // transcription instruction; a custom prompt runs ONCE, at the end,
-        // as a text-only pass over the full transcript.
-        val chunkPrompt = ChunkPromptPolicy.perChunkPrompt(backend.id, resolvedPrompt)
-        val finalGenerativePrompt =
-            if (ChunkPromptPolicy.shouldRunFinalGenerativePass(backend.id, resolvedPrompt)) resolvedPrompt
-            else null
+        val promptPlan = ChunkPromptPolicy.plan(backend.id, resolvedPrompt)
 
         // Use streaming pipeline for multi-chunk non-VAD scenarios
         val maxChunkDuration = backend.maxChunkDurationSeconds
@@ -641,7 +635,7 @@ class TranscriptionOrchestrator @Inject constructor(
 
         if (usePipeline) {
             return applyFinalGenerativePass(
-                backend, finalGenerativePrompt,
+                backend, promptPlan.finalPass,
                 processPipelinedAudio(
                     taskId = taskId,
                     filePath = filePath,
@@ -650,7 +644,7 @@ class TranscriptionOrchestrator @Inject constructor(
                     context = context,
                     coroutineScope = coroutineScope,
                     listener = listener,
-                    prompt = chunkPrompt,
+                    prompt = promptPlan.perChunk,
                     progressiveEnabled = progressiveEnabled
                 ))
         }
@@ -721,12 +715,12 @@ class TranscriptionOrchestrator @Inject constructor(
         // Progressive path: VAD-segmented audio + progressive toggle enabled
         if (preprocessingResult.isVadSegmented && progressiveEnabled) {
             return applyFinalGenerativePass(
-                backend, finalGenerativePrompt,
+                backend, promptPlan.finalPass,
                 processProgressiveSegments(
                     taskId = taskId,
                     chunks = preprocessingResult.chunks,
                     sampleRate = preprocessingResult.sampleRate,
-                    prompt = chunkPrompt,
+                    prompt = promptPlan.perChunk,
                     backend = backend,
                     audioDurationSeconds = audioDurationSeconds,
                     chunkProcessingStartTime = chunkProcessingStartTime,
@@ -737,12 +731,12 @@ class TranscriptionOrchestrator @Inject constructor(
 
         // Multi-chunk path: parallel processing with progress tracking
         return applyFinalGenerativePass(
-            backend, finalGenerativePrompt,
+            backend, promptPlan.finalPass,
             processParallelChunks(
                 taskId = taskId,
                 chunks = preprocessingResult.chunks,
                 sampleRate = preprocessingResult.sampleRate,
-                prompt = chunkPrompt,
+                prompt = promptPlan.perChunk,
                 backend = backend,
                 audioDurationSeconds = audioDurationSeconds,
                 chunkProcessingStartTime = chunkProcessingStartTime,

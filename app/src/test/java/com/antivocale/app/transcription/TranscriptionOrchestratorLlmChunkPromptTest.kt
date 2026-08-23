@@ -25,6 +25,7 @@ class TranscriptionOrchestratorLlmChunkPromptTest : TranscriptionOrchestratorTes
     val temporaryFolder = TemporaryFolder()
 
     private val customPrompt = "Riassumi e riscrivi in forma formale questo vocale."
+    private val expectedTranscript = "chunk-1 chunk-2 chunk-3 chunk-4 chunk-5 chunk-6 chunk-7 chunk-8"
 
     private lateinit var backend: FakeLlmBackend
 
@@ -127,7 +128,7 @@ class TranscriptionOrchestratorLlmChunkPromptTest : TranscriptionOrchestratorTes
         assertEquals(1, backend.generateTextPrompts.size)
         val finalPrompt = backend.generateTextPrompts.single()
         assertTrue(finalPrompt.startsWith(customPrompt))
-        assertTrue(finalPrompt.contains("chunk-1 chunk-2 chunk-3 chunk-4 chunk-5 chunk-6 chunk-7 chunk-8"))
+        assertTrue(finalPrompt.contains(expectedTranscript))
         assertEquals("GENERATIVE(1)", result.getOrNull())
     }
 
@@ -139,7 +140,7 @@ class TranscriptionOrchestratorLlmChunkPromptTest : TranscriptionOrchestratorTes
 
         assertTrue(result.isSuccess)
         assertEquals(0, backend.generateTextPrompts.size)
-        assertEquals("chunk-1 chunk-2 chunk-3 chunk-4 chunk-5 chunk-6 chunk-7 chunk-8", result.getOrNull())
+        assertEquals(expectedTranscript, result.getOrNull())
     }
 
     @Test
@@ -149,6 +150,6 @@ class TranscriptionOrchestratorLlmChunkPromptTest : TranscriptionOrchestratorTes
         val result = runAudioRequest()
 
         assertTrue(result.isSuccess)
-        assertEquals("chunk-1 chunk-2 chunk-3 chunk-4 chunk-5 chunk-6 chunk-7 chunk-8", result.getOrNull())
+        assertEquals(expectedTranscript, result.getOrNull())
     }
 }

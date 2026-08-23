@@ -20,17 +20,20 @@ object ChunkPromptPolicy {
     const val PLAIN_TRANSCRIPTION_PROMPT =
         "Transcribe the following audio segment verbatim. Output only the transcription."
 
-    /** Prompt each chunk's transcribeAudio call receives. */
-    fun perChunkPrompt(backendId: String, resolvedPrompt: String): String =
-        if (backendId == LlmTranscriptionBackend.BACKEND_ID && isCustom(resolvedPrompt)) {
-            PLAIN_TRANSCRIPTION_PROMPT
-        } else {
-            resolvedPrompt
-        }
+    /**
+     * Prompt routing for a multi-chunk request: [Plan.perChunk] goes to every
+     * chunk's transcribeAudio call; [Plan.finalPass] is the user prompt to run
+     * ONCE as a final text-only pass over the concatenated transcript (null =
+     * skip the pass).
+     */
+    data class Plan(val perChunk: String, val finalPass: String?)
 
-    /** True when the final text-only pass must run after concatenation. */
-    fun shouldRunFinalGenerativePass(backendId: String, resolvedPrompt: String): Boolean =
-        backendId == LlmTranscriptionBackend.BACKEND_ID && isCustom(resolvedPrompt)
+    fun plan(backendId: String, resolvedPrompt: String): Plan =
+        if (backendId == LlmTranscriptionBackend.BACKEND_ID && isCustom(resolvedPrompt)) {
+            Plan(PLAIN_TRANSCRIPTION_PROMPT, resolvedPrompt)
+        } else {
+            Plan(resolvedPrompt, null)
+        }
 
     fun finalPrompt(userPrompt: String, transcript: String): String =
         "$userPrompt\n\nTranscript:\n$transcript"

@@ -1,8 +1,7 @@
 package com.antivocale.app.transcription
 
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
+import org.junit.Assert.assertNull
 import org.junit.Test
 
 /**
@@ -18,30 +17,29 @@ class ChunkPromptPolicyTest {
     private val custom = "Riassumi e riscrivi in forma formale questo vocale."
 
     @Test
-    fun `llm chunks get the plain transcription prompt when the user prompt is generative`() {
-        assertEquals(
-            ChunkPromptPolicy.PLAIN_TRANSCRIPTION_PROMPT,
-            ChunkPromptPolicy.perChunkPrompt(llm, custom))
+    fun `llm chunks get the plain prompt and the custom prompt runs as final pass`() {
+        val plan = ChunkPromptPolicy.plan(llm, custom)
+        assertEquals(ChunkPromptPolicy.PLAIN_TRANSCRIPTION_PROMPT, plan.perChunk)
+        assertEquals(custom, plan.finalPass)
     }
 
     @Test
     fun `llm chunks keep the default transcription prompt when nothing custom is set`() {
-        assertEquals(
-            ChunkPromptPolicy.DEFAULT_AUDIO_PROMPT,
-            ChunkPromptPolicy.perChunkPrompt(llm, ChunkPromptPolicy.DEFAULT_AUDIO_PROMPT))
+        val plan = ChunkPromptPolicy.plan(llm, ChunkPromptPolicy.DEFAULT_AUDIO_PROMPT)
+        assertEquals(ChunkPromptPolicy.DEFAULT_AUDIO_PROMPT, plan.perChunk)
+        assertNull(plan.finalPass)
     }
 
     @Test
     fun `non-llm backends receive the prompt unchanged (whisper language prompting etc)`() {
-        assertEquals(custom, ChunkPromptPolicy.perChunkPrompt("whisper", custom))
+        val plan = ChunkPromptPolicy.plan("whisper", custom)
+        assertEquals(custom, plan.perChunk)
+        assertNull(plan.finalPass)
     }
 
     @Test
-    fun `final generative pass runs only for llm with a custom prompt`() {
-        assertTrue(ChunkPromptPolicy.shouldRunFinalGenerativePass(llm, custom))
-        assertFalse(ChunkPromptPolicy.shouldRunFinalGenerativePass(llm, ChunkPromptPolicy.DEFAULT_AUDIO_PROMPT))
-        assertFalse(ChunkPromptPolicy.shouldRunFinalGenerativePass(llm, ""))
-        assertFalse(ChunkPromptPolicy.shouldRunFinalGenerativePass("whisper", custom))
+    fun `blank prompt gets no final pass`() {
+        assertNull(ChunkPromptPolicy.plan(llm, "").finalPass)
     }
 
     @Test
