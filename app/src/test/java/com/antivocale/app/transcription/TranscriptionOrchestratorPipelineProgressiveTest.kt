@@ -165,7 +165,7 @@ class TranscriptionOrchestratorPipelineProgressiveTest : TranscriptionOrchestrat
         val result = runPipelineRequest()
 
         assertTrue(result.isSuccess)
-        coVerify(atLeast = 1) { logDao.update(any()) }
+        coVerify(atLeast = 1) { logDao.updateInterimResult("test-pipeline", any(), any()) }
     }
 
     @Test

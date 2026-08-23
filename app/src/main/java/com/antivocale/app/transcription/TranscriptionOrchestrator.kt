@@ -1362,8 +1362,9 @@ class TranscriptionOrchestrator @Inject constructor(
         if (now - (lastInterimRoomWriteMs[taskId] ?: 0L) < PARTIAL_SAVE_INTERVAL_MS) return
         lastInterimRoomWriteMs[taskId] = now
 
-        val entity = logDao.getByTaskId(taskId) ?: return
-        logDao.update(entity.toLogEntry().copy(result = accumulatedText).toEntity())
+        // TASK-390: column-scoped update (no read): a whole-row write-back could
+        // resurrect a row that a concurrent close (cancel/sweep) had just terminalized.
+        logDao.updateInterimResult(taskId, accumulatedText, isPartial = true)
 
         if (now - lastPartialSaveMs >= PARTIAL_SAVE_INTERVAL_MS) {
             lastPartialSaveMs = now
@@ -1376,8 +1377,8 @@ class TranscriptionOrchestrator @Inject constructor(
     }
 
     private suspend fun updateAudioDuration(taskId: String, audioDurationSeconds: Double) {
-        val entity = logDao.getByTaskId(taskId) ?: return
-        logDao.update(entity.toLogEntry().copy(audioDurationSeconds = audioDurationSeconds).toEntity())
+        // TASK-390: column-scoped, see updateInterimResult.
+        logDao.updateAudioDuration(taskId, audioDurationSeconds)
     }
 
     // ---- Chunk Retry ----

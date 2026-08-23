@@ -21,10 +21,12 @@ import java.io.ByteArrayInputStream
 import java.io.File
 import java.nio.file.Files
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runCurrent
@@ -158,5 +160,39 @@ class ModelViewModelLitertLmImportTest {
         assertEquals(null, dataStore.data.first()[backendKey])
         assertEquals(null, dataStore.data.first()[modelPathKey])
         assertTrue(!viewModel.uiState.value.litertLmImporting)
+    }
+
+    @Test
+    fun `import start clears candidates atomically - the auto-import effect cannot refire`() = runTest {
+        // TASK-390 (analysis recommendation): candidates are cleared in the SAME
+        // uiState.update that sets the busy flag, before any suspension, so the
+        // LaunchedEffect keyed on candidates.size sees 0 and never re-triggers on
+        // recomposition mid-download (the 2026-08-23 double-start bug class).
+        val downloaded = File.createTempFile("imported-model", ".litertlm").apply { writeBytes(ByteArray(8)) }
+        every { importer.listModels(any()) } returns listOf(
+            LitertLmFile("one.litertlm", 1L), LitertLmFile("two.litertlm", 2L))
+        viewModel.listLitertLmModels("https://huggingface.co/o/r")
+        // Poll: candidates land (dispatchers settle)
+        val deadline = System.currentTimeMillis() + 5_000
+        while (viewModel.uiState.value.litertLmCandidates.isEmpty() &&
+               System.currentTimeMillis() < deadline) Thread.sleep(20)
+        assertEquals(2, viewModel.uiState.value.litertLmCandidates.size)
+
+        every { importer.importFromUrl(any(), any(), any(), any(), any(), any(), any()) } answers {
+            // Simulate the download suspension: during it, the effect must see
+            // zero candidates and a busy flag.
+            runBlocking { delay(300) }
+            Result.success(downloaded)
+        }
+        viewModel.importLitertLmFile("https://huggingface.co/o/r",
+            viewModel.uiState.value.litertLmCandidates.first())
+        // The start update runs on Dispatchers.IO: poll for the busy flag (the
+        // download is delayed 300ms inside the mock, so this is well before any
+        // completion), then assert the atomic clear.
+        val deadline2 = System.currentTimeMillis() + 5_000
+        while (!viewModel.uiState.value.litertLmImporting &&
+               System.currentTimeMillis() < deadline2) Thread.sleep(20)
+        assertTrue(viewModel.uiState.value.litertLmImporting)
+        assertEquals(0, viewModel.uiState.value.litertLmCandidates.size)
     }
 }

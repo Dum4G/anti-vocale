@@ -98,11 +98,11 @@ class TranscriptionOrchestratorInterimThrottleTest : TranscriptionOrchestratorTe
         val result = runPipelineRequest()
         assertTrue(result.isSuccess)
 
-        val captured = mutableListOf<com.antivocale.app.data.local.LogEntity>()
-        coVerify(atLeast = 0) { logDao.update(capture(captured)) }
-        val interimWrites = captured.filter { it.status == "PROCESSING" }.map { it.result }.filter { it.isNotBlank() }
+        // TASK-390: interim writes go through the column-scoped DAO call.
+        val interimTexts = mutableListOf<String>()
+        coVerify(atLeast = 0) { logDao.updateInterimResult("throttle-task", capture(interimTexts), any()) }
         // First interim write lands immediately; the two within the interval are skipped.
-        assertEquals(listOf("first"), interimWrites)
+        assertEquals(listOf("first"), interimTexts)
     }
 
     @Test
@@ -121,10 +121,12 @@ class TranscriptionOrchestratorInterimThrottleTest : TranscriptionOrchestratorTe
         val result = runPipelineRequest()
         assertTrue(result.isSuccess)
 
-        val captured = mutableListOf<com.antivocale.app.data.local.LogEntity>()
-        coVerify(atLeast = 0) { logDao.update(capture(captured)) }
+        val interimTexts = mutableListOf<String>()
+        coVerify(atLeast = 0) { logDao.updateInterimResult("throttle-task", capture(interimTexts), any()) }
+        val finals = mutableListOf<com.antivocale.app.data.local.LogEntity>()
+        coVerify(atLeast = 0) { logDao.update(capture(finals)) }
         // logSuccess is not throttled: the full text is persisted even when all interim writes but the first were skipped.
-        assertTrue(captured.any { it.result == "first second third" && it.status == "SUCCESS" })
+        assertTrue(finals.any { it.result == "first second third" && it.status == "SUCCESS" })
     }
 
     @Test
@@ -144,9 +146,8 @@ class TranscriptionOrchestratorInterimThrottleTest : TranscriptionOrchestratorTe
         val result = runPipelineRequest()
         assertTrue(result.isSuccess)
 
-        val captured = mutableListOf<com.antivocale.app.data.local.LogEntity>()
-        coVerify(atLeast = 0) { logDao.update(capture(captured)) }
-        val interimWrites = captured.filter { it.status == "PROCESSING" }.map { it.result }.filter { it.isNotBlank() }
-        assertEquals(listOf("first", "first second", "first second third"), interimWrites)
+        val interimTexts = mutableListOf<String>()
+        coVerify(atLeast = 0) { logDao.updateInterimResult("throttle-task", capture(interimTexts), any()) }
+        assertEquals(listOf("first", "first second", "first second third"), interimTexts)
     }
 }

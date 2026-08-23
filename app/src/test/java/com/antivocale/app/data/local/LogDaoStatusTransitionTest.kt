@@ -107,4 +107,19 @@ class LogDaoStatusTransitionTest {
         assertEquals(42L, failed.durationMs)
         assertEquals("SUCCESS", dao.getByTaskId("done")?.status)
     }
+
+    @Test
+    fun `interim column updates cannot resurrect a closed row`() = runBlocking {
+        // TASK-390: the column-scoped updates cannot touch status at all.
+        val taskId = "resurrect-pin"
+        insert(taskId, "PROCESSING")
+        dao.failNonTerminal(taskId, "Cancelled", 0L)
+        dao.updateInterimResult(taskId, "partial text", isPartial = true)
+        dao.updateAudioDuration(taskId, 12.5)
+        val row = dao.getByTaskId(taskId)!!
+        assertEquals("ERROR", row.status)
+        assertEquals("Cancelled", row.errorMessage)
+        assertEquals("partial text", row.result)
+        assertEquals(12.5, row.audioDurationSeconds, 0.001)
+    }
 }

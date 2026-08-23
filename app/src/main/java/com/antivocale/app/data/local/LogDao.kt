@@ -69,6 +69,20 @@ interface LogDao {
     @Query("UPDATE logs SET status = 'ERROR', errorMessage = :reason WHERE status IN ('QUEUED', 'PROCESSING', 'PENDING')")
     suspend fun failAllNonTerminal(reason: String)
 
+    /**
+     * TASK-390: column-scoped interim write. The previous read-modify-write
+     * (getByTaskId + whole-row update) could copy a stale status back over a row
+     * that a concurrent failNonTerminal/failAllNonTerminal had just closed,
+     * resurrecting it as a ghost in-flight row with the error message wiped.
+     * Scoping the UPDATE to these columns makes status resurrection impossible.
+     */
+    @Query("UPDATE logs SET result = :result, isPartial = :isPartial WHERE taskId = :taskId")
+    suspend fun updateInterimResult(taskId: String, result: String, isPartial: Boolean)
+
+    /** Same TASK-390 contract as [updateInterimResult], for the duration column. */
+    @Query("UPDATE logs SET audioDurationSeconds = :seconds WHERE taskId = :taskId")
+    suspend fun updateAudioDuration(taskId: String, seconds: Double)
+
     /** TASK-336: rows closed by the cold-start sweep = the process died mid-transcription (OEM background kill). */
     @Query("SELECT COUNT(*) FROM logs WHERE errorMessage = 'Interrupted by app restart' AND timestamp > :since")
     suspend fun countInterruptedSince(since: Long): Int
