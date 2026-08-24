@@ -20,7 +20,11 @@ import kotlinx.coroutines.CoroutineName
 object CrashReporter {
 
     private const val TAG = "CrashReporter"
+
+    /** TASK-396: set by BridgeApplication at startup; must be set before report() can mark OOM. */
+    @Volatile var filesDir: java.io.File? = null
     private const val KEY_CONTEXT = "crash_context"
+    private const val OOM_MARKER_PATH = "/data/data/com.antivocale.app/files/last_crash_oom"
 
     val handler = CoroutineExceptionHandler { context, throwable ->
         val name = context[CoroutineName]?.name ?: "unnamed"
@@ -44,14 +48,14 @@ object CrashReporter {
     private fun markOomIfOOM(throwable: Throwable) {
         if (throwable is OutOfMemoryError) {
             runCatching {
-                java.io.File("/data/data/com.antivocale.app/files/last_crash_oom").writeText("1")
+                java.io.File(OOM_MARKER_PATH).writeText("1")
             }
         }
     }
 
     /** True when the previous process died on an OutOfMemoryError. Clears the marker. */
     fun consumeLastCrashWasOOM(): Boolean {
-        val marker = java.io.File("/data/data/com.antivocale.app/files/last_crash_oom")
+        val marker = java.io.File(OOM_MARKER_PATH)
         return if (marker.exists()) {
             marker.delete()
             true

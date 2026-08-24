@@ -245,8 +245,9 @@ class TranscriptionOrchestrator @Inject constructor(
         } catch (e: OutOfMemoryError) {
             // TASK-396: OOM is an Error, not an Exception; without this catch it
             // escapes processRequest unhandled and the user sees a crash instead
-            // of the memory advice. We must NOT allocate here (heap is exhausted):
-            // log the existing message, map to the dedicated string, and bail.
+            // of the memory advice. Keep this handler lean (the heap is exhausted):
+            // reuse the existing logError/listener paths, map to the dedicated
+            // string, and bail.
             Log.e(TAG, "Out of memory during transcription", e)
             val duration = System.currentTimeMillis() - startTime
             logError(taskId, "OutOfMemoryError", duration)

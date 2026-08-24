@@ -84,6 +84,6 @@ interface LogDao {
     suspend fun updateAudioDuration(taskId: String, seconds: Double)
 
     /** TASK-336: rows closed by the cold-start sweep = the process died mid-transcription (OEM background kill). */
-    @Query("SELECT COUNT(*) FROM logs WHERE errorMessage = 'Interrupted by app restart' AND timestamp > :since")
+    @Query("SELECT COUNT(*) FROM logs WHERE errorMessage LIKE 'Interrupted by app restart%' AND timestamp > :since")
     suspend fun countInterruptedSince(since: Long): Int
 }

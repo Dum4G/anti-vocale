@@ -89,6 +89,7 @@ class BridgeApplication : Application(), Configuration.Provider {
         }
         shareTargetManager.syncAll()
         migrateLanguagePreference()
+        CrashReporter.filesDir = filesDir
         installGlobalExceptionHandler()
     }
 
