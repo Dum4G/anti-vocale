@@ -96,7 +96,8 @@
     <string name="source_was_video">Источник: видеофайл</string>
     <string name="processed_in">Обработано за %1$s</string>
     <string name="today">Сегодня</string>
-    <string name="yesterday">Вчера</string>
+    <string name="yesterday">Вчера, %1$s</string>
+    <string name="yesterday_label">Вчера</string>
     <string name="time_seconds_ago">%1$d с назад</string>
     <string name="time_minutes_ago">%1$d мин назад</string>
     <string name="time_hours_ago">%1$d ч назад</string>
@@ -207,7 +208,12 @@
     <string name="copied_to_clipboard">Скопировано в буфер обмена</string>
     <string name="audio_received_for_transcription">Аудио получено для расшифровки</string>
     <string name="transcription_complete">Расшифровка завершена</string>
-    <string name="transcription_partial">Расшифровка неполная (не удалось обработать фрагментов: %1$d)</string>
+    <plurals name="transcription_partial">
+        <item quantity="one">не удалось обработать %1$d фрагмент</item>
+        <item quantity="few">не удалось обработать %1$d фрагмента</item>
+        <item quantity="many">не удалось обработать %1$d фрагментов</item>
+        <item quantity="other">не удалось обработать %1$d фрагментов</item>
+    </plurals>
     <string name="transcription_partial_chip">Неполная</string>
     <string name="transcription_failed">Не удалось выполнить расшифровку</string>
     <string name="error_model_load">Файл модели может быть повреждён или иметь неверный формат. Попробуйте скачать его заново на вкладке «Модель».</string>

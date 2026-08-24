@@ -713,7 +713,7 @@ private fun groupLogsByDate(logs: List<LogEntry>, context: Context): List<DateGr
         result.add(DateGroup(context.getString(R.string.today), today))
     }
     if (yesterday.isNotEmpty()) {
-        result.add(DateGroup(context.getString(R.string.yesterday), yesterday))
+        result.add(DateGroup(context.getString(R.string.yesterday_label), yesterday))
     }
     if (older.isNotEmpty()) {
         // Group older entries by date
@@ -788,7 +788,7 @@ private fun PartialTranscriptionBanner(failedChunkCount: Int) {
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
-                text = stringResource(R.string.transcription_partial, failedChunkCount),
+                text = pluralStringResource(R.plurals.transcription_partial, failedChunkCount, failedChunkCount),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onErrorContainer
             )
@@ -1251,7 +1251,7 @@ private fun formatRelativeTime(timestamp: Long, context: Context): String {
             val cal2 = Calendar.getInstance().apply { time = today }
             val timeFormat = SimpleDateFormat("HH:mm", locale)
             if (cal1.get(Calendar.DAY_OF_YEAR) == cal2.get(Calendar.DAY_OF_YEAR) - 1) {
-                "${context.getString(R.string.yesterday)} ${timeFormat.format(date)}"
+                context.getString(R.string.yesterday, timeFormat.format(date))
             } else {
                 SimpleDateFormat("MMM d, HH:mm", locale).format(date)
             }

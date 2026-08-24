@@ -65,7 +65,7 @@ class ResultNotificationFactory(private val context: Context) {
         val pageIndex = spec.pageIndex.coerceIn(0, pages.size - 1)
 
         val title = if (spec.isPartial) {
-            context.getString(R.string.transcription_partial, spec.failedChunkCount)
+            context.resources.getQuantityString(R.plurals.transcription_partial, spec.failedChunkCount, spec.failedChunkCount)
         } else {
             context.getString(R.string.transcription_complete)
         }

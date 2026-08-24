@@ -78,7 +78,8 @@
     <string name="source_was_video">Origen: archivo de video</string>
     <string name="processed_in">Procesado en %1$s</string>
     <string name="today">Hoy</string>
-    <string name="yesterday">Ayer</string>
+    <string name="yesterday">Ayer, %1$s</string>
+    <string name="yesterday_label">Ayer</string>
     <string name="time_seconds_ago">hace %1$ds</string>
     <string name="time_minutes_ago">hace %1$dm</string>
     <string name="time_hours_ago">hace %1$dh</string>
@@ -169,7 +170,10 @@
     <string name="copied_to_clipboard">Copiado al portapapeles</string>
     <string name="audio_received_for_transcription">Audio recibido para transcripción</string>
     <string name="transcription_complete">Transcripción completa</string>
-    <string name="transcription_partial">Transcripción incompleta (%1$d fragmento(s) fallido(s))</string>
+    <plurals name="transcription_partial">
+        <item quantity="one">%1$d fragmento fallido</item>
+        <item quantity="other">%1$d fragmentos fallidos</item>
+    </plurals>
     <string name="transcription_partial_chip">Incompleta</string>
     <string name="transcription_failed">Error de transcripción</string>
     <string name="error_model_load">El archivo del modelo puede estar corrupto o en formato incorrecto. Vuelve a descargarlo desde la pestaña Modelo.</string>

@@ -1368,10 +1368,13 @@ private fun ExternalModelCard(
                     Spacer(modifier = Modifier.width(8.dp))
                     Column {
                         Text(record.displayName, style = MaterialTheme.typography.titleMedium)
+                        // TASK-386: plain comma join instead of the middot chain:
+                        // " · " was announced as "middle dot" by TalkBack in some locales.
                         Text(
-                            record.typeLabel +
-                                " · " + com.antivocale.app.util.formatFileSize(record.sizeBytes) +
-                                if (record.languages.isEmpty()) "" else " · " + record.languages.joinToString(", "),
+                            (listOf(record.typeLabel,
+                                com.antivocale.app.util.formatFileSize(record.sizeBytes)) +
+                                listOfNotNull(record.languages.joinToString(", ").takeIf { it.isNotEmpty() }))
+                                .joinToString(", "),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )

@@ -97,7 +97,8 @@
     <string name="source_was_video">Source: video file</string>
     <string name="processed_in">Processed in %1$s</string>
     <string name="today">Today</string>
-    <string name="yesterday">Yesterday</string>
+    <string name="yesterday">Yesterday, %1$s</string>
+    <string name="yesterday_label">Yesterday</string>
     <string name="time_seconds_ago">%1$ds ago</string>
     <string name="time_minutes_ago">%1$dm ago</string>
     <string name="time_hours_ago">%1$dh ago</string>
@@ -208,7 +209,10 @@
     <string name="copied_to_clipboard">Copied to clipboard</string>
     <string name="audio_received_for_transcription">Audio received for transcription</string>
     <string name="transcription_complete">Transcription complete</string>
-    <string name="transcription_partial">Transcription incomplete (%1$d chunk(s) failed)</string>
+    <plurals name="transcription_partial">
+        <item quantity="one">Transcription incomplete (%1$d chunk failed)</item>
+        <item quantity="other">Transcription incomplete (%1$d chunks failed)</item>
+    </plurals>
     <string name="transcription_partial_chip">Incomplete</string>
     <string name="transcription_failed">Transcription failed</string>
     <string name="error_model_load">The model file may be corrupt or the wrong format. Try re-downloading it from the Model tab.</string>

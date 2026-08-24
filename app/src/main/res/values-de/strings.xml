@@ -89,7 +89,8 @@
     <string name="source_was_video">Quelle: Videodatei</string>
     <string name="processed_in">Verarbeitet in %1$s</string>
     <string name="today">Heute</string>
-    <string name="yesterday">Gestern</string>
+    <string name="yesterday">Gestern, %1$s</string>
+    <string name="yesterday_label">Gestern</string>
     <string name="time_seconds_ago">vor %1$ds</string>
     <string name="time_minutes_ago">vor %1$dm</string>
     <string name="time_hours_ago">vor %1$dh</string>
@@ -200,7 +201,10 @@
     <string name="copied_to_clipboard">In die Zwischenablage kopiert</string>
     <string name="audio_received_for_transcription">Audio zur Transkription empfangen</string>
     <string name="transcription_complete">Transkription abgeschlossen</string>
-    <string name="transcription_partial">Transkription unvollständig (%1$d Segmente fehlgeschlagen)</string>
+    <plurals name="transcription_partial">
+        <item quantity="one">%1$d Chunk fehlgeschlagen</item>
+        <item quantity="other">%1$d Chunks fehlgeschlagen</item>
+    </plurals>
     <string name="transcription_partial_chip">Unvollständig</string>
     <string name="transcription_failed">Transkription fehlgeschlagen</string>
     <string name="error_model_load">Die Modelldatei ist möglicherweise beschädigt oder hat das falsche Format. Lade sie im Tab \"Modell\" erneut herunter.</string>

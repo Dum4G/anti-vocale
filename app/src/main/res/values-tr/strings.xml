@@ -100,7 +100,8 @@
     <string name="source_was_video">Kaynak: video dosyası</string>
     <string name="processed_in">%1$s içinde işlendi</string>
     <string name="today">Bugün</string>
-    <string name="yesterday">Dün</string>
+    <string name="yesterday">Dün, %1$s</string>
+    <string name="yesterday_label">Dün</string>
     <string name="time_seconds_ago">%1$ds önce</string>
     <string name="time_minutes_ago">%1$dm önce</string>
     <string name="time_hours_ago">%1$dh önce</string>
@@ -211,7 +212,10 @@
     <string name="copied_to_clipboard">Panoya kopyalandı</string>
     <string name="audio_received_for_transcription">Metin çıkarma için ses alındı</string>
     <string name="transcription_complete">Metin çıkarma tamamlandı</string>
-    <string name="transcription_partial">Metin çıkarma eksik (%1$d parça başarısız)</string>
+    <plurals name="transcription_partial">
+        <item quantity="one">%1$d parça başarısız</item>
+        <item quantity="other">%1$d parça başarısız</item>
+    </plurals>
     <string name="transcription_partial_chip">Eksik</string>
     <string name="transcription_failed">Metin çıkarma başarısız</string>
     <string name="error_model_load">Model dosyası bozuk veya yanlış biçimde olabilir. Model sekmesinden yeniden indirmeyi deneyin.</string>

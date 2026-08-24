@@ -104,7 +104,8 @@
     <string name="source_was_video">Джерело: відеофайл</string>
     <string name="processed_in">Оброблено за %1$s</string>
     <string name="today">Сьогодні</string>
-    <string name="yesterday">Вчора</string>
+    <string name="yesterday">Вчора, %1$s</string>
+    <string name="yesterday_label">Вчора</string>
     <string name="time_seconds_ago">%1$dс тому</string>
     <string name="time_minutes_ago">%1$dхв тому</string>
     <string name="time_hours_ago">%1$dг тому</string>
@@ -215,7 +216,12 @@
     <string name="copied_to_clipboard">Скопійовано в буфер обміну</string>
     <string name="audio_received_for_transcription">Аудіо отримано для розшифровки</string>
     <string name="transcription_complete">Розшифровку завершено</string>
-    <string name="transcription_partial">Розшифровка неповна (не вдалося: %1$d фрагментів)</string>
+    <plurals name="transcription_partial">
+        <item quantity="one">%1$d фрагмент не вдалося</item>
+        <item quantity="few">%1$d фрагменти не вдалося</item>
+        <item quantity="many">%1$d фрагментів не вдалося</item>
+        <item quantity="other">%1$d фрагментів не вдалося</item>
+    </plurals>
     <string name="transcription_partial_chip">Неповна</string>
     <string name="transcription_failed">Розшифровка не вдалася</string>
     <string name="error_model_load">Файл моделі може бути пошкоджений або мати хибний формат. Спробуйте завантажити його знову на вкладці «Модель».</string>

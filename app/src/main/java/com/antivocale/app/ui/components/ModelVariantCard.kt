@@ -475,7 +475,7 @@ internal fun DownloadRateEta(state: DownloadState.Downloading) {
             )
             if (state.etaSeconds >= 0) {
                 Text(
-                    text = "· ${formatEta(state.etaSeconds)}",
+                    text = formatEta(state.etaSeconds),  // TASK-386: separator dropped; the adjacent rate Text already ends the line cleanly
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

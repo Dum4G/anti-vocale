@@ -102,7 +102,8 @@
     <string name="source_was_video">Źródło: plik wideo</string>
     <string name="processed_in">Przetworzono w %1$s</string>
     <string name="today">Dzisiaj</string>
-    <string name="yesterday">Wczoraj</string>
+    <string name="yesterday">Wczoraj, %1$s</string>
+    <string name="yesterday_label">Wczoraj</string>
     <string name="time_seconds_ago">%1$ds temu</string>
     <string name="time_minutes_ago">%1$dm temu</string>
     <string name="time_hours_ago">%1$dh temu</string>
@@ -213,7 +214,12 @@
     <string name="copied_to_clipboard">Skopiowano do schowka</string>
     <string name="audio_received_for_transcription">Otrzymano audio do transkrypcji</string>
     <string name="transcription_complete">Transkrypcja ukończona</string>
-    <string name="transcription_partial">Transkrypcja niekompletna (nie powiodło się: %1$d fragmentów)</string>
+    <plurals name="transcription_partial">
+        <item quantity="one">Nie powiódł się %1$d fragment</item>
+        <item quantity="few">Nie powiodły się %1$d fragmenty</item>
+        <item quantity="many">Nie powiodło się %1$d fragmentów</item>
+        <item quantity="other">Nie powiodło się %1$d fragmentów</item>
+    </plurals>
     <string name="transcription_partial_chip">Niekompletna</string>
     <string name="transcription_failed">Transkrypcja nie powiodła się</string>
     <string name="error_model_load">Plik modelu może być uszkodzony lub w złym formacie. Spróbuj pobrać go ponownie z karty Model.</string>

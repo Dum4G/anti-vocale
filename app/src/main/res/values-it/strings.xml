@@ -97,7 +97,8 @@
     <string name="source_was_video">Origine: file video</string>
     <string name="processed_in">Elaborato in %1$s</string>
     <string name="today">Oggi</string>
-    <string name="yesterday">Ieri</string>
+    <string name="yesterday">Ieri, %1$s</string>
+    <string name="yesterday_label">Ieri</string>
     <string name="time_seconds_ago">%1$d sec fa</string>
     <string name="time_minutes_ago">%1$d min fa</string>
     <string name="time_hours_ago">%1$d h fa</string>
@@ -208,7 +209,10 @@
     <string name="copied_to_clipboard">Copiato negli appunti</string>
     <string name="audio_received_for_transcription">Audio ricevuto per la trascrizione</string>
     <string name="transcription_complete">Trascrizione completata</string>
-    <string name="transcription_partial">Trascrizione incompleta (%1$d frammenti non riusciti)</string>
+    <plurals name="transcription_partial">
+        <item quantity="one">%1$d chunk non riuscito</item>
+        <item quantity="other">%1$d chunk non riusciti</item>
+    </plurals>
     <string name="transcription_partial_chip">Incompleta</string>
     <string name="transcription_failed">Trascrizione fallita</string>
     <string name="error_model_load">Il file del modello potrebbe essere danneggiato o in un formato errato. Prova a scaricarlo di nuovo dalla scheda Modello.</string>
