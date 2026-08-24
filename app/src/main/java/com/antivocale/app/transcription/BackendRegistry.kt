@@ -44,6 +44,12 @@ import javax.inject.Singleton
  * the catalog for entries without an explicit display (Whisper, Qwen3-ASR), else
  * the model file name. This is the single implementation of the derivations
  * (ActiveModelRepository consumes it since TASK-321).
+ *
+ * Backend-id VALIDATION site (TASK-394): TaskerRequestReceiver.isKnownBackendId
+ * accepts EXTRA_BACKEND_ID values against "llm" + BundledCatalog ids + the
+ * external: prefix (the registry is Hilt-scoped and the receiver has no
+ * injection). A new static backend outside the catalog must update that
+ * validation too or Tasker overrides will reject it as unknown.
  */
 data class BackendDescriptor(
     /** Value of the backend's `BACKEND_ID` companion constant (e.g. "sherpa-onnx"). */
