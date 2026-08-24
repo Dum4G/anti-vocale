@@ -9,7 +9,10 @@ import android.content.Intent
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.antivocale.app.R
+import com.antivocale.app.data.ExternalModelRecord
+import com.antivocale.app.data.catalog.BundledCatalog
 import com.antivocale.app.service.InferenceService
+import com.antivocale.app.transcription.LlmTranscriptionBackend
 
 /**
  * BroadcastReceiver for handling Tasker requests.
@@ -91,9 +94,9 @@ class TaskerRequestReceiver : BroadcastReceiver() {
             // valid-id space is the static descriptors' sources: the "llm" id,
             // catalog entry ids, and the external: prefix (records are validated
             // downstream with a loud ExternalModelUnavailable).
-            val known = id == com.antivocale.app.transcription.LlmTranscriptionBackend.BACKEND_ID ||
-                com.antivocale.app.data.catalog.BundledCatalog.byId(id) != null ||
-                id.startsWith(com.antivocale.app.data.ExternalModelRecord.BACKEND_ID_PREFIX)
+            val known = id == LlmTranscriptionBackend.BACKEND_ID ||
+                BundledCatalog.byId(id) != null ||
+                id.startsWith(ExternalModelRecord.BACKEND_ID_PREFIX)
             if (!known) {
                 Log.e(TAG, "Unknown backend_id '$id'")
                 context.sendBroadcast(Intent(ACTION_TASKER_REPLY).apply {
@@ -112,7 +115,7 @@ class TaskerRequestReceiver : BroadcastReceiver() {
             putExtra(EXTRA_PROMPT, prompt)
             putExtra(EXTRA_FILE_PATH, filePath)
             putExtra(EXTRA_TASK_ID, taskId)
-            putExtra(com.antivocale.app.service.InferenceService.EXTRA_BACKEND_OVERRIDE, backendOverride)
+            putExtra(InferenceService.EXTRA_BACKEND_OVERRIDE, backendOverride)
         }
 
         // Try starting the foreground service directly. This works when:
@@ -124,11 +127,11 @@ class TaskerRequestReceiver : BroadcastReceiver() {
         } catch (e: SecurityException) {
             // Android 12+ background FGS restriction — fall back to user-initiated notification
             Log.w(TAG, "FGS restricted (${e.javaClass.simpleName}). Posting fallback notification.")
-            postFallbackNotification(context, requestType, prompt, filePath, taskId)
+            postFallbackNotification(context, requestType, prompt, filePath, taskId, backendOverride)
         } catch (e: IllegalStateException) {
             // App not in foreground — same fallback
             Log.w(TAG, "Cannot start from background (${e.javaClass.simpleName}). Posting fallback notification.")
-            postFallbackNotification(context, requestType, prompt, filePath, taskId)
+            postFallbackNotification(context, requestType, prompt, filePath, taskId, backendOverride)
         }
     }
 
@@ -142,7 +145,8 @@ class TaskerRequestReceiver : BroadcastReceiver() {
         requestType: String,
         prompt: String,
         filePath: String?,
-        taskId: String
+        taskId: String,
+        backendOverride: String?
     ) {
         val notificationManager = context.getSystemService(NotificationManager::class.java)
 
@@ -156,6 +160,11 @@ class TaskerRequestReceiver : BroadcastReceiver() {
             putExtra(EXTRA_PROMPT, prompt)
             putExtra(EXTRA_FILE_PATH, filePath)
             putExtra(EXTRA_TASK_ID, taskId)
+            // TASK-394 (reviewer finding): the trampoline forwards everything,
+            // so carrying the override here keeps the fallback path consistent
+            // with the direct start (a lost override would silently transcribe
+            // with the saved default model).
+            putExtra(InferenceService.EXTRA_BACKEND_OVERRIDE, backendOverride)
         }
 
         val pendingIntent = PendingIntent.getActivity(

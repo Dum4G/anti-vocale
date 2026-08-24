@@ -1,14 +1,18 @@
 package com.antivocale.app.receiver
 
+import android.app.Application
 import android.app.NotificationManager
 import android.app.ForegroundServiceStartNotAllowedException
 import android.content.Context
 import android.content.Intent
+import com.antivocale.app.service.InferenceService
 import io.mockk.every
 import io.mockk.spyk
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -117,36 +121,36 @@ class TaskerRequestReceiverNotificationTest {
     @Test
     fun `valid backend_id is forwarded to the service as backend override`() {
         val receiver = TaskerRequestReceiver()
-        val intent = android.content.Intent("com.antivocale.app.PROCESS_REQUEST").apply {
+        val intent = Intent(TaskerRequestReceiver.ACTION_PROCESS_REQUEST).apply {
             putExtra(TaskerRequestReceiver.EXTRA_REQUEST_TYPE, "audio")
             putExtra(TaskerRequestReceiver.EXTRA_TASK_ID, "t394")
             putExtra(TaskerRequestReceiver.EXTRA_BACKEND_ID, "llm")
         }
         receiver.onReceive(context, intent)
         // Robolectric ShadowApplication captures started services.
-        val started = shadowOf(context.applicationContext as android.app.Application).nextStartedService
-        org.junit.Assert.assertNotNull(started)
-        org.junit.Assert.assertEquals(
-            "llm", started.getStringExtra(com.antivocale.app.service.InferenceService.EXTRA_BACKEND_OVERRIDE))
+        val started = shadowOf(context.applicationContext as Application).nextStartedService
+        assertNotNull(started)
+        assertEquals(
+            "llm", started.getStringExtra(InferenceService.EXTRA_BACKEND_OVERRIDE))
     }
 
     @Test
     fun `unknown backend_id fails loudly with no service start`() {
         val receiver = TaskerRequestReceiver()
-        val intent = android.content.Intent("com.antivocale.app.PROCESS_REQUEST").apply {
+        val intent = Intent(TaskerRequestReceiver.ACTION_PROCESS_REQUEST).apply {
             putExtra(TaskerRequestReceiver.EXTRA_REQUEST_TYPE, "audio")
             putExtra(TaskerRequestReceiver.EXTRA_TASK_ID, "t394bad")
             putExtra(TaskerRequestReceiver.EXTRA_BACKEND_ID, "no-such-backend")
         }
         receiver.onReceive(context, intent)
-        org.junit.Assert.assertNull(shadowOf(context.applicationContext as android.app.Application).nextStartedService)
-        val shadow = shadowOf(context.applicationContext as android.app.Application)
-        val reply = (0 until shadow.broadcastIntents.size).map { shadow.broadcastIntents[it] }.lastOrNull()
-        org.junit.Assert.assertNotNull(reply)
-        org.junit.Assert.assertEquals(
+        val shadow = shadowOf(context.applicationContext as Application)
+        assertNull(shadow.nextStartedService)
+        val reply = shadow.broadcastIntents.lastOrNull()
+        assertNotNull(reply)
+        assertEquals(
             TaskerRequestReceiver.STATUS_ERROR,
             reply?.getStringExtra(TaskerRequestReceiver.EXTRA_STATUS))
-        org.junit.Assert.assertTrue(
+        assertTrue(
             reply?.getStringExtra(TaskerRequestReceiver.EXTRA_ERROR_MESSAGE)?.contains("no-such-backend") == true)
     }
 }
