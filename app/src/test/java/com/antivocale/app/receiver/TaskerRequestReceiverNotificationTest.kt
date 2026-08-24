@@ -13,6 +13,7 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 
@@ -111,5 +112,41 @@ class TaskerRequestReceiverNotificationTest {
             2,
             ids.distinct().size
         )
+    }
+
+    @Test
+    fun `valid backend_id is forwarded to the service as backend override`() {
+        val receiver = TaskerRequestReceiver()
+        val intent = android.content.Intent("com.antivocale.app.PROCESS_REQUEST").apply {
+            putExtra(TaskerRequestReceiver.EXTRA_REQUEST_TYPE, "audio")
+            putExtra(TaskerRequestReceiver.EXTRA_TASK_ID, "t394")
+            putExtra(TaskerRequestReceiver.EXTRA_BACKEND_ID, "llm")
+        }
+        receiver.onReceive(context, intent)
+        // Robolectric ShadowApplication captures started services.
+        val started = shadowOf(context.applicationContext as android.app.Application).nextStartedService
+        org.junit.Assert.assertNotNull(started)
+        org.junit.Assert.assertEquals(
+            "llm", started.getStringExtra(com.antivocale.app.service.InferenceService.EXTRA_BACKEND_OVERRIDE))
+    }
+
+    @Test
+    fun `unknown backend_id fails loudly with no service start`() {
+        val receiver = TaskerRequestReceiver()
+        val intent = android.content.Intent("com.antivocale.app.PROCESS_REQUEST").apply {
+            putExtra(TaskerRequestReceiver.EXTRA_REQUEST_TYPE, "audio")
+            putExtra(TaskerRequestReceiver.EXTRA_TASK_ID, "t394bad")
+            putExtra(TaskerRequestReceiver.EXTRA_BACKEND_ID, "no-such-backend")
+        }
+        receiver.onReceive(context, intent)
+        org.junit.Assert.assertNull(shadowOf(context.applicationContext as android.app.Application).nextStartedService)
+        val shadow = shadowOf(context.applicationContext as android.app.Application)
+        val reply = (0 until shadow.broadcastIntents.size).map { shadow.broadcastIntents[it] }.lastOrNull()
+        org.junit.Assert.assertNotNull(reply)
+        org.junit.Assert.assertEquals(
+            TaskerRequestReceiver.STATUS_ERROR,
+            reply?.getStringExtra(TaskerRequestReceiver.EXTRA_STATUS))
+        org.junit.Assert.assertTrue(
+            reply?.getStringExtra(TaskerRequestReceiver.EXTRA_ERROR_MESSAGE)?.contains("no-such-backend") == true)
     }
 }

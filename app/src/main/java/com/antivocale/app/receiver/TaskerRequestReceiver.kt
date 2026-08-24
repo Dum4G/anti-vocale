@@ -48,6 +48,9 @@ class TaskerRequestReceiver : BroadcastReceiver() {
         const val EXTRA_PROMPT = "prompt"
         const val EXTRA_FILE_PATH = "file_path"
         const val EXTRA_TASK_ID = "task_id"
+
+        /** TASK-394: optional per-request backend/model override (one-shot, not persisted). */
+        const val EXTRA_BACKEND_ID = "backend_id"
         const val EXTRA_SUBTITLE_TRACK_INDEX = "subtitle_track_index"
 
         // Reply extras
@@ -80,6 +83,27 @@ class TaskerRequestReceiver : BroadcastReceiver() {
         val prompt = intent.getStringExtra(EXTRA_PROMPT) ?: ""
         val filePath = intent.getStringExtra(EXTRA_FILE_PATH)
         val taskId = intent.getStringExtra(EXTRA_TASK_ID) ?: "unknown_${System.currentTimeMillis()}"
+        // TASK-394: one-shot backend override. Validated loudly: an unknown id
+        // must NOT fall back silently to the saved preference (that would
+        // transcribe with the wrong model and look like a success).
+        val backendOverride = intent.getStringExtra(EXTRA_BACKEND_ID)?.also { id ->
+            // Registry is Hilt-scoped and this receiver has no injection; the
+            // valid-id space is the static descriptors' sources: the "llm" id,
+            // catalog entry ids, and the external: prefix (records are validated
+            // downstream with a loud ExternalModelUnavailable).
+            val known = id == com.antivocale.app.transcription.LlmTranscriptionBackend.BACKEND_ID ||
+                com.antivocale.app.data.catalog.BundledCatalog.byId(id) != null ||
+                id.startsWith(com.antivocale.app.data.ExternalModelRecord.BACKEND_ID_PREFIX)
+            if (!known) {
+                Log.e(TAG, "Unknown backend_id '$id'")
+                context.sendBroadcast(Intent(ACTION_TASKER_REPLY).apply {
+                    putExtra(EXTRA_TASK_ID, taskId)
+                    putExtra(EXTRA_STATUS, STATUS_ERROR)
+                    putExtra(EXTRA_ERROR_MESSAGE, "unknown backend_id: $id")
+                })
+                return
+            }
+        }
 
         Log.d(TAG, "Request: type=$requestType, taskId=$taskId, prompt=${prompt.take(50)}...")
 
@@ -88,6 +112,7 @@ class TaskerRequestReceiver : BroadcastReceiver() {
             putExtra(EXTRA_PROMPT, prompt)
             putExtra(EXTRA_FILE_PATH, filePath)
             putExtra(EXTRA_TASK_ID, taskId)
+            putExtra(com.antivocale.app.service.InferenceService.EXTRA_BACKEND_OVERRIDE, backendOverride)
         }
 
         // Try starting the foreground service directly. This works when:
