@@ -31,6 +31,15 @@
       ],
       "family": "TRANSDUCER",
       "entryUrl": "https://raw.githubusercontent.com/RisorseArtificiali/anti-vocale/main/app/src/main/assets/external-catalog/german-small.json"
+    },
+    {
+      "name": "Whisper v3 Turbo Swiss German int8 (sherpa, Flurin17 fine-tune)",
+      "languages": [
+        "de",
+        "gsw"
+      ],
+      "family": "WHISPER",
+      "entryUrl": "https://raw.githubusercontent.com/RisorseArtificiali/anti-vocale/main/app/src/main/assets/external-catalog/swiss-german.json"
     }
   ]
 }
