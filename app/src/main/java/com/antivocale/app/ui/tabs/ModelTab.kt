@@ -28,6 +28,8 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
@@ -1452,29 +1454,31 @@ private fun SpeedComparisonDialog(onDismiss: () -> Unit) {
                     shape = RoundedCornerShape(8.dp)
                 ) {
                     Column(modifier = Modifier.padding(8.dp)) {
-                        // Header row
+                        // Header row. TASK-386 (WCAG 1.3.1): header cells carry
+                        // heading semantics so TalkBack users can jump past the
+                        // table header instead of hearing four flat cells.
                         Row(modifier = Modifier.fillMaxWidth()) {
                             Text(
                                 stringResource(R.string.speed_comparison_header_model),
-                                modifier = Modifier.weight(2f),
+                                modifier = Modifier.weight(2f).semantics { heading() },
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.primary
                             )
                             Text(
                                 stringResource(R.string.speed_comparison_header_size),
-                                modifier = Modifier.weight(1f),
+                                modifier = Modifier.weight(1f).semantics { heading() },
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.primary
                             )
                             Text(
                                 stringResource(R.string.speed_comparison_header_speed),
-                                modifier = Modifier.weight(1f),
+                                modifier = Modifier.weight(1f).semantics { heading() },
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.primary
                             )
                             Text(
                                 stringResource(R.string.speed_comparison_header_quality),
-                                modifier = Modifier.weight(1.5f),
+                                modifier = Modifier.weight(1.5f).semantics { heading() },
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.primary
                             )
