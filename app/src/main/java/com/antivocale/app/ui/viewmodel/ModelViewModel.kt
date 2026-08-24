@@ -1337,6 +1337,17 @@ class ModelViewModel @Inject constructor(
     fun confirmDownload(entryId: String) {
         val state = _catalogStates.value[entryId] ?: return
         val variant = state.selectedVariant ?: return
+        // TASK-395 follow-up: per-model RAM warning on the CATALOG path too (the
+        // Gemma-only wiring left the heaviest sherpa models unwarned).
+        val catalogVariant = com.antivocale.app.data.catalog.BundledCatalog
+            .byId(entryId)?.variant(variant)
+        if (catalogVariant != null &&
+            !DeviceCompatibility.hasRamForModel(ctx, catalogVariant.estimatedSizeMB)) {
+            Log.w(TAG, "Device RAM below the estimated budget for $variant " +
+                "(${catalogVariant.estimatedSizeMB}MB * headroom); proceeding with warning")
+            _snackbarEvent.tryEmit(SnackbarEvent.Message(
+                ctx.getString(R.string.model_ram_warning, variant)))
+        }
         val needsExtraction = state.variantsNeedingExtraction.contains(variant)
         startDownload(
             entryId,
