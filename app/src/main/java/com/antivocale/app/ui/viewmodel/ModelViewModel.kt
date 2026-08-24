@@ -39,6 +39,7 @@ import com.antivocale.app.transcription.BackendConfig
 import com.antivocale.app.transcription.InferenceProvider
 import com.antivocale.app.benchmark.BenchmarkManager
 import com.antivocale.app.benchmark.BenchmarkState
+import com.antivocale.app.util.DeviceCompatibility
 import com.antivocale.app.util.formatFileSize
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -1124,7 +1125,7 @@ class ModelViewModel @Inject constructor(
         // TASK-395: per-model RAM gate. Warn-and-proceed (not block): a user
         // on a borderline device may still want to try; the global 1.5GB floor
         // in DeviceCompatibility.check remains the hard gate.
-        if (!com.antivocale.app.util.DeviceCompatibility.hasRamForModel(ctx, variant.estimatedSizeMB)) {
+        if (!DeviceCompatibility.hasRamForModel(ctx, variant.estimatedSizeMB)) {
             Log.w(TAG, "Device RAM below the estimated budget for ${variant.displayName} " +
                 "(${variant.estimatedSizeMB}MB * headroom); proceeding with warning")
             _snackbarEvent.tryEmit(SnackbarEvent.Message(
