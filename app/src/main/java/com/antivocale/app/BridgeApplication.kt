@@ -71,8 +71,18 @@ class BridgeApplication : Application(), Configuration.Provider {
         // permanently in-flight queue. Runs at process start, before the service can
         // exist in this process, so no live row can be caught.
         runCatching {
+            val wasOOMCrash = CrashReporter.consumeLastCrashWasOOM()
             kotlinx.coroutines.runBlocking {
-                logDao.failAllNonTerminal("Interrupted by app restart")
+                // TASK-396 pt.2: when the previous process died on an OOM, the
+                // sweep reason carries the mitigation advice instead of the bare
+                // technical "Interrupted by app restart" (the Crashlytics pattern:
+                // 4 reports, users had no hint the cause was memory).
+                val reason = if (wasOOMCrash) {
+                    "Interrupted by app restart: out of memory. Try a shorter file, a smaller model, or close other apps."
+                } else {
+                    "Interrupted by app restart"
+                }
+                logDao.failAllNonTerminal(reason)
             }
         }.onFailure { e ->
             android.util.Log.e("BridgeApplication", "Non-terminal log sweep failed", e)

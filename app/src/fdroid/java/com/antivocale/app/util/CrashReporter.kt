@@ -22,5 +22,24 @@ object CrashReporter {
 
     fun report(throwable: Throwable, context: String) {
         Log.e(TAG, context, throwable)
+        markOomIfOOM(throwable)
+    }
+
+    /** TASK-396 pt.2: persist an OOM marker readable at the next cold start. */
+    private fun markOomIfOOM(throwable: Throwable) {
+        if (throwable is OutOfMemoryError) {
+            // No SharedPreferences on the fdroid flavor's minimal surface; the
+            // marker is a plain file the Application can check cheaply.
+            java.io.File("/data/data/com.antivocale.app/files/last_crash_oom").writeText("1")
+        }
+    }
+
+    /** True when the previous process died on an OutOfMemoryError. Clears the marker. */
+    fun consumeLastCrashWasOOM(): Boolean {
+        val marker = java.io.File("/data/data/com.antivocale.app/files/last_crash_oom")
+        return if (marker.exists()) {
+            marker.delete()
+            true
+        } else false
     }
 }
