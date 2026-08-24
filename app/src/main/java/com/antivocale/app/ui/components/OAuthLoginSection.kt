@@ -143,7 +143,12 @@ fun OAuthLoginSection(
                         onClick = onLoginClick,
                         modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.tertiary
+                            containerColor = MaterialTheme.colorScheme.tertiary,
+                            // TASK-383: ButtonDefaults fills UNspecified params from the
+                            // OnPrimary token, not onTertiary (verified against the
+                            // material3 1.3.1 bytecode), so the label rendered onPrimary
+                            // and failed 4.5:1 on 2 of 6 schemes.
+                            contentColor = MaterialTheme.colorScheme.onTertiary
                         )
                     ) {
                         Icon(Icons.Default.Login, contentDescription = null)

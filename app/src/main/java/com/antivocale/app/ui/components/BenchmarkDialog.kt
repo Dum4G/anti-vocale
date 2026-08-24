@@ -244,12 +244,15 @@ private fun MetricRow(
     }
 }
 
+// TASK-383 (WCAG 1.4.3): the Material 500/700-ish greens/oranges gave ~1.9-2.6:1
+// with white badge text. Darkened 800-tier variants keep the rating semantics
+// and pass 4.5:1 (computed): 7.9 / 6.6 / 6.7 / 7.9.
 @Composable
 private fun ratingColor(rating: SpeedRating): Color = when (rating) {
-    SpeedRating.FAST -> Color(0xFF4CAF50)
-    SpeedRating.GOOD -> Color(0xFF8BC34A)
-    SpeedRating.MODERATE -> Color(0xFFFF9800)
-    SpeedRating.SLOW -> Color(0xFFF44336)
+    SpeedRating.FAST -> Color(0xFF1B5E20)
+    SpeedRating.GOOD -> Color(0xFF33691E)
+    SpeedRating.MODERATE -> Color(0xFF8E4B00)
+    SpeedRating.SLOW -> Color(0xFFA31515)
 }
 
 @Composable

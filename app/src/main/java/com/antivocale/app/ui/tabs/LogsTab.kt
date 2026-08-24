@@ -391,7 +391,7 @@ fun LogsTab(
                             Text(
                                 text = interruptedText!!.take(200),
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.8f),
+                                color = MaterialTheme.colorScheme.onErrorContainer,
                                 maxLines = 3
                             )
                         }
@@ -425,7 +425,7 @@ fun LogsTab(
                         Text(
                             text = stringResource(R.string.logs_empty_hint),
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -452,7 +452,7 @@ fun LogsTab(
                         Text(
                             text = stringResource(R.string.logs_search_no_results_hint),
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -683,7 +683,7 @@ private fun DateGroupHeader(label: String, count: Int) {
             Text(
                 text = "($count)",
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
+                color = MaterialTheme.colorScheme.onSecondaryContainer
             )
         }
     }
@@ -1105,7 +1105,7 @@ fun LogEntryItem(
                             Text(
                                 text = stringResource(R.string.logs_task_id, log.taskId.take(8)),
                                 style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
 
@@ -1501,13 +1501,13 @@ private fun ConversationGroupHeader(
             Text(
                 text = pluralStringResource(R.plurals.conversation_group_count, count, count),
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
+                color = MaterialTheme.colorScheme.onSecondaryContainer
             )
             Spacer(modifier = Modifier.weight(1f))
             Text(
                 text = formatRelativeTime(lastTimestamp, context),
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
+                color = MaterialTheme.colorScheme.onSecondaryContainer
             )
             Spacer(modifier = Modifier.width(4.dp))
         }

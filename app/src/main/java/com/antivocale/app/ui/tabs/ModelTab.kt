@@ -1600,9 +1600,14 @@ private fun AudioLimitLabel(limit: AudioLimit) {
         AudioLimit.NoKnownLimit ->
             stringResource(R.string.model_info_max_audio_unlimited)
     }
+    // TASK-383 (1.4.3/1.4.4): 11sp tertiary-on-surfaceVariant was below 4.5:1 in
+    // most palettes (2.5-5.7); labelMedium + primary improves it but is STILL
+    // under 4.5:1 on surfaceVariant in DefaultDark (3.5), WhatsAppLight (3.1)
+    // and TelegramLight (3.3). onSurfaceVariant-style fixes rejected; needs a
+    // follow-up (GH #49's capability line).
     Text(
         text = text,
-        style = MaterialTheme.typography.labelSmall,
-        color = MaterialTheme.colorScheme.tertiary
+        style = MaterialTheme.typography.labelMedium,
+        color = MaterialTheme.colorScheme.primary
     )
 }
