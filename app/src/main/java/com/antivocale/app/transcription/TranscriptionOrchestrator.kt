@@ -615,7 +615,12 @@ class TranscriptionOrchestrator @Inject constructor(
         }
 
         // Read settings
-        val vadEnabled = preferencesManager.vadEnabled.first()
+        val vadEnabled = preferencesManager.vadEnabled.first() ||
+            // TASK-370: the LLM audio encoder is far more boundary-sensitive than
+            // the ASR decoders (measured: mid-word 30s cuts garble Gemma chunks);
+            // VAD-aligned segmentation is forced for the llm backend regardless
+            // of the user toggle.
+            backend.id == LlmTranscriptionBackend.BACKEND_ID
         val threadCount = preferencesManager.threadCount.first()
         val providerPref = preferencesManager.inferenceProvider.first()
         val resolvedProvider = InferenceProvider.resolve(providerPref)

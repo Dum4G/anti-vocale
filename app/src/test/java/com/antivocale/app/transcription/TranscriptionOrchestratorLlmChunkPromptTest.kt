@@ -152,4 +152,20 @@ class TranscriptionOrchestratorLlmChunkPromptTest : TranscriptionOrchestratorTes
         assertTrue(result.isSuccess)
         assertEquals(expectedTranscript, result.getOrNull())
     }
+
+    @Test
+    fun `llm backend forces VAD-aligned chunking even when the user toggle is off`() = runTest {
+        // TASK-370 analysis outcome: fixed 30s cuts land mid-word; the LLM audio
+        // encoder is far more boundary-sensitive than Whisper. VAD segmentation
+        // is forced for the llm backend regardless of the user toggle.
+        every { preferencesManager.vadEnabled } returns flowOf(false)
+        stubEightChunks()
+        val result = runAudioRequest()
+        assertTrue(result.isSuccess)
+        io.mockk.verify(atLeast = 1) {
+            audioPreprocessor.prepareAudioForMediaPipe(
+                inputPath = any(), cacheDir = any(), maxChunkDurationSeconds = any(),
+                context = any(), enableVad = true, vadNumThreads = any(), vadProvider = any())
+        }
+    }
 }
