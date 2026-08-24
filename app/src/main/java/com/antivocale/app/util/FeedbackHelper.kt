@@ -122,12 +122,24 @@ object FeedbackHelper {
         appendLine(l.note)
     }
 
-    fun createEmailIntent(subject: String, body: String): Intent =
-        Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:$FEEDBACK_ADDRESS")).apply {
+    /**
+     * Subject/body travel BOTH in the mailto URI query params and as intent
+     * extras: current Gmail builds (verified on-device 2026-08-24) silently
+     * drop EXTRA_SUBJECT/EXTRA_TEXT on ACTION_SENDTO but honor the URI form,
+     * while other clients rely on the extras.
+     */
+    fun createEmailIntent(subject: String, body: String): Intent {
+        val encodedSubject = Uri.encode(subject)
+        val encodedBody = Uri.encode(body)
+        val uri = Uri.parse(
+            "mailto:$FEEDBACK_ADDRESS?subject=$encodedSubject&body=$encodedBody"
+        )
+        return Intent(Intent.ACTION_SENDTO, uri).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             putExtra(Intent.EXTRA_SUBJECT, subject)
             putExtra(Intent.EXTRA_TEXT, body)
         }
+    }
 
     fun isCallable(context: Context, intent: Intent): Boolean =
         intent.resolveActivity(context.packageManager) != null

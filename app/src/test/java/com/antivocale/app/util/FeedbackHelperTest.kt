@@ -89,9 +89,27 @@ class FeedbackHelperTest {
     fun `email intent uses ACTION_SENDTO with mailto uri and extras`() {
         val intent = FeedbackHelper.createEmailIntent("subj", "body")
         assertEquals(Intent.ACTION_SENDTO, intent.action)
-        assertEquals("mailto:paolo.antinori@risorseartificiali.com", intent.data.toString())
+        assertEquals(
+            "mailto:paolo.antinori@risorseartificiali.com?subject=subj&body=body",
+            intent.data.toString()
+        )
         assertEquals("subj", intent.getStringExtra(Intent.EXTRA_SUBJECT))
         assertEquals("body", intent.getStringExtra(Intent.EXTRA_TEXT))
+    }
+
+    @Test
+    fun `email intent uri-encodes subject and body query params`() {
+        // TASK-374 device finding: current Gmail drops SENDTO extras but honors
+        // the URI form, so the query params must survive encoding.
+        val intent = FeedbackHelper.createEmailIntent(
+            "[Anti-Vocale] task 42 & more",
+            "line one\nline two: 100% \"quoted\""
+        )
+        val uri = intent.data!!.toString()
+        assertFalse(uri.contains(' '))
+        assertFalse(uri.contains('\n'))
+        assertFalse(uri.contains("100% \""))
+        assertTrue(uri.startsWith("mailto:paolo.antinori@risorseartificiali.com?subject="))
     }
 
     // --- Fallback path ---
