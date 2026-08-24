@@ -317,11 +317,16 @@ private fun InfoRow(label: String, value: String) {
             text = "$label:",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.width(120.dp)
+            // TASK-386 (WCAG 1.4.4): fixed dp clips long localized labels at 200%
+            // font scale; weight lets the label column shrink and wrap.
+            modifier = Modifier.weight(0.45f, fill = false)
         )
         Text(
             text = value,
-            style = MaterialTheme.typography.bodySmall
+            style = MaterialTheme.typography.bodySmall,
+            // TASK-386: without a weight the value measures with the FULL row
+            // width first and squeezes the weighted label (reviewer finding).
+            modifier = Modifier.weight(1f, fill = false)
         )
     }
 }

@@ -19,6 +19,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -431,7 +432,7 @@ fun SettingsTab(
                         }
                     }
                     Icon(
-                        imageVector = Icons.Default.ChevronRight,
+                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                         contentDescription = stringResource(R.string.open_prompt_settings),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -1402,7 +1403,7 @@ fun SettingsTab(
                         }
                     }
                     Icon(
-                        imageVector = Icons.Default.ChevronRight,
+                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                         contentDescription = stringResource(R.string.open_per_app_settings),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -1451,7 +1452,7 @@ fun SettingsTab(
                         }
                     }
                     Icon(
-                        imageVector = Icons.Default.ChevronRight,
+                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                         contentDescription = stringResource(R.string.open_performance_stats),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )

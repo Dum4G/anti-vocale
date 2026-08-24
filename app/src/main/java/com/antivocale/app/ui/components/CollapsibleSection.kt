@@ -26,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
@@ -65,7 +66,10 @@ fun CollapsibleSection(
                 text = title,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
+                color = MaterialTheme.colorScheme.primary,
+                // TASK-386 (WCAG 1.3.1): section titles as headings so TalkBack
+                // users can jump between Settings sections by swipe-by-heading.
+                modifier = Modifier.semantics { heading() }
             )
             Spacer(modifier = Modifier.width(4.dp))
             Icon(

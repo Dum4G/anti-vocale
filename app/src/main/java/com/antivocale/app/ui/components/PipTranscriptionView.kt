@@ -35,6 +35,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -113,6 +114,10 @@ fun PipTranscriptionView(
                             MaterialTheme.colorScheme.primary.copy(alpha = alpha),
                             CircleShape
                         )
+                        // TASK-386: decorative pulse; the adjacent label carries the
+                        // state, so the dot must never take TalkBack focus in the
+                        // tiny PiP window.
+                        .clearAndSetSemantics { }
                 )
             }
 
