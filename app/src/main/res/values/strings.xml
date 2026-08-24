@@ -954,4 +954,5 @@
     <string name="a11y_back">Back</string>
     <string name="litertlm_importing">Importing…</string>
     <string name="model_ram_warning">%1$s may not have enough memory on this device. It might fail to load or crash; lighter models are safer.</string>
+    <string name="error_oom_transcription">Not enough memory to transcribe this audio. Try a shorter file, a smaller model, or close other apps.</string>
 </resources>

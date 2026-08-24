@@ -957,4 +957,5 @@
     <string name="a11y_back">Geri</string>
     <string name="litertlm_importing">İçe aktarılıyor…</string>
     <string name="model_ram_warning">Bu cihazda %1$s için yeterli bellek olmayabilir. Yükleme başarısız olabilir; daha hafif modeller daha güvenli.</string>
+    <string name="error_oom_transcription">Bu sesi transkribe etmek için yeterli bellek yok. Daha kısa bir dosya, daha küccük bir model deneyin veya diğer uygulamaları kapatın.</string>
 </resources>

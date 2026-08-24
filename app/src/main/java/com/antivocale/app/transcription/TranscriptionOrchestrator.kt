@@ -242,6 +242,17 @@ class TranscriptionOrchestrator @Inject constructor(
             val duration = System.currentTimeMillis() - startTime
             cancelIfPending(taskId, "Transcription cancelled", duration)
             throw e
+        } catch (e: OutOfMemoryError) {
+            // TASK-396: OOM is an Error, not an Exception; without this catch it
+            // escapes processRequest unhandled and the user sees a crash instead
+            // of the memory advice. We must NOT allocate here (heap is exhausted):
+            // log the existing message, map to the dedicated string, and bail.
+            Log.e(TAG, "Out of memory during transcription", e)
+            val duration = System.currentTimeMillis() - startTime
+            logError(taskId, "OutOfMemoryError", duration)
+            listener.onError(taskId, "OUT_OF_MEMORY", "OutOfMemoryError", isShareRequest, false, duration)
+            return Result.failure(TranscriptionException.InsufficientMemory(
+                context.getString(R.string.error_oom_transcription)))
         } catch (e: Exception) {
             Log.e(TAG, "Error processing request", e)
             val duration = System.currentTimeMillis() - startTime

@@ -975,4 +975,5 @@
     <string name="a11y_back">Назад</string>
     <string name="litertlm_importing">Імпортування…</string>
     <string name="model_ram_warning">%1$s може не вистачити пам\'яті на цьому пристрої. Завантаження може не вдатися; легші моделі надійніші.</string>
+    <string name="error_oom_transcription">Недостатньо пам\'яті для розшифровки цього аудіо. Спробуйте коротший файл, меншу модель або закрийте інші застосунки.</string>
 </resources>
