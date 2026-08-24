@@ -46,6 +46,35 @@ object WavUtils {
     }
 
     /**
+     * TASK-370 E4: strips the RIFF/WAVE container and returns the raw data-chunk
+     * payload. The Edge Gallery reference feeds LiteRT Content.AudioBytes with
+     * raw 16k mono PCM (AudioBytes carries no sample-rate carrier, so the runtime
+     * assumes its canonical input). Walks the RIFF chunk list instead of a blind
+     * +44 so extra chunks (LIST etc.) are skipped; non-RIFF input is returned
+     * unchanged (already raw).
+     */
+    fun stripWavHeader(wavBytes: ByteArray): ByteArray {
+        if (wavBytes.size < 12) return wavBytes
+        if (!(String(wavBytes, 0, 4, Charsets.US_ASCII) == "RIFF" &&
+                    String(wavBytes, 8, 4, Charsets.US_ASCII) == "WAVE")) {
+            return wavBytes
+        }
+        var offset = 12
+        while (offset + 8 <= wavBytes.size) {
+            val chunkId = String(wavBytes, offset, 4, Charsets.US_ASCII)
+            val chunkSize = readLittleEndianInt(wavBytes, offset + 4)
+            if (chunkId == "data") {
+                val from = offset + 8
+                val to = minOf(wavBytes.size.toLong(), from.toLong() + chunkSize.toLong()).toInt()
+                if (from > to) return wavBytes
+                return wavBytes.copyOfRange(from, to)
+            }
+            offset += 8 + chunkSize + (chunkSize and 1) // chunks are word-aligned
+        }
+        return wavBytes
+    }
+
+    /**
      * Creates a WAV byte array from mono FloatArray samples.
      * Used by LLM backends that require WAV format (LiteRT-LM Content.AudioBytes).
      */

@@ -6,6 +6,7 @@ import com.antivocale.app.data.PreferencesManager
 import com.antivocale.app.transcription.TranscriptionException
 import com.google.ai.edge.litertlm.*
 import com.antivocale.app.util.CrashReporter
+import com.antivocale.app.util.WavUtils
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -56,6 +57,11 @@ open class LlmManager @Inject constructor() {
         // A transcript is deterministic content: sample greedily and instruct verbatim output.
         internal val AUDIO_CONVERSATION_CONFIG = ConversationConfig(
             samplerConfig = SamplerConfig(topK = 1, topP = 1.0, temperature = 0.0),
+            // E2b REFUTED ON DEVICE 2026-08-24 (g240-e2b): the "SAME language /
+            // do NOT translate" instruction produced catastrophic repetition loops
+            // with greedy sampling (19,224 chars vs the 3,750-char Parakeet control;
+            // the tail repeats one sentence indefinitely). The original verbatim
+            // instruction measured best (2,832 chars, 0 refusals): keep it.
             systemInstruction = Contents.of(
                 "You are a speech-transcription engine. Transcribe the audio verbatim in its " +
                     "original language. Output only the transcription, with no commentary, no " +
@@ -436,6 +442,11 @@ open class LlmManager @Inject constructor() {
 
             freshConversation.sendMessageAsync(
                 Contents.of(
+                    // E4 REFUTED ON DEVICE 2026-08-24 (g240-e2be4): raw PCM made every
+                    // chunk return blank ("No transcription produced"); the litertlm
+                    // 0.13.1 Kotlin AudioBytes path decodes the WAV container via
+                    // miniaudio and does NOT accept headerless PCM (the Gallery
+                    // reference's raw-PCM feed goes through a different layer).
                     Content.AudioBytes(audioData),
                     Content.Text(prompt)
                 )
