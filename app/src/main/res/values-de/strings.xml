@@ -41,7 +41,7 @@
     <string name="model_load_failed">Laden fehlgeschlagen: %1$s</string>
     <string name="device_incompatible_title">Nicht unterstütztes Gerät</string>
     <string name="device_incompatible_arch">Diese App erfordert ein ARM64-Gerät. Sie funktioniert nicht auf Emulatoren oder x86-Geräten.</string>
-    <string name="device_incompatible_ram">Dieses Gerät hat nicht genug Speicher, um KI-Modelle lokal auszuführen (mindestens 4 GB RAM erforderlich).</string>
+    <string name="device_incompatible_ram">Dieses Gerät hat möglicherweise nicht genug Speicher für lokale KI-Modelle. Die kleineren Modelle (Parakeet) sollten funktionieren; größere könnten Probleme haben.</string>
     <string name="model_unloaded">Modell entladen</string>
     <string name="model_auto_unloaded">Modell wegen Inaktivität entladen</string>
     <string name="model_externally_loaded">Modell bereit (extern geladen)</string>
@@ -956,4 +956,5 @@
     <string name="a11y_collapse">einklappen</string>
     <string name="a11y_back">Zurück</string>
     <string name="litertlm_importing">Import läuft…</string>
+    <string name="model_ram_warning">%1$s hat auf diesem Gerät möglicherweise nicht genug Speicher. Das Laden könnte fehlschlagen oder abstürzen; leichtere Modelle sind sicherer.</string>
 </resources>

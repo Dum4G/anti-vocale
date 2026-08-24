@@ -1121,6 +1121,15 @@ class ModelViewModel @Inject constructor(
      */
     fun confirmDownload() {
         val variant = _downloadUiState.value.selectedVariant ?: return
+        // TASK-395: per-model RAM gate. Warn-and-proceed (not block): a user
+        // on a borderline device may still want to try; the global 1.5GB floor
+        // in DeviceCompatibility.check remains the hard gate.
+        if (!com.antivocale.app.util.DeviceCompatibility.hasRamForModel(ctx, variant.estimatedSizeMB)) {
+            Log.w(TAG, "Device RAM below the estimated budget for ${variant.displayName} " +
+                "(${variant.estimatedSizeMB}MB * headroom); proceeding with warning")
+            _snackbarEvent.tryEmit(SnackbarEvent.Message(
+                ctx.getString(R.string.model_ram_warning, variant.displayName)))
+        }
         _downloadUiState.update { it.copy(showDownloadDialog = false) }
         startDownload(variant)
     }

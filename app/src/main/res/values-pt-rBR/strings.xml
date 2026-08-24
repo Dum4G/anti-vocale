@@ -31,7 +31,7 @@
     <string name="model_load_failed">Falha no carregamento: %1$s</string>
     <string name="device_incompatible_title">Dispositivo não compatível</string>
     <string name="device_incompatible_arch">Este aplicativo requer um dispositivo ARM64. Não funcionará em emuladores ou dispositivos x86.</string>
-    <string name="device_incompatible_ram">Este dispositivo não tem memória suficiente para executar modelos de IA localmente (mínimo 4 GB de RAM necessário).</string>
+    <string name="device_incompatible_ram">Este dispositivo pode não ter memória suficiente para os modelos de IA locais. Os modelos mais leves (Parakeet) devem funcionar; os maiores podem ter dificuldades.</string>
     <string name="model_unloaded">Modelo descarregado</string>
     <string name="model_auto_unloaded">Modelo descarregado por inatividade</string>
     <string name="model_externally_loaded">Modelo pronto (carregado externamente)</string>
@@ -822,4 +822,5 @@
     <string name="a11y_collapse">recolher</string>
     <string name="a11y_back">Voltar</string>
     <string name="litertlm_importing">Importando…</string>
+    <string name="model_ram_warning">%1$s pode não ter memória suficiente neste dispositivo. Pode falhar ao carregar ou fechar; modelos mais leves são mais seguros.</string>
 </resources>

@@ -46,7 +46,7 @@
     <string name="model_load_failed">Помилка завантаження: %1$s</string>
     <string name="device_incompatible_title">Непідтримуваний пристрій</string>
     <string name="device_incompatible_arch">Цей додаток потребує пристрій ARM64. Він не працюватиме на емуляторах або пристроях x86.</string>
-    <string name="device_incompatible_ram">На цьому пристрої недостатньо пам\'яті для локальних моделей ШІ (потрібно щонайменше 4 ГБ ОЗП).</string>
+    <string name="device_incompatible_ram">Цей пристрій може не мати достатньо пам\'яті для локальних ІІ-моделей. Легші моделі (Parakeet) мають працювати; з більшими можуть бути труднощі.</string>
     <string name="model_unloaded">Модель вивантажено</string>
     <string name="model_auto_unloaded">Модель вивантажено через бездіяльність</string>
     <string name="model_externally_loaded">Модель готова (завантажена зовні)</string>
@@ -974,4 +974,5 @@
     <string name="a11y_collapse">згорнути</string>
     <string name="a11y_back">Назад</string>
     <string name="litertlm_importing">Імпортування…</string>
+    <string name="model_ram_warning">%1$s може не вистачити пам\'яті на цьому пристрої. Завантаження може не вдатися; легші моделі надійніші.</string>
 </resources>

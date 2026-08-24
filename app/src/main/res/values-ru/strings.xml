@@ -43,7 +43,7 @@
     <string name="model_load_failed">Ошибка загрузки: %1$s</string>
     <string name="device_incompatible_title">Устройство не поддерживается</string>
     <string name="device_incompatible_arch">Для работы приложения требуется устройство с ARM64. Оно не будет работать на эмуляторах и устройствах x86.</string>
-    <string name="device_incompatible_ram">На этом устройстве недостаточно памяти для запуска локальных ИИ-моделей (требуется минимум 4 ГБ ОЗУ).</string>
+    <string name="device_incompatible_ram">У этого устройства может быть недостаточно памяти для локальных ИИ-моделей. Более лёгкие модели (Parakeet) должны работать; с более крупными могут быть проблемы.</string>
     <string name="model_unloaded">Модель выгружена</string>
     <string name="model_auto_unloaded">Модель выгружена из-за неактивности</string>
     <string name="model_externally_loaded">Модель готова (загружена извне)</string>
@@ -973,4 +973,5 @@
     <string name="a11y_collapse">свернуть</string>
     <string name="a11y_back">Назад</string>
     <string name="litertlm_importing">Импорт…</string>
+    <string name="model_ram_warning">У %1$s может не хватить памяти на этом устройстве. Загрузка может завершиться неудачей; более лёгкие модели надёжнее.</string>
 </resources>

@@ -44,7 +44,7 @@
     <string name="model_load_failed">Wczytywanie nie powiodło się: %1$s</string>
     <string name="device_incompatible_title">Nieobsługiwane urządzenie</string>
     <string name="device_incompatible_arch">Ta aplikacja wymaga urządzenia ARM64. Nie będzie działać na emulatorach ani urządzeniach x86.</string>
-    <string name="device_incompatible_ram">To urządzenie nie ma wystarczającej pamięci do uruchamiania lokalnych modeli AI (wymagane min. 4 GB RAM).</string>
+    <string name="device_incompatible_ram">To urządzenie może nie mieć wystarczającej pamięci dla lokalnych modeli AI. Lżejsze modele (Parakeet) powinny działać; większe mogą mieć trudności.</string>
     <string name="model_unloaded">Model zwolniony</string>
     <string name="model_auto_unloaded">Model zwolniony z powodu bezczynności</string>
     <string name="model_externally_loaded">Model gotowy (wczytany zewnętrznie)</string>
@@ -972,4 +972,5 @@
     <string name="a11y_collapse">zwiń</string>
     <string name="a11y_back">Wstecz</string>
     <string name="litertlm_importing">Importowanie…</string>
+    <string name="model_ram_warning">%1$s może nie mieć wystarczającej pamięci na tym urządzeniu. Ładowanie może się nie powieść; lżejsze modele są bezpieczniejsze.</string>
 </resources>

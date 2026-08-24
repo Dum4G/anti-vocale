@@ -19,8 +19,20 @@ object DeviceCompatibility {
 
     private const val TAG = "DeviceCompatibility"
 
-    // Minimum device RAM to run models reliably (4 GB)
-    private const val MIN_RAM_BYTES = 4L * 1024 * 1024 * 1024
+    // TASK-395 (GH strk/Moto G10): two-tier RAM gate. The old flat 4GB floor
+    // blocked real users: a 4GB-nominal Moto G(10) reports totalMem ~3.6GB and
+    // saw the "not enough memory" wall, while a Redmi Note 12 with 3.3GB free
+    // ran the app habitually. The global floor is now a sanity check (1.5GB:
+    // below this even Parakeet int8 at ~464MB plus OS pressure is unsafe);
+    // heavier models are gated per-model at selection time via [hasRamForModel].
+    private const val MIN_RAM_BYTES = 1_500L * 1024 * 1024
+
+    /** Model RAM budget: download size is a proxy for the resident set; the
+     *  factor covers ONNX arena + inference buffers + system headroom. */
+    private const val RAM_HEADROOM_FACTOR = 2.5
+
+    /** Floor for the smallest realistic model (Parakeet int8 464MB * 2.5 = ~1.2GB). */
+    private const val MIN_MODEL_BUDGET_MB = 1_200L
 
     sealed class CheckResult {
         data object Compatible : CheckResult()
@@ -30,6 +42,29 @@ object DeviceCompatibility {
             data object UnsupportedArchitecture : Reason()
             data class InsufficientRam(val totalGb: Double) : Reason()
         }
+    }
+
+    /**
+     * TASK-395: per-model RAM check. Called at model-selection time (Model tab,
+     * Use/Download) with the model's estimated size in MB. Returns true when the
+     * device likely has enough headroom for that specific model; a false result
+     * should surface as a warning (not a block) so the user can still try
+     * lighter models. The global [check] remains the hard gate for the app itself.
+     */
+    fun hasRamForModel(context: Context, modelSizeMB: Long): Boolean {
+        val totalRamMb = totalRamBytes(context) / (1024 * 1024)
+        val required = maxOf(
+            (modelSizeMB * RAM_HEADROOM_FACTOR).toLong(),
+            MIN_MODEL_BUDGET_MB)
+        return totalRamMb >= required
+    }
+
+    private fun totalRamBytes(context: Context): Long {
+        val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
+            ?: return Long.MAX_VALUE // Can't determine, allow to proceed
+        val memInfo = ActivityManager.MemoryInfo()
+        activityManager.getMemoryInfo(memInfo)
+        return memInfo.totalMem
     }
 
     /**
@@ -75,7 +110,7 @@ object DeviceCompatibility {
         val totalGb = totalRam / (1024.0 * 1024.0 * 1024.0)
 
         if (totalRam < MIN_RAM_BYTES) {
-            Log.w(TAG, "Device has insufficient RAM: ${"%.1f".format(totalGb)} GB (minimum 4 GB)")
+            Log.w(TAG, "Device has insufficient RAM: ${"%.1f".format(totalGb)} GB (minimum 1.5 GB sanity floor)")
             return CheckResult.Incompatible(CheckResult.Reason.InsufficientRam(totalGb))
         }
 

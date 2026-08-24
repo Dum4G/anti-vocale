@@ -41,7 +41,7 @@
     <string name="model_load_failed">लोड विफल: %1$s</string>
     <string name="device_incompatible_title">असमर्थित डिवाइस</string>
     <string name="device_incompatible_arch">इस ऐप को ARM64 डिवाइस चाहिए। यह एमुलेटर या x86 डिवाइस पर काम नहीं करेगा।</string>
-    <string name="device_incompatible_ram">इस डिवाइस में ऑन-डिवाइस AI मॉडल चलाने के लिए पर्याप्त मेमोरी नहीं है (कम से कम 4 GB RAM चाहिए)।</string>
+    <string name="device_incompatible_ram">इस डिवाइस में स्थानीय AI मॉडल के लिए पर्याप्त मेमोरी नहीं हो सकती। हल्के मॉडल (Parakeet) काम करने चाहिए; बड़े मॉडलों में कठिनाई हो सकती है।</string>
     <string name="model_unloaded">मॉडल अनलोड किया गया</string>
     <string name="model_auto_unloaded">निष्क्रियता के कारण मॉडल अनलोड किया गया</string>
     <string name="model_externally_loaded">मॉडल तैयार (बाहरी रूप से लोड)</string>
@@ -955,4 +955,5 @@
     <string name="a11y_collapse">संकुचित</string>
     <string name="a11y_back">पीछे</string>
     <string name="litertlm_importing">इंपोर्ट हो रहा है…</string>
+    <string name="model_ram_warning">इस डिवाइस पर %1$s के लिए पर्याप्त मेमोरी नहीं हो सकती। लोड विफल हो सकता है; हल्के मॉडल सुरक्षित हैं।</string>
 </resources>

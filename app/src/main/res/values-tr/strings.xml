@@ -44,7 +44,7 @@
     <string name="model_load_failed">Yükleme başarısız: %1$s</string>
     <string name="device_incompatible_title">Desteklenmeyen Cihaz</string>
     <string name="device_incompatible_arch">Bu uygulama ARM64 cihaz gerektirir. Emülatörlerde veya x86 cihazlarda çalışmaz.</string>
-    <string name="device_incompatible_ram">Bu cihazda cihaz içi yapay zeka modellerini çalıştırmak için yeterli bellek yok (en az 4 GB RAM gerekir).</string>
+    <string name="device_incompatible_ram">Bu cihazın yerel AI modelleri için yeterli belleği olmayabilir. Daha hafif modeller (Parakeet) çalışmalıdır; daha büyük olanlarda zorlanabilir.</string>
     <string name="model_unloaded">Model kaldırıldı</string>
     <string name="model_auto_unloaded">Etkinlik olmadığından model kaldırıldı</string>
     <string name="model_externally_loaded">Model hazır (harici olarak yüklendi)</string>
@@ -956,4 +956,5 @@
     <string name="a11y_collapse">daralt</string>
     <string name="a11y_back">Geri</string>
     <string name="litertlm_importing">İçe aktarılıyor…</string>
+    <string name="model_ram_warning">Bu cihazda %1$s için yeterli bellek olmayabilir. Yükleme başarısız olabilir; daha hafif modeller daha güvenli.</string>
 </resources>

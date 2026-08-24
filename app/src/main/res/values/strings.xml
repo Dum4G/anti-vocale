@@ -41,7 +41,7 @@
     <string name="model_load_failed">Load failed: %1$s</string>
     <string name="device_incompatible_title">Unsupported Device</string>
     <string name="device_incompatible_arch">This app requires an ARM64 device. It will not work on emulators or x86 devices.</string>
-    <string name="device_incompatible_ram">This device does not have enough memory to run on-device AI models (minimum 4 GB RAM required).</string>
+    <string name="device_incompatible_ram">This device may not have enough memory for on-device AI models. The lighter models (Parakeet) should work; larger ones may struggle.</string>
     <string name="model_unloaded">Model unloaded</string>
     <string name="model_auto_unloaded">Model unloaded due to inactivity</string>
     <string name="model_externally_loaded">Model ready (externally loaded)</string>
@@ -953,4 +953,5 @@
     <string name="a11y_collapse">Collapse</string>
     <string name="a11y_back">Back</string>
     <string name="litertlm_importing">Importing…</string>
+    <string name="model_ram_warning">%1$s may not have enough memory on this device. It might fail to load or crash; lighter models are safer.</string>
 </resources>
