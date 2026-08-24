@@ -158,7 +158,9 @@ class ExtractionService : Service() {
             getString(R.string.download_status_connecting),
             title = displayName,
             notificationId = nid,
-            indeterminate = true
+            indeterminate = true,
+            cancelModelKey = modelKey,
+            cancelVariant = variant
         ))
 
         // Only restart if the exact same download is already running
@@ -311,7 +313,9 @@ class ExtractionService : Service() {
         maxProgress: Int = 0,
         indeterminate: Boolean = false,
         ongoing: Boolean = true,
-        subText: String? = null
+        subText: String? = null,
+        cancelModelKey: String? = null,
+        cancelVariant: String? = null,
     ): Notification {
         val builder = NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle(title)
@@ -324,11 +328,16 @@ class ExtractionService : Service() {
             .setProgress(maxProgress, progress, indeterminate)
             .apply { subText?.let { setSubText(it) } }
 
-        // Only show cancel action when there's a single active download
-        // and the notification is still ongoing.
-        if (ongoing && activeJobs.size <= 1) {
+        // TASK-385: per-key cancel on EVERY ongoing notification. The old
+        // single-download-only guard left multi-download users with no way to
+        // cancel anything from the shade; the intent already carries the key
+        // via EXTRA_MODEL_KEY/EXTRA_CANCEL_VARIANT (same extras onStartCommand
+        // reads), so each notification cancels exactly its own job.
+        if (ongoing) {
             val cancelIntent = Intent(this, ExtractionService::class.java).apply {
                 action = ACTION_CANCEL
+                putExtra(EXTRA_MODEL_KEY, cancelModelKey)
+                putExtra(EXTRA_CANCEL_VARIANT, cancelVariant)
             }
             val cancelPendingIntent = android.app.PendingIntent.getService(
                 this,
@@ -353,26 +362,31 @@ class ExtractionService : Service() {
         val notificationManager = getSystemService(NotificationManager::class.java)
         val nid = notificationIdForKey(key)
         val title = displayNames[key] ?: ""
+        // TASK-385: split the composite "model:variant" key back into the pair
+        // the per-notification cancel action needs.
+        val keyParts = key.split(':', limit = 2)
+        val cancelModelKey = keyParts[0]
+        val cancelVariant = keyParts.getOrNull(1)?.takeIf { it.isNotEmpty() }
 
         when (state) {
             is DownloadState.Connecting -> {
                 notificationManager.notify(nid,
-                    createNotification(getString(R.string.download_status_connecting), title, nid, indeterminate = true))
+                    createNotification(getString(R.string.download_status_connecting), title, nid, indeterminate = true, cancelModelKey = cancelModelKey, cancelVariant = cancelVariant))
             }
             is DownloadState.CheckingAccess -> {
                 notificationManager.notify(nid,
-                    createNotification(getString(R.string.download_status_checking_access), title, nid, indeterminate = true))
+                    createNotification(getString(R.string.download_status_checking_access), title, nid, indeterminate = true, cancelModelKey = cancelModelKey, cancelVariant = cancelVariant))
             }
             is DownloadState.Downloading -> {
                 val percent = state.progressPercent.toInt()
                 val text = getString(R.string.notification_downloading_progress, percent)
                 notificationManager.notify(nid,
-                    createNotification(text, title, nid, progress = percent, maxProgress = 100))
+                    createNotification(text, title, nid, progress = percent, maxProgress = 100, cancelModelKey = cancelModelKey, cancelVariant = cancelVariant))
             }
             is DownloadState.Retrying -> {
                 val text = getString(R.string.download_status_retrying, state.attempt, state.maxRetries)
                 notificationManager.notify(nid,
-                    createNotification(text, title, nid, indeterminate = true))
+                    createNotification(text, title, nid, indeterminate = true, cancelModelKey = cancelModelKey, cancelVariant = cancelVariant))
             }
             is DownloadState.Extracting -> {
                 val text = if (state.totalFiles > 0) {
@@ -385,16 +399,18 @@ class ExtractionService : Service() {
                 notificationManager.notify(nid,
                     createNotification(text, title, nid, progress = progress, maxProgress = maxProgress,
                         indeterminate = state.totalFiles <= 0,
-                        subText = getString(R.string.notification_extracting_hint)))
+                        subText = getString(R.string.notification_extracting_hint),
+                        cancelModelKey = cancelModelKey, cancelVariant = cancelVariant))
             }
             is DownloadState.Complete -> {
                 notificationManager.notify(nid,
                     createNotification(getString(R.string.notification_download_complete), title, nid,
-                        progress = 100, maxProgress = 100, ongoing = false))
+                        progress = 100, maxProgress = 100, ongoing = false,
+                        cancelModelKey = cancelModelKey, cancelVariant = cancelVariant))
             }
             is DownloadState.Error -> {
                 notificationManager.notify(nid,
-                    createNotification("Error: ${state.message}", title, nid, ongoing = false))
+                    createNotification("Error: ${state.message}", title, nid, ongoing = false, cancelModelKey = cancelModelKey, cancelVariant = cancelVariant))
             }
             is DownloadState.Cancelled -> {
                 notificationManager.cancel(nid)

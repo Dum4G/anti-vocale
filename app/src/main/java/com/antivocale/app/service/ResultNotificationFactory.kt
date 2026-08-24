@@ -25,6 +25,8 @@ data class ResultNotificationSpec(
     val failedChunkCount: Int = 0,
     val pageIndex: Int = 0,
     val notificationId: Int,
+    /** TASK-385: the clipboard was silently modified; surfaced in subText instead of a toast-only signal. */
+    val copiedToClipboard: Boolean = false,
     val firstPostedAt: Long = System.currentTimeMillis(),
     /** True when rebuilding after a prev/next tap: suppresses re-alerting. */
     val repost: Boolean = false
@@ -137,6 +139,9 @@ class ResultNotificationFactory(private val context: Context) {
         if (spec.confidence != null && spec.confidence < CONFIDENCE_MEDIUM_THRESHOLD) {
             subTextParts.add(context.getString(R.string.confidence_low))
         }
+        if (spec.copiedToClipboard) {
+            subTextParts.add(context.getString(R.string.copied_to_clipboard))
+        }
         if (subTextParts.isNotEmpty()) {
             builder.setSubText(subTextParts.joinToString(" · "))
         }
@@ -170,7 +175,7 @@ class ResultNotificationFactory(private val context: Context) {
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
             builder.addAction(
-                android.R.drawable.ic_menu_revert,
+                android.R.drawable.ic_menu_send,
                 AppInfoUtils.getSendToText(context, spec.sourcePackage),
                 shareBackPendingIntent
             )

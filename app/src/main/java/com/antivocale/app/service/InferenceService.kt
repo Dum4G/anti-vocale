@@ -554,9 +554,9 @@ class InferenceService : Service(), TranscriptionListener {
             // read as "the notification vanished and nothing arrived" (TASK-336).
             pendingResultNotifications.add(serviceScope.launch {
                 try {
-                    autoCopyIfEnabled(resultText, sourcePackage)
+                    val copied = autoCopyIfEnabled(resultText, sourcePackage)
                     saveTranscriptToFileIfEnabled(resultText, sourcePackage)
-                    showResultNotification(resultText, sourcePackage, taskId, confidence, detectedLanguage, isPartial, failedChunkCount)
+                    showResultNotification(resultText, sourcePackage, taskId, confidence, detectedLanguage, isPartial, failedChunkCount, copiedToClipboard = copied)
                 } finally {
                     pendingResultNotifications.remove(coroutineContext[Job])
                 }
@@ -602,7 +602,8 @@ class InferenceService : Service(), TranscriptionListener {
 
     // ---- Auto-Copy ----
 
-    private suspend fun autoCopyIfEnabled(transcriptionText: String, sourcePackage: String?) {
+    /** @return true when the text was copied (TASK-385: rides the result notification subText). */
+    private suspend fun autoCopyIfEnabled(transcriptionText: String, sourcePackage: String?): Boolean {
         // Effective auto-copy = global toggle OR per-app preference (issue #13). The global
         // "Auto-Copy Transcription" toggle is the master enable; per-app preferences add their
         // own defaults/overrides on top. Previously the per-app value shadowed the global for
@@ -629,7 +630,9 @@ class InferenceService : Service(), TranscriptionListener {
                     R.string.copied_to_clipboard
                 )
             }
+            return true
         }
+        return false
     }
 
     // ---- Auto-save to folder (issue #14) ----
@@ -784,7 +787,8 @@ class InferenceService : Service(), TranscriptionListener {
         confidence: Float?,
         detectedLanguage: String?,
         isPartial: Boolean = false,
-        failedChunkCount: Int = 0
+        failedChunkCount: Int = 0,
+        copiedToClipboard: Boolean = false,
     ) {
         val prefs = if (sourcePackage != null) {
             try {
@@ -807,6 +811,7 @@ class InferenceService : Service(), TranscriptionListener {
             isPartial = isPartial,
             failedChunkCount = failedChunkCount,
             notificationId = id,
+            copiedToClipboard = copiedToClipboard,
             firstPostedAt = System.currentTimeMillis()
         )
         val notification = resultNotificationFactory.build(spec, prefs)
