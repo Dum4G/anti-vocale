@@ -70,6 +70,8 @@ class BridgeApplication : Application(), Configuration.Provider {
         // (START_NOT_STICKY restores nothing); fail them so they don't render as a
         // permanently in-flight queue. Runs at process start, before the service can
         // exist in this process, so no live row can be caught.
+        // TASK-396: set BEFORE the sweep (it calls consumeLastCrashWasOOM)
+        CrashReporter.filesDir = filesDir
         runCatching {
             val wasOOMCrash = CrashReporter.consumeLastCrashWasOOM()
             kotlinx.coroutines.runBlocking {
@@ -89,7 +91,6 @@ class BridgeApplication : Application(), Configuration.Provider {
         }
         shareTargetManager.syncAll()
         migrateLanguagePreference()
-        CrashReporter.filesDir = filesDir
         installGlobalExceptionHandler()
     }
 
