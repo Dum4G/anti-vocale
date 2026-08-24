@@ -86,26 +86,17 @@ class TaskerRequestReceiver : BroadcastReceiver() {
         val prompt = intent.getStringExtra(EXTRA_PROMPT) ?: ""
         val filePath = intent.getStringExtra(EXTRA_FILE_PATH)
         val taskId = intent.getStringExtra(EXTRA_TASK_ID) ?: "unknown_${System.currentTimeMillis()}"
-        // TASK-394: one-shot backend override. Validated loudly: an unknown id
-        // must NOT fall back silently to the saved preference (that would
-        // transcribe with the wrong model and look like a success).
-        val backendOverride = intent.getStringExtra(EXTRA_BACKEND_ID)?.also { id ->
-            // Registry is Hilt-scoped and this receiver has no injection; the
-            // valid-id space is the static descriptors' sources: the "llm" id,
-            // catalog entry ids, and the external: prefix (records are validated
-            // downstream with a loud ExternalModelUnavailable).
-            val known = id == LlmTranscriptionBackend.BACKEND_ID ||
-                BundledCatalog.byId(id) != null ||
-                id.startsWith(ExternalModelRecord.BACKEND_ID_PREFIX)
-            if (!known) {
-                Log.e(TAG, "Unknown backend_id '$id'")
-                context.sendBroadcast(Intent(ACTION_TASKER_REPLY).apply {
-                    putExtra(EXTRA_TASK_ID, taskId)
-                    putExtra(EXTRA_STATUS, STATUS_ERROR)
-                    putExtra(EXTRA_ERROR_MESSAGE, "unknown backend_id: $id")
-                })
-                return
-            }
+        // TASK-394: one-shot backend override. Unknown ids fail loudly instead of
+        // silently falling back to the saved preference (wrong model, looks like success).
+        val backendOverride = intent.getStringExtra(EXTRA_BACKEND_ID)
+        if (backendOverride != null && !isKnownBackendId(backendOverride)) {
+            Log.e(TAG, "Unknown backend_id '$backendOverride'")
+            context.sendBroadcast(Intent(ACTION_TASKER_REPLY).apply {
+                putExtra(EXTRA_TASK_ID, taskId)
+                putExtra(EXTRA_STATUS, STATUS_ERROR)
+                putExtra(EXTRA_ERROR_MESSAGE, "unknown backend_id: $backendOverride")
+            })
+            return
         }
 
         Log.d(TAG, "Request: type=$requestType, taskId=$taskId, prompt=${prompt.take(50)}...")
@@ -135,6 +126,15 @@ class TaskerRequestReceiver : BroadcastReceiver() {
         }
     }
 
+    // The BackendRegistry is Hilt-scoped and this receiver has no injection, so
+    // the valid-id space is enumerated from its static sources: the "llm" id,
+    // catalog entry ids, and the external: prefix (record validity is enforced
+    // downstream with a loud ExternalModelUnavailable).
+    private fun isKnownBackendId(id: String): Boolean =
+        id == LlmTranscriptionBackend.BACKEND_ID ||
+            BundledCatalog.byId(id) != null ||
+            id.startsWith(ExternalModelRecord.BACKEND_ID_PREFIX)
+
     /**
      * Posts a high-priority notification that, when tapped, launches [TaskerTrampolineActivity]
      * which starts [InferenceService]. The notification tap counts as user-initiated,
@@ -160,10 +160,8 @@ class TaskerRequestReceiver : BroadcastReceiver() {
             putExtra(EXTRA_PROMPT, prompt)
             putExtra(EXTRA_FILE_PATH, filePath)
             putExtra(EXTRA_TASK_ID, taskId)
-            // TASK-394 (reviewer finding): the trampoline forwards everything,
-            // so carrying the override here keeps the fallback path consistent
-            // with the direct start (a lost override would silently transcribe
-            // with the saved default model).
+            // TASK-394: the trampoline forwards all extras, so carrying the
+            // override here keeps the fallback path consistent with the direct start.
             putExtra(InferenceService.EXTRA_BACKEND_OVERRIDE, backendOverride)
         }
 

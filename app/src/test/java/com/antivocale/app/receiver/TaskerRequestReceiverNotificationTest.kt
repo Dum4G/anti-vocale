@@ -127,7 +127,6 @@ class TaskerRequestReceiverNotificationTest {
             putExtra(TaskerRequestReceiver.EXTRA_BACKEND_ID, "llm")
         }
         receiver.onReceive(context, intent)
-        // Robolectric ShadowApplication captures started services.
         val started = shadowOf(context.applicationContext as Application).nextStartedService
         assertNotNull(started)
         assertEquals(
