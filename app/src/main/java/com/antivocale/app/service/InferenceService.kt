@@ -577,7 +577,12 @@ class InferenceService : Service(), TranscriptionListener {
         // The Logs row records the error either way, but a user actively waiting on
         // an in-app transcription had no immediate signal unless they expanded the row.
         if (isNoModelError) showNoModelNotification()
-        else showErrorNotification(errorMessage)
+        else showErrorNotification(
+            // TASK-396 pt.1: the orchestrator's OOM catch reports the technical
+            // class name as the message; the notification must carry the localized
+            // mitigation advice, not "OutOfMemoryError".
+            if (errorCode == "OUT_OF_MEMORY") getString(R.string.error_oom_transcription)
+            else errorMessage)
     }
 
     // ---- Broadcast Replies ----

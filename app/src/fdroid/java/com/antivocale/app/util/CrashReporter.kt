@@ -29,18 +29,24 @@ object CrashReporter {
         markOomIfOOM(throwable)
     }
 
-    /** TASK-396 pt.2: persist an OOM marker readable at the next cold start. */
+    /** TASK-396 pt.2: persist an OOM marker readable at the next cold start.
+     *  Resolves via the injected [filesDir] (debug builds run as .debug and the
+     *  hardcoded production path is unwritable there); falls back to it otherwise.
+     *  Guarded: an IO failure here must never mask the crash being reported. */
+    private fun markerFile(): java.io.File =
+        filesDir?.resolve("last_crash_oom") ?: java.io.File(OOM_MARKER_PATH)
+
     private fun markOomIfOOM(throwable: Throwable) {
         if (throwable is OutOfMemoryError) {
             // No SharedPreferences on the fdroid flavor's minimal surface; the
             // marker is a plain file the Application can check cheaply.
-            java.io.File(OOM_MARKER_PATH).writeText("1")
+            runCatching { markerFile().writeText("1") }
         }
     }
 
     /** True when the previous process died on an OutOfMemoryError. Clears the marker. */
     fun consumeLastCrashWasOOM(): Boolean {
-        val marker = java.io.File(OOM_MARKER_PATH)
+        val marker = markerFile()
         return if (marker.exists()) {
             marker.delete()
             true

@@ -44,18 +44,23 @@ object CrashReporter {
         }
     }
 
-    /** TASK-396 pt.2: persist an OOM marker readable at the next cold start. */
+    /** TASK-396 pt.2: persist an OOM marker readable at the next cold start.
+     *  Resolves via the injected [filesDir] (debug builds run as .debug and the
+     *  hardcoded production path is unwritable there); falls back to it otherwise. */
+    private fun markerFile(): java.io.File =
+        filesDir?.resolve("last_crash_oom") ?: java.io.File(OOM_MARKER_PATH)
+
     private fun markOomIfOOM(throwable: Throwable) {
         if (throwable is OutOfMemoryError) {
             runCatching {
-                java.io.File(OOM_MARKER_PATH).writeText("1")
+                markerFile().writeText("1")
             }
         }
     }
 
     /** True when the previous process died on an OutOfMemoryError. Clears the marker. */
     fun consumeLastCrashWasOOM(): Boolean {
-        val marker = java.io.File(OOM_MARKER_PATH)
+        val marker = markerFile()
         return if (marker.exists()) {
             marker.delete()
             true
