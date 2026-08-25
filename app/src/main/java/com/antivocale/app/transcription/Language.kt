@@ -6,7 +6,8 @@ import com.antivocale.app.R
  * Language metadata for the model filter feature.
  *
  * Contains per-backend language support sets (ISO 639-1 codes)
- * and a curated list of filter entries for the UI dropdown.
+ * and a curated list of filter codes for the UI dropdown. Display names come
+ * from the platform ICU data via [com.antivocale.app.util.LanguageNames].
  */
 object Language {
 
@@ -125,8 +126,7 @@ object Language {
     )
 
     /** Nemotron 3.5 streaming multilingual — languages the model conditions on
-     *  (derived from its ONNX prompt_dictionary; see docs/sherpa-onnx-multilingual-validation.ipynb).
-     *  Restricted to languages that have localized display names in [FILTER_ENTRIES]. */
+     *  (derived from its ONNX prompt_dictionary; see docs/sherpa-onnx-multilingual-validation.ipynb). */
     val NEMOTRON: Set<String> = setOf(
         "en", "es", "zh", "hi", "ar", "fr", "de", "ja", "ru", "pt",
         "ko", "it", "nl", "pl", "tr", "uk", "ro", "el", "cs", "hu",

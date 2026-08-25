@@ -748,9 +748,12 @@ class SettingsViewModel @Inject constructor(
 // ---- TASK-353: locale-aware language option ordering ----
 // Alphabetical order is locale-dependent, so the sort runs at READ time with a
 // Collator for the active app locale (what the Android system language picker
-// does, frameworks/opt/localepicker LocaleHelper). Native display names are
-// kept: users find their language by its own name. The sentinel entry (system
-// default / auto-detect) stays pinned first.
+// does, frameworks/opt/localepicker LocaleHelper). Display names come from the
+// platform ICU/CLDR data via [LanguageNames] (native names: users find their
+// language by its own name; see util/LanguageNames.kt). The sentinel entry
+// (system default / auto-detect) stays pinned first; its label is genuinely
+// translatable and resolved from string resources at the UI layer, so its
+// displayName here is an unused placeholder.
 
 data class LanguageOption(val code: String, val displayName: String)
 
