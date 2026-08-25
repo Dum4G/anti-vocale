@@ -85,7 +85,7 @@
     <string name="logs_undo">Скасувати</string>
     <string name="logs_cancel">Скасувати</string>
     <string name="logs_confirm">Підтвердити</string>
-    <string name="logs_empty_hint">Поділіться голосовим повідомленням з WhatsApp, Telegram або іншого додатка, щоб побачити розшифровки тут</string>
+    <string name="logs_empty_hint">Поділіться голосовим повідомленням із месенджера, і тут з\'явиться його текст</string>
     <string name="logs_prompt_label">Запит:</string>
     <string name="logs_result_label">Результат:</string>
     <string name="logs_error_label">Помилка:</string>
