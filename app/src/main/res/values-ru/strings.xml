@@ -542,7 +542,7 @@
 
     <!-- Freeze-rescue prompt -->
     <string name="freeze_detected_title">Распознавание приостановлено системой</string>
-    <string name="freeze_detected_text">Система заморозила приложение во время распознавания. Нажмите «Разрешить», чтобы оно доработало в фоне — прерванная транскрипция продолжится сама.</string>
+    <string name="freeze_detected_text">Система заморозила приложение во время распознавания. Нажмите «Разрешить», чтобы оно доработало в фоне, и прерванное распознавание продолжится само.</string>
     <string name="freeze_allow_action">Разрешить</string>
 
     <!-- Tasker fallback notification -->
