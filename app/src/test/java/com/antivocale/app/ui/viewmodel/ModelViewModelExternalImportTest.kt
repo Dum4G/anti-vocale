@@ -128,6 +128,7 @@ class ModelViewModelExternalImportTest {
             externalModelStore = com.antivocale.app.data.ExternalModelStore(fakePrefs),
             externalModelImporter = fakeImporter,
             litertLmUrlImporter = io.mockk.mockk(relaxed = true),
+            externalCatalogRepository = io.mockk.mockk(relaxed = true),
         )
 
     }

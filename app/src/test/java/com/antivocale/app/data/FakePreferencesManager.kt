@@ -59,6 +59,10 @@ internal class FakePreferencesManager : PreferencesManager {
     override val themeMode: Flow<String> get() = _themeMode
     override val transcriptionBackend: Flow<String> get() = _transcriptionBackend
     override fun sherpaModelPath(entryId: String): Flow<String?> = _sherpaModelPath(entryId)
+    override val externalCatalogUrl: kotlinx.coroutines.flow.Flow<String> =
+        kotlinx.coroutines.flow.MutableStateFlow(PreferencesManager.DEFAULT_EXTERNAL_CATALOG_URL)
+    override suspend fun saveExternalCatalogUrl(url: String) {}
+
     override val externalMigrationDone: Flow<Boolean> get() = _externalMigrationDone
     override val customTransducerModelPath: Flow<String?> get() = _customTransducerModelPath
     override val customTransducerModelType: Flow<String> get() = _customTransducerModelType

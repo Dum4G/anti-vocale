@@ -777,7 +777,6 @@
     <string name="external_import_folder">Ordner auswählen</string>
     <string name="external_import_url">Von URL importieren</string>
     <string name="external_url_hint">HuggingFace-Repo oder URL einer Katalog-Eintrag-JSON</string>
-    <string name="external_url_dialog_title">Externes Modell importieren</string>
     <string name="external_import">Importieren</string>
     <string name="external_importing">Modell wird importiert…</string>
     <string name="external_importing_file">%1$s wird importiert (%2$d von %3$d)…</string>
@@ -786,6 +785,19 @@
     <string name="external_delete_confirm">Externes Modell %1$s löschen?</string>
     <string name="external_deleted">%1$s gelöscht</string>
         <string name="external_catalog_all">Alle Sprachen</string>
+        <string name="external_catalog_dialog_title">Aus Katalog importieren</string>
+    <string name="external_catalog_loading">Katalog wird geladen…</string>
+    <string name="external_catalog_error">Katalog konnte nicht geladen werden: %1$s</string>
+    <string name="external_catalog_retry">Erneut versuchen</string>
+    <string name="external_catalog_source">Katalog</string>
+    <string name="external_catalog_official">Community (offiziell)</string>
+    <string name="external_catalog_custom">Eigene Quelle</string>
+    <string name="external_catalog_offline">offline</string>
+    <string name="external_catalog_change">ändern</string>
+    <string name="external_catalog_url">Katalog-Index-URL</string>
+    <string name="external_catalog_apply">Übernehmen</string>
+    <string name="external_catalog_restore">Offiziellen Katalog wiederherstellen</string>
+    <string name="external_link_advanced">Ich habe bereits einen Link (erweitert)</string>
     <string name="external_catalog_language">Sprache</string>
     <string name="external_catalog_other">Weitere Sprachen</string>
     <string name="external_decode_language">Dekodierungssprache</string>

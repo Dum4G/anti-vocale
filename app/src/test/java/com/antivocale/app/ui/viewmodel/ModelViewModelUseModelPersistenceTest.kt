@@ -116,6 +116,7 @@ class ModelViewModelUseModelPersistenceTest {
                 filesRoot = { Files.createTempDirectory("use-model-ext").toFile() },
             ),
             litertLmUrlImporter = io.mockk.mockk(relaxed = true),
+            externalCatalogRepository = io.mockk.mockk(relaxed = true),
         )
 
     }

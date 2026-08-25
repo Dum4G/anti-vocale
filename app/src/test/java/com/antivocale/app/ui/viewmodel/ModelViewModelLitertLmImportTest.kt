@@ -110,6 +110,7 @@ class ModelViewModelLitertLmImportTest {
                 filesRoot = { Files.createTempDirectory("litertlm-ext").toFile() },
             ),
             litertLmUrlImporter = importer,
+            externalCatalogRepository = mockk(relaxed = true),
         )
     }
 

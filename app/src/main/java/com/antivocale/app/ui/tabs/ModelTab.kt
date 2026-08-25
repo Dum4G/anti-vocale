@@ -5,6 +5,9 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -15,6 +18,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -1061,27 +1065,6 @@ private fun LanguageEndonymDropdown(
     }
 }
 
-/** One catalog suggestion row: name + declared languages, fills URL and family. */
-@Composable
-private fun CatalogSuggestionRow(
-    entry: ExternalCatalog.CatalogEntry,
-    onTap: (ExternalCatalog.CatalogEntry) -> Unit,
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onTap(entry) }
-            .padding(vertical = 8.dp)
-    ) {
-        Text(entry.name, style = MaterialTheme.typography.bodyMedium)
-        Text(
-            entry.languages.joinToString(", "),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
-}
-
 /**
  * Imported external models: one card per record plus the two import actions and the
  * shared family selector with its conditional options panel. The two standing notices
@@ -1099,35 +1082,9 @@ private fun ExternalModelsSection(
 ) {
     val records by viewModel.externalModels.collectAsState()
     val importState by viewModel.externalImportState.collectAsState()
-    val context = LocalContext.current
     var urlDialogOpen by remember { mutableStateOf(false) }
-    // TASK-401: the dialog's discovery filter. Blank = all languages (Auto-detect);
-    // a chosen code partitions the catalog suggestions (matching first, the rest
-    // under the "other" separator). Pasting a URL skips it as before.
-    var catalogLanguage by remember { mutableStateOf("") }
-    var urlText by remember { mutableStateOf("") }
-    // Fills URL and family from a tapped catalog suggestion.
-    val pickEntry: (ExternalCatalog.CatalogEntry) -> Unit = { entry ->
-        urlText = entry.entryUrl
-        onSelectionChange(selection.copy(family = entry.family))
-    }
     var dropdownExpanded by remember { mutableStateOf(false) }
     var ctcExpanded by remember { mutableStateOf(false) }
-
-    // Bundled catalog index for the URL-dialog autocomplete (search by name or
-    // language), parsed lazily on the first dialog open instead of on every
-    // Models-tab composition. A read failure degrades to no suggestions, never
-    // a crash.
-    var catalogEntries by remember { mutableStateOf<List<ExternalCatalog.CatalogEntry>>(emptyList()) }
-    LaunchedEffect(urlDialogOpen) {
-        if (urlDialogOpen && catalogEntries.isEmpty()) {
-            catalogEntries = runCatching {
-                context.assets.open("external-catalog/index.json").use {
-                    it.readBytes().decodeToString()
-                }.let(ExternalCatalog::parseIndex)
-            }.getOrDefault(emptyList())
-        }
-    }
 
     // lint AST misresolves this block; it returns List<Triple<...>>
     @SuppressLint("RememberReturnType")
@@ -1364,58 +1321,182 @@ private fun ExternalModelsSection(
     }
 
     if (urlDialogOpen) {
+        val catalogState by viewModel.catalogUiState.collectAsState()
+        LaunchedEffect(urlDialogOpen) {
+            if (urlDialogOpen) viewModel.loadExternalCatalog()
+        }
+        var catalogLanguage by remember { mutableStateOf("") }
+        var selectedEntry by remember { mutableStateOf<ExternalCatalog.CatalogEntry?>(null) }
+        var overrideMode by remember { mutableStateOf(false) }
+        var overrideUrl by remember { mutableStateOf("") }
+        var linkMode by remember { mutableStateOf(false) }
+        var linkUrl by remember { mutableStateOf("") }
+
         androidx.compose.material3.AlertDialog(
             onDismissRequest = { urlDialogOpen = false },
-            title = { Text(stringResource(R.string.external_url_dialog_title)) },
+            title = { Text(stringResource(R.string.external_catalog_dialog_title)) },
             text = {
                 Column {
-                    OutlinedTextField(
-                        value = urlText,
-                        onValueChange = { urlText = it },
-                        placeholder = { Text(stringResource(R.string.external_url_hint)) },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    // TASK-401 step 1: language drives discovery. A dropdown (not
-                    // free text: ISO codes are expert knowledge) with the full
-                    // FILTER_ENTRIES list shown as native endonyms per the
-                    // platform-picker policy (PR #66); first entry clears it.
-                    LanguageEndonymDropdown(
-                        selected = catalogLanguage,
-                        onSelect = { catalogLanguage = it },
-                        label = stringResource(R.string.external_catalog_language),
-                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 4.dp),
-                        blankText = stringResource(R.string.external_catalog_all)
-                    )
-                    // Catalog autocomplete: text filters (name + languages); the
-                    // chosen language partitions the results, matching entries
-                    // first and the rest under the "other" separator. Hidden once
-                    // the text looks like a URL being typed or pasted.
-                    if (!urlText.startsWith("http")) {
-                        val (matching, other) = ExternalCatalog.partitionByLanguage(
-                            ExternalCatalog.filter(catalogEntries, urlText), catalogLanguage)
-                        matching.forEach { entry -> CatalogSuggestionRow(entry, pickEntry) }
-                        if (other.isNotEmpty() && catalogLanguage.isNotBlank()) {
-                            Text(
-                                stringResource(R.string.external_catalog_other),
-                                style = MaterialTheme.typography.labelSmall,
+                    // Source row: the catalog IS the subject of the dialog. The URL
+                    // exists only behind "change" (TASK-401: initial information,
+                    // not something to keep looking at).
+                    when (val cs = catalogState) {
+                        is ModelViewModel.CatalogUiState.Loading ->
+                            Text(stringResource(R.string.external_catalog_loading),
+                                style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(top = 8.dp)
+                                modifier = Modifier.padding(vertical = 8.dp))
+                        is ModelViewModel.CatalogUiState.Error -> Column {
+                            Text(
+                                stringResource(R.string.external_catalog_error, cs.message),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.padding(vertical = 4.dp))
+                            TextButton(onClick = { viewModel.loadExternalCatalog(true) }) {
+                                Text(stringResource(R.string.external_catalog_retry))
+                            }
+                        }
+                        is ModelViewModel.CatalogUiState.Ready -> Unit
+                    }
+                    if (!overrideMode) {
+                        val ready = catalogState as? ModelViewModel.CatalogUiState.Ready
+                        if (ready != null) Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp)
+                        ) {
+                            val label = if (ready.isOverride)
+                                stringResource(R.string.external_catalog_custom)
+                            else stringResource(R.string.external_catalog_official)
+                            Text(
+                                stringResource(R.string.external_catalog_source) + ": " + label +
+                                    if (ready?.offline == true) " (" +
+                                        stringResource(R.string.external_catalog_offline) + ")" else "",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.weight(1f),
+                                maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(
+                                stringResource(R.string.external_catalog_change),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier
+                                    .clickable { overrideMode = true; selectedEntry = null }
+                                    .padding(4.dp))
+                        }
+                        if (ready != null) {
+                            LanguageEndonymDropdown(
+                                selected = catalogLanguage,
+                                onSelect = { catalogLanguage = it; selectedEntry = null },
+                                label = stringResource(R.string.external_catalog_language),
+                                modifier = Modifier.fillMaxWidth(),
+                                blankText = stringResource(R.string.external_catalog_all)
                             )
-                            other.forEach { entry -> CatalogSuggestionRow(entry, pickEntry) }
+                            val (matching, other) = ExternalCatalog.partitionByLanguage(
+                                ExternalCatalog.filter(ready.entries, ""), catalogLanguage)
+                            LazyColumn(modifier = Modifier.heightIn(max = 220.dp)) {
+                                items(matching) { entry ->
+                                    CatalogPickRow(entry, entry.entryUrl == selectedEntry?.entryUrl) {
+                                        selectedEntry = entry
+                                    }
+                                }
+                                if (other.isNotEmpty() && catalogLanguage.isNotBlank()) {
+                                    item {
+                                        Text(
+                                            stringResource(R.string.external_catalog_other),
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.padding(top = 6.dp))
+                                    }
+                                    items(other) { entry ->
+                                        CatalogPickRow(entry, entry.entryUrl == selectedEntry?.entryUrl) {
+                                            selectedEntry = entry
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        // Override mode: the one place a URL is typed, pointing at an
+                        // INDEX (a list), not a single model.
+                        OutlinedTextField(
+                            value = overrideUrl,
+                            onValueChange = { overrideUrl = it },
+                            label = { Text(stringResource(R.string.external_catalog_url)) },
+                            placeholder = { Text("https://…/index.json") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Row {
+                            TextButton(onClick = { overrideMode = false }) {
+                                Text(stringResource(android.R.string.cancel))
+                            }
+                            TextButton(
+                                enabled = overrideUrl.isNotBlank(),
+                                onClick = {
+                                    viewModel.saveExternalCatalogUrl(overrideUrl.trim()) { ok ->
+                                        if (ok) overrideMode = false
+                                    }
+                                }
+                            ) { Text(stringResource(R.string.external_catalog_apply)) }
+                        }
+                        TextButton(onClick = { viewModel.resetExternalCatalogUrl() }) {
+                            Text(stringResource(R.string.external_catalog_restore))
                         }
                     }
-                    // Architecture selector is in the section above (visible for both
-                    // import paths), not duplicated here.
+                    // Selection row: the model is the state, never a URL written
+                    // into a field.
+                    selectedEntry?.let { entry ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 6.dp)
+                                .clickable { selectedEntry = null }
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(entry.name, style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.SemiBold)
+                                Text(entry.languages.joinToString(", "),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            Text("×", color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(4.dp))
+                        }
+                    }
+                    // Advanced branch: an existing link (entry JSON or HF repo), for
+                    // the expert path. Never visible in the main flow.
+                    if (!linkMode) {
+                        Text(
+                            stringResource(R.string.external_link_advanced),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier
+                                .clickable { linkMode = true; selectedEntry = null }
+                                .padding(top = 4.dp))
+                    } else {
+                        OutlinedTextField(
+                            value = linkUrl,
+                            onValueChange = { linkUrl = it },
+                            label = { Text(stringResource(R.string.external_url_hint)) },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth().padding(top = 6.dp)
+                        )
+                    }
                 }
             },
             confirmButton = {
                 androidx.compose.material3.TextButton(
+                    enabled = selectedEntry != null || (linkMode && linkUrl.isNotBlank()),
                     onClick = {
+                        val entry = selectedEntry
+                        val manual = if (linkMode) linkUrl.trim().isNotBlank() else false
                         urlDialogOpen = false
-                        if (urlText.isNotBlank()) {
-                            viewModel.importExternalFromUrl(
-                                urlText.trim(), selection.family,
+                        when {
+                            entry != null -> viewModel.importExternalFromUrl(
+                                entry.entryUrl, entry.family)
+                            manual -> viewModel.importExternalFromUrl(
+                                linkUrl.trim(), selection.family,
                                 ctcModelType = selection.ctcModelType,
                                 options = selection.options(),
                                 languages = selection.languageCodes(),
@@ -1430,6 +1511,38 @@ private fun ExternalModelsSection(
                 }
             }
         )
+    }
+}
+
+/** One pickable catalog row: name + declared languages; tapping SELECTS it. */
+@Composable
+private fun CatalogPickRow(
+    entry: ExternalCatalog.CatalogEntry,
+    selected: Boolean,
+    onTap: () -> Unit,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onTap() }
+            .padding(vertical = 8.dp)
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(entry.name,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+                color = if (selected) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.onSurface)
+            Text(entry.languages.joinToString(", "),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        if (selected) {
+            Icon(Icons.Default.Check, contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(18.dp))
+        }
     }
 }
 

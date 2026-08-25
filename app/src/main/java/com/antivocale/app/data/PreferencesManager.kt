@@ -22,6 +22,10 @@ interface PreferencesManager {
     val customTransducerModelType: Flow<String>
     /** One-shot custom-transducer -> external-model migration marker (v2a Task 9). */
     val externalMigrationDone: Flow<Boolean>
+    /** TASK-401: source index for the community catalog dialog. Default = the
+     *  index published in our repo; an override persists until changed back. */
+    val externalCatalogUrl: Flow<String>
+    suspend fun saveExternalCatalogUrl(url: String)
     val ggufModelPath: Flow<String?>
     val autoCopyEnabled: Flow<Boolean>
     val outputFolderUri: Flow<String?>
@@ -112,5 +116,9 @@ interface PreferencesManager {
         const val DEFAULT_FORCE_MODEL_LOAD = false
         const val DEFAULT_COMPACT_RESULT_ACTIONS = true
         const val DEFAULT_SHOW_TASK_DETAILS = false
+
+        /** The maintained community index, published from this repo. */
+        const val DEFAULT_EXTERNAL_CATALOG_URL =
+            "https://raw.githubusercontent.com/RisorseArtificiali/anti-vocale/main/app/src/main/assets/external-catalog/index.json"
     }
 }
