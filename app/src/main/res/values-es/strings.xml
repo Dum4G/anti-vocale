@@ -678,6 +678,11 @@
     <string name="external_imported">%1$s importado</string>
     <string name="external_delete_confirm">¿Eliminar el modelo externo %1$s?</string>
     <string name="external_deleted">%1$s eliminado</string>
+        <string name="external_catalog_all">Todos los idiomas</string>
+    <string name="external_catalog_language">Idioma</string>
+    <string name="external_catalog_other">Otros idiomas</string>
+    <string name="external_decode_language">Idioma de decodificación</string>
+    <string name="external_decode_auto">Detección automática</string>
     <string name="external_family">Familia de modelo</string>
     <string name="external_family_transducer">Transductor (NeMo/Zipformer)</string>
     <string name="external_family_transducer_help">Espera archivos encoder + decoder + joiner + tokens</string>
@@ -687,14 +692,10 @@
     <string name="external_family_ctc_help">Espera archivos encoder + tokens</string>
     <string name="external_family_sense_voice">SenseVoice</string>
     <string name="external_family_sense_voice_help">Espera archivos model + tokens</string>
-    <string name="external_option_language">Idioma (opcional)</string>
-    <string name="external_option_language_hint">p. ej. ar, en, it (vacío = auto)</string>
     <string name="external_option_itn">Normalización inversa de texto</string>
     <string name="external_ctc_subtype">Subtipo CTC</string>
     <string name="external_ctc_subtype_nemo">NeMo CTC</string>
     <string name="external_ctc_subtype_zipformer">Zipformer CTC</string>
-    <string name="external_languages">Idiomas (opcional)</string>
-    <string name="external_languages_hint">separados por comas o espacios, p. ej. ar, en</string>
     <string name="external_notice_single_pass">Un audio muy largo puede no procesarse en una sola pasada con modelos grandes. Recorta el audio o elige un modelo más pequeño.</string>
     <string name="external_notice_family">Si la transcripción se cierra sin error, la arquitectura puede ser incorrecta: elimina y reimporta el modelo con otra arquitectura.</string>
     <string name="share_targets_title">Modelos en el menú Compartir</string>

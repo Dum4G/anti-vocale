@@ -810,6 +810,11 @@
     <string name="external_imported">Imported %1$s</string>
     <string name="external_delete_confirm">Delete external model %1$s?</string>
     <string name="external_deleted">%1$s deleted</string>
+        <string name="external_catalog_all">All languages</string>
+    <string name="external_catalog_language">Language</string>
+    <string name="external_catalog_other">Other languages</string>
+    <string name="external_decode_language">Decode language</string>
+    <string name="external_decode_auto">Auto-detect (no fixed language)</string>
     <string name="external_family">Model family</string>
     <string name="external_family_transducer">Transducer (NeMo/Zipformer)</string>
     <string name="external_family_transducer_help">Expects encoder + decoder + joiner + tokens files</string>
@@ -819,14 +824,10 @@
     <string name="external_family_ctc_help">Expects encoder + tokens files</string>
     <string name="external_family_sense_voice">SenseVoice</string>
     <string name="external_family_sense_voice_help">Expects model + tokens files</string>
-    <string name="external_option_language">Language (optional)</string>
-    <string name="external_option_language_hint">e.g. ar, en, it (blank = auto)</string>
     <string name="external_option_itn">Inverse text normalization</string>
     <string name="external_ctc_subtype">CTC subtype</string>
     <string name="external_ctc_subtype_nemo">NeMo CTC</string>
     <string name="external_ctc_subtype_zipformer">Zipformer CTC</string>
-    <string name="external_languages">Languages (optional)</string>
-    <string name="external_languages_hint">comma or space separated, e.g. ar, en</string>
     <string name="external_notice_single_pass">Very long audio may not be processed by large models in one pass. Trim the audio or choose a smaller model.</string>
     <string name="external_notice_family">If transcription crashes with no error, the architecture may be wrong: delete and re-import the model with a different architecture selected.</string>
 

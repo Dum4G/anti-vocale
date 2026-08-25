@@ -829,6 +829,11 @@
     <string name="external_imported">Імпортовано %1$s</string>
     <string name="external_delete_confirm">Видалити зовнішню модель %1$s?</string>
     <string name="external_deleted">%1$s видалено</string>
+        <string name="external_catalog_all">Усі мови</string>
+    <string name="external_catalog_language">Мова</string>
+    <string name="external_catalog_other">Інші мови</string>
+    <string name="external_decode_language">Мова розпізнавання</string>
+    <string name="external_decode_auto">Автовизначення</string>
     <string name="external_family">Родина моделі</string>
     <string name="external_family_transducer">Transducer (NeMo/Zipformer)</string>
     <string name="external_family_transducer_help">Очікує файли енкодер + декодер + joiner + tokens</string>
@@ -838,14 +843,10 @@
     <string name="external_family_ctc_help">Очікує файли енкодер + tokens</string>
     <string name="external_family_sense_voice">SenseVoice</string>
     <string name="external_family_sense_voice_help">Очікує файли model + tokens</string>
-    <string name="external_option_language">Мова (необов\'язково)</string>
-    <string name="external_option_language_hint">напр. ar, en, it (порожньо = авто)</string>
     <string name="external_option_itn">Зворотна нормалізація тексту</string>
     <string name="external_ctc_subtype">Підтип CTC</string>
     <string name="external_ctc_subtype_nemo">NeMo CTC</string>
     <string name="external_ctc_subtype_zipformer">Zipformer CTC</string>
-    <string name="external_languages">Мови (необов\'язково)</string>
-    <string name="external_languages_hint">розділені комою або пробілом, напр. ar, en</string>
     <string name="external_notice_single_pass">Однопрохідна розшифровка: дуже довге аудіо може не вдатися з великими моделями. Обріжте аудіо або використайте меншу модель.</string>
     <string name="external_notice_family">Якщо розшифровка аварійно завершується без помилки, архітектура може бути хибною: видаліть модель та імпортуйте її знову з іншою вибраною архітектурою.</string>
 

@@ -92,6 +92,25 @@ class ExternalCatalogTest {
     }
 
     @Test
+    fun `partitionByLanguage puts declaring entries first and the rest under other`() {
+        val entries = listOf(
+            ExternalCatalog.CatalogEntry("Swiss German", listOf("de", "gsw"), "u1", ModelFamily.WHISPER),
+            ExternalCatalog.CatalogEntry("Russian", listOf("ru"), "u2", ModelFamily.TRANSDUCER),
+        )
+        // regional prefix match: de-CH declared, de selected
+        val regional = listOf(
+            ExternalCatalog.CatalogEntry("Regional", listOf("de-CH"), "u3", ModelFamily.WHISPER))
+        val (m1, o1) = ExternalCatalog.partitionByLanguage(entries, "de")
+        assertEquals(listOf("u1"), m1.map { it.entryUrl })
+        assertEquals(listOf("u2"), o1.map { it.entryUrl })
+        assertEquals(listOf("u3"), ExternalCatalog.partitionByLanguage(regional, "de").first.map { it.entryUrl })
+        // blank language = everything matches, nothing under other
+        val (all, none) = ExternalCatalog.partitionByLanguage(entries, "")
+        assertEquals(2, all.size)
+        assertTrue(none.isEmpty())
+    }
+
+    @Test
     fun `bundled asset index carries the sherpa-compatible arabic mirror entry`() {
         // The OpenVoiceOS optimum export was replaced by the validated mirror
         // pantinor/whisper-arabic-dialectal-sherpa (TASK-332: desktop-verified

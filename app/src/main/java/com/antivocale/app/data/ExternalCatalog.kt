@@ -37,6 +37,23 @@ object ExternalCatalog {
         }
     }
 
+    /**
+     * TASK-401: partitions [entries] by whether they declare [language]. A blank
+     * language matches everything (all entries in the first list). Used by the
+     * URL dialog's language-driven discovery: matching entries first, the rest
+     * rendered under the "other" separator.
+     */
+    fun partitionByLanguage(
+        entries: List<CatalogEntry>,
+        language: String,
+    ): Pair<List<CatalogEntry>, List<CatalogEntry>> {
+        if (language.isBlank()) return entries to emptyList()
+        val code = language.lowercase()
+        return entries.partition { e ->
+            e.languages.any { it.equals(code, ignoreCase = true) || it.startsWith("$code-", ignoreCase = true) }
+        }
+    }
+
     /** Entries matching [query], in index order. */
     fun filter(entries: List<CatalogEntry>, query: String): List<CatalogEntry> =
         entries.filter { matchesQuery(it.name, it.languages, query) }

@@ -678,6 +678,11 @@
     <string name="external_imported">%1$s importado</string>
     <string name="external_delete_confirm">Excluir o modelo externo %1$s?</string>
     <string name="external_deleted">%1$s excluído</string>
+        <string name="external_catalog_all">Todos os idiomas</string>
+    <string name="external_catalog_language">Idioma</string>
+    <string name="external_catalog_other">Outros idiomas</string>
+    <string name="external_decode_language">Idioma de decodificação</string>
+    <string name="external_decode_auto">Detecção automática</string>
     <string name="external_family">Família de modelo</string>
     <string name="external_family_transducer">Transductor (NeMo/Zipformer)</string>
     <string name="external_family_transducer_help">Espera arquivos encoder + decoder + joiner + tokens</string>
@@ -687,14 +692,10 @@
     <string name="external_family_ctc_help">Espera arquivos encoder + tokens</string>
     <string name="external_family_sense_voice">SenseVoice</string>
     <string name="external_family_sense_voice_help">Espera arquivos model + tokens</string>
-    <string name="external_option_language">Idioma (opcional)</string>
-    <string name="external_option_language_hint">ex. ar, en, it (vazio = auto)</string>
     <string name="external_option_itn">Normalização inversa de texto</string>
     <string name="external_ctc_subtype">Subtipo CTC</string>
     <string name="external_ctc_subtype_nemo">NeMo CTC</string>
     <string name="external_ctc_subtype_zipformer">Zipformer CTC</string>
-    <string name="external_languages">Idiomas (opcional)</string>
-    <string name="external_languages_hint">separados por vírgula ou espaço, ex. ar, en</string>
     <string name="external_notice_single_pass">Áudio muito longo pode não ser processado por modelos grandes em uma única passagem. Corte o áudio ou escolha um modelo menor.</string>
     <string name="external_notice_family">Se a transcrição fechar sem erro, a arquitetura pode estar errada: exclua e reimporte o modelo com outra arquitetura.</string>
     <string name="share_targets_title">Modelos no menu Compartilhar</string>

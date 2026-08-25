@@ -47,6 +47,8 @@ import com.antivocale.app.data.catalog.CatalogStringKeys
 import com.antivocale.app.data.download.DownloadState
 import com.antivocale.app.service.InferenceService
 import com.antivocale.app.transcription.CatalogVariantUi
+import com.antivocale.app.transcription.Language
+import com.antivocale.app.util.LanguageNames
 import com.antivocale.app.transcription.LlmTranscriptionBackend
 import com.antivocale.app.transcription.ModelFamilySupport
 import com.antivocale.app.transcription.AudioLimit
@@ -986,28 +988,98 @@ private fun CatalogModelSection(
 internal data class ExternalImportUiState(
     val family: ModelFamily = ModelFamily.TRANSDUCER,
     val ctcModelType: String = "nemo_ctc",
-    val languages: String = "",
-    val whisperLanguage: String = "",
-    val sensevoiceLanguage: String = "",
+    /** TASK-401 alternative A: one "Decode language" choice replaces the old twin
+     *  free-text fields. It feeds the family's language option AND derives the
+     *  record's language tags (one value, both purposes); blank = auto-detect. */
+    val decodeLanguage: String = "",
     val sensevoiceItn: Boolean = false,
 ) {
     /** Family-specific importer options; blank optional fields are omitted. */
     fun options(): Map<String, String> = when (family) {
         ModelFamily.WHISPER ->
-            if (whisperLanguage.isBlank()) emptyMap()
-            else mapOf(ModelFamilySupport.OPTION_WHISPER_LANGUAGE to whisperLanguage.trim())
+            if (decodeLanguage.isBlank()) emptyMap()
+            else mapOf(ModelFamilySupport.OPTION_WHISPER_LANGUAGE to decodeLanguage.trim())
         ModelFamily.SENSE_VOICE -> buildMap {
-            if (sensevoiceLanguage.isNotBlank()) {
-                put(ModelFamilySupport.OPTION_SENSEVOICE_LANGUAGE, sensevoiceLanguage.trim())
+            if (decodeLanguage.isNotBlank()) {
+                put(ModelFamilySupport.OPTION_SENSEVOICE_LANGUAGE, decodeLanguage.trim())
             }
             put(ModelFamilySupport.OPTION_SENSEVOICE_ITN, sensevoiceItn.toString())
         }
         else -> emptyMap()
     }
 
-    /** Comma/space separated language codes for the importer's languages parameter. */
+    /** The decode language doubles as the record's language tags. */
     fun languageCodes(): List<String> =
-        languages.split(',', ' ', ';').map { it.trim() }.filter { it.isNotEmpty() }
+        if (decodeLanguage.isBlank()) emptyList() else listOf(decodeLanguage.trim())
+}
+
+/**
+ * TASK-401 alternative A: a language dropdown (not free text: users had to know
+ * ISO codes), first entry Auto-detect (blank selection), entries from
+ * Language.FILTER_ENTRIES rendered as native endonyms per the platform-picker
+ * policy (PR #66). Shared by the import form's decode language and the URL
+ * dialog's discovery filter; only the label differs.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun LanguageEndonymDropdown(
+    selected: String,
+    onSelect: (String) -> Unit,
+    label: String,
+    modifier: Modifier = Modifier,
+    /** Text for the blank selection. Discovery contexts read "All languages";
+     *  the manual import's decode option reads "Auto-detect". */
+    blankText: String,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = it },
+        modifier = modifier
+    ) {
+        OutlinedTextField(
+            value = if (selected.isBlank()) blankText
+            else LanguageNames.nativeLanguageName(selected),
+            onValueChange = {},
+            readOnly = true,
+            label = { Text(label) },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            modifier = Modifier.fillMaxWidth().menuAnchor()
+        )
+        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            DropdownMenuItem(
+                text = { Text(blankText) },
+                onClick = { onSelect(""); expanded = false }
+            )
+            Language.FILTER_ENTRIES.forEach { code ->
+                DropdownMenuItem(
+                    text = { Text(LanguageNames.nativeLanguageName(code)) },
+                    onClick = { onSelect(code); expanded = false }
+                )
+            }
+        }
+    }
+}
+
+/** One catalog suggestion row: name + declared languages, fills URL and family. */
+@Composable
+private fun CatalogSuggestionRow(
+    entry: ExternalCatalog.CatalogEntry,
+    onTap: (ExternalCatalog.CatalogEntry) -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onTap(entry) }
+            .padding(vertical = 8.dp)
+    ) {
+        Text(entry.name, style = MaterialTheme.typography.bodyMedium)
+        Text(
+            entry.languages.joinToString(", "),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
 }
 
 /**
@@ -1029,7 +1101,16 @@ private fun ExternalModelsSection(
     val importState by viewModel.externalImportState.collectAsState()
     val context = LocalContext.current
     var urlDialogOpen by remember { mutableStateOf(false) }
+    // TASK-401: the dialog's discovery filter. Blank = all languages (Auto-detect);
+    // a chosen code partitions the catalog suggestions (matching first, the rest
+    // under the "other" separator). Pasting a URL skips it as before.
+    var catalogLanguage by remember { mutableStateOf("") }
     var urlText by remember { mutableStateOf("") }
+    // Fills URL and family from a tapped catalog suggestion.
+    val pickEntry: (ExternalCatalog.CatalogEntry) -> Unit = { entry ->
+        urlText = entry.entryUrl
+        onSelectionChange(selection.copy(family = entry.family))
+    }
     var dropdownExpanded by remember { mutableStateOf(false) }
     var ctcExpanded by remember { mutableStateOf(false) }
 
@@ -1124,22 +1205,20 @@ private fun ExternalModelsSection(
 
             // Conditional options panel below the selector.
             when (selection.family) {
-                ModelFamily.WHISPER -> OutlinedTextField(
-                    value = selection.whisperLanguage,
-                    onValueChange = { onSelectionChange(selection.copy(whisperLanguage = it)) },
-                    label = { Text(stringResource(R.string.external_option_language)) },
-                    placeholder = { Text(stringResource(R.string.external_option_language_hint)) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+                ModelFamily.WHISPER -> LanguageEndonymDropdown(
+                    selected = selection.decodeLanguage,
+                    onSelect = { onSelectionChange(selection.copy(decodeLanguage = it)) },
+                    label = stringResource(R.string.external_decode_language),
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                    blankText = stringResource(R.string.external_decode_auto)
                 )
                 ModelFamily.SENSE_VOICE -> {
-                    OutlinedTextField(
-                        value = selection.sensevoiceLanguage,
-                        onValueChange = { onSelectionChange(selection.copy(sensevoiceLanguage = it)) },
-                        label = { Text(stringResource(R.string.external_option_language)) },
-                        placeholder = { Text(stringResource(R.string.external_option_language_hint)) },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+                    LanguageEndonymDropdown(
+                        selected = selection.decodeLanguage,
+                        onSelect = { onSelectionChange(selection.copy(decodeLanguage = it)) },
+                        label = stringResource(R.string.external_decode_language),
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                        blankText = stringResource(R.string.external_decode_auto)
                     )
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
@@ -1190,17 +1269,6 @@ private fun ExternalModelsSection(
                 }
                 else -> {}
             }
-
-            // Languages field for ALL families: stored on the record and used as the
-            // Whisper default language when no explicit option is set.
-            OutlinedTextField(
-                value = selection.languages,
-                onValueChange = { onSelectionChange(selection.copy(languages = it)) },
-                label = { Text(stringResource(R.string.external_languages)) },
-                placeholder = { Text(stringResource(R.string.external_languages_hint)) },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
-            )
 
             Row(modifier = Modifier.fillMaxWidth()) {
             Button(
@@ -1308,30 +1376,34 @@ private fun ExternalModelsSection(
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
-                    // Catalog autocomplete: suggestions filtered by the typed text
-                    // over name + languages, filling URL and family on tap. Hidden
-                    // once the text looks like a URL being typed or pasted.
+                    // TASK-401 step 1: language drives discovery. A dropdown (not
+                    // free text: ISO codes are expert knowledge) with the full
+                    // FILTER_ENTRIES list shown as native endonyms per the
+                    // platform-picker policy (PR #66); first entry clears it.
+                    LanguageEndonymDropdown(
+                        selected = catalogLanguage,
+                        onSelect = { catalogLanguage = it },
+                        label = stringResource(R.string.external_catalog_language),
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 4.dp),
+                        blankText = stringResource(R.string.external_catalog_all)
+                    )
+                    // Catalog autocomplete: text filters (name + languages); the
+                    // chosen language partitions the results, matching entries
+                    // first and the rest under the "other" separator. Hidden once
+                    // the text looks like a URL being typed or pasted.
                     if (!urlText.startsWith("http")) {
-                        ExternalCatalog
-                            .filter(catalogEntries, urlText)
-                            .forEach { entry ->
-                                Column(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable {
-                                            urlText = entry.entryUrl
-                                            onSelectionChange(selection.copy(family = entry.family))
-                                        }
-                                        .padding(vertical = 8.dp)
-                                ) {
-                                    Text(entry.name, style = MaterialTheme.typography.bodyMedium)
-                                    Text(
-                                        entry.languages.joinToString(", "),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            }
+                        val (matching, other) = ExternalCatalog.partitionByLanguage(
+                            ExternalCatalog.filter(catalogEntries, urlText), catalogLanguage)
+                        matching.forEach { entry -> CatalogSuggestionRow(entry, pickEntry) }
+                        if (other.isNotEmpty() && catalogLanguage.isNotBlank()) {
+                            Text(
+                                stringResource(R.string.external_catalog_other),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(top = 8.dp)
+                            )
+                            other.forEach { entry -> CatalogSuggestionRow(entry, pickEntry) }
+                        }
                     }
                     // Architecture selector is in the section above (visible for both
                     // import paths), not duplicated here.
