@@ -57,7 +57,9 @@ import com.antivocale.app.ui.screens.PerAppSettingsScreen
 import com.antivocale.app.ui.screens.PromptSettingsScreen
 import com.antivocale.app.ui.theme.ThemeType
 import com.antivocale.app.util.FeedbackHelper
+import com.antivocale.app.util.LanguageNames
 import com.antivocale.app.service.InferenceService
+import com.antivocale.app.ui.viewmodel.LanguageOption
 import com.antivocale.app.ui.viewmodel.SettingsViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -332,12 +334,17 @@ fun SettingsTab(
                     SettingsDropdown(
                         currentValue = currentTranscriptionLanguage,
                         options = viewModel.transcriptionLanguageOptions.map { it.code },
-                        currentValueDisplay = viewModel.transcriptionLanguageOptions.find { it.code == currentTranscriptionLanguage }?.let {
-                            if (it.code == "auto") stringResource(R.string.transcription_language_auto) else it.displayName
-                        } ?: currentTranscriptionLanguage,
+                        currentValueDisplay = languageOptionLabel(
+                            currentTranscriptionLanguage, "auto",
+                            R.string.transcription_language_auto,
+                            viewModel.transcriptionLanguageOptions
+                        ),
                         optionDisplay = { code ->
-                            if (code == "auto") stringResource(R.string.transcription_language_auto)
-                            else viewModel.transcriptionLanguageOptions.find { it.code == code }?.displayName ?: code
+                            languageOptionLabel(
+                                code, "auto",
+                                R.string.transcription_language_auto,
+                                viewModel.transcriptionLanguageOptions
+                            )
                         },
                         onOptionSelected = { viewModel.saveTranscriptionLanguage(it) },
                         label = stringResource(R.string.transcription_language_title),
@@ -655,28 +662,15 @@ fun SettingsTab(
                     SettingsDropdown(
                         currentValue = currentLanguage,
                         options = viewModel.languageOptions.map { it.code },
-                        currentValueDisplay = when (currentLanguage) {
-                            "system" -> stringResource(R.string.language_system)
-                            "en" -> stringResource(R.string.language_english)
-                            "it" -> stringResource(R.string.language_italian)
-                            "de" -> stringResource(R.string.language_german)
-                            "ru" -> stringResource(R.string.language_russian)
-                            "hi" -> stringResource(R.string.language_hindi)
-                            "fr" -> stringResource(R.string.language_french)
-                            "es" -> stringResource(R.string.language_spanish)
-                            "pt-BR" -> stringResource(R.string.language_portuguese)
-                            else -> viewModel.languageOptions.find { it.code == currentLanguage }?.displayName ?: currentLanguage
-                        },
+                        currentValueDisplay = languageOptionLabel(
+                            currentLanguage, "system",
+                            R.string.language_system, viewModel.languageOptions
+                        ),
                         optionDisplay = { code ->
-                            when (code) {
-                                "system" -> stringResource(R.string.language_system)
-                                "en" -> stringResource(R.string.language_english)
-                                "it" -> stringResource(R.string.language_italian)
-                                "de" -> stringResource(R.string.language_german)
-                                "ru" -> stringResource(R.string.language_russian)
-                                "hi" -> stringResource(R.string.language_hindi)
-                                else -> viewModel.languageOptions.find { it.code == code }?.displayName ?: code
-                            }
+                            languageOptionLabel(
+                                code, "system",
+                                R.string.language_system, viewModel.languageOptions
+                            )
                         },
                         onOptionSelected = { viewModel.saveLanguagePreference(it) },
                         label = stringResource(R.string.language_title),
@@ -1785,4 +1779,22 @@ private fun OutputFolderSettingCard(
             }
         }
     }
+}
+
+/**
+ * Single label policy for the language dropdowns: the sentinel code resolves
+ * to its string resource, everything else goes through the option list and
+ * falls back to an ICU native name. Shared by both dropdowns so the fallback
+ * chain cannot drift apart.
+ */
+@Composable
+private fun languageOptionLabel(
+    code: String,
+    sentinelCode: String,
+    sentinelLabelRes: Int,
+    options: List<LanguageOption>,
+): String = when (code) {
+    sentinelCode -> stringResource(sentinelLabelRes)
+    else -> options.find { it.code == code }?.displayName
+        ?: LanguageNames.nativeLanguageName(code)
 }

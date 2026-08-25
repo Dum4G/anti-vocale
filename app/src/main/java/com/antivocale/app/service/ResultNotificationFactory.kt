@@ -9,9 +9,9 @@ import com.antivocale.app.MainActivity
 import com.antivocale.app.R
 import com.antivocale.app.data.AppNotificationPreferences
 import com.antivocale.app.receiver.NotificationActionReceiver
-import com.antivocale.app.transcription.Language
 import com.antivocale.app.util.AppInfoUtils
 import com.antivocale.app.util.AppNotificationChannel
+import com.antivocale.app.util.LanguageNames
 import java.util.concurrent.atomic.AtomicInteger
 
 /** Everything needed to (re)build one result notification (TASK-327). */
@@ -130,8 +130,7 @@ class ResultNotificationFactory(private val context: Context) {
             )
         }
         val langLabel = spec.detectedLanguage?.let { lang ->
-            Language.FILTER_ENTRIES.find { it.code == lang }
-                ?.let { context.getString(it.nameResId) }
+            LanguageNames.nativeLanguageName(lang)
         }
         if (langLabel != null) {
             subTextParts.add(context.getString(R.string.detected_language, langLabel))
