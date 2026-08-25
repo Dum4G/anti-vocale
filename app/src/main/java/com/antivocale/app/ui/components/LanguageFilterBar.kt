@@ -29,6 +29,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.antivocale.app.R
 import com.antivocale.app.transcription.Language
+import com.antivocale.app.util.LanguageNames
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -40,17 +41,17 @@ fun LanguageFilterBar(
     var expanded by remember { mutableStateOf(false) }
     var textFieldValue by remember { mutableStateOf(TextFieldValue()) }
 
-    val selectedLabel = selectedLanguageCode?.let { code ->
-        Language.FILTER_ENTRIES.find { it.code == code }?.let {
-            stringResource(it.nameResId)
-        }
-    } ?: stringResource(R.string.lang_filter_all)
+    val selectedLabel = selectedLanguageCode
+        ?.let { LanguageNames.nativeLanguageName(it) }
+        ?: stringResource(R.string.lang_filter_all)
 
     val searchQuery = textFieldValue.text
 
-    val allEntries = Language.FILTER_ENTRIES
-        .map { it to stringResource(it.nameResId) }
-        .sortedBy { (_, name) -> name }
+    val allEntries = remember(Language.FILTER_ENTRIES) {
+        Language.FILTER_ENTRIES
+            .map { it to LanguageNames.nativeLanguageName(it) }
+            .sortedBy { (_, name) -> name }
+    }
 
     val matchedEntries = remember(searchQuery) {
         if (searchQuery.isBlank()) allEntries
@@ -145,7 +146,7 @@ fun LanguageFilterBar(
                         onClick = {
                             expanded = false
                             textFieldValue = TextFieldValue()
-                            onLanguageSelected(entry.code)
+                            onLanguageSelected(entry)
                         }
                     )
                 }

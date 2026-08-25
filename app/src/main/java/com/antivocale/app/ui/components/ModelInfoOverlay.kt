@@ -36,10 +36,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.antivocale.app.R
 import com.antivocale.app.transcription.ArchitectureType
-import com.antivocale.app.transcription.Language
 import com.antivocale.app.transcription.LanguageFlags
 import com.antivocale.app.transcription.ModelInfo
 import com.antivocale.app.transcription.ModelVariant
+import com.antivocale.app.util.LanguageNames
 import com.antivocale.app.util.formatFileSize
 
 @Composable
@@ -84,7 +84,6 @@ fun ModelInfoOverlay(
 
 private data class LanguageItem(
     val code: String,
-    val nameResId: Int?,
     val sortKey: String
 )
 
@@ -103,24 +102,12 @@ private fun LanguagesSection(languageCodes: Set<String>) {
     if (languageCodes.isEmpty()) return
 
     val items = remember(languageCodes) {
-        val mapped = Language.FILTER_ENTRIES.filter { it.code in languageCodes }
-        val mappedCodes = mapped.map { it.code }.toSet()
-        val unmapped = languageCodes - mappedCodes
-
-        val mappedItems = mapped.map { entry ->
-            val sortKey = java.util.Locale(entry.code)
+        languageCodes.map { code ->
+            val sortKey = java.util.Locale(code)
                 .getDisplayLanguage(java.util.Locale.ENGLISH)
-                .ifEmpty { entry.code }
-            LanguageItem(code = entry.code, nameResId = entry.nameResId, sortKey = sortKey)
-        }
-        val unmappedItems = unmapped.map { code ->
-            val locale = java.util.Locale(code)
-            val sortKey = locale.getDisplayLanguage(java.util.Locale.ENGLISH)
                 .ifEmpty { code }
-            LanguageItem(code = code, nameResId = null, sortKey = sortKey)
-        }
-
-        (mappedItems + unmappedItems).sortedBy { it.sortKey.lowercase() }
+            LanguageItem(code = code, sortKey = sortKey)
+        }.sortedBy { it.sortKey.lowercase() }
     }
 
     FlowRow(
@@ -129,17 +116,9 @@ private fun LanguagesSection(languageCodes: Set<String>) {
         modifier = Modifier.fillMaxWidth()
     ) {
         items.forEach { item ->
-            val name = if (item.nameResId != null) {
-                stringResource(item.nameResId)
-            } else {
-                val locale = java.util.Locale(item.code)
-                locale.getDisplayLanguage(locale)
-                    .replaceFirstChar { it.uppercase() }
-                    .ifEmpty { item.code.uppercase() }
-            }
             LanguageChip(
                 flag = LanguageFlags.getFlag(item.code),
-                name = name
+                name = LanguageNames.nativeLanguageName(item.code)
             )
         }
     }

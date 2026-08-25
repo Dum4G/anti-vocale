@@ -1,72 +1,22 @@
 package com.antivocale.app.transcription
 
-import com.antivocale.app.R
-
 /**
  * Language metadata for the model filter feature.
  *
  * Contains per-backend language support sets (ISO 639-1 codes)
- * and a curated list of filter entries for the UI dropdown.
+ * and a curated list of filter codes for the UI dropdown. Display names come
+ * from the platform ICU data via [com.antivocale.app.util.LanguageNames].
  */
 object Language {
 
-    data class Entry(val code: String, val nameResId: Int)
-
-    /** Languages shown in the filter dropdown (~30 most useful). */
-    val FILTER_ENTRIES: List<Entry> = listOf(
-        Entry("af", R.string.lang_afrikaans),
-        Entry("ar", R.string.lang_arabic),
-        Entry("az", R.string.lang_azerbaijani),
-        Entry("be", R.string.lang_belarusian),
-        Entry("bg", R.string.lang_bulgarian),
-        Entry("bn", R.string.lang_bengali),
-        Entry("ca", R.string.lang_catalan),
-        Entry("cs", R.string.lang_czech),
-        Entry("cy", R.string.lang_welsh),
-        Entry("da", R.string.lang_danish),
-        Entry("de", R.string.lang_german),
-        Entry("el", R.string.lang_greek),
-        Entry("en", R.string.lang_english),
-        Entry("es", R.string.lang_spanish),
-        Entry("et", R.string.lang_estonian),
-        Entry("eu", R.string.lang_basque),
-        Entry("fa", R.string.lang_persian),
-        Entry("fi", R.string.lang_finnish),
-        Entry("fr", R.string.lang_french),
-        Entry("gl", R.string.lang_galician),
-        Entry("he", R.string.lang_hebrew),
-        Entry("hi", R.string.lang_hindi),
-        Entry("hr", R.string.lang_croatian),
-        Entry("hu", R.string.lang_hungarian),
-        Entry("id", R.string.lang_indonesian),
-        Entry("it", R.string.lang_italian),
-        Entry("ja", R.string.lang_japanese),
-        Entry("ka", R.string.lang_georgian),
-        Entry("ko", R.string.lang_korean),
-        Entry("lt", R.string.lang_lithuanian),
-        Entry("lv", R.string.lang_latvian),
-        Entry("mk", R.string.lang_macedonian),
-        Entry("ms", R.string.lang_malay),
-        Entry("nl", R.string.lang_dutch),
-        Entry("no", R.string.lang_norwegian),
-        Entry("pl", R.string.lang_polish),
-        Entry("pt", R.string.lang_portuguese),
-        Entry("ro", R.string.lang_romanian),
-        Entry("ru", R.string.lang_russian),
-        Entry("sk", R.string.lang_slovak),
-        Entry("sl", R.string.lang_slovenian),
-        Entry("sq", R.string.lang_albanian),
-        Entry("sr", R.string.lang_serbian),
-        Entry("sv", R.string.lang_swedish),
-        Entry("sw", R.string.lang_swahili),
-        Entry("ta", R.string.lang_tamil),
-        Entry("th", R.string.lang_thai),
-        Entry("tr", R.string.lang_turkish),
-        Entry("uk", R.string.lang_ukrainian),
-        Entry("ur", R.string.lang_urdu),
-        Entry("uz", R.string.lang_uzbek),
-        Entry("vi", R.string.lang_vietnamese),
-        Entry("zh", R.string.lang_chinese),
+    /** Languages shown in the filter dropdown (~50 most useful). */
+    val FILTER_ENTRIES: List<String> = listOf(
+        "af", "ar", "az", "be", "bg", "bn", "ca", "cs", "cy", "da",
+        "de", "el", "en", "es", "et", "eu", "fa", "fi", "fr", "gl",
+        "he", "hi", "hr", "hu", "id", "it", "ja", "ka", "ko", "lt",
+        "lv", "mk", "ms", "nl", "no", "pl", "pt", "ro", "ru", "sk",
+        "sl", "sq", "sr", "sv", "sw", "ta", "th", "tr", "uk", "ur",
+        "uz", "vi", "zh",
     )
 
     // ==================== Per-backend language sets ====================
@@ -125,8 +75,7 @@ object Language {
     )
 
     /** Nemotron 3.5 streaming multilingual — languages the model conditions on
-     *  (derived from its ONNX prompt_dictionary; see docs/sherpa-onnx-multilingual-validation.ipynb).
-     *  Restricted to languages that have localized display names in [FILTER_ENTRIES]. */
+     *  (derived from its ONNX prompt_dictionary; see docs/sherpa-onnx-multilingual-validation.ipynb). */
     val NEMOTRON: Set<String> = setOf(
         "en", "es", "zh", "hi", "ar", "fr", "de", "ja", "ru", "pt",
         "ko", "it", "nl", "pl", "tr", "uk", "ro", "el", "cs", "hu",

@@ -173,10 +173,10 @@ class ResultNotificationFactoryTest {
 
     @Test
     fun `paged subtext shows language and low confidence`() {
-        // lang_italian nameResId resolves to "Italian" in the default (en) locale.
-        // detected_language format: "Detected: %1$s" → "Detected: Italian"
+        // Native ICU display name for "it" (util/LanguageNames), independent of
+        // the app locale. detected_language format: "Detected: %1$s"
         // confidence_low: "Low confidence"
         val n = factory.build(langSpec(longText(3), page = 1), prefs)
-        assertEquals("Page 2 of 3 · Detected: Italian · Low confidence", n.subTextCompat())
+        assertEquals("Page 2 of 3 · Detected: Italiano · Low confidence", n.subTextCompat())
     }
 }

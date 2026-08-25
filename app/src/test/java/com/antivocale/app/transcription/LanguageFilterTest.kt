@@ -31,7 +31,7 @@ class LanguageFilterTest {
 
     @Test
     fun `FILTER_ENTRIES contains common languages`() {
-        val codes = Language.FILTER_ENTRIES.map { it.code }.toSet()
+        val codes = Language.FILTER_ENTRIES.toSet()
         assertTrue(codes.contains("en"))
         assertTrue(codes.contains("it"))
         assertTrue(codes.contains("de"))
@@ -46,14 +46,13 @@ class LanguageFilterTest {
 
     @Test
     fun `FILTER_ENTRIES has no duplicate codes`() {
-        val codes = Language.FILTER_ENTRIES.map { it.code }
-        assertEquals(codes.size, codes.toSet().size)
+        assertEquals(Language.FILTER_ENTRIES.size, Language.FILTER_ENTRIES.toSet().size)
     }
 
     @Test
     fun `FILTER_ENTRIES codes are ISO 639-1 format`() {
-        Language.FILTER_ENTRIES.forEach { entry ->
-            assertEquals("Expected 2-letter code for ${entry.code}", 2, entry.code.length)
+        Language.FILTER_ENTRIES.forEach { code ->
+            assertEquals("Expected 2-letter code for $code", 2, code.length)
         }
     }
 
@@ -202,10 +201,10 @@ class LanguageFilterTest {
             Language.QWEN3_ASR +
             Language.PARAKEET +
             Language.GEMMA
-        Language.FILTER_ENTRIES.forEach { entry ->
+        Language.FILTER_ENTRIES.forEach { code ->
             assertTrue(
-                "Filter entry '${entry.code}' should be supported by at least one backend",
-                entry.code in allSupported
+                "Filter entry '$code' should be supported by at least one backend",
+                code in allSupported
             )
         }
     }

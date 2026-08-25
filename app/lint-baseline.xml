@@ -1834,16 +1834,6 @@
             column="13"/>
     </issue>
 
-    <issue
-        id="UnusedResources"
-        message="The resource `R.string.share_back_description` appears to be unused"
-        errorLine1="    &lt;string name=&quot;share_back_description&quot;>Share transcription back to source app&lt;/string>"
-        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/values/strings.xml"
-            line="518"
-            column="13"/>
-    </issue>
 
     <issue
         id="UnusedResources"
@@ -2043,16 +2033,6 @@
             column="13"/>
     </issue>
 
-    <issue
-        id="UnusedResources"
-        message="The resource `R.string.error_no_transcription_produced` appears to be unused"
-        errorLine1="    &lt;string name=&quot;error_no_transcription_produced&quot;>No transcription produced&lt;/string>"
-        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/values/strings.xml"
-            line="657"
-            column="13"/>
-    </issue>
 
     <issue
         id="UnusedResources"
@@ -2285,16 +2265,6 @@
             column="13"/>
     </issue>
 
-    <issue
-        id="UnusedResources"
-        message="The resource `R.string.lang_filter_search` appears to be unused"
-        errorLine1="    &lt;string name=&quot;lang_filter_search&quot;>Search language…&lt;/string>"
-        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/values/strings.xml"
-            line="706"
-            column="13"/>
-    </issue>
 
     <issue
         id="UnusedResources"

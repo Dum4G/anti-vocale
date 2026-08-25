@@ -24,6 +24,7 @@ import com.antivocale.app.manager.LlmManager
 import com.antivocale.app.transcription.TranscriptionBackendManager
 import com.antivocale.app.ui.theme.ThemeMode
 import com.antivocale.app.ui.theme.ThemeType
+import com.antivocale.app.util.LanguageNames
 import com.antivocale.app.util.LocaleManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.io.File
@@ -748,46 +749,34 @@ class SettingsViewModel @Inject constructor(
 // ---- TASK-353: locale-aware language option ordering ----
 // Alphabetical order is locale-dependent, so the sort runs at READ time with a
 // Collator for the active app locale (what the Android system language picker
-// does, frameworks/opt/localepicker LocaleHelper). Native display names are
-// kept: users find their language by its own name. The sentinel entry (system
-// default / auto-detect) stays pinned first.
-
+// does, frameworks/opt/localepicker LocaleHelper). Display names come from the
+// platform ICU/CLDR data via [LanguageNames] (native names: users find their
+// language by its own name; see util/LanguageNames.kt). The sentinel entry
+// (system default / auto-detect) stays pinned first; its label is genuinely
+// translatable and resolved from string resources at the UI layer, so its
+// displayName here is an unused placeholder.
 data class LanguageOption(val code: String, val displayName: String)
 
-private val appLanguageEntries = listOf(
-    LanguageOption("de", "Deutsch"),
-    LanguageOption("en", "English"),
-    LanguageOption("es", "Español"),
-    LanguageOption("fr", "Français"),
-    LanguageOption("hi", "हिन्दी"),
-    LanguageOption("it", "Italiano"),
-    LanguageOption("pt-BR", "Português (BR)"),
-    LanguageOption("ru", "Русский"),
-)
+private val appLanguageCodes =
+    listOf("de", "en", "es", "fr", "hi", "it", "pt-BR", "ru")
 
-private val transcriptionLanguageEntries = listOf(
-    LanguageOption("ar", "العربية"),
-    LanguageOption("de", "Deutsch"),
-    LanguageOption("en", "English"),
-    LanguageOption("es", "Español"),
-    LanguageOption("fr", "Français"),
-    LanguageOption("it", "Italiano"),
-    LanguageOption("ja", "日本語"),
-    LanguageOption("pt", "Português"),
-    LanguageOption("zh", "中文"),
-)
+private val transcriptionLanguageCodes =
+    listOf("ar", "de", "en", "es", "fr", "it", "ja", "pt", "zh")
 
-private fun sortedWithSentinel(
-    sentinel: LanguageOption,
-    entries: List<LanguageOption>,
+private fun optionsFor(
+    sentinelCode: String,
+    codes: List<String>,
     locale: java.util.Locale,
 ): List<LanguageOption> {
     val collator = java.text.Collator.getInstance(locale)
-    return listOf(sentinel) + entries.sortedWith { a, b -> collator.compare(a.displayName, b.displayName) }
+    val entries = codes
+        .map { LanguageOption(it, LanguageNames.nativeLanguageName(it)) }
+        .sortedWith { a, b -> collator.compare(a.displayName, b.displayName) }
+    return listOf(LanguageOption(sentinelCode, "")) + entries
 }
 
 internal fun languageOptionsFor(locale: java.util.Locale): List<LanguageOption> =
-    sortedWithSentinel(LanguageOption("system", "System Default"), appLanguageEntries, locale)
+    optionsFor("system", appLanguageCodes, locale)
 
 internal fun transcriptionOptionsFor(locale: java.util.Locale): List<LanguageOption> =
-    sortedWithSentinel(LanguageOption("auto", "Auto-detect"), transcriptionLanguageEntries, locale)
+    optionsFor("auto", transcriptionLanguageCodes, locale)

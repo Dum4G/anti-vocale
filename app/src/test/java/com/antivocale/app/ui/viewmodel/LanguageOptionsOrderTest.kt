@@ -44,7 +44,7 @@ class LanguageOptionsOrderTest {
         // And the Latin block comes before the Devanagari/Cyrillic names under
         // this collation (codepoint order would scatter them).
         assertTrue(rest.indexOf("Italiano") < rest.indexOf("हिन्दी"))
-        assertTrue(rest.indexOf("Русский") > rest.indexOf("Português (BR)") || rest.indexOf("Русский") < rest.indexOf("Deutsch"))
+        assertTrue(rest.indexOf("Русский") > rest.indexOf("Português (Brasil)") || rest.indexOf("Русский") < rest.indexOf("Deutsch"))
     }
 
     @Test
