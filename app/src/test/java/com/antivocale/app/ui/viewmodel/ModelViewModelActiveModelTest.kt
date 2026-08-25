@@ -106,6 +106,7 @@ class ModelViewModelActiveModelTest {
                 filesRoot = { filesRoot },
             ),
             litertLmUrlImporter = io.mockk.mockk(relaxed = true),
+            externalCatalogRepository = io.mockk.mockk(relaxed = true),
         )
 
     }

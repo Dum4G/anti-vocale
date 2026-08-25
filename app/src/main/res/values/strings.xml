@@ -802,7 +802,6 @@
     <string name="external_import_folder">Select folder</string>
     <string name="external_import_url">Import from URL</string>
     <string name="external_url_hint">HuggingFace repo or catalog-entry JSON URL</string>
-    <string name="external_url_dialog_title">Import external model</string>
     <string name="external_import">Import</string>
     <string name="external_importing">Importing model…</string>
     <string name="external_importing_file">Importing %1$s (%2$d of %3$d)…</string>
@@ -811,6 +810,19 @@
     <string name="external_delete_confirm">Delete external model %1$s?</string>
     <string name="external_deleted">%1$s deleted</string>
         <string name="external_catalog_all">All languages</string>
+        <string name="external_catalog_dialog_title">Import from catalog</string>
+    <string name="external_catalog_loading">Loading the catalog…</string>
+    <string name="external_catalog_error">Could not load the catalog: %1$s</string>
+    <string name="external_catalog_retry">Retry</string>
+    <string name="external_catalog_source">Catalog</string>
+    <string name="external_catalog_official">Community (official)</string>
+    <string name="external_catalog_custom">Custom source</string>
+    <string name="external_catalog_offline">offline</string>
+    <string name="external_catalog_change">change</string>
+    <string name="external_catalog_url">Catalog index URL</string>
+    <string name="external_catalog_apply">Apply</string>
+    <string name="external_catalog_restore">Restore the official catalog</string>
+    <string name="external_link_advanced">I already have a link (advanced)</string>
     <string name="external_catalog_language">Language</string>
     <string name="external_catalog_other">Other languages</string>
     <string name="external_decode_language">Decode language</string>

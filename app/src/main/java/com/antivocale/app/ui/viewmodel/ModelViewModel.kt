@@ -15,6 +15,8 @@ import com.antivocale.app.data.PreferencesManager
 import com.antivocale.app.data.ShareTargetManager
 import com.antivocale.app.data.ExternalModelImportOperations
 import com.antivocale.app.data.ExternalModelRecord
+import com.antivocale.app.data.ExternalCatalog
+import com.antivocale.app.data.ExternalCatalogRepository
 import com.antivocale.app.data.ExternalModelStore
 import com.antivocale.app.data.LitertLmFile
 import com.antivocale.app.data.LitertLmUrlImporter
@@ -75,9 +77,78 @@ class ModelViewModel @Inject constructor(
     private val externalModelStore: ExternalModelStore,
     private val externalModelImporter: ExternalModelImportOperations,
     private val litertLmUrlImporter: LitertLmUrlImporter,
+    private val externalCatalogRepository: ExternalCatalogRepository,
 ) : ViewModel() {
 
     val tokenState = tokenManager.tokenState
+
+    // ---- External catalog (TASK-401 catalog-URL architecture) ----
+
+    /** UI state of the "Import from catalog" dialog. */
+    sealed interface CatalogUiState {
+        data object Loading : CatalogUiState
+        data class Ready(
+            val entries: List<ExternalCatalog.CatalogEntry>,
+            /** True when the source is a user override rather than the official index. */
+            val isOverride: Boolean,
+            /** Human hint about HOW the index was resolved (remote/cached/bundled). */
+            val offline: Boolean,
+        ) : CatalogUiState
+        data class Error(val message: String) : CatalogUiState
+    }
+
+    private val _catalogUiState = MutableStateFlow<CatalogUiState>(CatalogUiState.Loading)
+    val catalogUiState: StateFlow<CatalogUiState> = _catalogUiState.asStateFlow()
+
+    private var catalogLoadedForUrl: String? = null
+
+    /** Loads (or reloads) the catalog from the configured source url. */
+    fun loadExternalCatalog(force: Boolean = false) {
+        viewModelScope.launch {
+            val url = preferencesManager.externalCatalogUrl.first()
+            if (!force && catalogLoadedForUrl == url &&
+                _catalogUiState.value is CatalogUiState.Ready) return@launch
+            _catalogUiState.value = CatalogUiState.Loading
+            externalCatalogRepository.load().fold(
+                onSuccess = { state ->
+                    catalogLoadedForUrl = url
+                    _catalogUiState.value = CatalogUiState.Ready(
+                        entries = state.entries,
+                        isOverride = when (val source = state.source) {
+                            is ExternalCatalogRepository.Source.Remote -> source.isOverride
+                            is ExternalCatalogRepository.Source.Cached -> source.isOverride
+                            ExternalCatalogRepository.Source.BundledAsset -> false
+                        },
+                        offline = state.source !is ExternalCatalogRepository.Source.Remote,
+                    )
+                },
+                onFailure = { e ->
+                    Log.e(TAG, "catalog load failed", e)
+                    _catalogUiState.value = CatalogUiState.Error(e.message ?: "unknown error")
+                })
+        }
+    }
+
+    /** Validates and persists a catalog override; reloads on success. */
+    fun saveExternalCatalogUrl(url: String, onResult: (Boolean) -> Unit) {
+        viewModelScope.launch {
+            if (!externalCatalogRepository.validateOverride(url)) {
+                onResult(false)
+                return@launch
+            }
+            preferencesManager.saveExternalCatalogUrl(url)
+            loadExternalCatalog(force = true)
+            onResult(true)
+        }
+    }
+
+    /** Restores the official index as the source. */
+    fun resetExternalCatalogUrl() {
+        viewModelScope.launch {
+            preferencesManager.saveExternalCatalogUrl(PreferencesManager.DEFAULT_EXTERNAL_CATALOG_URL)
+            loadExternalCatalog(force = true)
+        }
+    }
 
     companion object {
         private const val TAG = "ModelViewModel"

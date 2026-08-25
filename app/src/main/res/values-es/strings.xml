@@ -670,7 +670,6 @@
     <string name="external_import_folder">Seleccionar carpeta</string>
     <string name="external_import_url">Importar desde URL</string>
     <string name="external_url_hint">URL de repositorio HuggingFace o JSON de catálogo</string>
-    <string name="external_url_dialog_title">Importar modelo externo</string>
     <string name="external_import">Importar</string>
     <string name="external_importing">Importando modelo…</string>
     <string name="external_importing_file">Importando %1$s (%2$d de %3$d)…</string>
@@ -679,6 +678,19 @@
     <string name="external_delete_confirm">¿Eliminar el modelo externo %1$s?</string>
     <string name="external_deleted">%1$s eliminado</string>
         <string name="external_catalog_all">Todos los idiomas</string>
+        <string name="external_catalog_dialog_title">Importar del catálogo</string>
+    <string name="external_catalog_loading">Cargando el catálogo…</string>
+    <string name="external_catalog_error">No se pudo cargar el catálogo: %1$s</string>
+    <string name="external_catalog_retry">Reintentar</string>
+    <string name="external_catalog_source">Catálogo</string>
+    <string name="external_catalog_official">Comunidad (oficial)</string>
+    <string name="external_catalog_custom">Fuente personalizada</string>
+    <string name="external_catalog_offline">sin conexión</string>
+    <string name="external_catalog_change">cambiar</string>
+    <string name="external_catalog_url">URL del índice del catálogo</string>
+    <string name="external_catalog_apply">Aplicar</string>
+    <string name="external_catalog_restore">Restaurar el catálogo oficial</string>
+    <string name="external_link_advanced">Ya tengo un enlace (avanzado)</string>
     <string name="external_catalog_language">Idioma</string>
     <string name="external_catalog_other">Otros idiomas</string>
     <string name="external_decode_language">Idioma de decodificación</string>

@@ -821,7 +821,6 @@
     <string name="external_import_folder">Вибрати папку</string>
     <string name="external_import_url">Імпортувати з URL</string>
     <string name="external_url_hint">URL репозиторію HuggingFace або JSON запису каталогу</string>
-    <string name="external_url_dialog_title">Імпортувати зовнішню модель</string>
     <string name="external_import">Імпортувати</string>
     <string name="external_importing">Імпортування моделі…</string>
     <string name="external_importing_file">Імпортування %1$s (%2$d з %3$d)…</string>
@@ -830,6 +829,19 @@
     <string name="external_delete_confirm">Видалити зовнішню модель %1$s?</string>
     <string name="external_deleted">%1$s видалено</string>
         <string name="external_catalog_all">Усі мови</string>
+        <string name="external_catalog_dialog_title">Імпорт із каталогу</string>
+    <string name="external_catalog_loading">Завантаження каталогу…</string>
+    <string name="external_catalog_error">Не вдалося завантажити каталог: %1$s</string>
+    <string name="external_catalog_retry">Повторити</string>
+    <string name="external_catalog_source">Каталог</string>
+    <string name="external_catalog_official">Спільнота (офіційний)</string>
+    <string name="external_catalog_custom">Власне джерело</string>
+    <string name="external_catalog_offline">офлайн</string>
+    <string name="external_catalog_change">змінити</string>
+    <string name="external_catalog_url">URL індексу каталогу</string>
+    <string name="external_catalog_apply">Застосувати</string>
+    <string name="external_catalog_restore">Відновити офіційний каталог</string>
+    <string name="external_link_advanced">В мене вже є посилання (додатково)</string>
     <string name="external_catalog_language">Мова</string>
     <string name="external_catalog_other">Інші мови</string>
     <string name="external_decode_language">Мова розпізнавання</string>

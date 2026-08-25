@@ -54,6 +54,7 @@ class PreferencesManagerImpl(
         private val QWEN3_ASR_MODEL_PATH = stringPreferencesKey("qwen3_asr_model_path")
         private val NEMOTRON_MODEL_PATH = stringPreferencesKey("nemotron_model_path")
         private val GIGAAM_MODEL_PATH = stringPreferencesKey("gigaam_model_path")
+        private val EXTERNAL_CATALOG_URL = stringPreferencesKey("external_catalog_url")
         private val EXTERNAL_MIGRATION_DONE = booleanPreferencesKey("external_migration_done")
         private val GGUF_MODEL_PATH = stringPreferencesKey("gguf_model_path")
         private val AUTO_COPY_ENABLED = booleanPreferencesKey("auto_copy_enabled")
@@ -90,6 +91,7 @@ class PreferencesManagerImpl(
         val customTransducerModelPath: String? = null,
         val customTransducerModelType: String = PreferencesManager.DEFAULT_CUSTOM_TRANSDUCER_MODEL_TYPE,
         val externalMigrationDone: Boolean = false,
+        val externalCatalogUrl: String = PreferencesManager.DEFAULT_EXTERNAL_CATALOG_URL,
         val ggufModelPath: String? = null,
         val autoCopyEnabled: Boolean = PreferencesManager.DEFAULT_AUTO_COPY_ENABLED,
         val outputFolderUri: String? = null,
@@ -125,6 +127,7 @@ class PreferencesManagerImpl(
         customTransducerModelType = this[CUSTOM_TRANSDUCER_MODEL_TYPE]
             ?: PreferencesManager.DEFAULT_CUSTOM_TRANSDUCER_MODEL_TYPE,
         externalMigrationDone = this[EXTERNAL_MIGRATION_DONE] ?: false,
+        externalCatalogUrl = this[EXTERNAL_CATALOG_URL] ?: PreferencesManager.DEFAULT_EXTERNAL_CATALOG_URL,
         ggufModelPath = this[GGUF_MODEL_PATH],
         autoCopyEnabled = this[AUTO_COPY_ENABLED] ?: PreferencesManager.DEFAULT_AUTO_COPY_ENABLED,
         outputFolderUri = this[OUTPUT_FOLDER_URI],
@@ -255,6 +258,16 @@ class PreferencesManagerImpl(
 
     override val externalMigrationDone: Flow<Boolean> = dataStore.data.map { it[EXTERNAL_MIGRATION_DONE] ?: false }
         .onStart { emit(cache.get().externalMigrationDone) }
+
+    override val externalCatalogUrl: Flow<String> = dataStore.data.map { it[EXTERNAL_CATALOG_URL] ?: PreferencesManager.DEFAULT_EXTERNAL_CATALOG_URL }
+        .onStart { emit(cache.get().externalCatalogUrl) }
+
+    override suspend fun saveExternalCatalogUrl(url: String) {
+        dataStore.edit { preferences ->
+            preferences[EXTERNAL_CATALOG_URL] = url
+        }
+        cache.updateAndGet { it.copy(externalCatalogUrl = url) }
+    }
 
     override suspend fun saveExternalMigrationDone(done: Boolean) {
         dataStore.edit { preferences ->

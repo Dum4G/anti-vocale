@@ -771,7 +771,6 @@
     <string name="external_import_folder">फ़ोल्डर चुनें</string>
     <string name="external_import_url">URL से इंपोर्ट करें</string>
     <string name="external_url_hint">HuggingFace रेपो या कैटलॉग-एंट्री JSON URL</string>
-    <string name="external_url_dialog_title">बाहरी मॉडल इंपोर्ट करें</string>
     <string name="external_import">इंपोर्ट करें</string>
     <string name="external_importing">मॉडल इंपोर्ट हो रहा है…</string>
     <string name="external_importing_file">%1$s इंपोर्ट हो रहा है (%2$d/%3$d)…</string>
@@ -780,6 +779,19 @@
     <string name="external_delete_confirm">बाहरी मॉडल %1$s मिटाएं?</string>
     <string name="external_deleted">%1$s मिटाया गया</string>
         <string name="external_catalog_all">सभी भाषाएँ</string>
+        <string name="external_catalog_dialog_title">कैटलॉग से इंपोर्ट करें</string>
+    <string name="external_catalog_loading">कैटलॉग लोड हो रहा है…</string>
+    <string name="external_catalog_error">कैटलॉग लोड नहीं हो सका: %1$s</string>
+    <string name="external_catalog_retry">पुनः प्रयास</string>
+    <string name="external_catalog_source">कैटलॉग</string>
+    <string name="external_catalog_official">कम्युनिटी (आधिकारिक)</string>
+    <string name="external_catalog_custom">कस्टम स्रोत</string>
+    <string name="external_catalog_offline">ऑफ़लाइन</string>
+    <string name="external_catalog_change">बदलें</string>
+    <string name="external_catalog_url">कैटलॉग इंडेक्स URL</string>
+    <string name="external_catalog_apply">लागू करें</string>
+    <string name="external_catalog_restore">आधिकारिक कैटलॉग बहाल करें</string>
+    <string name="external_link_advanced">मेरे पास पहले से लिंक है (उन्नत)</string>
     <string name="external_catalog_language">भाषा</string>
     <string name="external_catalog_other">अन्य भाषाएँ</string>
     <string name="external_decode_language">डिकोड भाषा</string>

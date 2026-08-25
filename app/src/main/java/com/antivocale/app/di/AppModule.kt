@@ -20,6 +20,9 @@ import com.antivocale.app.transcription.BackendRegistry
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withContext
 import dagger.hilt.android.qualifiers.ApplicationContext
 import okhttp3.OkHttpClient
 import dagger.hilt.components.SingletonComponent
@@ -89,6 +92,23 @@ object AppModule {
     ): com.antivocale.app.data.LitertLmUrlImporter =
         com.antivocale.app.data.LitertLmUrlImporter(
             com.antivocale.app.data.HuggingFaceRepoListing(okHttpClient))
+
+    @Provides
+    @Singleton
+    fun provideExternalCatalogRepository(
+        preferencesManager: PreferencesManager,
+        @ApplicationContext context: Context,
+        okHttpClient: OkHttpClient,
+    ): com.antivocale.app.data.ExternalCatalogRepository =
+        com.antivocale.app.data.ExternalCatalogRepository(
+            context = context,
+            catalogUrl = { preferencesManager.externalCatalogUrl.first() },
+            fetchText = { url ->
+                withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    com.antivocale.app.data.HuggingFaceRepoListing(okHttpClient).fetchText(url)
+                }
+            },
+        )
 
     @Provides
     @Singleton

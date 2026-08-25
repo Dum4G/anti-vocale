@@ -805,7 +805,6 @@
     <string name="external_import_folder">Klasör seç</string>
     <string name="external_import_url">URL\'den içe aktar</string>
     <string name="external_url_hint">HuggingFace deposu veya katalog girdisi JSON URL\'si</string>
-    <string name="external_url_dialog_title">Harici model içe aktar</string>
     <string name="external_import">İçe Aktar</string>
     <string name="external_importing">Model içe aktarılıyor…</string>
     <string name="external_importing_file">%1$s içe aktarılıyor (%2$d/%3$d)…</string>
@@ -814,6 +813,19 @@
     <string name="external_delete_confirm">%1$s harici modeli silinsin mi?</string>
     <string name="external_deleted">%1$s silindi</string>
         <string name="external_catalog_all">Tüm diller</string>
+        <string name="external_catalog_dialog_title">Katalogdan içe aktar</string>
+    <string name="external_catalog_loading">Katalog yükleniyor…</string>
+    <string name="external_catalog_error">Katalog yüklenemedi: %1$s</string>
+    <string name="external_catalog_retry">Yeniden dene</string>
+    <string name="external_catalog_source">Katalog</string>
+    <string name="external_catalog_official">Topluluk (resmi)</string>
+    <string name="external_catalog_custom">Özel kaynak</string>
+    <string name="external_catalog_offline">çevrimdışı</string>
+    <string name="external_catalog_change">değiştir</string>
+    <string name="external_catalog_url">Katalog dizini URL\'si</string>
+    <string name="external_catalog_apply">Uygula</string>
+    <string name="external_catalog_restore">Resmi katalogu geri yükle</string>
+    <string name="external_link_advanced">Zaten bir linkim var (gelişmiş)</string>
     <string name="external_catalog_language">Dil</string>
     <string name="external_catalog_other">Diğer diller</string>
     <string name="external_decode_language">Kod çözme dili</string>
