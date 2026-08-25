@@ -111,6 +111,12 @@ class ResultNotificationFactoryTest {
     }
 
     @Test
+    fun `copiedToClipboard rides the subText line (TASK-385)`() {
+        val n = factory.build(spec("ciao come stai").copy(copiedToClipboard = true), prefs)
+        assertEquals("Copied to clipboard", n.subTextCompat())
+    }
+
+    @Test
     fun `paged subtext shows page counter`() {
         val n = factory.build(spec(longText(3), page = 1), prefs)
         assertEquals("Page 2 of 3", n.subTextCompat())
