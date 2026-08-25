@@ -93,6 +93,13 @@ class InferenceService : Service(), TranscriptionListener {
     private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob() + CrashReporter.handler)
 
     /**
+     * Keeps the CPU awake while a batch is actively transcribing (share-flow
+     * background inference stalls on deep-idle otherwise). Held from the drain
+     * loop's start to its finally; released again in onDestroy as a belt.
+     */
+    private val transcriptionWakeLock by lazy { TranscriptionWakeLock(this) }
+
+    /**
      * In-flight result-notification jobs (onSuccess's auto-copy + save + notify
      * coroutine). processQueue() awaits these before tearing the service down;
      * see onSuccess for the race this closes.
@@ -221,6 +228,9 @@ class InferenceService : Service(), TranscriptionListener {
     override fun onDestroy() {
         super.onDestroy()
         serviceScope.cancel()
+        // Belt: the drain loop's finally normally releases, but a scope teardown that
+        // lands before the coroutine reaches it must not leak the lock.
+        transcriptionWakeLock.release()
         Log.i(TAG, "Service destroyed")
     }
 
@@ -234,6 +244,9 @@ class InferenceService : Service(), TranscriptionListener {
             }
 
             _isTranscribing.value = true
+            // Deep-idle CPU suspension mid-inference is the share-flow hang: take the
+            // lock for the whole batch (each task start refreshes the safety deadline).
+            transcriptionWakeLock.acquire()
             val totalInBatch = pendingCount.get()
             var currentIndex = 0
 
@@ -309,6 +322,9 @@ class InferenceService : Service(), TranscriptionListener {
                 currentTaskId = null
                 currentTaskJob = null
                 _isTranscribing.value = false
+                // Runs on EVERY exit path (normal, batch cancel, scope teardown):
+                // release() is idempotent and the lock is non-reference-counted.
+                transcriptionWakeLock.release()
             }
 
             // Wait for any pending result-notification jobs before teardown:
