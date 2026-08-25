@@ -632,6 +632,11 @@
     <string name="notification_no_model_message">Apri l\'app e scarica un modello</string>
     <string name="notification_no_model_action">Apri app</string>
 
+    <!-- Freeze-rescue prompt -->
+    <string name="freeze_detected_title">Trascrizione sospesa dal sistema</string>
+    <string name="freeze_detected_text">Android ha bloccato l\'app durante il riconoscimento. Tocca \"Consenti\" per farla terminare in background: la trascrizione interrotta riprende da sola.</string>
+    <string name="freeze_allow_action">Consenti</string>
+
     <!-- Content descriptions (accessibility) -->
     <string name="back">Indietro</string>
     <string name="add_app">Aggiungi app</string>
