@@ -55,7 +55,9 @@ import com.antivocale.app.transcription.audioLimitForCatalogEntry
 import com.antivocale.app.transcription.audioLimitForVariants
 import com.antivocale.app.transcription.ModelVariant
 import com.antivocale.app.transcription.SherpaModelDownloader
+import androidx.compose.ui.text.style.TextOverflow
 import com.antivocale.app.ui.components.DownloadButtonState
+import com.antivocale.app.ui.components.DownloadProgressView
 import com.antivocale.app.ui.components.InfoIconButton
 import com.antivocale.app.ui.components.LanguageFilterBar
 import com.antivocale.app.ui.components.ModelVariantCard
@@ -1219,12 +1221,35 @@ private fun ExternalModelsSection(
         }
 
         when (val st = importState) {
-            is ModelViewModel.ExternalImportState.Importing -> Text(
-                stringResource(R.string.external_importing),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(vertical = 8.dp)
-            )
+            is ModelViewModel.ExternalImportState.Importing -> Column(
+                modifier = Modifier.padding(vertical = 8.dp).fillMaxWidth()
+            ) {
+                // TASK-398: same progress widget as catalog downloads, so a stalled
+                // external import is visible instead of a static "Importing…" label.
+                Text(
+                    if (st.fileCount > 0)
+                        stringResource(
+                            R.string.external_importing_file,
+                            st.fileName, st.fileIndex + 1, st.fileCount)
+                    else
+                        stringResource(R.string.external_importing),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                if (st.fileCount > 0) {
+                    DownloadProgressView(
+                        downloadState = DownloadState.Downloading(
+                            bytesDownloaded = st.bytes,
+                            totalBytes = st.totalBytes,
+                            // progressPercent is the 0..100 scale (ResumeDownloadHelper convention)
+                            progressPercent = st.progress * 100,
+                        ),
+                        downloadProgress = st.progress,
+                    )
+                }
+            }
             is ModelViewModel.ExternalImportState.Error -> Text(
                 stringResource(R.string.external_import_failed, st.message),
                 style = MaterialTheme.typography.bodySmall,

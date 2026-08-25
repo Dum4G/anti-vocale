@@ -872,6 +872,7 @@
     <string name="external_url_dialog_title">Harici model içe aktar</string>
     <string name="external_import">İçe Aktar</string>
     <string name="external_importing">Model içe aktarılıyor…</string>
+    <string name="external_importing_file">%1$s içe aktarılıyor (%2$d/%3$d)…</string>
     <string name="external_import_failed">İçe aktarma başarısız: %1$s</string>
     <string name="external_imported">%1$s içe aktarıldı</string>
     <string name="external_delete_confirm">%1$s harici modeli silinsin mi?</string>

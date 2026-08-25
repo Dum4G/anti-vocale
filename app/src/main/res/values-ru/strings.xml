@@ -875,6 +875,7 @@
     <string name="external_url_dialog_title">Импорт внешней модели</string>
     <string name="external_import">Импортировать</string>
     <string name="external_importing">Импорт модели…</string>
+    <string name="external_importing_file">Импорт %1$s (%2$d из %3$d)…</string>
     <string name="external_import_failed">Не удалось импортировать: %1$s</string>
     <string name="external_imported">Импортировано: %1$s</string>
     <string name="external_delete_confirm">Удалить внешнюю модель %1$s?</string>

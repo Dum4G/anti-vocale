@@ -66,6 +66,7 @@ class ModelViewModelExternalImportTest {
     private class RecordingImporter(val latch: CountDownLatch) : ExternalModelImportOperations {
         val calls = mutableListOf<ImportCall>()
         var treeUri: Uri? = null
+        var stateAtCallback: (() -> ModelViewModel.ExternalImportState)? = null
 
         private fun record(url: String?, modelType: String?, family: ModelFamily,
                            options: Map<String, String>, languages: List<String>) {
@@ -82,11 +83,20 @@ class ModelViewModelExternalImportTest {
             return sampleRecord()
         }
 
+        var statesAtCallbacks: List<ModelViewModel.ExternalImportState> = emptyList()
+        var onProgressObserved: com.antivocale.app.data.ExternalImportProgress = { _, _, _, _, _ -> }
+
         override suspend fun importFromUrl(
             url: String, modelType: String?, family: ModelFamily,
             options: Map<String, String>, languages: List<String>, streaming: Boolean,
+            onProgress: com.antivocale.app.data.ExternalImportProgress,
         ): ExternalModelRecord {
             record(url, modelType, family, options, languages)
+            onProgressObserved = onProgress
+            onProgress(0, 2, "encoder.int8.onnx", 100L, 200L)
+            statesAtCallbacks += stateAtCallback?.invoke() ?: ModelViewModel.ExternalImportState.Idle
+            onProgress(1, 2, "tokens.txt", 50L, 50L)
+            statesAtCallbacks += stateAtCallback?.invoke() ?: ModelViewModel.ExternalImportState.Idle
             return sampleRecord()
         }
     }
@@ -161,6 +171,31 @@ class ModelViewModelExternalImportTest {
         assertEquals(ModelFamily.SENSE_VOICE, call.family)
         assertEquals(mapOf("sensevoice.itn" to "true"), call.options)
         assertEquals(listOf("en"), call.languages)
+    }
+
+    @Test
+    fun `url import streams per-file progress into the state`() = runTest {
+        fakeImporter.stateAtCallback = { viewModel.externalImportState.value }
+        viewModel.importExternalFromUrl(
+            url = "https://example.com/model.json",
+            family = ModelFamily.WHISPER,
+        )
+        awaitImporter()
+        val first = fakeImporter.statesAtCallbacks[0]
+        val second = fakeImporter.statesAtCallbacks[1]
+        org.junit.Assert.assertTrue(first is ModelViewModel.ExternalImportState.Importing)
+        first as ModelViewModel.ExternalImportState.Importing
+        second as ModelViewModel.ExternalImportState.Importing
+        assertEquals("encoder.int8.onnx", first.fileName)
+        assertEquals(0, first.fileIndex)
+        assertEquals(2, first.fileCount)
+        assertEquals(0.5f, first.progress)
+        assertEquals("tokens.txt", second.fileName)
+        assertEquals(1f, second.progress)
+        // completion resets to Idle
+        assertEquals(
+            ModelViewModel.ExternalImportState.Idle,
+            viewModel.externalImportState.value)
     }
 
     @Test

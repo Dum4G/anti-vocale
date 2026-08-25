@@ -37,8 +37,14 @@ interface ExternalModelImportOperations {
         options: Map<String, String> = emptyMap(),
         languages: List<String> = emptyList(),
         streaming: Boolean = false,
+        onProgress: ExternalImportProgress = NOOP_PROGRESS,
     ): ExternalModelRecord
 }
+
+/** Per-file download telemetry for URL imports (TASK-398): (fileIndex, fileCount, fileName, bytes, totalBytes). */
+typealias ExternalImportProgress = (Int, Int, String, Long, Long) -> Unit
+
+val NOOP_PROGRESS: ExternalImportProgress = { _, _, _, _, _ -> }
 
 /**
  * The single import pipeline for external models (spec: external models platform v2a).
@@ -200,6 +206,7 @@ class ExternalModelImporter(
         options: Map<String, String> = emptyMap(),
         languages: List<String> = emptyList(),
         streaming: Boolean = false,
+        onProgress: ExternalImportProgress = NOOP_PROGRESS,
     ): ExternalModelRecord {
         val repoId = HuggingFaceRepoListing.parseRepoId(repoUrl)
             ?: throw IllegalArgumentException("not a HuggingFace repository URL: $repoUrl")
@@ -218,12 +225,15 @@ class ExternalModelImporter(
         }
         return downloadCore(
             triples, resolveModelType(modelType, family), repoId.substringAfter('/'),
-            ExternalModelSource.URL, repoUrl, family, options, languages, streaming)
+            ExternalModelSource.URL, repoUrl, family, options, languages, streaming, onProgress)
     }
 
     /** Catalog-entry JSON import: every file must carry a sha256 pin (hashless entries rejected).
      *  The record is driven entirely by the entry (family, modelType, languages, options). */
-    suspend fun importFromEntryJson(entryUrl: String): ExternalModelRecord {
+    suspend fun importFromEntryJson(
+        entryUrl: String,
+        onProgress: ExternalImportProgress = NOOP_PROGRESS,
+    ): ExternalModelRecord {
         val text = repoListing.fetchText(entryUrl)
         val entry = ExternalModelEntryJson.parse(text)
         val plan = buildCopyPlan(entry.files.map { it.name }, entry.family)
@@ -241,7 +251,7 @@ class ExternalModelImporter(
         }
         return downloadCore(
             triples, entry.modelType, entry.name, ExternalModelSource.URL, entryUrl,
-            entry.family, entry.options, entry.languages, entry.streaming)
+            entry.family, entry.options, entry.languages, entry.streaming, onProgress)
     }
 
     /**
@@ -258,11 +268,12 @@ class ExternalModelImporter(
         options: Map<String, String>,
         languages: List<String>,
         streaming: Boolean,
+        onProgress: ExternalImportProgress,
     ): ExternalModelRecord =
         if (url.trim().endsWith(".json")) {
-            importFromEntryJson(url)
+            importFromEntryJson(url, onProgress)
         } else if (HuggingFaceRepoListing.parseRepoId(url) != null) {
-            importFromHuggingFaceRepo(url, modelType, family, options, languages, streaming)
+            importFromHuggingFaceRepo(url, modelType, family, options, languages, streaming, onProgress)
         } else {
             // A stray URL must fail classification loudly here; falling through to
             // the entry-JSON parse would surface as a raw JSON error instead.
@@ -346,6 +357,7 @@ class ExternalModelImporter(
         options: Map<String, String> = emptyMap(),
         languages: List<String> = emptyList(),
         streaming: Boolean = false,
+        onProgress: ExternalImportProgress = NOOP_PROGRESS,
     ): ExternalModelRecord {
         val root = filesRoot()
         // Unconditional pre-flight (spec binding): callers must supply sizes (the HF
@@ -360,7 +372,7 @@ class ExternalModelImporter(
 
         return importCleaningUpOnFailure(targetDir) {
             val pins = HashMap<String, FilePin>()
-            for (triple in triples) {
+            for ((fileIndex, triple) in triples.withIndex()) {
                 val target = File(targetDir, triple.canonicalName)
                 val result = ResumeDownloadHelper.downloadWithResume(
                     DownloadConfig(
@@ -369,6 +381,9 @@ class ExternalModelImporter(
                         targetFile = target,
                         estimatedSizeBytes = triple.size,
                     ),
+                    onProgress = { bytes, total, _ ->
+                        onProgress(fileIndex, triples.size, triple.canonicalName, bytes, total)
+                    },
                 )
                 // The resume machinery leaves a .size sidecar next to the target; model
                 // directories must stay clean (the engine walks them for size and users

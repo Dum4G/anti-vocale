@@ -794,6 +794,7 @@
     <string name="external_url_dialog_title">Importa modello esterno</string>
     <string name="external_import">Importa</string>
     <string name="external_importing">Importazione modello…</string>
+    <string name="external_importing_file">Importazione %1$s (%2$d di %3$d)…</string>
     <string name="external_import_failed">Importazione non riuscita: %1$s</string>
     <string name="external_imported">Importato %1$s</string>
     <string name="external_delete_confirm">Eliminare il modello esterno %1$s?</string>

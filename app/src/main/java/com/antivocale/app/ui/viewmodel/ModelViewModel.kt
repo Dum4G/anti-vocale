@@ -1377,7 +1377,18 @@ class ModelViewModel @Inject constructor(
     /** Import progress for the external-models section (one import at a time). */
     sealed class ExternalImportState {
         data object Idle : ExternalImportState()
-        data object Importing : ExternalImportState()
+
+        /** TASK-398: URL imports report per-file download progress; the folder path
+         *  stays on the no-arg shape (no download to report). */
+        data class Importing(
+            val fileName: String = "",
+            val fileIndex: Int = 0,
+            val fileCount: Int = 0,
+            val bytes: Long = 0,
+            val totalBytes: Long = 0,
+            val progress: Float = 0f,
+        ) : ExternalImportState()
+
         data class Error(val message: String) : ExternalImportState()
     }
 
@@ -1408,7 +1419,7 @@ class ModelViewModel @Inject constructor(
         ctcModelType: String = "nemo_ctc",
         options: Map<String, String> = emptyMap(),
         languages: List<String> = emptyList(),
-    ) = runExternalImport("External folder") {
+    ) = runExternalImport("External folder", onProgress = null) {
         externalModelImporter.importFromTreeUri(
             context, treeUri,
             modelType = ctcModelType(family, ctcModelType),
@@ -1422,11 +1433,18 @@ class ModelViewModel @Inject constructor(
         ctcModelType: String = "nemo_ctc",
         options: Map<String, String> = emptyMap(),
         languages: List<String> = emptyList(),
-    ) = runExternalImport("External URL") {
+    ) = runExternalImport("External URL",
+        onProgress = { index, count, name, bytes, total ->
+            _externalImportState.value = ExternalImportState.Importing(
+                fileName = name, fileIndex = index, fileCount = count,
+                bytes = bytes, totalBytes = total,
+                progress = if (total > 0) bytes.toFloat() / total else 0f)
+        }) { onProgress ->
         externalModelImporter.importFromUrl(
             url,
             modelType = ctcModelType(family, ctcModelType),
-            family = family, options = options, languages = languages)
+            family = family, options = options, languages = languages,
+            onProgress = onProgress)
     }
 
     /** Only CTC takes an explicit modelType (it selects the sherpa config subtype);
@@ -1434,11 +1452,18 @@ class ModelViewModel @Inject constructor(
     private fun ctcModelType(family: ModelFamily, ctcModelType: String): String? =
         if (family == ModelFamily.CTC) ctcModelType else null
 
-    /** Shared import scaffolding: progress state, IO dispatching, and the failure tail. */
-    private fun runExternalImport(label: String, block: suspend () -> ExternalModelRecord) {
-        _externalImportState.value = ExternalImportState.Importing
+    /** Shared import scaffolding: progress state, IO dispatching, and the failure tail.
+     *  [onProgress] is handed to the block so URL imports can stream download telemetry
+     *  into the state (TASK-398); null for the folder path (nothing to report). */
+    private fun runExternalImport(
+        label: String,
+        onProgress: ((Int, Int, String, Long, Long) -> Unit)?,
+        block: suspend ((Int, Int, String, Long, Long) -> Unit) -> ExternalModelRecord,
+    ) {
+        val noop: (Int, Int, String, Long, Long) -> Unit = { _, _, _, _, _ -> }
+        _externalImportState.value = ExternalImportState.Importing()
         viewModelScope.launch(Dispatchers.IO) {
-            runCatching { block() }
+            runCatching { block(onProgress ?: noop) }
                 .fold(
                     onSuccess = { record -> onExternalImported(record) },
                     onFailure = { e ->
