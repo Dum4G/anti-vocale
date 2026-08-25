@@ -8,8 +8,8 @@
     <string name="app_name">Anti-Vocale</string>
 
     <!-- Tab names -->
-    <string name="model_tab">Модель</string>
-    <string name="logs_tab">Журнал</string>
+    <string name="model_tab">Моделі</string>
+    <string name="logs_tab">Історія</string>
     <string name="settings_tab">Налаштування</string>
 
     <!-- Model selection -->
@@ -64,12 +64,12 @@
     <string name="logs_empty">Запитів ще немає</string>
     <string name="request_text">Текстовий запит</string>
     <string name="request_audio">Аудіозапит</string>
-    <string name="logs_recent_requests">Останні запити (%1$d)</string>
+    <string name="logs_recent_requests">Останні записи (%1$d)</string>
     <string name="logs_clear">Очистити</string>
     <string name="logs_delete_entry">Видалити запис</string>
-    <string name="logs_delete_confirmation">Видалити цей запис журналу?</string>
+    <string name="logs_delete_confirmation">Видалити цей запис історії?</string>
     <string name="logs_delete_selected">Видалити вибрані</string>
-    <string name="logs_clear_confirmation">Очистити весь журнал? Цю дію не можна скасувати.</string>
+    <string name="logs_clear_confirmation">Очистити всю історію? Цю дію не можна скасувати.</string>
     <string name="logs_select_all">Вибрати всі</string>
     <string name="logs_deselect_all">Зняти вибір</string>
     <string name="logs_entries_selected">Вибрано: %d</string>
@@ -97,8 +97,8 @@
     <string name="logs_status_processing">Обробка</string>
     <string name="logs_model_label">Модель: %1$s</string>
     <string name="logs_transcription_cancelled">Розшифровку скасовано</string>
-    <string name="logs_search_placeholder">Пошук розшифровок…</string>
-    <string name="logs_search_no_results">Немає відповідних розшифровок</string>
+    <string name="logs_search_placeholder">Пошук записів…</string>
+    <string name="logs_search_no_results">Немає відповідних записів</string>
     <string name="logs_search_no_results_hint">Спробуйте інший пошуковий запит</string>
     <string name="voice_message_duration">голосове повідомлення</string>
     <string name="source_was_video">Джерело: відеофайл</string>
@@ -159,7 +159,7 @@
     <!-- Nemotron 3.5 streaming model -->
     <string name="nemotron_name">Nemotron 3.5</string>
     <string name="nemotron_title">Nemotron 3.5 (потокова)</string>
-    <string name="nemotron_description">Потоковий трансдюсер • Експериментальна якість італійської</string>
+    <string name="nemotron_description">~640МБ • Потоковий трансдюсер • Експериментальна якість італійської</string>
     <string name="nemotron_download_confirm_title">Завантажити %1$s?</string>
     <string name="nemotron_download_confirm_message">Буде завантажено ~%1$dМБ. Nemotron 3.5 - це потокова багатомовна модель ASR.</string>
     <string name="nemotron_download">Завантажити Nemotron</string>
@@ -169,7 +169,7 @@
 
     <!-- GigaAM v3 model -->
     <string name="gigaam_title">GigaAM v3</string>
-    <string name="gigaam_description">Російська ASR • ~326МБ • Sber (MIT)</string>
+    <string name="gigaam_description">~326МБ • Швидка • Розпізнавання російської мови з пунктуацією</string>
     <string name="gigaam_name">GigaAM v3</string>
     <string name="gigaam_download_confirm_title">Завантажити GigaAM v3?</string>
     <string name="gigaam_download_confirm_message">Буде завантажено ~%1$dМБ. GigaAM v3 - це російськомовна модель ASR від Sber з високою точністю російської.</string>
@@ -461,14 +461,6 @@
     <string name="language_title">Мова</string>
     <string name="language_description">Виберіть мову інтерфейсу додатка.</string>
     <string name="language_system">Системна за замовчуванням</string>
-    <string name="language_english">English</string>
-    <string name="language_italian">Italiano</string>
-    <string name="language_german">Deutsch</string>
-    <string name="language_russian">Русский</string>
-    <string name="language_hindi">हिन्दी</string>
-    <string name="language_french">Français</string>
-    <string name="language_spanish">Español</string>
-    <string name="language_portuguese">Português (BR)</string>
 
     <!-- Settings Tab - Transcription Language -->
     <string name="transcription_language_title">Мова розшифровки</string>
@@ -514,7 +506,7 @@
     <string name="per_app_settings_sound_chime">Дзвіночок</string>
     <string name="per_app_settings_sound_bell">Дзвін</string>
     <string name="per_app_settings_quick_share_back_title">Швидке надсилання назад</string>
-    <string name="per_app_settings_quick_share_back_description">Одним дотиком надсилайте розшифровки назад у цей додаток</string>
+    <string name="per_app_settings_quick_share_back_description">Одним дотиком надсилайте результати назад у цей додаток</string>
 
     <!-- Per-App Reset -->
     <string name="per_app_settings_reset_all">Скинути все до типових</string>
@@ -537,7 +529,6 @@
 
     <!-- Share Back -->
     <string name="share_back">Надіслати назад</string>
-    <string name="share_back_description">Поділитися розшифровкою назад у вихідний додаток</string>
     <string name="send_to_app">Надіслати в %1$s</string>
 
     <!-- Notification Channels -->
@@ -662,10 +653,10 @@
     <string name="swipe_action_description">Виберіть, що станеться після проведення пальцем ліворуч по запису журналу</string>
     <string name="swipe_action_reveal">Показати дії</string>
     <string name="swipe_action_immediate_delete">Негайне видалення</string>
-    <string name="swipe_action_copy_description">Копіювати розшифровку</string>
-    <string name="swipe_action_share_description">Поділитися розшифровкою</string>
+    <string name="swipe_action_copy_description">Копіювати текст</string>
+    <string name="swipe_action_share_description">Поділитися текстом</string>
     <string name="swipe_action_delete_description">Видалити запис</string>
-    <string name="swipe_action_copied">Розшифровку скопійовано</string>
+    <string name="swipe_action_copied">Текст скопійовано</string>
 
     <!-- Content descriptions (accessibility) -->
     <string name="back">Назад</string>
@@ -678,12 +669,11 @@
     <string name="error_no_active_backend">Немає активного бекенду</string>
     <string name="error_no_file_path">Для аудіозапиту не надано шлях до файлу</string>
     <string name="error_backend_no_audio_support">%1$s не підтримує розшифровку аудіо. Перейдіть на модель мова-в-текст у Налаштуваннях.</string>
-    <string name="error_no_transcription_produced">Розшифровку не створено</string>
     <string name="error_no_llm_model">Модель LLM не налаштовано. Відкрийте додаток, щоб завантажити модель.</string>
     <string name="error_no_model_configured">Модель %1$s не налаштовано. Відкрийте додаток, щоб завантажити модель.</string>
     <string name="loading_model">Завантаження моделі %1$s…</string>
     <string name="preprocessing_audio">Попередня обробка аудіо…</string>
-    <string name="clipboard_label_transcription">Розшифровка</string>
+    <string name="clipboard_label_transcription">Результат</string>
 
     <!-- Settings accessibility -->
     <string name="open_prompt_settings">Відкрити налаштування запитів</string>
@@ -727,62 +717,8 @@
     <!-- Language filter -->
     <string name="lang_filter_label">Фільтрувати за мовою</string>
     <string name="lang_filter_all">Усі мови</string>
-    <string name="lang_filter_search">Пошук мови…</string>
     <string name="lang_filter_no_results">Немає відповідних мов</string>
     <string name="lang_filter_clear">Очистити пошук</string>
-    <string name="lang_afrikaans">африкаанс</string>
-    <string name="lang_arabic">арабська</string>
-    <string name="lang_azerbaijani">азербайджанська</string>
-    <string name="lang_belarusian">білоруська</string>
-    <string name="lang_bulgarian">болгарська</string>
-    <string name="lang_bengali">бенгальська</string>
-    <string name="lang_catalan">каталанська</string>
-    <string name="lang_czech">чеська</string>
-    <string name="lang_welsh">валлійська</string>
-    <string name="lang_danish">данська</string>
-    <string name="lang_german">німецька</string>
-    <string name="lang_greek">грецька</string>
-    <string name="lang_english">англійська</string>
-    <string name="lang_spanish">іспанська</string>
-    <string name="lang_estonian">естонська</string>
-    <string name="lang_basque">баскійська</string>
-    <string name="lang_persian">перська</string>
-    <string name="lang_finnish">фінська</string>
-    <string name="lang_french">французька</string>
-    <string name="lang_galician">галісійська</string>
-    <string name="lang_hebrew">іврит</string>
-    <string name="lang_hindi">хінді</string>
-    <string name="lang_croatian">хорватська</string>
-    <string name="lang_hungarian">угорська</string>
-    <string name="lang_indonesian">індонезійська</string>
-    <string name="lang_italian">італійська</string>
-    <string name="lang_japanese">японська</string>
-    <string name="lang_georgian">грузинська</string>
-    <string name="lang_korean">корейська</string>
-    <string name="lang_lithuanian">литовська</string>
-    <string name="lang_latvian">латиська</string>
-    <string name="lang_macedonian">македонська</string>
-    <string name="lang_malay">малайська</string>
-    <string name="lang_dutch">нідерландська</string>
-    <string name="lang_norwegian">норвезька</string>
-    <string name="lang_polish">польська</string>
-    <string name="lang_portuguese">португальська</string>
-    <string name="lang_romanian">румунська</string>
-    <string name="lang_russian">російська</string>
-    <string name="lang_slovak">словацька</string>
-    <string name="lang_slovenian">словенська</string>
-    <string name="lang_albanian">албанська</string>
-    <string name="lang_serbian">сербська</string>
-    <string name="lang_swedish">шведська</string>
-    <string name="lang_swahili">суахілі</string>
-    <string name="lang_tamil">тамільська</string>
-    <string name="lang_thai">тайська</string>
-    <string name="lang_turkish">турецька</string>
-    <string name="lang_ukrainian">українська</string>
-    <string name="lang_urdu">урду</string>
-    <string name="lang_uzbek">узбецька</string>
-    <string name="lang_vietnamese">в\'єтнамська</string>
-    <string name="lang_chinese">китайська</string>
 
     <!-- Model Benchmark -->
     <string name="benchmark_title">Тест %1$s</string>
@@ -827,7 +763,7 @@
     <string name="model_info_no_languages">Підтримку мов невідомо</string>
     <string name="model_info_architecture">Архітектура</string>
     <string name="model_info_arch_encoder_decoder">Енкодер-декодер (Whisper)</string>
-    <string name="model_info_arch_transducer">Трансдюсер (TDT)</string>
+    <string name="model_info_arch_transducer">Transducer (TDT)</string>
     <string name="model_info_arch_ctc">CTC (Connectionist Temporal Classification)</string>
     <string name="model_info_arch_llm">Велика мовна модель</string>
     <string name="model_info_model_size">Розмір моделі</string>
@@ -860,7 +796,7 @@
 <string name="model_info_best_for_gigaam">Найкраща точність російської на пристрої</string>
 <string name="model_info_notes_gigaam">Лише російська. Рідна пунктуація та великі літери.</string>
 <string name="model_info_best_for_nemotron">Потокова розшифровка для довгого аудіо</string>
-<string name="model_info_notes_nemotron">Потоковий трансдюсер з низькою затримкою. Багатомовне автовизначення з опцією мови для кожного потоку.</string>
+<string name="model_info_notes_nemotron">Потоковий transducer з низькою затримкою. Багатомовне автовизначення з опцією мови для кожного потоку.</string>
     <string name="model_info_best_for_gemma">Мультимодальна LLM для завдань текст + аудіо</string>
     <string name="model_info_notes_gemma">Не оптимізована для чистого ASR. Використовуйте для розширених функцій на кшталт розуміння аудіо разом з генеруванням тексту.</string>
     <string name="model_info_benchmark_wer">Частота помилок у словах (італійська): %.1f%%</string>
@@ -868,7 +804,7 @@
     <string name="model_info_close">Закрити</string>
 
     <!-- Skeleton loading -->
-    <string name="skeleton_loading_content_description">Завантаження розшифровки</string>
+    <string name="skeleton_loading_content_description">Завантаження тексту</string>
 
     <!-- Share target profiles (appear as separate entries in Android share sheet) -->
     <string name="share_target_parakeet">Anti-Vocale (Parakeet)</string>
@@ -894,7 +830,7 @@
     <string name="external_delete_confirm">Видалити зовнішню модель %1$s?</string>
     <string name="external_deleted">%1$s видалено</string>
     <string name="external_family">Родина моделі</string>
-    <string name="external_family_transducer">Трансдюсер (NeMo/Zipformer)</string>
+    <string name="external_family_transducer">Transducer (NeMo/Zipformer)</string>
     <string name="external_family_transducer_help">Очікує файли енкодер + декодер + joiner + tokens</string>
     <string name="external_family_whisper">Whisper</string>
     <string name="external_family_whisper_help">Очікує файли енкодер + декодер + tokens</string>
@@ -924,8 +860,8 @@
     <string name="compact_result_actions_title">Компактні кнопки дій</string>
     <string name="show_task_details_title">Показувати деталі завдання</string>
     <string name="show_task_details_description">Показувати ідентифікатор завдання в записах журналу. Корисно при повідомленні про проблеми; типово вимкнено.</string>
-    <string name="compact_result_actions_description">Показувати дії розшифровки лише як значки, заховані в кутку картки результату. Вимкніть для кнопок з підписами.</string>
-    <string name="conversation_grouping_description">Групувати розшифровки за вихідним додатком (WhatsApp, Telegram тощо) у розгортних розділах.</string>
+    <string name="compact_result_actions_description">Показувати дії з текстом лише як значки, заховані в кутку картки результату. Вимкніть для кнопок з підписами.</string>
+    <string name="conversation_grouping_description">Групувати записи за вихідним додатком (WhatsApp, Telegram тощо) у розгортних розділах.</string>
     <plurals name="conversation_group_count">
         <item quantity="one">%1$d повідомлення</item>
         <item quantity="few">%1$d повідомлення</item>
@@ -943,7 +879,7 @@
     <string name="retranscribe_file_not_found">Аудіофайл більше недоступний</string>
     <string name="retranscribe_active_badge">Активна</string>
     <string name="retranscribe_setting_title">Кнопка повторної розшифровки</string>
-    <string name="retranscribe_setting_description">Показувати кнопку на аудіорозшифровках, щоб повторити з іншою моделлю.</string>
+    <string name="retranscribe_setting_description">Показувати кнопку повторного розпізнавання іншою моделлю для готових результатів.</string>
 
     <!-- Subtitle extraction choice (TASK-228) -->
     <string name="subtitles_found_title">Знайдено субтитри</string>
@@ -963,13 +899,13 @@
     <string name="litertlm_pick_file">Виберіть файл моделі</string>
     <string name="litertlm_no_models">У цьому репозиторії не знайдено файлу .litertlm</string>
     <!-- TASK-374: per-transcription feedback -->
-    <string name="feedback_report_transcription">Повідомити про розшифровку</string>
+    <string name="feedback_report_transcription">Повідомити про помилку в тексті</string>
     <string name="feedback_label_task">Завдання</string>
     <string name="feedback_label_model">Модель</string>
     <string name="feedback_label_duration">Тривалість аудіо</string>
     <string name="feedback_label_time">Час обробки</string>
     <string name="feedback_label_status">Статус</string>
-    <string name="feedback_label_excerpt">Фрагмент розшифровки</string>
+    <string name="feedback_label_excerpt">Фрагмент запису</string>
     <string name="feedback_label_truncated">скорочено</string>
     <string name="a11y_expand">розгорнути</string>
     <string name="a11y_collapse">згорнути</string>

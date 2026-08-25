@@ -6,7 +6,7 @@
     <string name="app_name">Anti-Vocale</string>
 
     <!-- Tab names -->
-    <string name="model_tab">Model</string>
+    <string name="model_tab">Modeller</string>
     <string name="logs_tab">Kayıtlar</string>
     <string name="settings_tab">Ayarlar</string>
 
@@ -62,7 +62,7 @@
     <string name="logs_empty">Henüz istek yok</string>
     <string name="request_text">Metin İsteği</string>
     <string name="request_audio">Ses İsteği</string>
-    <string name="logs_recent_requests">Son İstekler (%1$d)</string>
+    <string name="logs_recent_requests">Son Kayıtlar (%1$d)</string>
     <string name="logs_clear">Temizle</string>
     <string name="logs_delete_entry">Kaydı sil</string>
     <string name="logs_delete_confirmation">Bu kayıt silinsin mi?</string>
@@ -72,7 +72,7 @@
     <string name="logs_deselect_all">Seçimi kaldır</string>
     <string name="logs_entries_selected">%d seçildi</string>
     <string name="logs_no_entries_selected">Hiçbir kayıt seçilmedi</string>
-    <string name="logs_cleared">Tüm kayıtlar temizlendi</string>
+    <string name="logs_cleared">Kayıtlar temizlendi</string>
     <string name="logs_entry_deleted">Kayıt silindi</string>
     <plurals name="logs_entries_deleted">
             <item quantity="one">%d kayıt silindi</item>
@@ -81,7 +81,7 @@
     <string name="logs_undo">Geri al</string>
     <string name="logs_cancel">İptal</string>
     <string name="logs_confirm">Onayla</string>
-    <string name="logs_empty_hint">Metin çıkarmaları burada görmek için WhatsApp, Telegram veya başka bir uygulamadan bir sesli mesaj paylaşın</string>
+    <string name="logs_empty_hint">Bir mesajlaşma uygulamasından sesli mesaj paylaşın, metni burada görünecek</string>
     <string name="logs_prompt_label">Komut:</string>
     <string name="logs_result_label">Sonuç:</string>
     <string name="logs_error_label">Hata:</string>
@@ -93,8 +93,8 @@
     <string name="logs_status_processing">İşleniyor</string>
     <string name="logs_model_label">Model: %1$s</string>
     <string name="logs_transcription_cancelled">Metin çıkarma iptal edildi</string>
-    <string name="logs_search_placeholder">Metin çıkarmalarında ara…</string>
-    <string name="logs_search_no_results">Eşleşen metin çıkarması yok</string>
+    <string name="logs_search_placeholder">Kayıtlarda ara…</string>
+    <string name="logs_search_no_results">Eşleşen kayıt yok</string>
     <string name="logs_search_no_results_hint">Farklı bir arama terimi deneyin</string>
     <string name="voice_message_duration">sesli mesaj</string>
     <string name="source_was_video">Kaynak: video dosyası</string>
@@ -155,7 +155,7 @@
     <!-- Nemotron 3.5 streaming model -->
     <string name="nemotron_name">Nemotron 3.5</string>
     <string name="nemotron_title">Nemotron 3.5 (akış)</string>
-    <string name="nemotron_description">Akış transdüseri • Deneysel İtalyanca kalitesi</string>
+    <string name="nemotron_description">~640MB • Akış transdüseri • Deneysel İtalyanca kalitesi</string>
     <string name="nemotron_download_confirm_title">%1$s indirilsin mi?</string>
     <string name="nemotron_download_confirm_message">Bu, yaklaşık %1$dMB indirir. Nemotron 3.5, çok dilli bir akış ASR modelidir.</string>
     <string name="nemotron_download">Nemotron indir</string>
@@ -165,7 +165,7 @@
 
     <!-- GigaAM v3 model -->
     <string name="gigaam_title">GigaAM v3</string>
-    <string name="gigaam_description">Rusça ASR • ~326MB • Sber (MIT)</string>
+    <string name="gigaam_description">~326MB • Hızlı • Noktalama içeren Rusça ASR</string>
     <string name="gigaam_name">GigaAM v3</string>
     <string name="gigaam_download_confirm_title">GigaAM v3 indirilsin mi?</string>
     <string name="gigaam_download_confirm_message">Bu, yaklaşık %1$dMB indirir. GigaAM v3, Sber tarafından geliştirilen, güçlü Rusça doğruluğuna sahip yalnızca Rusça bir ASR modelidir.</string>
@@ -227,7 +227,7 @@
     <string name="oom_crash_warning">Cihazın belleği azaldığı için uygulama kapatıldı. Yeniden metin çıkarmadan önce diğer uygulamaları kapatmayı veya daha küçük bir model kullanmayı deneyin.</string>
     <string name="native_crash_title">Uygulama beklenmedik şekilde kapandı</string>
     <string name="native_crash_go_to_model">Model sekmesine git</string>
-    <string name="model_load_low_memory">Bu model için yeterli boş bellek yok (%1$s boş, yaklaşık %2$s gerekiyor). Diğer uygulamaları kapatın veya daha küçük bir model kullanın. Yine de denemek için Ayarlar\'dan \"Model yüklemeyi zorla\" seçeneğini etkinleştirebilirsiniz.</string>
+    <string name="model_load_low_memory">Bu model için yeterli boş bellek yok (%1$s boş, yaklaşık %2$s gerekiyor). Diğer uygulamaları kapatın veya daha küçük bir model kullanın. Zorunlu yükleme Ayarlar\'dan yapılabilir.</string>
     <string name="force_model_load">Model yüklemeyi zorla</string>
     <string name="force_model_load_desc">Bellek yetersiz görünse bile modeli yükle. Az RAM\'li cihazlarda uygulamayı kapatabilir.</string>
     <string name="copy">Kopyala</string>
@@ -242,7 +242,7 @@
     <string name="unknown_audio_format">Ses biçimi tanımlanamadı. Sesi bir mesajlaşma uygulamasından paylaşın.</string>
     <string name="transcription_started">Metin çıkarma başladı…</string>
     <string name="processing_segment_progress">Dilim %1$d / %2$d…</string>
-    <string name="progressive_initial">Kısmi önizlemeler hazırlanıyor; tam metin işlem bittiğinde hazır olacak</string>
+    <string name="progressive_initial">Metin hazırlanıyor; tamamlanınca nihai sonuç</string>
     <string name="added_to_queue">Kuyruğa eklendi…</string>
     <string name="processing_chunk">Parça %1$d/%2$d işleniyor…</string>
     <string name="processing_audio">Ses işleniyor…</string>
@@ -345,7 +345,7 @@
 
     <!-- Settings Tab - HuggingFace Authentication -->
     <string name="huggingface_auth">HuggingFace Kimlik Doğrulama</string>
-    <string name="huggingface_auth_description">Yalnızca sizin adınıza HuggingFace üzerinden model indirmek için gerekir. Yerel modeller kimlik doğrulama olmadan çalışır.</string>
+    <string name="huggingface_auth_description">Yalnızca HuggingFace\'ten model indirmek için gerekir. Yerel modeller oturum açmadan çalışır.</string>
     <string name="setup_guide">Kurulum Kılavuzu</string>
     <string name="setup_step1">1. Aşağıdaki \'HuggingFace ile giriş yap\' düğmesine dokunun</string>
     <string name="setup_step2">2. HuggingFace hesabınızda oturum açın</string>
@@ -357,7 +357,7 @@
     <string name="expires_label">Son kullanma: %1$s</string>
     <string name="expired">Süresi doldu</string>
     <string name="login_with_huggingface">HuggingFace ile giriş yap</string>
-    <string name="oauth_login_description">Tarayıcınızı kullanarak hızlı giriş. Chrome\'da HuggingFace hesabınızla zaten oturum açtıysanız anında geri yönlendirilirsiniz.</string>
+    <string name="oauth_login_description">Tarayıcıyla hızlı giriş. HuggingFace hesabınızla zaten oturum açtıysanız onay birkaç saniye sürer.</string>
     <string name="create_account_link">Hesabınız yok mu? huggingface.co adresinde oluşturun</string>
     <string name="authenticating">HuggingFace ile kimlik doğrulanıyor…</string>
     <string name="logged_in_as">%1$s olarak giriş yapıldı</string>
@@ -381,8 +381,8 @@
     <string name="validating_token">Jeton doğrulanıyor…</string>
 
     <!-- Settings Tab - Timeout -->
-    <string name="auto_unload_timeout">Otomatik Kaldırma Zaman Aşımı</string>
-    <string name="timeout_description">Belleği boşaltmak için model, belirli bir etkinlik olmama süresinden sonra otomatik olarak kaldırılır. Model, gerektiğinde otomatik yeniden yüklenir.</string>
+    <string name="auto_unload_timeout">Otomatik Kaldırma</string>
+    <string name="timeout_description">Model boşta kaldığında kaldırılır ve bir sonraki kullanımda otomatik olarak geri yüklenir.</string>
     <string name="timeout_1_minute">1 dakika</string>
     <string name="timeout_1_hour">1 saat</string>
     <plurals name="timeout_minutes">
@@ -392,7 +392,7 @@
 
     <!-- Settings Tab - Thread Count -->
     <string name="thread_count_title">Çıkarım İş Parçacıkları</string>
-    <string name="thread_count_description">Metin çıkarma ve ses etkinliği algılamada kullanılan CPU iş parçacığı sayısı. Daha yüksek değerler daha çok CPU kullanır ancak işlemeyi hızlandırabilir.</string>
+    <string name="thread_count_description">Metin çıkarma için CPU iş parçacığı sayısı. Yüksek değerler işlemeyi hızlandırır ve yükü artırır.</string>
     <string name="thread_count_auto">%1$d (otomatik algılandı)</string>
     <string name="thread_count_value">%1$d</string>
 
@@ -407,12 +407,12 @@
     <string name="save">Kaydet</string>
 
     <!-- Settings Tab - Auto-Copy -->
-    <string name="auto_copy_title">Metin Çıkarmayı Otomatik Kopyala</string>
-    <string name="auto_copy_description">Metin çıkarma sonuçlarını otomatik olarak panoya kopyalar. Bildirimden yine de el ile kopyalayabilirsiniz.</string>
+    <string name="auto_copy_title">Otomatik Kopyalama</string>
+    <string name="auto_copy_description">Hazır metni panoya kopyalar. Bildirimden manuel kopyalama da mümkündür.</string>
 
     <!-- Settings Tab - Output Folder -->
-    <string name="output_folder_title">Metinleri klasöre kaydet</string>
-    <string name="output_folder_description">Her metin çıkarmayı otomatik olarak seçtiğiniz bir klasöre .txt olarak kaydeder (ör. Drive veya Syncthing klasörü).</string>
+    <string name="output_folder_title">Klasöre otomatik kaydetme</string>
+    <string name="output_folder_description">Her metin çıkarma, seçilen klasöre ayrı bir .txt dosyası olarak kaydedilir (ör. Drive veya Syncthing).</string>
     <string name="output_folder_choose">Klasör seç</string>
     <string name="output_folder_clear">Klasörü temizle</string>
 
@@ -420,11 +420,11 @@
     <string name="vad_title">Sessizliği Kırp (VAD)</string>
     <string name="vad_description">Metin çıkarmadan önce sesli mesajlardaki sessiz kısımları kaldırır. İşleme süresini azaltır ve doğruluğu artırır.</string>
     <string name="progressive_title">Aşamalı Görüntüleme</string>
-    <string name="progressive_description">Tam sonucu beklemeden, her konuşma dilimi tamamlandıkça metin çıkarma metnini gösterir.</string>
+    <string name="progressive_description">Kaydın bitmesini beklemeden, metin çıkarma ilerledikçe metni gösterir.</string>
 
     <!-- Settings Tab - Default Prompt -->
-    <string name="default_prompt_title">Varsayılan Metin Çıkarma Komutu</string>
-    <string name="default_prompt_description">Bu komut sesi metne çıkarırken kullanılır. Varsayılan sistem komutunu kullanmak için boş bırakın.</string>
+    <string name="default_prompt_title">Varsayılan Komut</string>
+    <string name="default_prompt_description">Metin çıkarma sırasında modele verilen talimat. Boş bırakılırsa yerleşik komut kullanılır.</string>
     <string name="default_prompt_placeholder">ör. Bu konuşmayı metne çıkar:</string>
     <string name="default_prompt_chars">%1$d / 500</string>
     <string name="default_prompt_compatibility_info">Yalnızca LLM modelleri (Gemma) için geçerlidir. Whisper ve Parakeet modelleri bu ayarı yok sayar.</string>
@@ -451,19 +451,11 @@
     <string name="language_title">Dil</string>
     <string name="language_description">Uygulama görünümü dilini seçin.</string>
     <string name="language_system">Sistem Varsayılanı</string>
-    <string name="language_english">English</string>
-    <string name="language_italian">Italiano</string>
-    <string name="language_german">Deutsch</string>
-    <string name="language_russian">Русский</string>
-    <string name="language_hindi">हिन्दी</string>
-    <string name="language_french">Français</string>
-    <string name="language_spanish">Español</string>
-    <string name="language_portuguese">Português (BR)</string>
 
     <!-- Settings Tab - Transcription Language -->
     <string name="transcription_language_title">Metin Çıkarma Dili</string>
     <string name="transcription_language_auto">Otomatik algıla</string>
-    <string name="transcription_language_description">Ses metin çıkarma için dili seçin. Belirli bir dil seçmek algılamayı atlar ve daha hızlıdır.</string>
+    <string name="transcription_language_description">Metin çıkarma için ses dili. Belirli bir dil seçmek algılamayı atlar ve işlemeyi hızlandırır.</string>
     <string name="transcription_language_note">Yalnızca Whisper modelleri için geçerlidir. Distil Italian modeli her zaman İtalyanca kullanır. Diğer arka uçlar (Gemma, Parakeet, Qwen3-ASR) otomatik algılar.</string>
 
     <!-- Settings Tab - Theme -->
@@ -478,7 +470,7 @@
     <!-- Per-App Settings -->
     <string name="per_app_settings_title">Uygulama Başına Ayarlar</string>
     <string name="per_app_settings_description">Her uygulama için bildirim davranışını özelleştirin</string>
-    <string name="per_app_settings_info">Ses o uygulamadan paylaşıldığında bildirimlerin nasıl davranacağını yapılandırmak için bir uygulamaya dokunun.</string>
+    <string name="per_app_settings_info">Bildirimlerini yapılandırmak için bir uygulamaya dokunun.</string>
     <string name="per_app_settings_loading">Tercihler yükleniyor...</string>
     <string name="per_app_settings_manually_added">El ile Eklendi</string>
     <string name="per_app_settings_add_app">Uygulama Ekle</string>
@@ -492,8 +484,8 @@
     <string name="per_app_settings_share_off">Paylaş düğmesi kapalı</string>
     <string name="per_app_settings_sound">Ses: %1$s</string>
     <string name="per_app_settings_dialog_title">%1$s ayarları</string>
-    <string name="per_app_settings_auto_copy_title">Metin çıkarmayı otomatik kopyala</string>
-    <string name="per_app_settings_auto_copy_description">Metin çıkarmayı otomatik olarak panoya kopyala</string>
+    <string name="per_app_settings_auto_copy_title">Otomatik Kopyalama</string>
+    <string name="per_app_settings_auto_copy_description">Mesaj metnini panoya kopyala</string>
     <string name="per_app_settings_show_share_title">Paylaş düğmesini göster</string>
     <string name="per_app_settings_show_share_description">Bildirimde paylaş düğmesini göster</string>
     <string name="per_app_settings_notification_sound">Bildirim sesi</string>
@@ -522,12 +514,11 @@
 
     <!-- VAD Advisory (shown in Log tab when Parakeet is active with VAD enabled) -->
     <string name="vad_advisory_title">Parakeet ile VAD gerekli değildir</string>
-    <string name="vad_advisory_description">Sessizlik kırpma, bu model için sonuçları iyileştirmeden işleme yükü ekler. Ayarlar\'dan kapatabilirsiniz.</string>
+    <string name="vad_advisory_description">Parakeet için sessizlik kırpma yalnızca işlem süresini uzatır. Ayarlar\'dan kapatılabilir.</string>
     <string name="vad_advisory_dismiss">Anladım</string>
 
     <!-- Share Back -->
     <string name="share_back">Geri Paylaş</string>
-    <string name="share_back_description">Metin çıkarmayı kaynak uygulamaya geri paylaş</string>
     <string name="send_to_app">%1$s uygulamasına gönder</string>
 
     <!-- Notification Channels -->
@@ -541,12 +532,12 @@
     <string name="notification_channel_inference">Metin Çıkarma Hizmeti</string>
     <string name="notification_channel_inference_description">Arka plan sesli metin çıkarma işlemi</string>
     <string name="notification_channel_result">Metin Çıkarma Sonucu</string>
-    <string name="notification_channel_result_description">Metin çıkarma tamamlandığında bildirim</string>
+    <string name="notification_channel_result_description">Hazır metin ve işlemler</string>
     <string name="notification_cancelling">İptal ediliyor…</string>
 
     <!-- No-model notification -->
-    <string name="notification_no_model_title">Metin çıkarma modeli yok</string>
-    <string name="notification_no_model_message">Bir metin çıkarma modeli indirmek için uygulamayı açın</string>
+    <string name="notification_no_model_title">Model yüklü değil</string>
+    <string name="notification_no_model_message">Uygulamayı açın ve bir model indirin</string>
     <string name="notification_no_model_action">Uygulamayı aç</string>
 
     <!-- Tasker fallback notification -->
@@ -634,12 +625,12 @@
 
     <!-- Transcription active protection -->
     <string name="dialog_transcription_active_title">Metin Çıkarma Sürüyor</string>
-    <string name="dialog_delete_active_model_message">\'%1$s\' metin çıkarma için kullanıldığından silinemez. Lütfen metin çıkarma bitmesini bekleyin.</string>
+    <string name="dialog_delete_active_model_message">\'%1$s\' silinemez: model metin çıkarmada kullanılıyor. Bitmesini bekleyin.</string>
     <string name="dialog_delete_inactive_model_message">Bir metin çıkarma sürüyor. \'%1$s\' silinmesi onu etkilemez, ancak dikkatli ilerleyin.</string>
     <string name="dialog_switch_model_message">Şu anda bir metin çıkarma sürüyor. Model değiştirmek onu bozabilir. Emin misiniz?</string>
     <string name="action_understood">Anladım</string>
     <string name="action_switch_anyway">Yine de değiştir</string>
-    <string name="warn_reset_stats_during_transcription">Bir metin çıkarma sürüyor. İstatistikleri şimdi sıfırlamak onu etkilemez, ancak zamanlama verileri eksik olabilir.</string>
+    <string name="warn_reset_stats_during_transcription">Metin çıkarma sürüyor: istatistikler korunur ancak zamanlama verileri eksik olabilir.</string>
     <string name="cannot_unload_during_transcription">Kaldırılamıyor: model etkin bir metin çıkarma için kullanılıyor</string>
     <string name="dialog_unload_title">Model Kaldırılsın mı?</string>
     <string name="dialog_unload_message">\'%1$s\' modeli bellekten kaldırılacak. Sonraki metin çıkarmada otomatik olarak yeniden yüklenecek.</string>
@@ -647,7 +638,7 @@
 
     <!-- Swipe Action Mode -->
     <string name="swipe_action_title">Kaydırma Eylemi</string>
-    <string name="swipe_action_description">Bir kayıt girişinde sola kaydırdığınızda ne olacağını seçin</string>
+    <string name="swipe_action_description">Girişi sola kaydırınca yapılacak işlemi seçin</string>
     <string name="swipe_action_reveal">Eylemleri göster</string>
     <string name="swipe_action_immediate_delete">Hemen sil</string>
     <string name="swipe_action_copy_description">Metin çıkarmayı kopyala</string>
@@ -666,7 +657,6 @@
     <string name="error_no_active_backend">Etkin arka uç yok</string>
     <string name="error_no_file_path">Ses isteği için dosya yolu verilmedi</string>
     <string name="error_backend_no_audio_support">%1$s sesli metin çıkarmayı desteklemiyor. Ayarlar\'dan bir konuşmadan metne modeline geçin.</string>
-    <string name="error_no_transcription_produced">Metin çıkarma üretilmedi</string>
     <string name="error_no_llm_model">Yapılandırılmış LLM modeli yok. Bir model indirmek için uygulamayı açın.</string>
     <string name="error_no_model_configured">%1$s modeli yapılandırılmadı. Bir model indirmek için uygulamayı açın.</string>
     <string name="loading_model">%1$s modeli yükleniyor…</string>
@@ -715,62 +705,8 @@
     <!-- Language filter -->
     <string name="lang_filter_label">Dile göre filtrele</string>
     <string name="lang_filter_all">Tüm diller</string>
-    <string name="lang_filter_search">Dil ara…</string>
     <string name="lang_filter_no_results">Eşleşen dil yok</string>
     <string name="lang_filter_clear">Aramayı temizle</string>
-    <string name="lang_afrikaans">Afrikaanca</string>
-    <string name="lang_arabic">Arapça</string>
-    <string name="lang_azerbaijani">Azerice</string>
-    <string name="lang_belarusian">Belarusça</string>
-    <string name="lang_bulgarian">Bulgarca</string>
-    <string name="lang_bengali">Bengalce</string>
-    <string name="lang_catalan">Katalanca</string>
-    <string name="lang_czech">Çekçe</string>
-    <string name="lang_welsh">Galce</string>
-    <string name="lang_danish">Danca</string>
-    <string name="lang_german">Almanca</string>
-    <string name="lang_greek">Yunanca</string>
-    <string name="lang_english">İngilizce</string>
-    <string name="lang_spanish">İspanyolca</string>
-    <string name="lang_estonian">Estonca</string>
-    <string name="lang_basque">Baskça</string>
-    <string name="lang_persian">Farsça</string>
-    <string name="lang_finnish">Fince</string>
-    <string name="lang_french">Fransızca</string>
-    <string name="lang_galician">Galiçyaca</string>
-    <string name="lang_hebrew">İbranice</string>
-    <string name="lang_hindi">Hintçe</string>
-    <string name="lang_croatian">Hırvatça</string>
-    <string name="lang_hungarian">Macarca</string>
-    <string name="lang_indonesian">Endonezce</string>
-    <string name="lang_italian">İtalyanca</string>
-    <string name="lang_japanese">Japonca</string>
-    <string name="lang_georgian">Gürcüce</string>
-    <string name="lang_korean">Korece</string>
-    <string name="lang_lithuanian">Litvanca</string>
-    <string name="lang_latvian">Letonca</string>
-    <string name="lang_macedonian">Makedonca</string>
-    <string name="lang_malay">Malayca</string>
-    <string name="lang_dutch">Hollandaca</string>
-    <string name="lang_norwegian">Norveççe</string>
-    <string name="lang_polish">Lehçe</string>
-    <string name="lang_portuguese">Portekizce</string>
-    <string name="lang_romanian">Romence</string>
-    <string name="lang_russian">Rusça</string>
-    <string name="lang_slovak">Slovakça</string>
-    <string name="lang_slovenian">Slovence</string>
-    <string name="lang_albanian">Arnavutça</string>
-    <string name="lang_serbian">Sırpça</string>
-    <string name="lang_swedish">İsveççe</string>
-    <string name="lang_swahili">Svahili</string>
-    <string name="lang_tamil">Tamilce</string>
-    <string name="lang_thai">Tayca</string>
-    <string name="lang_turkish">Türkçe</string>
-    <string name="lang_ukrainian">Ukraynaca</string>
-    <string name="lang_urdu">Urduca</string>
-    <string name="lang_uzbek">Özbekçe</string>
-    <string name="lang_vietnamese">Vietnamca</string>
-    <string name="lang_chinese">Çince</string>
 
     <!-- Model Benchmark -->
     <string name="benchmark_title">%1$s kıyaslaması</string>
@@ -894,20 +830,20 @@
     <string name="external_ctc_subtype_zipformer">Zipformer CTC</string>
     <string name="external_languages">Diller (isteğe bağlı)</string>
     <string name="external_languages_hint">virgül veya boşlukla ayrılmış, ör. ar, en</string>
-    <string name="external_notice_single_pass">Tek geçişli metin çıkarma: çok uzun sesler büyük modellerde başarısız olabilir. Sesi kırpın veya daha küçük bir model kullanın.</string>
+    <string name="external_notice_single_pass">Çok uzun sesler büyük modellerle tek geçişte işlenemeyebilir. Sesi kısaltın veya daha küçük bir model seçin.</string>
     <string name="external_notice_family">Metin çıkarma hatasız şekilde kilitleniyorsa mimari yanlış olabilir: modeli silin ve başka bir mimari seçerek yeniden içe aktarın.</string>
 
     <!-- Advanced sharing settings -->
-    <string name="share_targets_title">Paylaşım Hedefleri</string>
-    <string name="share_targets_description">İndirilen her modeli Android paylaşım sayfasında ayrı bir seçenek olarak göster. Sesi belirli bir model üzerinden paylaştığınızda, yalnızca o metin çıkarma için geçici olarak kullanılır.</string>
-    <string name="advanced_sharing_toggle">Modelleri paylaşım sayfasında göster</string>
-    <string name="share_targets_models_info">İndirilen her model ayrı bir paylaşım hedefi olarak görünecek. Bir modeli silmek paylaşım hedefini de kaldırır.</string>
+    <string name="share_targets_title">Paylaşım Menüsünde Modeller</string>
+    <string name="share_targets_description">İndirilen her model sistem menüsünde ayrı bir seçenek olarak görünür. Sesi seçilen model işler.</string>
+    <string name="advanced_sharing_toggle">İndirilen modelleri göster</string>
+    <string name="share_targets_models_info">İndirilen her model paylaşım menüsünde ayrı bir öğe olarak görünür. Model silindiğinde menüden kalkar.</string>
 
     <!-- Conversation Grouping -->
     <string name="conversation_grouping_title">Konuşmaya Göre Grupla</string>
     <string name="compact_result_actions_title">Kompakt eylem düğmeleri</string>
     <string name="show_task_details_title">Görev ayrıntılarını göster</string>
-    <string name="show_task_details_description">Kayıt girişlerinde görev kimliğini göster. Sorun bildirirken yararlıdır; varsayılan olarak kapalıdır.</string>
+    <string name="show_task_details_description">Girişlerde görev kimliğini göster. Destekle iletişimde yararlıdır; varsayılan olarak kapalıdır.</string>
     <string name="compact_result_actions_description">Metin çıkarma eylemlerini yalnızca simge olarak, sonuç kartının köşesine yerleştirilmiş şekilde göster. Etiketli düğmeler için kapatın.</string>
     <string name="conversation_grouping_description">Metin çıkarmaları kaynak uygulamaya göre (WhatsApp, Telegram vb.) daraltılabilir bölümlerde gruplandır.</string>
     <plurals name="conversation_group_count">
@@ -936,8 +872,8 @@
     <string name="subtitle_fallback_status">Altyazılar ayıklanamadı; ses metne çıkarılıyor</string>
     <string name="subtitle_choice_notification_text">Seçiminiz bekleniyor…</string>
     <!-- TASK-336: background-kill remediation card -->
-    <string name="battery_exemption_title">Arka planda metin çıkarmaya izin ver</string>
-    <string name="battery_exemption_description">Cihazınız, uygulama arka plandayken bir metin çıkarmayı durdurdu (bazı Android telefonlarda yaygındır). Metin çıkarmaları tamamlamak için Anti-Vocale\'in arka planda çalışmasına izin verin.</string>
+    <string name="battery_exemption_title">Arka planda çalışmaya izin ver</string>
+    <string name="battery_exemption_description">Sistem, arka planda tanımayı durdurdu. Tanıma yarıda kesilmesin diye uygulamanın arka planda çalışmasına izin verin.</string>
     <string name="battery_exemption_action">Ayarı aç</string>
     <!-- TASK-373: litert-lm HF url import -->
     <string name="litertlm_import_from_url">Hugging Face URL’sinden içe aktar</string>

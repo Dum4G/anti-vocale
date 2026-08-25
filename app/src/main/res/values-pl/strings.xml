@@ -6,8 +6,8 @@
     <string name="app_name">Anti-Vocale</string>
 
     <!-- Tab names -->
-    <string name="model_tab">Model</string>
-    <string name="logs_tab">Dziennik</string>
+    <string name="model_tab">Modele</string>
+    <string name="logs_tab">Historia</string>
     <string name="settings_tab">Ustawienia</string>
 
     <!-- Model selection -->
@@ -62,17 +62,17 @@
     <string name="logs_empty">Brak żądań</string>
     <string name="request_text">Żądanie tekstowe</string>
     <string name="request_audio">Żądanie audio</string>
-    <string name="logs_recent_requests">Ostatnie żądania (%1$d)</string>
+    <string name="logs_recent_requests">Ostatnie wpisy (%1$d)</string>
     <string name="logs_clear">Wyczyść</string>
     <string name="logs_delete_entry">Usuń wpis</string>
-    <string name="logs_delete_confirmation">Usunąć ten wpis dziennika?</string>
+    <string name="logs_delete_confirmation">Usunąć ten wpis historii?</string>
     <string name="logs_delete_selected">Usuń wybrane</string>
-    <string name="logs_clear_confirmation">Wyczyścić cały dziennik? Tego nie można cofnąć.</string>
+    <string name="logs_clear_confirmation">Wyczyścić całą historię? Tego nie można cofnąć.</string>
     <string name="logs_select_all">Zaznacz wszystkie</string>
     <string name="logs_deselect_all">Odznacz wszystkie</string>
     <string name="logs_entries_selected">Zaznaczono: %d</string>
     <string name="logs_no_entries_selected">Nie zaznaczono żadnych wpisów</string>
-    <string name="logs_cleared">Wyczyszczono cały dziennik</string>
+    <string name="logs_cleared">Historia wyczyszczona</string>
     <string name="logs_entry_deleted">Wpis dziennika usunięty</string>
     <plurals name="logs_entries_deleted">
         <item quantity="one">Usunięto %d wpis</item>
@@ -83,7 +83,7 @@
     <string name="logs_undo">Cofnij</string>
     <string name="logs_cancel">Anuluj</string>
     <string name="logs_confirm">Potwierdź</string>
-    <string name="logs_empty_hint">Udostępnij wiadomość głosową z WhatsApp, Telegrama lub innej aplikacji, aby zobaczyć tutaj transkrypcje</string>
+    <string name="logs_empty_hint">Udostępnij wiadomość głosową z komunikatora, a jej tekst pojawi się tutaj</string>
     <string name="logs_prompt_label">Podpowiedź:</string>
     <string name="logs_result_label">Wynik:</string>
     <string name="logs_error_label">Błąd:</string>
@@ -95,8 +95,8 @@
     <string name="logs_status_processing">Przetwarzanie</string>
     <string name="logs_model_label">Model: %1$s</string>
     <string name="logs_transcription_cancelled">Transkrypcja anulowana</string>
-    <string name="logs_search_placeholder">Szukaj transkrypcji…</string>
-    <string name="logs_search_no_results">Brak pasujących transkrypcji</string>
+    <string name="logs_search_placeholder">Szukaj wpisów…</string>
+    <string name="logs_search_no_results">Brak pasujących wpisów</string>
     <string name="logs_search_no_results_hint">Spróbuj innego wyszukiwanego hasła</string>
     <string name="voice_message_duration">wiadomość głosowa</string>
     <string name="source_was_video">Źródło: plik wideo</string>
@@ -157,7 +157,7 @@
     <!-- Nemotron 3.5 streaming model -->
     <string name="nemotron_name">Nemotron 3.5</string>
     <string name="nemotron_title">Nemotron 3.5 (strumieniowanie)</string>
-    <string name="nemotron_description">Transducer strumieniowy • Eksperymentalna jakość włoskiego</string>
+    <string name="nemotron_description">~640MB • Transducer strumieniowy • Eksperymentalna jakość włoskiego</string>
     <string name="nemotron_download_confirm_title">Pobrać %1$s?</string>
     <string name="nemotron_download_confirm_message">To pobierze ok. %1$dMB. Nemotron 3.5 to wielojęzyczny strumieniowy model ASR.</string>
     <string name="nemotron_download">Pobierz Nemotron</string>
@@ -167,7 +167,7 @@
 
     <!-- GigaAM v3 model -->
     <string name="gigaam_title">GigaAM v3</string>
-    <string name="gigaam_description">Rosyjski ASR • ~326MB • Sber (MIT)</string>
+    <string name="gigaam_description">~326MB • Szybki • Rosyjski ASR z interpunkcją</string>
     <string name="gigaam_name">GigaAM v3</string>
     <string name="gigaam_download_confirm_title">Pobrać GigaAM v3?</string>
     <string name="gigaam_download_confirm_message">To pobierze ok. %1$dMB. GigaAM v3 to rosyjski model ASR od Sber z wysoką dokładnością rosyjskiego.</string>
@@ -231,7 +231,7 @@
     <string name="oom_crash_warning">Aplikacja została zamknięta, ponieważ urządzeniu kończyła się pamięć. Przed ponowną transkrypcją spróbuj zamknąć inne aplikacje lub użyć mniejszego modelu.</string>
     <string name="native_crash_title">Aplikacja zamknęła się nieoczekiwanie</string>
     <string name="native_crash_go_to_model">Przejdź do karty Model</string>
-    <string name="model_load_low_memory">Za mało wolnej pamięci dla tego modelu (dostępne %1$s, potrzeba ok. %2$s). Zamknij inne aplikacje lub użyj mniejszego modelu. Możesz też włączyć w Ustawieniach opcję \"Wymuś wczytanie modelu\", aby spróbować mimo to.</string>
+    <string name="model_load_low_memory">Za mało wolnej pamięci dla tego modelu (dostępne %1$s, potrzeba ok. %2$s). Zamknij inne aplikacje lub użyj mniejszego modelu. Wymuszone wczytanie jest dostępne w Ustawieniach.</string>
     <string name="force_model_load">Wymuś wczytanie modelu</string>
     <string name="force_model_load_desc">Wczytaj model nawet, gdy pamięci wydaje się brakować. Może zamknąć aplikację na urządzeniach z małą ilością RAM.</string>
     <string name="copy">Kopiuj</string>
@@ -246,7 +246,7 @@
     <string name="unknown_audio_format">Nie udało się zidentyfikować formatu audio. Udostępnij audio z aplikacji do wiadomości.</string>
     <string name="transcription_started">Transkrypcja rozpoczęta…</string>
     <string name="processing_segment_progress">Segment %1$d z %2$d…</string>
-    <string name="progressive_initial">Przygotowywanie podglądów częściowych; pełny tekst będzie dostępny po zakończeniu</string>
+    <string name="progressive_initial">Przygotowywanie tekstu; wynik końcowy po zakończeniu</string>
     <string name="added_to_queue">Dodano do kolejki…</string>
     <string name="processing_chunk">Przetwarzanie fragmentu %1$d/%2$d…</string>
     <string name="processing_audio">Przetwarzanie audio…</string>
@@ -351,7 +351,7 @@
 
     <!-- Settings Tab - HuggingFace Authentication -->
     <string name="huggingface_auth">Uwierzytelnianie HuggingFace</string>
-    <string name="huggingface_auth_description">Potrzebne tylko do pobierania modeli z HuggingFace w Twoim imieniu. Lokalne modele działają bez uwierzytelniania.</string>
+    <string name="huggingface_auth_description">Potrzebne tylko do pobierania modeli z HuggingFace. Lokalne modele działają bez logowania.</string>
     <string name="setup_guide">Przewodnik konfiguracji</string>
     <string name="setup_step1">1. Dotknij \'Zaloguj się przez HuggingFace\' poniżej</string>
     <string name="setup_step2">2. Zaloguj się na konto HuggingFace</string>
@@ -363,7 +363,7 @@
     <string name="expires_label">Wygasa: %1$s</string>
     <string name="expired">Wygasł</string>
     <string name="login_with_huggingface">Zaloguj się przez HuggingFace</string>
-    <string name="oauth_login_description">Szybkie logowanie przez przeglądarkę. Jeśli jesteś już zalogowany w HuggingFace w Chrome, natychmiast wrócisz do aplikacji.</string>
+    <string name="oauth_login_description">Szybkie logowanie przez przeglądarkę. Jeśli jesteś już zalogowany w HuggingFace, potwierdzenie zajmie kilka sekund.</string>
     <string name="create_account_link">Nie masz konta? Utwórz je na huggingface.co</string>
     <string name="authenticating">Uwierzytelnianie przez HuggingFace…</string>
     <string name="logged_in_as">Zalogowano jako %1$s</string>
@@ -387,8 +387,8 @@
     <string name="validating_token">Sprawdzanie tokenu…</string>
 
     <!-- Settings Tab - Timeout -->
-    <string name="auto_unload_timeout">Limit automatycznego zwolnienia</string>
-    <string name="timeout_description">Automatycznie zwalnia model po okresie bezczynności, aby odzyskać pamięć. Model zostanie automatycznie wczytany ponownie, gdy będzie potrzebny.</string>
+    <string name="auto_unload_timeout">Automatyczne zwalnianie</string>
+    <string name="timeout_description">Model jest zwalniany po bezczynności i wraca przy kolejnym użyciu.</string>
     <string name="timeout_1_minute">1 minuta</string>
     <string name="timeout_1_hour">1 godzina</string>
     <plurals name="timeout_minutes">
@@ -400,7 +400,7 @@
 
     <!-- Settings Tab - Thread Count -->
     <string name="thread_count_title">Wątki wnioskowania</string>
-    <string name="thread_count_description">Liczba wątków CPU używanych do transkrypcji i wykrywania aktywności głosowej. Wyższe wartości zużywają więcej CPU, ale mogą przyspieszyć przetwarzanie.</string>
+    <string name="thread_count_description">Liczba wątków CPU do transkrypcji. Wyższe wartości przyspieszają przetwarzanie i zwiększają obciążenie.</string>
     <string name="thread_count_auto">%1$d (wykryte automatycznie)</string>
     <string name="thread_count_value">%1$d</string>
 
@@ -415,12 +415,12 @@
     <string name="save">Zapisz</string>
 
     <!-- Settings Tab - Auto-Copy -->
-    <string name="auto_copy_title">Automatyczne kopiowanie transkrypcji</string>
-    <string name="auto_copy_description">Automatycznie kopiuje wyniki transkrypcji do schowka. Nadal możesz skopiować ręcznie z powiadomienia.</string>
+    <string name="auto_copy_title">Automatyczne kopiowanie</string>
+    <string name="auto_copy_description">Kopiuje gotowy tekst do schowka. Ręczne kopiowanie z powiadomienia nadal dostępne.</string>
 
     <!-- Settings Tab - Output Folder -->
-    <string name="output_folder_title">Zapisuj transkrypcje do folderu</string>
-    <string name="output_folder_description">Automatycznie zapisuje każdą transkrypcję jako .txt do wybranego folderu (np. folder Drive lub Syncthing).</string>
+    <string name="output_folder_title">Automatyczny zapis do folderu</string>
+    <string name="output_folder_description">Każda transkrypcja zapisuje się jako osobny plik .txt w wybranym folderze (np. Drive lub Syncthing).</string>
     <string name="output_folder_choose">Wybierz folder</string>
     <string name="output_folder_clear">Wyczyść folder</string>
 
@@ -428,11 +428,11 @@
     <string name="vad_title">Usuwanie ciszy (VAD)</string>
     <string name="vad_description">Usuwa ciche fragmenty z wiadomości głosowych przed transkrypcją. Skraca czas przetwarzania i poprawia dokładność.</string>
     <string name="progressive_title">Wyświetlanie progresywne</string>
-    <string name="progressive_description">Pokazuje tekst transkrypcji po zakończeniu każdego segmentu mowy, zamiast czekać na pełny wynik.</string>
+    <string name="progressive_description">Pokazuje tekst w trakcie transkrypcji, bez czekania na koniec nagrania.</string>
 
     <!-- Settings Tab - Default Prompt -->
-    <string name="default_prompt_title">Domyślna podpowiedź transkrypcji</string>
-    <string name="default_prompt_description">Ta podpowiedź będzie używana przy transkrypcji audio. Zostaw puste, aby użyć domyślnej podpowiedzi systemowej.</string>
+    <string name="default_prompt_title">Domyślny prompt</string>
+    <string name="default_prompt_description">Instrukcja dla modelu podczas transkrypcji. Puste pole oznacza użycie wbudowanego promptu.</string>
     <string name="default_prompt_placeholder">np. Przepisz tę mowę:</string>
     <string name="default_prompt_chars">%1$d / 500</string>
     <string name="default_prompt_compatibility_info">Dotyczy tylko modeli LLM (Gemma). Modele Whisper i Parakeet ignorują to ustawienie.</string>
@@ -459,19 +459,11 @@
     <string name="language_title">Język</string>
     <string name="language_description">Wybierz język wyświetlania aplikacji.</string>
     <string name="language_system">Domyślny systemowy</string>
-    <string name="language_english">English</string>
-    <string name="language_italian">Italiano</string>
-    <string name="language_german">Deutsch</string>
-    <string name="language_russian">Русский</string>
-    <string name="language_hindi">हिन्दी</string>
-    <string name="language_french">Français</string>
-    <string name="language_spanish">Español</string>
-    <string name="language_portuguese">Português (BR)</string>
 
     <!-- Settings Tab - Transcription Language -->
     <string name="transcription_language_title">Język transkrypcji</string>
     <string name="transcription_language_auto">Automatyczna detekcja</string>
-    <string name="transcription_language_description">Wybierz język transkrypcji audio. Wybranie konkretnego języka pomija detekcję i jest szybsze.</string>
+    <string name="transcription_language_description">Język audio dla transkrypcji. Wybranie konkretnego języka pomija detekcję i przyspiesza przetwarzanie.</string>
     <string name="transcription_language_note">Dotyczy tylko modeli Whisper. Model Distil Italian zawsze używa włoskiego. Pozostałe backendy (Gemma, Parakeet, Qwen3-ASR) wykrywają automatycznie.</string>
 
     <!-- Settings Tab - Theme -->
@@ -486,7 +478,7 @@
     <!-- Per-App Settings -->
     <string name="per_app_settings_title">Ustawienia per aplikacja</string>
     <string name="per_app_settings_description">Dostosuj zachowanie powiadomień dla każdej aplikacji</string>
-    <string name="per_app_settings_info">Dotknij aplikacji, aby skonfigurować zachowanie powiadomień przy udostępnianiu audio z tej aplikacji.</string>
+    <string name="per_app_settings_info">Dotknij aplikacji, aby skonfigurować jej powiadomienia.</string>
     <string name="per_app_settings_loading">Wczytywanie preferencji...</string>
     <string name="per_app_settings_manually_added">Dodane ręcznie</string>
     <string name="per_app_settings_add_app">Dodaj aplikację</string>
@@ -500,8 +492,8 @@
     <string name="per_app_settings_share_off">Przycisk udostępniania: wyłącz.</string>
     <string name="per_app_settings_sound">Dźwięk: %1$s</string>
     <string name="per_app_settings_dialog_title">Ustawienia dla %1$s</string>
-    <string name="per_app_settings_auto_copy_title">Automatyczne kopiowanie transkrypcji</string>
-    <string name="per_app_settings_auto_copy_description">Automatycznie kopiuj transkrypcję do schowka</string>
+    <string name="per_app_settings_auto_copy_title">Automatyczne kopiowanie</string>
+    <string name="per_app_settings_auto_copy_description">Kopiuj tekst wiadomości do schowka</string>
     <string name="per_app_settings_show_share_title">Pokazuj przycisk udostępniania</string>
     <string name="per_app_settings_show_share_description">Wyświetlaj przycisk udostępniania w powiadomieniu</string>
     <string name="per_app_settings_notification_sound">Dźwięk powiadomienia</string>
@@ -530,12 +522,11 @@
 
     <!-- VAD Advisory (shown in Log tab when Parakeet is active with VAD enabled) -->
     <string name="vad_advisory_title">VAD nie jest potrzebny z Parakeet</string>
-    <string name="vad_advisory_description">Usuwanie ciszy zwiększa obciążenie przetwarzania, nie poprawiając wyników dla tego modelu. Możesz to wyłączyć w Ustawieniach.</string>
+    <string name="vad_advisory_description">Dla Parakeeta usuwanie ciszy tylko wydłuża przetwarzanie. Można wyłączyć w Ustawieniach.</string>
     <string name="vad_advisory_dismiss">Rozumiem</string>
 
     <!-- Share Back -->
     <string name="share_back">Odeślij</string>
-    <string name="share_back_description">Udostępnij transkrypcję z powrotem do aplikacji źródłowej</string>
     <string name="send_to_app">Wyślij do %1$s</string>
 
     <!-- Notification Channels -->
@@ -549,12 +540,12 @@
     <string name="notification_channel_inference">Usługa transkrypcji</string>
     <string name="notification_channel_inference_description">Przetwarzanie transkrypcji audio w tle</string>
     <string name="notification_channel_result">Wynik transkrypcji</string>
-    <string name="notification_channel_result_description">Powiadomienie po zakończeniu transkrypcji</string>
+    <string name="notification_channel_result_description">Gotowy tekst i działania</string>
     <string name="notification_cancelling">Anulowanie…</string>
 
     <!-- No-model notification -->
-    <string name="notification_no_model_title">Brak modelu transkrypcji</string>
-    <string name="notification_no_model_message">Otwórz aplikację, aby pobrać model transkrypcji</string>
+    <string name="notification_no_model_title">Model niezainstalowany</string>
+    <string name="notification_no_model_message">Otwórz aplikację i pobierz model</string>
     <string name="notification_no_model_action">Otwórz aplikację</string>
 
     <!-- Tasker fallback notification -->
@@ -644,12 +635,12 @@
 
     <!-- Transcription active protection -->
     <string name="dialog_transcription_active_title">Transkrypcja w toku</string>
-    <string name="dialog_delete_active_model_message">Nie można usunąć \'%1$s\', ponieważ jest używany do transkrypcji. Poczekaj na zakończenie transkrypcji.</string>
+    <string name="dialog_delete_active_model_message">Nie można usunąć \'%1$s\': model jest używany do transkrypcji. Poczekaj na zakończenie.</string>
     <string name="dialog_delete_inactive_model_message">Transkrypcja jest w toku. Usunięcie \'%1$s\' nie wpłynie na nią, ale postępuj ostrożnie.</string>
     <string name="dialog_switch_model_message">Transkrypcja jest właśnie w toku. Zmiana modelu może ją przerwać. Czy na pewno?</string>
     <string name="action_understood">Rozumiem</string>
     <string name="action_switch_anyway">Zmień mimo to</string>
-    <string name="warn_reset_stats_during_transcription">Transkrypcja jest w toku. Zresetowanie statystyk teraz nie wpłynie na nią, ale dane czasowe mogą być niekompletne.</string>
+    <string name="warn_reset_stats_during_transcription">Transkrypcja w toku: statystyki zostaną zachowane, ale dane czasowe mogą być niekompletne.</string>
     <string name="cannot_unload_during_transcription">Nie można zwolnić: model jest używany przez aktywną transkrypcję</string>
     <string name="dialog_unload_title">Zwolnić model?</string>
     <string name="dialog_unload_message">Model \'%1$s\' zostanie zwolniony z pamięci. Zostanie automatycznie wczytany ponownie przy następnej transkrypcji.</string>
@@ -657,7 +648,7 @@
 
     <!-- Swipe Action Mode -->
     <string name="swipe_action_title">Działanie przesunięcia</string>
-    <string name="swipe_action_description">Wybierz, co się stanie po przesunięciu wpisu dziennika w lewo</string>
+    <string name="swipe_action_description">Wybierz działanie przy przesunięciu wpisu w lewo</string>
     <string name="swipe_action_reveal">Pokaż działania</string>
     <string name="swipe_action_immediate_delete">Natychmiastowe usunięcie</string>
     <string name="swipe_action_copy_description">Kopiuj transkrypcję</string>
@@ -676,7 +667,6 @@
     <string name="error_no_active_backend">Brak aktywnego backendu</string>
     <string name="error_no_file_path">Nie podano ścieżki pliku dla żądania audio</string>
     <string name="error_backend_no_audio_support">%1$s nie obsługuje transkrypcji audio. Przejdź na model mowy-na-tekst w Ustawieniach.</string>
-    <string name="error_no_transcription_produced">Nie wygenerowano transkrypcji</string>
     <string name="error_no_llm_model">Nie skonfigurowano modelu LLM. Otwórz aplikację, aby pobrać model.</string>
     <string name="error_no_model_configured">Nie skonfigurowano modelu %1$s. Otwórz aplikację, aby pobrać model.</string>
     <string name="loading_model">Wczytywanie modelu %1$s…</string>
@@ -725,62 +715,8 @@
     <!-- Language filter -->
     <string name="lang_filter_label">Filtruj według języka</string>
     <string name="lang_filter_all">Wszystkie języki</string>
-    <string name="lang_filter_search">Szukaj języka…</string>
     <string name="lang_filter_no_results">Brak pasujących języków</string>
     <string name="lang_filter_clear">Wyczyść wyszukiwanie</string>
-    <string name="lang_afrikaans">afrikaans</string>
-    <string name="lang_arabic">arabski</string>
-    <string name="lang_azerbaijani">azerski</string>
-    <string name="lang_belarusian">białoruski</string>
-    <string name="lang_bulgarian">bułgarski</string>
-    <string name="lang_bengali">bengalski</string>
-    <string name="lang_catalan">kataloński</string>
-    <string name="lang_czech">czeski</string>
-    <string name="lang_welsh">walijski</string>
-    <string name="lang_danish">duński</string>
-    <string name="lang_german">niemiecki</string>
-    <string name="lang_greek">grecki</string>
-    <string name="lang_english">angielski</string>
-    <string name="lang_spanish">hiszpański</string>
-    <string name="lang_estonian">estoński</string>
-    <string name="lang_basque">baskijski</string>
-    <string name="lang_persian">perski</string>
-    <string name="lang_finnish">fiński</string>
-    <string name="lang_french">francuski</string>
-    <string name="lang_galician">galicyjski</string>
-    <string name="lang_hebrew">hebrajski</string>
-    <string name="lang_hindi">hindi</string>
-    <string name="lang_croatian">chorwacki</string>
-    <string name="lang_hungarian">węgierski</string>
-    <string name="lang_indonesian">indonezyjski</string>
-    <string name="lang_italian">włoski</string>
-    <string name="lang_japanese">japoński</string>
-    <string name="lang_georgian">gruziński</string>
-    <string name="lang_korean">koreański</string>
-    <string name="lang_lithuanian">litewski</string>
-    <string name="lang_latvian">łotewski</string>
-    <string name="lang_macedonian">macedoński</string>
-    <string name="lang_malay">malajski</string>
-    <string name="lang_dutch">niderlandzki</string>
-    <string name="lang_norwegian">norweski</string>
-    <string name="lang_polish">polski</string>
-    <string name="lang_portuguese">portugalski</string>
-    <string name="lang_romanian">rumuński</string>
-    <string name="lang_russian">rosyjski</string>
-    <string name="lang_slovak">słowacki</string>
-    <string name="lang_slovenian">słoweński</string>
-    <string name="lang_albanian">albański</string>
-    <string name="lang_serbian">serbski</string>
-    <string name="lang_swedish">szwedzki</string>
-    <string name="lang_swahili">suahili</string>
-    <string name="lang_tamil">tamilski</string>
-    <string name="lang_thai">tajski</string>
-    <string name="lang_turkish">turecki</string>
-    <string name="lang_ukrainian">ukraiński</string>
-    <string name="lang_urdu">urdu</string>
-    <string name="lang_uzbek">uzbecki</string>
-    <string name="lang_vietnamese">wietnamski</string>
-    <string name="lang_chinese">chiński</string>
 
     <!-- Model Benchmark -->
     <string name="benchmark_title">Benchmark %1$s</string>
@@ -908,20 +844,20 @@
     <string name="external_ctc_subtype_zipformer">Zipformer CTC</string>
     <string name="external_languages">Języki (opcjonalnie)</string>
     <string name="external_languages_hint">rozdzielone przecinkiem lub spacją, np. ar, en</string>
-    <string name="external_notice_single_pass">Transkrypcja jednoprzebiegowa: bardzo długie audio może się nie powieść z dużymi modelami. Przytnij audio lub użyj mniejszego modelu.</string>
+    <string name="external_notice_single_pass">Bardzo długie audio może nie zostać przetworzone przez duży model w jednym przebiegu. Skróć audio lub wybierz mniejszy model.</string>
     <string name="external_notice_family">Jeśli transkrypcja kończy się awarią bez błędu, architektura może być błędna: usuń model i zaimportuj go ponownie z wybraną inną architekturą.</string>
 
     <!-- Advanced sharing settings -->
-    <string name="share_targets_title">Cele udostępniania</string>
-    <string name="share_targets_description">Pokazuj każdy pobrany model jako osobną opcję w arkuszu udostępniania Androida. Gdy udostępniasz audio przez konkretny model, jest on używany tymczasowo tylko dla tej transkrypcji.</string>
-    <string name="advanced_sharing_toggle">Pokazuj modele w arkuszu udostępniania</string>
-    <string name="share_targets_models_info">Każdy pobrany model pojawi się jako osobny cel udostępniania. Usunięcie modelu usuwa jego cel udostępniania.</string>
+    <string name="share_targets_title">Modele w menu udostępniania</string>
+    <string name="share_targets_description">Każdy pobrany model pojawia się jako osobna pozycja w menu systemowym. Audio przetwarza wybrany model.</string>
+    <string name="advanced_sharing_toggle">Pokazuj pobrane modele</string>
+    <string name="share_targets_models_info">Każdy pobrany model pojawi się jako pozycja w menu udostępniania. Usunięcie modelu usuwa go z menu.</string>
 
     <!-- Conversation Grouping -->
     <string name="conversation_grouping_title">Grupuj według rozmów</string>
     <string name="compact_result_actions_title">Kompaktowe przyciski działań</string>
     <string name="show_task_details_title">Pokazuj szczegóły zadania</string>
-    <string name="show_task_details_description">Pokazuj identyfikator zadania we wpisach dziennika. Przydatne przy zgłaszaniu problemów; domyślnie wyłączone.</string>
+    <string name="show_task_details_description">Pokazuj identyfikator zadania we wpisach. Przydatne przy kontakcie ze wsparciem; domyślnie wyłączone.</string>
     <string name="compact_result_actions_description">Pokazuj działania transkrypcji tylko jako ikony, wpuszczone w róg karty wyniku. Wyłącz dla przycisków z etykietami.</string>
     <string name="conversation_grouping_description">Grupuj transkrypcje według aplikacji źródłowej (WhatsApp, Telegram itd.) w zwijanych sekcjach.</string>
     <plurals name="conversation_group_count">
@@ -952,8 +888,8 @@
     <string name="subtitle_fallback_status">Nie udało się wyodrębnić napisów; przepisywanie audio</string>
     <string name="subtitle_choice_notification_text">Oczekiwanie na Twój wybór…</string>
     <!-- TASK-336: background-kill remediation card -->
-    <string name="battery_exemption_title">Zezwól na transkrypcję w tle</string>
-    <string name="battery_exemption_description">Twoje urządzenie przerwało transkrypcję, gdy aplikacja była w tle (częste na niektórych telefonach z Androidem). Zezwól Anti-Vocale na działanie w tle, aby kończyć transkrypcje.</string>
+    <string name="battery_exemption_title">Zezwól na działanie w tle</string>
+    <string name="battery_exemption_description">System przerwał rozpoznawanie w tle. Zezwól aplikacji na działanie w tle, aby transkrypcja nie została przerwana.</string>
     <string name="battery_exemption_action">Otwórz ustawienie</string>
     <!-- TASK-373: litert-lm HF url import -->
     <string name="litertlm_import_from_url">Importuj z adresu URL Hugging Face</string>

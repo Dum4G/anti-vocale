@@ -3,8 +3,8 @@
     <string name="app_name">Anti-Vocale</string>
 
     <!-- Tab names -->
-    <string name="model_tab">Model</string>
-    <string name="logs_tab">Logs</string>
+    <string name="model_tab">Models</string>
+    <string name="logs_tab">History</string>
     <string name="settings_tab">Settings</string>
 
     <!-- Model selection -->
@@ -59,17 +59,17 @@
     <string name="logs_empty">No requests yet</string>
     <string name="request_text">Text Request</string>
     <string name="request_audio">Audio Request</string>
-    <string name="logs_recent_requests">Recent Requests (%1$d)</string>
+    <string name="logs_recent_requests">Recent Entries (%1$d)</string>
     <string name="logs_clear">Clear</string>
     <string name="logs_delete_entry">Delete log</string>
-    <string name="logs_delete_confirmation">Delete this log entry?</string>
+    <string name="logs_delete_confirmation">Delete this history entry?</string>
     <string name="logs_delete_selected">Delete selected</string>
-    <string name="logs_clear_confirmation">Clear all logs? This cannot be undone.</string>
+    <string name="logs_clear_confirmation">Clear all history? This cannot be undone.</string>
     <string name="logs_select_all">Select all</string>
     <string name="logs_deselect_all">Deselect all</string>
     <string name="logs_entries_selected">%d selected</string>
     <string name="logs_no_entries_selected">No entries selected</string>
-    <string name="logs_cleared">All logs cleared</string>
+    <string name="logs_cleared">History cleared</string>
     <string name="logs_entry_deleted">Log entry deleted</string>
     <plurals name="logs_entries_deleted">
         <item quantity="one">%d entry deleted</item>
@@ -78,7 +78,7 @@
     <string name="logs_undo">Undo</string>
     <string name="logs_cancel">Cancel</string>
     <string name="logs_confirm">Confirm</string>
-    <string name="logs_empty_hint">Share a voice message from WhatsApp, Telegram, or another app to see transcriptions here</string>
+    <string name="logs_empty_hint">Share a voice message from a messenger and its text will appear here</string>
     <string name="logs_prompt_label">Prompt:</string>
     <string name="logs_result_label">Result:</string>
     <string name="logs_error_label">Error:</string>
@@ -90,8 +90,8 @@
     <string name="logs_status_processing">Processing</string>
     <string name="logs_model_label">Model: %1$s</string>
     <string name="logs_transcription_cancelled">Transcription cancelled</string>
-    <string name="logs_search_placeholder">Search transcriptions…</string>
-    <string name="logs_search_no_results">No matching transcriptions</string>
+    <string name="logs_search_placeholder">Search entries…</string>
+    <string name="logs_search_no_results">No matching entries</string>
     <string name="logs_search_no_results_hint">Try a different search term</string>
     <string name="voice_message_duration">voice message</string>
     <string name="source_was_video">Source: video file</string>
@@ -152,7 +152,7 @@
     <!-- Nemotron 3.5 streaming model -->
     <string name="nemotron_name">Nemotron 3.5</string>
     <string name="nemotron_title">Nemotron 3.5 (streaming)</string>
-    <string name="nemotron_description">Streaming transducer • Experimental Italian quality</string>
+    <string name="nemotron_description">~640MB • Streaming transducer • Experimental Italian quality</string>
     <string name="nemotron_download_confirm_title">Download %1$s?</string>
     <string name="nemotron_download_confirm_message">This will download ~%1$dMB. Nemotron 3.5 is a streaming multilingual ASR model.</string>
     <string name="nemotron_download">Download Nemotron</string>
@@ -162,7 +162,7 @@
 
     <!-- GigaAM v3 model -->
     <string name="gigaam_title">GigaAM v3</string>
-    <string name="gigaam_description">Russian ASR • ~326MB • Sber (MIT)</string>
+    <string name="gigaam_description">~326MB • Fast • Russian ASR with punctuation</string>
     <string name="gigaam_name">GigaAM v3</string>
     <string name="gigaam_download_confirm_title">Download GigaAM v3?</string>
     <string name="gigaam_download_confirm_message">This will download ~%1$dMB. GigaAM v3 is a Russian-only ASR model from Sber with strong Russian accuracy.</string>
@@ -224,7 +224,7 @@
     <string name="oom_crash_warning">The app was closed because the device was running low on memory. Try closing other apps or using a smaller model before transcribing again.</string>
     <string name="native_crash_title">App closed unexpectedly</string>
     <string name="native_crash_go_to_model">Go to Model tab</string>
-    <string name="model_load_low_memory">Not enough free memory for this model (%1$s available, about %2$s needed). Close other apps or use a smaller model. You can also enable \"Force model load\" in Settings to try anyway.</string>
+    <string name="model_load_low_memory">Not enough free memory for this model (%1$s available, about %2$s needed). Close other apps or use a smaller model. Forced loading is available in Settings.</string>
     <string name="force_model_load">Force model load</string>
     <string name="force_model_load_desc">Load the model even when memory seems insufficient. May close the app on devices with little RAM.</string>
     <string name="copy">Copy</string>
@@ -239,7 +239,7 @@
     <string name="unknown_audio_format">Could not identify the audio format. Share the audio from a messaging app.</string>
     <string name="transcription_started">Transcription started…</string>
     <string name="processing_segment_progress">Segment %1$d of %2$d…</string>
-    <string name="progressive_initial">Preparing partial previews — full text available when done</string>
+    <string name="progressive_initial">Preparing text; final result available on completion</string>
     <string name="added_to_queue">Added to queue…</string>
     <string name="processing_chunk">Processing chunk %1$d/%2$d…</string>
     <string name="processing_audio">Processing audio…</string>
@@ -342,7 +342,7 @@
 
     <!-- Settings Tab - HuggingFace Authentication -->
     <string name="huggingface_auth">HuggingFace Authentication</string>
-    <string name="huggingface_auth_description">Only needed to download models from HuggingFace on your behalf. Local models work without authentication.</string>
+    <string name="huggingface_auth_description">Only needed to download models from HuggingFace. Local models work without signing in.</string>
     <string name="setup_guide">Setup Guide</string>
     <string name="setup_step1">1. Tap \'Login with HuggingFace\' below</string>
     <string name="setup_step2">2. Sign in to your HuggingFace account</string>
@@ -354,7 +354,7 @@
     <string name="expires_label">Expires: %1$s</string>
     <string name="expired">Expired</string>
     <string name="login_with_huggingface">Login with HuggingFace</string>
-    <string name="oauth_login_description">Quick login using your browser. If you\'re already logged into HuggingFace in Chrome, you\'ll be redirected back instantly.</string>
+    <string name="oauth_login_description">Quick login via your browser. If you are already signed in to HuggingFace, confirmation takes a few seconds.</string>
     <string name="create_account_link">Don\'t have an account? Create one at huggingface.co</string>
     <string name="authenticating">Authenticating with HuggingFace…</string>
     <string name="logged_in_as">Logged in as %1$s</string>
@@ -378,8 +378,8 @@
     <string name="validating_token">Validating token…</string>
 
     <!-- Settings Tab - Timeout -->
-    <string name="auto_unload_timeout">Auto-Unload Timeout</string>
-    <string name="timeout_description">Automatically unload the model after a period of inactivity to free memory. The model will be automatically reloaded when needed.</string>
+    <string name="auto_unload_timeout">Auto-Unload</string>
+    <string name="timeout_description">The model unloads after idle time and returns on next use.</string>
     <string name="timeout_1_minute">1 minute</string>
     <string name="timeout_1_hour">1 hour</string>
     <plurals name="timeout_minutes">
@@ -389,7 +389,7 @@
 
     <!-- Settings Tab - Thread Count -->
     <string name="thread_count_title">Inference Threads</string>
-    <string name="thread_count_description">Number of CPU threads used for transcription and voice activity detection. Higher values use more CPU but may speed up processing.</string>
+    <string name="thread_count_description">Number of CPU threads used for transcription. Higher values speed up processing and increase load.</string>
     <string name="thread_count_auto">%1$d (auto-detected)</string>
     <string name="thread_count_value">%1$d</string>
 
@@ -404,12 +404,12 @@
     <string name="save">Save</string>
 
     <!-- Settings Tab - Auto-Copy -->
-    <string name="auto_copy_title">Auto-Copy Transcription</string>
-    <string name="auto_copy_description">Automatically copy transcription results to clipboard. You can still manually copy from the notification.</string>
+    <string name="auto_copy_title">Auto-Copy</string>
+    <string name="auto_copy_description">Copy the finished text to the clipboard. Manual copying from the notification is still available.</string>
 
     <!-- Settings Tab - Output Folder -->
-    <string name="output_folder_title">Save transcripts to folder</string>
-    <string name="output_folder_description">Automatically save each transcription as a .txt to a folder you choose (e.g. a Drive or Syncthing folder).</string>
+    <string name="output_folder_title">Auto-Save to Folder</string>
+    <string name="output_folder_description">Each transcription is saved as a separate .txt file in the folder you choose (e.g. Drive or Syncthing).</string>
     <string name="output_folder_choose">Choose folder</string>
     <string name="output_folder_clear">Clear folder</string>
 
@@ -417,11 +417,11 @@
     <string name="vad_title">Strip Silence (VAD)</string>
     <string name="vad_description">Remove silent portions from voice messages before transcription. Reduces processing time and improves accuracy.</string>
     <string name="progressive_title">Progressive Display</string>
-    <string name="progressive_description">Show transcription text as each speech segment is completed, instead of waiting for the full result.</string>
+    <string name="progressive_description">Show text as transcription progresses instead of waiting for the recording to finish.</string>
 
     <!-- Settings Tab - Default Prompt -->
-    <string name="default_prompt_title">Default Transcription Prompt</string>
-    <string name="default_prompt_description">This prompt will be used when transcribing audio. Leave empty to use the default system prompt.</string>
+    <string name="default_prompt_title">Default Prompt</string>
+    <string name="default_prompt_description">Instruction given to the model during transcription. Leave empty to use the built-in prompt.</string>
     <string name="default_prompt_placeholder">e.g., Transcribe this speech:</string>
     <string name="default_prompt_chars">%1$d / 500</string>
     <string name="default_prompt_compatibility_info">Only applies to LLM models (Gemma). Whisper and Parakeet models ignore this setting.</string>
@@ -448,19 +448,11 @@
     <string name="language_title">Language</string>
     <string name="language_description">Choose the app display language.</string>
     <string name="language_system">System Default</string>
-    <string name="language_english">English</string>
-    <string name="language_italian">Italiano</string>
-    <string name="language_german">Deutsch</string>
-    <string name="language_russian">Русский</string>
-    <string name="language_hindi">हिन्दी</string>
-    <string name="language_french">Français</string>
-    <string name="language_spanish">Español</string>
-    <string name="language_portuguese">Português (BR)</string>
 
     <!-- Settings Tab - Transcription Language -->
     <string name="transcription_language_title">Transcription Language</string>
     <string name="transcription_language_auto">Auto-detect</string>
-    <string name="transcription_language_description">Choose the language for audio transcription. Selecting a specific language skips detection and is faster.</string>
+    <string name="transcription_language_description">Audio language for transcription. Selecting a specific language skips detection and speeds up processing.</string>
     <string name="transcription_language_note">Only applies to Whisper models. The Distil Italian model always uses Italian. Other backends (Gemma, Parakeet, Qwen3-ASR) auto-detect.</string>
 
     <!-- Settings Tab - Theme -->
@@ -475,7 +467,7 @@
     <!-- Per-App Settings -->
     <string name="per_app_settings_title">Per-App Settings</string>
     <string name="per_app_settings_description">Customize notification behavior for each app</string>
-    <string name="per_app_settings_info">Tap an app to configure how notifications behave when audio is shared from that app.</string>
+    <string name="per_app_settings_info">Tap an app to configure its notifications.</string>
     <string name="per_app_settings_loading">Loading preferences...</string>
     <string name="per_app_settings_manually_added">Manually Added</string>
     <string name="per_app_settings_add_app">Add App</string>
@@ -489,8 +481,8 @@
     <string name="per_app_settings_share_off">Share button off</string>
     <string name="per_app_settings_sound">Sound: %1$s</string>
     <string name="per_app_settings_dialog_title">Settings for %1$s</string>
-    <string name="per_app_settings_auto_copy_title">Auto-copy transcription</string>
-    <string name="per_app_settings_auto_copy_description">Automatically copy transcription to clipboard</string>
+    <string name="per_app_settings_auto_copy_title">Auto-Copy</string>
+    <string name="per_app_settings_auto_copy_description">Copy the message text to the clipboard</string>
     <string name="per_app_settings_show_share_title">Show share button</string>
     <string name="per_app_settings_show_share_description">Display share button in notification</string>
     <string name="per_app_settings_notification_sound">Notification sound</string>
@@ -519,12 +511,11 @@
 
     <!-- VAD Advisory (shown in Log tab when Parakeet is active with VAD enabled) -->
     <string name="vad_advisory_title">VAD is not needed with Parakeet</string>
-    <string name="vad_advisory_description">Silence stripping adds processing overhead without improving results for this model. You can turn it off in Settings.</string>
+    <string name="vad_advisory_description">For Parakeet, silence removal only adds processing time. You can turn it off in Settings.</string>
     <string name="vad_advisory_dismiss">Got it</string>
 
     <!-- Share Back -->
     <string name="share_back">Share Back</string>
-    <string name="share_back_description">Share transcription back to source app</string>
     <string name="send_to_app">Send to %1$s</string>
 
     <!-- Notification Channels -->
@@ -538,12 +529,12 @@
     <string name="notification_channel_inference">Transcription Service</string>
     <string name="notification_channel_inference_description">Background audio transcription processing</string>
     <string name="notification_channel_result">Transcription Result</string>
-    <string name="notification_channel_result_description">Notification when transcription is complete</string>
+    <string name="notification_channel_result_description">Finished text and actions</string>
     <string name="notification_cancelling">Cancelling…</string>
 
     <!-- No-model notification -->
-    <string name="notification_no_model_title">No transcription model</string>
-    <string name="notification_no_model_message">Open the app to download a transcription model</string>
+    <string name="notification_no_model_title">Model not installed</string>
+    <string name="notification_no_model_message">Open the app and download a model</string>
     <string name="notification_no_model_action">Open app</string>
 
     <!-- Tasker fallback notification -->
@@ -631,12 +622,12 @@
 
     <!-- Transcription active protection -->
     <string name="dialog_transcription_active_title">Transcription in Progress</string>
-    <string name="dialog_delete_active_model_message">Cannot delete \'%1$s\' while it is being used for transcription. Please wait for the transcription to finish.</string>
+    <string name="dialog_delete_active_model_message">Cannot delete \'%1$s\': the model is used for transcription. Please wait until it finishes.</string>
     <string name="dialog_delete_inactive_model_message">A transcription is in progress. Deleting \'%1$s\' will not affect it, but proceed with caution.</string>
     <string name="dialog_switch_model_message">A transcription is currently in progress. Switching models may disrupt it. Are you sure?</string>
     <string name="action_understood">Understood</string>
     <string name="action_switch_anyway">Switch anyway</string>
-    <string name="warn_reset_stats_during_transcription">A transcription is in progress. Resetting stats now won\'t affect it, but timing data may be incomplete.</string>
+    <string name="warn_reset_stats_during_transcription">Recognition is in progress: stats are kept, but timing data may be incomplete.</string>
     <string name="cannot_unload_during_transcription">Cannot unload: model is being used for an active transcription</string>
     <string name="dialog_unload_title">Unload Model?</string>
     <string name="dialog_unload_message">The model \'%1$s\' will be unloaded from memory. It will be automatically reloaded on the next transcription.</string>
@@ -644,7 +635,7 @@
 
     <!-- Swipe Action Mode -->
     <string name="swipe_action_title">Swipe Action</string>
-    <string name="swipe_action_description">Choose what happens when you swipe left on a log entry</string>
+    <string name="swipe_action_description">Choose the action when swiping an entry left</string>
     <string name="swipe_action_reveal">Reveal actions</string>
     <string name="swipe_action_immediate_delete">Immediate delete</string>
     <string name="swipe_action_copy_description">Copy transcription</string>
@@ -663,7 +654,6 @@
     <string name="error_no_active_backend">No active backend</string>
     <string name="error_no_file_path">No file path provided for audio request</string>
     <string name="error_backend_no_audio_support">%1$s does not support audio transcription. Switch to a speech-to-text model in Settings.</string>
-    <string name="error_no_transcription_produced">No transcription produced</string>
     <string name="error_no_llm_model">No LLM model configured. Open the app to download a model.</string>
     <string name="error_no_model_configured">No %1$s model configured. Open the app to download a model.</string>
     <string name="loading_model">Loading %1$s model…</string>
@@ -712,62 +702,8 @@
     <!-- Language filter -->
     <string name="lang_filter_label">Filter by language</string>
     <string name="lang_filter_all">All languages</string>
-    <string name="lang_filter_search">Search language…</string>
     <string name="lang_filter_no_results">No matching language</string>
     <string name="lang_filter_clear">Clear search</string>
-    <string name="lang_afrikaans">Afrikaans</string>
-    <string name="lang_arabic">Arabic</string>
-    <string name="lang_azerbaijani">Azerbaijani</string>
-    <string name="lang_belarusian">Belarusian</string>
-    <string name="lang_bulgarian">Bulgarian</string>
-    <string name="lang_bengali">Bengali</string>
-    <string name="lang_catalan">Catalan</string>
-    <string name="lang_czech">Czech</string>
-    <string name="lang_welsh">Welsh</string>
-    <string name="lang_danish">Danish</string>
-    <string name="lang_german">German</string>
-    <string name="lang_greek">Greek</string>
-    <string name="lang_english">English</string>
-    <string name="lang_spanish">Spanish</string>
-    <string name="lang_estonian">Estonian</string>
-    <string name="lang_basque">Basque</string>
-    <string name="lang_persian">Persian</string>
-    <string name="lang_finnish">Finnish</string>
-    <string name="lang_french">French</string>
-    <string name="lang_galician">Galician</string>
-    <string name="lang_hebrew">Hebrew</string>
-    <string name="lang_hindi">Hindi</string>
-    <string name="lang_croatian">Croatian</string>
-    <string name="lang_hungarian">Hungarian</string>
-    <string name="lang_indonesian">Indonesian</string>
-    <string name="lang_italian">Italian</string>
-    <string name="lang_japanese">Japanese</string>
-    <string name="lang_georgian">Georgian</string>
-    <string name="lang_korean">Korean</string>
-    <string name="lang_lithuanian">Lithuanian</string>
-    <string name="lang_latvian">Latvian</string>
-    <string name="lang_macedonian">Macedonian</string>
-    <string name="lang_malay">Malay</string>
-    <string name="lang_dutch">Dutch</string>
-    <string name="lang_norwegian">Norwegian</string>
-    <string name="lang_polish">Polish</string>
-    <string name="lang_portuguese">Portuguese</string>
-    <string name="lang_romanian">Romanian</string>
-    <string name="lang_russian">Russian</string>
-    <string name="lang_slovak">Slovak</string>
-    <string name="lang_slovenian">Slovenian</string>
-    <string name="lang_albanian">Albanian</string>
-    <string name="lang_serbian">Serbian</string>
-    <string name="lang_swedish">Swedish</string>
-    <string name="lang_swahili">Swahili</string>
-    <string name="lang_tamil">Tamil</string>
-    <string name="lang_thai">Thai</string>
-    <string name="lang_turkish">Turkish</string>
-    <string name="lang_ukrainian">Ukrainian</string>
-    <string name="lang_urdu">Urdu</string>
-    <string name="lang_uzbek">Uzbek</string>
-    <string name="lang_vietnamese">Vietnamese</string>
-    <string name="lang_chinese">Chinese</string>
 
     <!-- Model Benchmark -->
     <string name="benchmark_title">Benchmark %1$s</string>
@@ -891,20 +827,20 @@
     <string name="external_ctc_subtype_zipformer">Zipformer CTC</string>
     <string name="external_languages">Languages (optional)</string>
     <string name="external_languages_hint">comma or space separated, e.g. ar, en</string>
-    <string name="external_notice_single_pass">Single-pass transcription: very long audio may fail with large models. Trim the audio or use a smaller model.</string>
+    <string name="external_notice_single_pass">Very long audio may not be processed by large models in one pass. Trim the audio or choose a smaller model.</string>
     <string name="external_notice_family">If transcription crashes with no error, the architecture may be wrong: delete and re-import the model with a different architecture selected.</string>
 
     <!-- Advanced sharing settings -->
-    <string name="share_targets_title">Share Targets</string>
-    <string name="share_targets_description">Show each downloaded model as a separate option in the Android share sheet. When you share audio via a specific model, it is used temporarily for that transcription only.</string>
-    <string name="advanced_sharing_toggle">Show models in share sheet</string>
-    <string name="share_targets_models_info">Each downloaded model will appear as a separate share target. Deleting a model removes its share target.</string>
+    <string name="share_targets_title">Models in Share Menu</string>
+    <string name="share_targets_description">Each downloaded model appears as a separate option in the system menu. Audio is processed by the selected model.</string>
+    <string name="advanced_sharing_toggle">Show downloaded models</string>
+    <string name="share_targets_models_info">Each downloaded model will appear as an item in the share menu. Deleting a model removes it from the menu.</string>
 
     <!-- Conversation Grouping -->
     <string name="conversation_grouping_title">Group by Conversation</string>
     <string name="compact_result_actions_title">Compact action buttons</string>
     <string name="show_task_details_title">Show task details</string>
-    <string name="show_task_details_description">Show the task ID on log entries. Useful when reporting issues; off by default.</string>
+    <string name="show_task_details_description">Show the task ID on entries. Useful when contacting support; off by default.</string>
     <string name="compact_result_actions_description">Show transcription actions as icons only, tucked into the corner of the result card. Turn off for labeled buttons.</string>
     <string name="conversation_grouping_description">Group transcriptions by source app (WhatsApp, Telegram, etc.) into collapsible sections.</string>
     <plurals name="conversation_group_count">
@@ -933,8 +869,8 @@
     <string name="subtitle_fallback_status">Couldn\'t extract subtitles — transcribing audio</string>
     <string name="subtitle_choice_notification_text">Waiting for your choice…</string>
     <!-- TASK-336: background-kill remediation card -->
-    <string name="battery_exemption_title">Allow background transcription</string>
-    <string name="battery_exemption_description">Your device stopped a transcription while the app was in the background (common on some Android phones). Allow Anti-Vocale to run in the background to finish transcriptions.</string>
+    <string name="battery_exemption_title">Allow Background Operation</string>
+    <string name="battery_exemption_description">The system stopped recognition while the app was in the background. Allow Anti-Vocale to run in the background so recognition is not interrupted.</string>
     <string name="battery_exemption_action">Open setting</string>
     <!-- TASK-373: litert-lm HF url import -->
     <string name="litertlm_import_from_url">Import from Hugging Face URL</string>
